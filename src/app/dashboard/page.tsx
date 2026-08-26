@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 type Business = {
@@ -17,12 +17,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
+  const [connect, setConnect] = useState<string | null>(null);
+  const [reason, setReason] = useState<string | null>(null);
+  const [handle, setHandle] = useState<string | null>(null);
   const router = useRouter();
-  const params = useSearchParams();
 
-  const connectResult = params.get('connect');
-  const connectReason = params.get('reason');
-  const connectedHandle = params.get('handle');
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    setConnect(q.get('connect'));
+    setReason(q.get('reason'));
+    setHandle(q.get('handle'));
+  }, []);
 
   const load = useCallback(async () => {
     const { data: userData } = await supabase.auth.getUser();
@@ -111,15 +116,15 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 pb-16 space-y-4">
-        {connectResult === 'ok' ? (
+        {connect === 'ok' ? (
           <div className="rounded-2xl bg-[#E1F5EE] p-5">
             <p className="text-[#0F6E56]">
-              Connected to @{connectedHandle}. We can read your posts now.
+              Connected to @{handle}. We can read your posts now.
             </p>
           </div>
         ) : null}
 
-        {connectResult === 'cancelled' ? (
+        {connect === 'cancelled' ? (
           <div className="rounded-2xl bg-white border border-[#EAE7DF] p-5">
             <p className="text-[#5F5E5A]">
               Connection cancelled. Nothing changed.
@@ -127,15 +132,15 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        {connectResult === 'no_instagram' ? (
+        {connect === 'no_instagram' ? (
           <div className="rounded-2xl bg-[#FAEEDA] p-5">
-            <p className="text-[#854F0B]">{connectReason}</p>
+            <p className="text-[#854F0B]">{reason}</p>
           </div>
         ) : null}
 
-        {connectResult === 'error' ? (
+        {connect === 'error' ? (
           <div className="rounded-2xl bg-[#FCEBEB] p-5">
-            <p className="text-[#A32D2D]">Could not connect. {connectReason}</p>
+            <p className="text-[#A32D2D]">Could not connect. {reason}</p>
           </div>
         ) : null}
 
