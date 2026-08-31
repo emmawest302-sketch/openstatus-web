@@ -3,7 +3,16 @@ import { getAdminClient } from '@/lib/supabaseAdmin';
 
 export const revalidate = 60;
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 type Hours = {
   day_of_week: number;
@@ -48,12 +57,39 @@ function ago(iso: string): string {
   return Math.floor(hrs / 24) + 'd ago';
 }
 
+function label(row: Hours | undefined): string {
+  if (!row) return '-';
+  if (row.is_closed) return 'Closed';
+  return pretty(row.opens_at) + ' - ' + pretty(row.closes_at);
+}
+
+// Collapse consecutive days that share the same hours into one row,
+// so a normal week reads as three lines instead of seven.
+function groupHours(hours: Hours[]) {
+  const ordered = [1, 2, 3, 4, 5, 6, 0];
+  const out: { label: string; value: string; days: number[] }[] = [];
+
+  for (const dow of ordered) {
+    const value = label(hours.find((h) => h.day_of_week === dow));
+    const last = out[out.length - 1];
+    if (last && last.value === value) {
+      last.days.push(dow);
+      last.label =
+        DAY_SHORT[last.days[0]] + ' - ' + DAY_SHORT[last.days[last.days.length - 1]];
+    } else {
+      out.push({ label: DAY_NAMES[dow], value, days: [dow] });
+    }
+  }
+  return out;
+}
+
 function Icon({ name }: { name: string }) {
   const paths: Record<string, string> = {
     directions: 'M3 11l18-8-8 18-2-8-8-2z',
     menu: 'M4 5h16M4 12h16M4 19h10',
     call: 'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a1 1 0 01-1 1A16 16 0 014 5a1 1 0 011-1z',
-    website: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18',
+    website:
+      'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18',
   };
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
@@ -68,11 +104,11 @@ function Icon({ name }: { name: string }) {
   );
 }
 
-function iconFor(label: string): string {
-  const l = label.toLowerCase();
-  if (l.includes('direction') || l.includes('map')) return 'directions';
-  if (l.includes('menu')) return 'menu';
-  if (l.includes('call') || l.includes('phone')) return 'call';
+function iconFor(l: string): string {
+  const s = l.toLowerCase();
+  if (s.includes('direction') || s.includes('map')) return 'directions';
+  if (s.includes('menu')) return 'menu';
+  if (s.includes('call') || s.includes('phone')) return 'call';
   return 'website';
 }
 
@@ -154,6 +190,8 @@ export default async function BeforeYouGo({
     big = 'No changes announced';
   }
 
+  const grouped = groupHours(hours);
+
   return (
     <div
       className="min-h-screen bg-[#EFF7F2] text-[#0B2E22] flex justify-center sm:items-center sm:p-6"
@@ -207,7 +245,11 @@ export default async function BeforeYouGo({
           <div
             className={
               'mt-3 rounded-2xl px-5 py-4 ' +
-              (amber ? 'bg-[#FDF3E3]' : closedAllDay ? 'bg-[#FCEBEB]' : 'bg-[#E9F6F0]')
+              (amber
+                ? 'bg-[#FDF3E3]'
+                : closedAllDay
+                ? 'bg-[#FCEBEB]'
+                : 'bg-[#E9F6F0]')
             }
           >
             <div className="flex items-center gap-2.5">
@@ -217,7 +259,9 @@ export default async function BeforeYouGo({
               />
               <p
                 className="text-lg font-medium"
-                style={{ color: amber ? '#B4741A' : closedAllDay ? '#A32D2D' : '#0F6E56' }}
+                style={{
+                  color: amber ? '#B4741A' : closedAllDay ? '#A32D2D' : '#0F6E56',
+                }}
               >
                 {title}
               </p>
@@ -243,7 +287,9 @@ export default async function BeforeYouGo({
               style={{ fontFamily: 'var(--font-mono)' }}
             >
               Updated {ago(lead.created_at)}
-              {business.instagram_handle ? ' · @' + business.instagram_handle : ''}
+              {business.instagram_handle
+                ? ' · @' + business.instagram_handle
+                : ''}
             </p>
           ) : null}
 
@@ -264,8 +310,34 @@ export default async function BeforeYouGo({
             </ul>
           ) : null}
 
+          <div className="mt-4 rounded-2xl bg-[#F5F7F5] px-5 py-4">
+            <p
+              className="text-[11px] uppercase tracking-[0.22em] text-[#4E7A69]"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              Regular hours
+            </p>
+            <ul className="mt-2.5 space-y-2">
+              {grouped.map((g) => {
+                const isToday = g.days.includes(today);
+                return (
+                  <li
+                    key={g.label + g.value}
+                    className={
+                      'flex items-center justify-between text-sm ' +
+                      (isToday ? 'font-medium' : 'text-[#78907F]')
+                    }
+                  >
+                    <span>{g.label}</span>
+                    <span>{g.value}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
           {links.length > 0 ? (
-            <div className="mt-5 grid grid-cols-4 gap-2">
+            <div className="mt-4 grid grid-cols-4 gap-2">
               {links.slice(0, 4).map((l) => (
                 <a
                   key={l.url}
@@ -280,38 +352,6 @@ export default async function BeforeYouGo({
               ))}
             </div>
           ) : null}
-
-          <div className="mt-5 rounded-2xl bg-[#F5F7F5] px-5 py-4">
-            <p
-              className="text-[11px] uppercase tracking-[0.22em] text-[#4E7A69]"
-              style={{ fontFamily: 'var(--font-mono)' }}
-            >
-              Regular hours
-            </p>
-            <ul className="mt-2.5 space-y-1.5">
-              {DAYS.map((label, idx) => {
-                const row = hours.find((h) => h.day_of_week === idx);
-                return (
-                  <li
-                    key={label}
-                    className={
-                      'flex items-center justify-between text-sm ' +
-                      (idx === today ? 'font-medium' : 'text-[#78907F]')
-                    }
-                  >
-                    <span>{label}</span>
-                    <span>
-                      {!row
-                        ? '-'
-                        : row.is_closed
-                        ? 'Closed'
-                        : pretty(row.opens_at) + ' - ' + pretty(row.closes_at)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
 
           <a
             href="/"
