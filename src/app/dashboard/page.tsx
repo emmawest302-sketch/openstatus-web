@@ -11,12 +11,22 @@ type Business = {
   instagram_account_id: string | null;
 };
 
+type Post = {
+  id: string;
+  caption: string | null;
+  permalink: string | null;
+  posted_at: string | null;
+};
+
 export default function DashboardPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [business, setBusiness] = useState<Business | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState('');
+  const [syncNote, setSyncNote] = useState('');
   const [connect, setConnect] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
   const [handle, setHandle] = useState<string | null>(null);
@@ -44,6 +54,17 @@ export default function DashboardPage() {
       .maybeSingle();
 
     setBusiness(biz ?? null);
+
+    if (biz) {
+      const { data: rows } = await supabase
+        .from('posts')
+        .select('id, caption, permalink, posted_at')
+        .eq('business_id', biz.id)
+        .order('posted_at', { ascending: false })
+        .limit(25);
+      setPosts(rows ?? []);
+    }
+
     setLoading(false);
   }, [router]);
 
@@ -70,6 +91,31 @@ export default function DashboardPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setConnecting(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setError('');
+    setSyncNote('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Session expired, sign in again');
+
+      const res = await fetch('/api/posts/sync', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Sync failed');
+
+      setSyncNote('Read ' + body.fetched + ' posts, ' + body.stored + ' new.');
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sync failed');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -118,17 +164,7 @@ export default function DashboardPage() {
       <main className="max-w-4xl mx-auto px-6 pb-16 space-y-4">
         {connect === 'ok' ? (
           <div className="rounded-2xl bg-[#E1F5EE] p-5">
-            <p className="text-[#0F6E56]">
-              Connected to @{handle}. We can read your posts now.
-            </p>
-          </div>
-        ) : null}
-
-        {connect === 'cancelled' ? (
-          <div className="rounded-2xl bg-white border border-[#EAE7DF] p-5">
-            <p className="text-[#5F5E5A]">
-              Connection cancelled. Nothing changed.
-            </p>
+            <p className="text-[#0F6E56]">Connected to @{handle}.</p>
           </div>
         ) : null}
 
@@ -206,12 +242,66 @@ export default function DashboardPage() {
         </section>
 
         <section className="rounded-3xl bg-white border border-[#EAE7DF] p-7">
-          <h2 className="text-2xl font-medium tracking-tight">Recent posts</h2>
-          <p className="mt-1 text-[#5F5E5A]">
-            {igConnected
-              ? 'Reading posts is the next thing to build.'
-              : 'Connect Instagram to start reading posts.'}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-medium tracking-tight">
+                Recent posts
+              </h2>
+              <p className="mt-1 text-[#5F5E5A]">
+                {igConnected
+                  ? 'Read straight from Instagram. Nothing on your account is changed.'
+                  : 'Connect Instagram to start reading posts.'}
+              </p>
+            </div>
+            {igConnected ? (
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="px-5 py-2.5 rounded-full bg-[#0B0B0B] text-white font-medium hover:bg-[#1D9E75] disabled:opacity-50 transition whitespace-nowrap"
+              >
+                {syncing ? 'Reading...' : 'Read posts'}
+              </button>
+            ) : null}
+          </div>
+
+          {syncNote ? (
+            <p className="mt-4 text-sm text-[#0F6E56]">{syncNote}</p>
+          ) : null}
+
+          {posts.length > 0 ? (
+            <ul className="mt-6 space-y-3">
+              {posts.map((p) => (
+                <li key={p.id} className="rounded-2xl bg-[#FBFAF7] p-4">
+                  <p className="text-sm whitespace-pre-line">
+                    {p.caption && p.caption.length > 0
+                      ? p.caption.slice(0, 280)
+                      : 'No caption'}
+                  </p>
+                  <div className="mt-2 flex items-center gap-3 text-xs text-[#9C9A93]">
+                    <span>
+                      {p.posted_at
+                        ? new Date(p.posted_at).toLocaleString()
+                        : 'No date'}
+                    </span>
+                    {p.permalink ? (
+                      <a
+                        href={p.permalink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#0F6E56] underline"
+                      >
+                        View on Instagram
+                      </a>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : igConnected ? (
+            <p className="mt-6 text-sm text-[#9C9A93]">
+              No posts stored yet. Press Read posts.
+            </p>
+          ) : null}
         </section>
       </main>
     </div>
