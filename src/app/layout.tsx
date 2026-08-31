@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Space_Grotesk, Space_Mono } from 'next/font/google';
+import { Space_Grotesk, Space_Mono, Instrument_Serif } from 'next/font/google';
 import './globals.css';
 
 const display = Space_Grotesk({
@@ -14,6 +14,13 @@ const mono = Space_Mono({
   variable: '--font-mono',
 });
 
+const serif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: ['400'],
+  style: ['italic', 'normal'],
+  variable: '--font-serif',
+});
+
 export const metadata: Metadata = {
   title: 'OpenStatus — know before you go',
   description:
@@ -25,7 +32,13 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={display.variable + ' ' + mono.variable}>{children}</body>
+      <body
+        className={
+          display.variable + ' ' + mono.variable + ' ' + serif.variable
+        }
+      >
+        {children}
+      </body>
     </html>
   );
 }
