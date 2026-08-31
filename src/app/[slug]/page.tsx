@@ -30,7 +30,7 @@ function pretty(t: string | null): string {
   const mer = h >= 12 ? 'PM' : 'AM';
   if (h === 0) h = 12;
   else if (h > 12) h -= 12;
-  return m === '00' ? h + ' ' + mer : h + ':' + m + ' ' + mer;
+  return m === '00' ? h + ':00 ' + mer : h + ':' + m + ' ' + mer;
 }
 
 function minutes(t: string | null): number | null {
@@ -46,6 +46,34 @@ function ago(iso: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return hrs + 'h ago';
   return Math.floor(hrs / 24) + 'd ago';
+}
+
+function Icon({ name }: { name: string }) {
+  const paths: Record<string, string> = {
+    directions: 'M3 11l18-8-8 18-2-8-8-2z',
+    menu: 'M4 5h16M4 12h16M4 19h10',
+    call: 'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a1 1 0 01-1 1A16 16 0 014 5a1 1 0 011-1z',
+    website: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18',
+  };
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+      <path
+        d={paths[name] ?? paths.website}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function iconFor(label: string): string {
+  const l = label.toLowerCase();
+  if (l.includes('direction') || l.includes('map')) return 'directions';
+  if (l.includes('menu')) return 'menu';
+  if (l.includes('call') || l.includes('phone')) return 'call';
+  return 'website';
 }
 
 export default async function BeforeYouGo({
@@ -104,25 +132,26 @@ export default async function BeforeYouGo({
     nowMins >= openMins &&
     nowMins < closeMins;
 
+  const amber = Boolean(lead) && !closedAllDay;
   const dot = closedAllDay ? '#A32D2D' : lead ? '#EF9F27' : '#1D9E75';
 
-  let bigLine: string;
-  let smallLine: string;
+  let title: string;
+  let big: string;
   if (closedAllDay) {
-    bigLine = 'Closed today';
-    smallLine = lead?.detail ?? 'Back tomorrow';
+    title = 'Closed today';
+    big = lead?.detail ?? 'Back tomorrow';
   } else if (lead) {
-    bigLine = lead.headline;
-    smallLine = lead.detail ?? '';
+    title = lead.headline;
+    big = lead.detail ?? '';
   } else if (isOpen) {
-    bigLine = 'Business as usual';
-    smallLine = 'Open until ' + pretty(effectiveClose);
+    title = 'Business as usual';
+    big = 'Open until ' + pretty(effectiveClose);
   } else if (openMins !== null && nowMins < openMins) {
-    bigLine = 'Opens ' + pretty(todayRow?.opens_at ?? null);
-    smallLine = 'No changes announced';
+    title = 'Closed right now';
+    big = 'Opens ' + pretty(todayRow?.opens_at ?? null);
   } else {
-    bigLine = 'Closed for today';
-    smallLine = 'No changes announced';
+    title = 'Closed for today';
+    big = 'No changes announced';
   }
 
   return (
@@ -130,134 +159,144 @@ export default async function BeforeYouGo({
       className="min-h-screen bg-[#EFF7F2] text-[#0B2E22] flex justify-center sm:items-center sm:p-6"
       style={{ fontFamily: 'var(--font-display)' }}
     >
-      <div className="w-full max-w-[400px] min-h-screen sm:min-h-[740px] bg-white sm:rounded-[34px] overflow-hidden flex flex-col sm:shadow-[0_16px_60px_rgba(11,46,34,0.14)]">
-        <div className="relative h-40 shrink-0">
+      <div className="w-full max-w-[420px] bg-white sm:rounded-[32px] overflow-hidden sm:shadow-[0_16px_60px_rgba(11,46,34,0.16)]">
+        <div className="relative h-56">
           {business.header_url ? (
             <img
               src={business.header_url}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover scale-110 blur-[3px]"
-              style={{ objectPosition: 'center 62%' }}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: 'center 60%' }}
             />
           ) : (
-            <div className="absolute inset-0 bg-[#D6E9E0]" />
+            <div className="absolute inset-0 bg-[#0B2E22]" />
           )}
-          <div className="absolute inset-0 bg-white/45 backdrop-blur-[2px]" />
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-white" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10" />
 
-          <div className="relative h-full flex items-center justify-center">
+          <div className="relative h-full flex items-end gap-4 px-5 pb-5">
             {business.avatar_url ? (
               <img
                 src={business.avatar_url}
                 alt=""
-                className="w-24 h-24 rounded-full object-cover bg-white ring-4 ring-white/80 shadow-[0_6px_24px_rgba(11,46,34,0.16)]"
+                className="w-[86px] h-[86px] rounded-full object-cover bg-white shrink-0"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-[#0B2E22] ring-4 ring-white/80" />
+              <div className="w-[86px] h-[86px] rounded-full bg-[#0B2E22] shrink-0" />
             )}
+            <div className="pb-1 min-w-0">
+              <h1 className="text-[26px] font-bold tracking-[-0.02em] text-white leading-tight truncate">
+                {business.name}
+              </h1>
+              {business.tagline ? (
+                <p className="text-sm text-white/80 truncate">
+                  {business.tagline}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        <div className="px-6 pt-1 pb-7 flex-1 flex flex-col">
-          <div className="text-center">
-            <h1 className="text-xl font-bold tracking-tight">{business.name}</h1>
-            {business.tagline ? (
-              <p className="mt-0.5 text-sm text-[#4E7A69]">{business.tagline}</p>
-            ) : null}
-          </div>
+        <div className="px-5 pt-5 pb-6">
+          <p
+            className="text-[11px] uppercase tracking-[0.22em] text-[#4E7A69]"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            Before you go
+          </p>
 
-          <div className="mt-8 rounded-[24px] bg-[#F5F9F6] border border-[#0B2E22]/8 px-6 py-7 text-center">
-            <p
-              className="text-[10px] uppercase tracking-[0.3em] text-[#4E7A69]"
-              style={{ fontFamily: 'var(--font-mono)' }}
-            >
-              Before you go
-            </p>
-
-            <div className="mt-4 flex items-center justify-center gap-2.5">
+          <div
+            className={
+              'mt-3 rounded-2xl px-5 py-4 ' +
+              (amber ? 'bg-[#FDF3E3]' : closedAllDay ? 'bg-[#FCEBEB]' : 'bg-[#E9F6F0]')
+            }
+          >
+            <div className="flex items-center gap-2.5">
               <span
                 className="w-2.5 h-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: dot }}
               />
-              <p className="text-[27px] font-medium tracking-[-0.02em] leading-tight">
-                {bigLine}
+              <p
+                className="text-lg font-medium"
+                style={{ color: amber ? '#B4741A' : closedAllDay ? '#A32D2D' : '#0F6E56' }}
+              >
+                {title}
               </p>
             </div>
-
-            {smallLine ? (
-              <p className="mt-2 text-[19px] text-[#2C5648] leading-snug">
-                {smallLine}
+            {big ? (
+              <p className="mt-2 text-[26px] font-bold tracking-[-0.02em] leading-tight">
+                {big}
               </p>
             ) : null}
-
             {lead && lead.closes_at && todayRow?.closes_at ? (
-              <p className="mt-2 text-sm text-[#8AA79B]">
+              <p className="mt-1.5 text-sm text-[#7A6A50]">
                 Normally until {pretty(todayRow.closes_at)}
-                {lead.reason ? ' · ' + lead.reason : ''}
               </p>
             ) : null}
-
-            {lead ? (
-              <p
-                className="mt-4 text-[11px] text-[#8AA79B]"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              >
-                Updated {ago(lead.created_at)}
-                {business.instagram_handle
-                  ? ' · @' + business.instagram_handle
-                  : ''}
-              </p>
+            {lead?.reason ? (
+              <p className="text-sm text-[#7A6A50]">{lead.reason}</p>
             ) : null}
           </div>
 
+          {lead ? (
+            <p
+              className="mt-3 text-[11px] text-[#8AA79B]"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              Updated {ago(lead.created_at)}
+              {business.instagram_handle ? ' · @' + business.instagram_handle : ''}
+            </p>
+          ) : null}
+
           {also.length > 0 ? (
-            <div className="mt-3 rounded-[20px] bg-[#FAEEDA] px-5 py-4">
-              <p
-                className="text-[10px] uppercase tracking-[0.25em] text-[#854F0B]"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              >
-                Also today
-              </p>
-              <ul className="mt-2 space-y-1.5">
-                {also.map((u) => (
-                  <li key={u.headline + u.created_at} className="text-sm text-[#854F0B]">
+            <ul className="mt-3 space-y-1.5">
+              {also.map((u) => (
+                <li
+                  key={u.headline + u.created_at}
+                  className="flex gap-2 text-sm text-[#2C5648]"
+                >
+                  <span className="text-[#8AA79B]">·</span>
+                  <span>
                     <span className="font-medium">{u.headline}</span>
-                    {u.detail ? <span> &middot; {u.detail}</span> : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
+                    {u.detail ? ' — ' + u.detail : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
           ) : null}
 
           {links.length > 0 ? (
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              {links.slice(0, 3).map((l) => (
+            <div className="mt-5 grid grid-cols-4 gap-2">
+              {links.slice(0, 4).map((l) => (
                 <a
                   key={l.url}
                   href={l.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-center text-sm rounded-2xl border border-[#0B2E22]/12 py-3 hover:border-[#1D9E75] hover:text-[#0F6E56] transition"
+                  className="flex flex-col items-center gap-1.5 rounded-2xl border border-[#0B2E22]/12 py-3 hover:border-[#1D9E75] hover:text-[#0F6E56] transition"
                 >
-                  {l.label}
+                  <Icon name={iconFor(l.label)} />
+                  <span className="text-[11px]">{l.label}</span>
                 </a>
               ))}
             </div>
           ) : null}
 
-          <details className="mt-5">
-            <summary className="text-xs text-[#4E7A69] cursor-pointer list-none select-none text-center">
-              Regular hours &darr;
-            </summary>
-            <ul className="mt-3 space-y-1.5">
+          <div className="mt-5 rounded-2xl bg-[#F5F7F5] px-5 py-4">
+            <p
+              className="text-[11px] uppercase tracking-[0.22em] text-[#4E7A69]"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              Regular hours
+            </p>
+            <ul className="mt-2.5 space-y-1.5">
               {DAYS.map((label, idx) => {
                 const row = hours.find((h) => h.day_of_week === idx);
                 return (
                   <li
                     key={label}
                     className={
-                      'flex items-center justify-between text-xs ' +
-                      (idx === today ? 'font-medium' : 'text-[#8AA79B]')
+                      'flex items-center justify-between text-sm ' +
+                      (idx === today ? 'font-medium' : 'text-[#78907F]')
                     }
                   >
                     <span>{label}</span>
@@ -272,11 +311,11 @@ export default async function BeforeYouGo({
                 );
               })}
             </ul>
-          </details>
+          </div>
 
           <a
             href="/"
-            className="mt-auto pt-8 block text-center text-[10px] uppercase tracking-[0.2em] text-[#8AA79B] hover:text-[#1D9E75] transition"
+            className="mt-5 block text-center text-[10px] uppercase tracking-[0.2em] text-[#8AA79B] hover:text-[#1D9E75] transition"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
             Kept current by OpenStatus
