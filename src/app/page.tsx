@@ -12,7 +12,7 @@ const steps = [
   {
     n: '3',
     title: 'We do the work',
-    body: 'Our AI reads your posts for anything a customer needs to know today.',
+    body: 'Our system reads your posts for anything a customer needs to know today.',
   },
   {
     n: '4',
@@ -28,19 +28,16 @@ const steps = [
 
 const examples = [
   {
-    icon: 'M',
     caption: 'Croissants are gone for today, more tomorrow morning!',
     headline: 'Croissants sold out',
     detail: 'More tomorrow morning',
   },
   {
-    icon: 'W',
     caption: 'Closing at 3 today, roads are getting bad out there',
     headline: 'Closing early today',
     detail: 'Closing at 3:00 PM · Weather',
   },
   {
-    icon: 'L',
     caption: 'We are parked at The Factory until 7 tonight!',
     headline: "Today's location",
     detail: 'The Factory · Until 7:00 PM',
@@ -173,8 +170,8 @@ export default function HomePage() {
           You post. We translate.
         </h2>
         <p className="mt-3 text-[#5F5E5A] max-w-xl">
-          Our AI reads what you wrote and turns it into something a customer can
-          act on. Temporary things disappear on their own.
+          Our system reads what you wrote and turns it into something a customer
+          can act on. Temporary things disappear on their own.
         </p>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {examples.map((e) => (
