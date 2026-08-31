@@ -79,10 +79,12 @@ export default function HomePage() {
 
       <section className="max-w-6xl mx-auto px-6 pt-8 pb-16">
         <Label>Before you go</Label>
-        <h1 className="mt-6 text-[12vw] md:text-[7.5vw] font-bold leading-[0.86] tracking-[-0.045em]">
-          IS ANYTHING
+        <h1 className="mt-6 text-[11vw] md:text-[6.6vw] font-bold leading-[0.88] tracking-[-0.045em]">
+          YOUR CUSTOMERS
           <br />
-          <span className="text-[#1D9E75]">DIFFERENT TODAY?</span>
+          SHOULD KNOW
+          <br />
+          <span className="text-[#1D9E75]">WHAT CHANGED.</span>
         </h1>
 
         <div className="mt-10 grid gap-8 md:grid-cols-[1.1fr_1fr] md:items-center">
