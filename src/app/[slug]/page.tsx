@@ -109,119 +109,120 @@ export default async function BeforeYouGo({
   let bigLine: string;
   let smallLine: string;
   if (closedAllDay) {
-    bigLine = 'CLOSED TODAY';
+    bigLine = 'Closed today';
     smallLine = lead?.detail ?? 'Back tomorrow';
   } else if (lead) {
-    bigLine = lead.headline.toUpperCase();
+    bigLine = lead.headline;
     smallLine = lead.detail ?? '';
   } else if (isOpen) {
-    bigLine = 'BUSINESS AS USUAL';
+    bigLine = 'Business as usual';
     smallLine = 'Open until ' + pretty(effectiveClose);
   } else if (openMins !== null && nowMins < openMins) {
-    bigLine = 'OPENS ' + pretty(todayRow?.opens_at ?? null).toUpperCase();
+    bigLine = 'Opens ' + pretty(todayRow?.opens_at ?? null);
     smallLine = 'No changes announced';
   } else {
-    bigLine = 'CLOSED FOR TODAY';
+    bigLine = 'Closed for today';
     smallLine = 'No changes announced';
   }
 
   return (
     <div
-      className="min-h-screen bg-[#EFF7F2] text-[#0B2E22] flex items-center justify-center p-3 sm:p-6"
+      className="min-h-screen bg-[#EFF7F2] text-[#0B2E22] flex justify-center sm:items-center sm:p-6"
       style={{ fontFamily: 'var(--font-display)' }}
     >
-      <div className="w-full max-w-[400px] bg-white rounded-[26px] overflow-hidden shadow-[0_8px_40px_rgba(11,46,34,0.10)]">
-        {business.header_url ? (
-          <div className="h-16 overflow-hidden">
+      <div className="w-full max-w-[400px] min-h-screen sm:min-h-[740px] bg-white sm:rounded-[34px] overflow-hidden flex flex-col sm:shadow-[0_16px_60px_rgba(11,46,34,0.14)]">
+        <div className="relative h-40 shrink-0">
+          {business.header_url ? (
             <img
               src={business.header_url}
               alt=""
-              className="w-full h-full object-cover"
-              style={{ objectPosition: 'center 68%' }}
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-[3px]"
+              style={{ objectPosition: 'center 62%' }}
             />
-          </div>
-        ) : null}
+          ) : (
+            <div className="absolute inset-0 bg-[#D6E9E0]" />
+          )}
+          <div className="absolute inset-0 bg-white/45 backdrop-blur-[2px]" />
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-white" />
 
-        <div className="px-5 pt-4 pb-5">
-          <div className="flex items-center gap-3">
+          <div className="relative h-full flex items-center justify-center">
             {business.avatar_url ? (
               <img
                 src={business.avatar_url}
                 alt=""
-                className="w-11 h-11 rounded-full bg-white object-cover border border-[#0B2E22]/10"
+                className="w-24 h-24 rounded-full object-cover bg-white ring-4 ring-white/80 shadow-[0_6px_24px_rgba(11,46,34,0.16)]"
               />
             ) : (
-              <div className="w-11 h-11 rounded-full bg-[#0B2E22]" />
+              <div className="w-24 h-24 rounded-full bg-[#0B2E22] ring-4 ring-white/80" />
             )}
-            <div className="min-w-0">
-              <p className="font-bold tracking-tight leading-tight truncate">
-                {business.name}
-              </p>
-              {business.tagline ? (
-                <p className="text-xs text-[#4E7A69] truncate">
-                  {business.tagline}
-                </p>
-              ) : null}
-            </div>
+          </div>
+        </div>
+
+        <div className="px-6 pt-1 pb-7 flex-1 flex flex-col">
+          <div className="text-center">
+            <h1 className="text-xl font-bold tracking-tight">{business.name}</h1>
+            {business.tagline ? (
+              <p className="mt-0.5 text-sm text-[#4E7A69]">{business.tagline}</p>
+            ) : null}
           </div>
 
-          <p
-            className="mt-5 text-[10px] uppercase tracking-[0.25em] text-[#4E7A69]"
-            style={{ fontFamily: 'var(--font-mono)' }}
-          >
-            Before you go
-          </p>
-
-          <div className="mt-2.5 flex items-start gap-2.5">
-            <span
-              className="w-2.5 h-2.5 rounded-full mt-2.5 shrink-0"
-              style={{ backgroundColor: dot }}
-            />
-            <div className="min-w-0">
-              <p className="text-[30px] font-bold tracking-[-0.03em] leading-[1.02]">
-                {bigLine}
-              </p>
-              {smallLine ? (
-                <p className="mt-1 text-lg text-[#2C5648] leading-snug">
-                  {smallLine}
-                </p>
-              ) : null}
-              {lead && lead.closes_at && todayRow?.closes_at ? (
-                <p className="mt-1 text-sm text-[#8AA79B]">
-                  Normally until {pretty(todayRow.closes_at)}
-                  {lead.reason ? ' · ' + lead.reason : ''}
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          {lead ? (
+          <div className="mt-8 rounded-[24px] bg-[#F5F9F6] border border-[#0B2E22]/8 px-6 py-7 text-center">
             <p
-              className="mt-3 text-[11px] text-[#8AA79B]"
+              className="text-[10px] uppercase tracking-[0.3em] text-[#4E7A69]"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
-              Updated {ago(lead.created_at)}
-              {business.instagram_handle
-                ? ' · from @' + business.instagram_handle
-                : ''}
+              Before you go
             </p>
-          ) : null}
+
+            <div className="mt-4 flex items-center justify-center gap-2.5">
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: dot }}
+              />
+              <p className="text-[27px] font-medium tracking-[-0.02em] leading-tight">
+                {bigLine}
+              </p>
+            </div>
+
+            {smallLine ? (
+              <p className="mt-2 text-[19px] text-[#2C5648] leading-snug">
+                {smallLine}
+              </p>
+            ) : null}
+
+            {lead && lead.closes_at && todayRow?.closes_at ? (
+              <p className="mt-2 text-sm text-[#8AA79B]">
+                Normally until {pretty(todayRow.closes_at)}
+                {lead.reason ? ' · ' + lead.reason : ''}
+              </p>
+            ) : null}
+
+            {lead ? (
+              <p
+                className="mt-4 text-[11px] text-[#8AA79B]"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                Updated {ago(lead.created_at)}
+                {business.instagram_handle
+                  ? ' · @' + business.instagram_handle
+                  : ''}
+              </p>
+            ) : null}
+          </div>
 
           {also.length > 0 ? (
-            <div className="mt-4 rounded-2xl bg-[#F5F7F5] px-4 py-3">
+            <div className="mt-3 rounded-[20px] bg-[#FAEEDA] px-5 py-4">
               <p
-                className="text-[10px] uppercase tracking-[0.2em] text-[#4E7A69]"
+                className="text-[10px] uppercase tracking-[0.25em] text-[#854F0B]"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
                 Also today
               </p>
               <ul className="mt-2 space-y-1.5">
                 {also.map((u) => (
-                  <li key={u.headline + u.created_at} className="text-sm">
+                  <li key={u.headline + u.created_at} className="text-sm text-[#854F0B]">
                     <span className="font-medium">{u.headline}</span>
-                    {u.detail ? (
-                      <span className="text-[#4E7A69]"> &middot; {u.detail}</span>
-                    ) : null}
+                    {u.detail ? <span> &middot; {u.detail}</span> : null}
                   </li>
                 ))}
               </ul>
@@ -236,7 +237,7 @@ export default async function BeforeYouGo({
                   href={l.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-center text-sm rounded-full border border-[#0B2E22]/15 py-2.5 hover:border-[#1D9E75] hover:text-[#0F6E56] transition"
+                  className="text-center text-sm rounded-2xl border border-[#0B2E22]/12 py-3 hover:border-[#1D9E75] hover:text-[#0F6E56] transition"
                 >
                   {l.label}
                 </a>
@@ -244,11 +245,11 @@ export default async function BeforeYouGo({
             </div>
           ) : null}
 
-          <details className="mt-4">
-            <summary className="text-xs text-[#4E7A69] cursor-pointer list-none select-none">
+          <details className="mt-5">
+            <summary className="text-xs text-[#4E7A69] cursor-pointer list-none select-none text-center">
               Regular hours &darr;
             </summary>
-            <ul className="mt-2.5 space-y-1">
+            <ul className="mt-3 space-y-1.5">
               {DAYS.map((label, idx) => {
                 const row = hours.find((h) => h.day_of_week === idx);
                 return (
@@ -262,7 +263,7 @@ export default async function BeforeYouGo({
                     <span>{label}</span>
                     <span>
                       {!row
-                        ? '\u2014'
+                        ? '-'
                         : row.is_closed
                         ? 'Closed'
                         : pretty(row.opens_at) + ' - ' + pretty(row.closes_at)}
@@ -275,7 +276,7 @@ export default async function BeforeYouGo({
 
           <a
             href="/"
-            className="mt-5 block text-center text-[10px] uppercase tracking-[0.2em] text-[#8AA79B] hover:text-[#1D9E75] transition"
+            className="mt-auto pt-8 block text-center text-[10px] uppercase tracking-[0.2em] text-[#8AA79B] hover:text-[#1D9E75] transition"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
             Kept current by OpenStatus
