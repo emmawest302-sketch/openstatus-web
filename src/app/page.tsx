@@ -1,28 +1,28 @@
+const surfaces = [
+  ['Your Instagram bio', 'One link that never needs changing', 'Free'],
+  ['Your own website', 'A live status block above your hours', 'Unlimited'],
+  ['Your Before You Go page', 'Shareable, QR-able, always current', 'Free'],
+  ['Your regulars', 'A text when something actually changes', 'Unlimited'],
+];
+
 const freeFeatures = [
   ['Before You Go page', 'openstatus.co/yourbusiness'],
   ['Connect Instagram', 'We watch your posts for what matters'],
   ['Up to 5 automatic updates a month', 'We catch changes and update your page'],
   ['Automatic expiry', 'Updates clear when they stop being true'],
-  ['Regular hours', 'Your normal opening times'],
-  ['Directions, menu, call', 'The three things people tap'],
+  ['Regular hours', 'Your normal opening times, always shown'],
+  ['Directions, menu, call, website', 'The things people actually tap'],
 ];
 
 const proFeatures = [
-  ['Unlimited automatic updates', 'No monthly cap'],
+  ['Website embed', 'The same live status on your own site'],
   ['SMS alerts for your customers', 'Subscribers hear about changes instantly'],
+  ['Unlimited automatic updates', 'No monthly cap'],
   ['Customer subscriber list', 'See and manage who has opted in'],
   ['Full analytics', 'Views, taps and what people acted on'],
   ['More update types', 'Sold out, cash only, parking, location'],
   ['Facebook monitoring', 'Works with your Facebook posts too'],
-  ['Website embed', 'Same live status on your own site'],
   ['Your colours', 'Match the page to your brand'],
-];
-
-const flow = [
-  ['You post', 'on Instagram or Facebook'],
-  ['OpenStatus watches', 'for what actually matters'],
-  ['Your page updates', 'automatically, then clears'],
-  ['Customers know', 'before they get in the car'],
 ];
 
 function Keyhole({ size = 26 }: { size?: number }) {
@@ -108,21 +108,22 @@ export default function HomePage() {
             </span>
 
             <h1 className="mt-7 text-6xl font-bold tracking-[-0.035em] leading-[0.98]">
-              Keep your
-              <br />
-              customers
+              One update.
               <br />
               <span
                 className="text-[#C9CFC0]"
                 style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}
               >
-                in the know.
+                Everywhere
+                <br />
+                it matters.
               </span>
             </h1>
 
             <p className="mt-6 text-lg text-white/75 leading-relaxed max-w-md">
-              OpenStatus keeps your live updates front and centre, so customers
-              always know what&rsquo;s true today.
+              Keep posting on Instagram like you always do. OpenStatus turns
+              those updates into live information on your page, your website and
+              in your customers&rsquo; hands.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -166,11 +167,13 @@ export default function HomePage() {
             <div className="mt-2 rounded-2xl bg-[#FDF3E3] px-4 py-3.5">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#EF9F27]" />
-                <p className="font-medium text-[#854F0B]">Closing early today</p>
+                <p className="font-medium text-[#B4741A]">Closing early today</p>
               </div>
-              <p className="mt-1.5 text-[#0B2E22]">Open until 3:00 PM</p>
+              <p className="mt-1.5 text-xl font-bold tracking-tight">
+                Closing at 3:00 PM
+              </p>
               <p className="text-sm text-[#8A7A5E]">Normally until 8:00 PM</p>
-              <p className="text-sm text-[#8A7A5E]">Weather closure</p>
+              <p className="text-sm text-[#8A7A5E]">Weather</p>
             </div>
 
             <p
@@ -180,8 +183,8 @@ export default function HomePage() {
               Updated 1h ago · via OpenStatus
             </p>
 
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-              {['Directions', 'Menu', 'Call'].map((l) => (
+            <div className="mt-4 grid grid-cols-4 gap-2 text-center text-[11px]">
+              {['Directions', 'Menu', 'Call', 'Website'].map((l) => (
                 <span
                   key={l}
                   className="rounded-xl border border-[#0B2E22]/12 py-2.5"
@@ -190,48 +193,116 @@ export default function HomePage() {
                 </span>
               ))}
             </div>
-
-            <p className="mt-4 text-center text-xs text-[#8AA79B]">
-              Regular hours &darr;
-            </p>
           </div>
         </div>
       </section>
 
       <section className="max-w-6xl mx-auto px-6 -mt-10 relative">
-        <div className="rounded-[26px] bg-white p-8 grid gap-8 lg:grid-cols-[300px_1fr] lg:items-center">
-          <div>
-            <p className="text-2xl font-bold tracking-tight leading-snug">
-              You post.
-              <br />
-              We keep it current.
-            </p>
-            <p className="mt-3 text-sm text-[#4E7A69] leading-relaxed">
-              OpenStatus watches for important updates and keeps your page
-              accurate on its own.
-            </p>
-          </div>
+        <div className="rounded-[26px] bg-white p-8">
+          <div className="grid gap-8 lg:grid-cols-[300px_1fr] lg:items-start">
+            <div>
+              <p className="text-2xl font-bold tracking-tight leading-snug">
+                You post it once.
+                <br />
+                We put it everywhere.
+              </p>
+              <p className="mt-3 text-sm text-[#4E7A69] leading-relaxed">
+                OpenStatus is the one place your live status lives. Everything
+                else reads from it, and clears itself when the day is over.
+              </p>
+            </div>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {flow.map(([title, body], i) => (
-              <div key={title}>
-                <span
-                  className="text-[11px] text-[#1D9E75]"
-                  style={{ fontFamily: 'var(--font-mono)' }}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {surfaces.map(([where, what, tier]) => (
+                <div
+                  key={where}
+                  className="rounded-2xl bg-[#F7F6F1] px-5 py-4"
                 >
-                  0{i + 1}
-                </span>
-                <p className="mt-1.5 font-medium tracking-tight">{title}</p>
-                <p className="mt-1 text-sm text-[#78766F] leading-relaxed">
-                  {body}
-                </p>
-              </div>
-            ))}
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-medium tracking-tight">{where}</p>
+                    <span
+                      className={
+                        'text-[9px] uppercase tracking-[0.15em] px-2 py-1 rounded-full shrink-0 ' +
+                        (tier === 'Free'
+                          ? 'bg-[#E1F5EE] text-[#0F6E56]'
+                          : 'bg-[#0B2E22] text-white')
+                      }
+                      style={{ fontFamily: 'var(--font-mono)' }}
+                    >
+                      {tier}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-[#78766F]">{what}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       <section className="max-w-6xl mx-auto px-6 py-16">
+        <div className="rounded-[26px] bg-[#0B2E22] text-white overflow-hidden">
+          <div className="p-8 sm:p-12 grid gap-10 lg:grid-cols-2 lg:items-center">
+            <div>
+              <p
+                className="text-[11px] uppercase tracking-[0.25em] text-[#9FE1CB]"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                The bit owners like most
+              </p>
+              <h2 className="mt-4 text-4xl font-bold tracking-[-0.03em] leading-tight">
+                Your website stops
+                <br />
+                telling people the
+                <br />
+                <span
+                  className="text-[#9FE1CB]"
+                  style={{
+                    fontFamily: 'var(--font-serif)',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  wrong thing.
+                </span>
+              </h2>
+              <p className="mt-5 text-white/70 leading-relaxed max-w-md">
+                Paste one line into your site. From then on it shows whatever is
+                true today, taken from the posts you were already making. You
+                never edit it again.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-white text-[#0B2E22] p-6">
+              <p
+                className="text-[10px] uppercase tracking-[0.25em] text-[#4E7A69]"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                On their own website
+              </p>
+              <div className="mt-3 rounded-xl bg-[#FDF3E3] px-4 py-3.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#EF9F27]" />
+                  <p className="text-sm font-medium text-[#B4741A]">
+                    Closing early today
+                  </p>
+                </div>
+                <p className="mt-1 text-lg font-bold tracking-tight">
+                  Open until 3:00 PM
+                </p>
+                <p className="text-xs text-[#8A7A5E]">Normally until 8:00 PM</p>
+              </div>
+              <p
+                className="mt-3 text-[10px] text-[#8AA79B]"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                Kept current by OpenStatus
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-6 pb-16">
         <div className="grid gap-6 lg:grid-cols-[280px_1fr_1fr] lg:items-start">
           <div>
             <h2 className="text-3xl font-bold tracking-tight leading-tight">
@@ -240,8 +311,8 @@ export default function HomePage() {
               Real value.
             </h2>
             <p className="mt-3 text-[#4E7A69] leading-relaxed">
-              Start free. Upgrade when you want to reach customers, not just
-              inform the ones who check.
+              Free keeps your page current. Unlimited puts that status wherever
+              your customers already are.
             </p>
           </div>
 
@@ -259,7 +330,7 @@ export default function HomePage() {
               </span>
             </p>
             <p className="mt-3 text-sm text-[#4E7A69]">
-              Everything you need to share what&rsquo;s true today.
+              They check, and it is always right.
             </p>
 
             <ul className="mt-6 space-y-3">
@@ -307,7 +378,7 @@ export default function HomePage() {
               or $150 a year, saving 17%
             </p>
             <p className="mt-3 text-sm text-white/70">
-              Make sure your customers never miss what matters.
+              You reach them, wherever they are.
             </p>
 
             <ul className="mt-6 space-y-3">
@@ -340,9 +411,9 @@ export default function HomePage() {
             </span>
             <div>
               <p className="text-xl font-bold tracking-tight">
-                Post like you always do.
+                Keep posting there.
               </p>
-              <p className="text-[#4E7A69]">OpenStatus keeps the rest current.</p>
+              <p className="text-[#4E7A69]">We will take it from there.</p>
             </div>
           </div>
           <a
