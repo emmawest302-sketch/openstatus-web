@@ -112,7 +112,7 @@ export default function HomePage() {
               <br />
               <span
                 className="text-[#C9CFC0]"
-                style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}
+                style={{ fontStyle: 'italic' }}
               >
                 Everywhere
                 <br />
@@ -257,10 +257,7 @@ export default function HomePage() {
                 <br />
                 <span
                   className="text-[#9FE1CB]"
-                  style={{
-                    fontFamily: 'var(--font-serif)',
-                    fontStyle: 'italic',
-                  }}
+                  style={{ fontStyle: 'italic' }}
                 >
                   wrong thing.
                 </span>
