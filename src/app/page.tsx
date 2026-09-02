@@ -1,271 +1,283 @@
-const surfaces = [
-  ['Your Instagram bio', 'One link that never needs changing'],
-  ['Your own website', 'A live status block above your hours'],
-  ['Your status page', 'Shareable, QR-able, always current'],
-  ['Your regulars', 'A text when something actually changes'],
-];
+import Image from 'next/image';
+import Link from 'next/link';
 
 const freeFeatures = [
-  ['Your own status page', 'openstatus.co/yourbusiness'],
-  ['Connect Instagram', 'We watch your posts for what matters'],
-  ['Unlimited automatic updates', 'Closing early, closed today, opening late'],
-  ['Automatic expiry', 'Back to normal on its own, every time'],
-  ['Regular hours', 'Always shown, always current'],
-  ['Quick links', 'Menu, order, directions, reserve and more'],
-  ['Website embed', 'The same live status on your own site'],
-  ['Manual override', 'Set or correct anything yourself'],
+  'Your own openstatus.co link',
+  'Instagram connection',
+  'Unlimited automatic updates',
+  'Automatic expiry',
+  'Regular hours + quick links',
+  'Website status embed',
+  'Manual corrections',
 ];
 
 const proFeatures = [
-  ['Who is checking', 'How many people, and when'],
-  ['What they tapped', 'Directions, menu, order, website'],
-  ['Change performance', 'How many people saw a closure notice'],
-  ['Trends over time', 'Busiest days, busiest hours'],
-  ['SMS alerts', 'Text your opted-in customers when things change'],
-  ['Subscriber list', 'See and manage who has opted in'],
-  ['More customisation', 'Match the page to your brand'],
+  'Visitor and tap analytics',
+  'Change performance',
+  'Busiest-day trends',
+  'SMS alerts',
+  'Subscriber management',
+  'More brand control',
 ];
 
-function Keyhole({ size = 26 }: { size?: number }) {
+function Keyhole({ size = 30 }: { size?: number }) {
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
-      <mask id="kh">
+      <mask id="keyhole-mask">
         <rect width="100" height="100" fill="#fff" />
         <circle cx="50" cy="42" r="13" fill="#000" />
         <path d="M44 52 L56 52 L60 74 L40 74 Z" fill="#000" />
       </mask>
-      <circle cx="50" cy="50" r="48" fill="currentColor" mask="url(#kh)" />
+      <circle cx="50" cy="50" r="48" fill="currentColor" mask="url(#keyhole-mask)" />
     </svg>
   );
 }
 
-function Tick({ light = false }: { light?: boolean }) {
+function Arrow({ size = 22 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" className={'shrink-0 mt-1 ' + (light ? 'text-[#AAC1AD]' : 'text-[#537987]')} aria-hidden="true">
-      <path d="M4 12.5l5 5L20 6.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
+      <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" />
     </svg>
   );
 }
 
-function SampleCard() {
+function Check() {
   return (
-    <div className="w-full max-w-[330px] rounded-[26px] bg-white border border-[#E9633E]/20 p-5 shadow-[0_20px_60px_rgba(83,121,135,0.2)]">
-      <div className="flex items-center gap-3">
-        <img src="/images.png" alt="" className="w-11 h-11 rounded-full object-cover border-2 border-[#AAC1AD]/40" />
-        <div>
-          <p className="font-bold text-[15px] tracking-tight text-[#1A1A18]">Herban Market</p>
-          <p className="text-xs text-[#6C6A62]">Grocery &amp; coffee · Columbia, TN</p>
-        </div>
-      </div>
-      <p className="mt-5 text-[10px] uppercase tracking-[0.25em] text-[#537987] font-bold">Before you go</p>
-      <div className="mt-2 rounded-[18px] bg-[#EAAA42]/15 border border-[#EAAA42]/30 px-4 py-4">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#E9633E]" />
-          <p className="font-medium text-[#E9633E] text-sm">Closing early today</p>
-        </div>
-        <p className="mt-2 text-[22px] font-bold tracking-tight text-[#1A1A18]">Closing at 3:00 PM</p>
-        <p className="text-sm text-[#6C6A62]">Normally until 8:00 PM</p>
-      </div>
-      <div className="mt-4 grid grid-cols-4 gap-2 text-center text-[11px] text-[#537987]">
-        {['Directions', 'Menu', 'Call', 'Website'].map((l) => (
-          <span key={l} className="rounded-xl border border-[#537987]/20 py-2.5 bg-[#537987]/5">{l}</span>
-        ))}
-      </div>
-    </div>
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+      <path d="M4 12.5l5 5L20 6.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" />
+    </svg>
+  );
+}
+
+function Eyebrow({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
+  return (
+    <p className={`font-mono text-[10px] font-bold uppercase tracking-[0.22em] ${dark ? 'text-white/55' : 'text-black/55'}`}>
+      {'// '}{children}
+    </p>
   );
 }
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#FAF8F4] text-[#1A1A18]" style={{ fontFamily: 'var(--font-display)' }}>
+    <main className="min-h-screen overflow-hidden bg-[#F4F1E8] text-[#0A0A0A]" style={{ fontFamily: 'var(--font-display)' }}>
+      <div className="bg-[#A7E348] px-4 py-2.5 text-center font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-black">
+        The door changes. Your link keeps up. <span aria-hidden="true">↗</span>
+      </div>
 
-      {/* NAV */}
-      <header className="sticky top-0 z-50 bg-[#1C2D32]/80 backdrop-blur border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="text-[#AAC1AD]"><Keyhole size={24} /></span>
-            <span className="text-lg font-bold tracking-[0.02em] text-white">OPENSTATUS</span>
-          </div>
-          <nav className="flex items-center gap-2">
-            <a href="/login" className="px-4 py-2 text-sm text-white/70 hover:text-white transition">Log in</a>
-            <a href="/signup" className="px-5 py-2.5 text-sm font-semibold bg-[#E9633E] text-white rounded-full hover:bg-[#EAAA42] hover:text-[#1A1A18] transition">Get started free</a>
+      <header className="relative z-50 border-b-2 border-black bg-[#F4F1E8]">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-4 md:px-8">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="OpenStatus home">
+            <span className="text-black"><Keyhole size={27} /></span>
+            <span className="text-lg font-bold tracking-[-0.03em]">OPENSTATUS</span>
+          </Link>
+
+          <nav className="hidden items-center gap-8 font-mono text-[10px] font-bold uppercase tracking-[0.14em] md:flex" aria-label="Main navigation">
+            <a href="#how" className="underline-offset-4 hover:underline">How it works</a>
+            <a href="#pricing" className="underline-offset-4 hover:underline">Pricing</a>
+            <Link href="/herban" className="underline-offset-4 hover:underline">Live example</Link>
           </nav>
+
+          <div className="flex items-center gap-2">
+            <Link href="/login" className="hidden border-2 border-black px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition hover:bg-black hover:text-white sm:block">
+              Log in
+            </Link>
+            <Link href="/signup" className="flex items-center gap-2 border-2 border-black bg-black px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white transition hover:bg-[#A7E348] hover:text-black">
+              Get your link <Arrow size={16} />
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* HERO — full-bleed photo */}
-      <section className="relative min-h-[88vh] flex items-center overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/image.png')" }}
+      <section className="relative min-h-[calc(100svh-108px)] border-b-2 border-black bg-black text-white">
+        <Image
+          src="/image.png"
+          alt="Two local business workers photographed with direct flash"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
         />
-        <div className="absolute inset-0 bg-[#1C2D32]/55" />
-        <div className="relative z-10 max-w-6xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-12 items-center w-full">
-          <div>
-            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] px-3.5 py-2 rounded-full bg-white/15 text-white border border-white/25">
-              ✦ no app download required
-            </span>
-            <h1 className="mt-7 text-6xl font-bold tracking-[-0.04em] leading-[0.95] text-white">
-              Your hours change.<br />
-              <span className="text-[#EAAA42]">Your link doesn&rsquo;t.</span>
+        <div className="absolute inset-0 bg-black/42" />
+        <div className="photo-vignette absolute inset-0" />
+        <div className="noise absolute inset-0 opacity-35" />
+
+        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-108px)] max-w-[1440px] flex-col px-5 py-7 md:px-8 md:py-9">
+          <div className="grid grid-cols-2 gap-4 font-mono text-[9px] font-bold uppercase leading-relaxed tracking-[0.16em] text-white/75 md:grid-cols-3 md:text-[10px]">
+            <p>The hours online say open.<br />The lights say otherwise.</p>
+            <p className="hidden text-center md:block">Live status for local businesses<br />No app required</p>
+            <p className="text-right">Nashville, Franklin + beyond<br />Built for right now</p>
+          </div>
+
+          <div className="my-auto py-20 text-center">
+            <Eyebrow dark>Know before you go</Eyebrow>
+            <h1 className="mx-auto mt-5 max-w-6xl text-[clamp(4rem,11vw,10rem)] font-bold uppercase leading-[0.78] tracking-[-0.075em]">
+              Are they<br />
+              <span className="text-[#A7E348]">actually open?</span>
             </h1>
-            <p className="mt-6 text-xl text-white/75 leading-relaxed max-w-md">
-              Post on Instagram like you always do. OpenStatus turns it into live info on your status page, your website, and in your customers&rsquo; hands.
+            <p className="mx-auto mt-8 max-w-xl text-base font-medium leading-relaxed text-white/80 md:text-lg">
+              One link that shows customers what is true right now—current hours, closures, sold-out items, pop-ups, and the updates they would otherwise miss.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a href="/signup" className="px-7 py-3.5 rounded-full bg-[#E9633E] text-white font-semibold hover:bg-[#EAAA42] hover:text-[#1A1A18] transition text-base">Get your link — it&rsquo;s free</a>
-              <a href="/herban" className="px-7 py-3.5 rounded-full bg-white/15 border border-white/30 font-semibold text-white hover:bg-white/25 transition text-base">See an example →</a>
-            </div>
-            <p className="mt-5 text-sm text-white/50">Free forever. No credit card. Takes 2 minutes.</p>
           </div>
-          <div className="flex justify-center lg:justify-end">
-            <SampleCard />
+
+          <div className="grid items-end gap-5 md:grid-cols-[1fr_auto_1fr]">
+            <div className="hidden font-mono text-[9px] uppercase leading-relaxed tracking-[0.16em] text-white/55 md:block">
+              Post like you already do.<br />OpenStatus handles the rest.
+            </div>
+            <Link href="/signup" className="group flex min-w-[250px] items-center justify-between border-2 border-white bg-white px-5 py-4 font-bold uppercase tracking-tight text-black transition hover:border-[#A7E348] hover:bg-[#A7E348]">
+              Start free
+              <span className="transition-transform group-hover:translate-x-1"><Arrow /></span>
+            </Link>
+            <Link href="/herban" className="justify-self-end font-mono text-[10px] font-bold uppercase tracking-[0.15em] underline decoration-1 underline-offset-4 hover:text-[#A7E348]">
+              See a live business ↗
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* BANNER */}
-      <section className="bg-[#537987] py-5">
-        <p className="text-center text-white/80 text-sm tracking-wider uppercase font-semibold">
-          Live status pages for local businesses · no app needed
-        </p>
-      </section>
+      <div className="ticker border-b-2 border-black bg-[#A7E348] py-3 font-mono text-xs font-bold uppercase tracking-[0.2em]">
+        <div className="ticker-track">
+          <span>Closing early today&nbsp;&nbsp;◆&nbsp;&nbsp;Sold out&nbsp;&nbsp;◆&nbsp;&nbsp;Pop-up moved&nbsp;&nbsp;◆&nbsp;&nbsp;Opening late&nbsp;&nbsp;◆&nbsp;&nbsp;Private event&nbsp;&nbsp;◆&nbsp;&nbsp;</span>
+          <span aria-hidden="true">Closing early today&nbsp;&nbsp;◆&nbsp;&nbsp;Sold out&nbsp;&nbsp;◆&nbsp;&nbsp;Pop-up moved&nbsp;&nbsp;◆&nbsp;&nbsp;Opening late&nbsp;&nbsp;◆&nbsp;&nbsp;Private event&nbsp;&nbsp;◆&nbsp;&nbsp;</span>
+        </div>
+      </div>
 
-      {/* HOW IT WORKS */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#A0AF72]">How it works</span>
-            <h2 className="mt-3 text-4xl font-bold tracking-[-0.03em] leading-tight">
-              You post it once.<br />
-              <span className="text-[#537987]">We put it everywhere.</span>
-            </h2>
-            <p className="mt-4 text-[#6C6A62] leading-relaxed max-w-md">
-              OpenStatus watches your Instagram for what actually matters — early closures, special hours, pop-up events. It reads them so your customers don&rsquo;t have to guess.
+      <section className="border-b-2 border-black" id="how">
+        <div className="mx-auto grid max-w-[1440px] lg:grid-cols-[0.75fr_1.25fr]">
+          <div className="border-b-2 border-black p-6 md:p-10 lg:border-b-0 lg:border-r-2">
+            <Eyebrow>What OpenStatus does</Eyebrow>
+            <p className="mt-8 max-w-sm font-serif text-3xl italic leading-tight md:text-4xl">
+              The internet should not make people guess whether the door will be open.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {surfaces.map(([where, what], i) => {
-              const colors = [
-                'bg-[#E9633E]/8 border-[#E9633E]/20',
-                'bg-[#EAAA42]/8 border-[#EAAA42]/20',
-                'bg-[#A0AF72]/10 border-[#A0AF72]/20',
-                'bg-[#537987]/8 border-[#537987]/20',
-              ];
-              const dots = ['bg-[#E9633E]', 'bg-[#EAAA42]', 'bg-[#A0AF72]', 'bg-[#537987]'];
-              return (
-                <div key={where} className={`rounded-[20px] border p-5 ${colors[i]}`}>
-                  <span className={`w-2 h-2 rounded-full inline-block mb-3 ${dots[i]}`} />
-                  <p className="font-semibold tracking-tight">{where}</p>
-                  <p className="mt-1 text-sm text-[#6C6A62]">{what}</p>
+          <div className="p-6 md:p-10 lg:p-14">
+            <h2 className="max-w-4xl text-[clamp(3.2rem,7.5vw,7.2rem)] font-bold uppercase leading-[0.83] tracking-[-0.065em]">
+              One post.<br />One link.<br />The actual answer.
+            </h2>
+            <div className="mt-10 grid gap-6 border-t-2 border-black pt-7 md:grid-cols-2">
+              <p className="max-w-md text-lg leading-relaxed">
+                You post an update on Instagram. OpenStatus spots the useful part and turns it into a clean live notice for customers.
+              </p>
+              <p className="max-w-md text-lg leading-relaxed text-black/60">
+                When the change is over, the notice expires automatically and your page goes back to showing regular hours.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b-2 border-black bg-white">
+        <div className="mx-auto max-w-[1440px]">
+          <div className="grid md:grid-cols-3">
+            {[
+              ['01', 'POST', 'Share the update where you already have your audience.'],
+              ['02', 'OPENSTATUS READS', 'We identify only the details that could change someone’s trip.'],
+              ['03', 'CUSTOMERS KNOW', 'Your status link and website show the current answer immediately.'],
+            ].map(([number, title, body], index) => (
+              <article key={number} className={`min-h-[320px] p-6 md:p-9 ${index < 2 ? 'border-b-2 border-black md:border-b-0 md:border-r-2' : ''}`}>
+                <p className="font-mono text-xs font-bold tracking-[0.18em]">/{number}</p>
+                <h3 className="mt-16 text-4xl font-bold uppercase tracking-[-0.05em] md:text-5xl">{title}</h3>
+                <p className="mt-5 max-w-xs text-base leading-relaxed text-black/60">{body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b-2 border-black bg-[#111] text-white">
+        <div className="mx-auto grid max-w-[1440px] lg:grid-cols-2">
+          <div className="relative min-h-[520px] border-b-2 border-white/25 lg:border-b-0 lg:border-r-2">
+            <Image src="/herban-market-franklin-sign-768x1024.jpg" alt="A local business sign" fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover grayscale" />
+            <div className="noise absolute inset-0 opacity-30" />
+            <div className="absolute left-5 top-5 border border-white bg-black/75 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.16em] backdrop-blur-sm">
+              A real place deserves a real answer
+            </div>
+          </div>
+          <div className="flex flex-col justify-between p-6 md:p-10 lg:p-14">
+            <div>
+              <Eyebrow dark>Live on every surface</Eyebrow>
+              <h2 className="mt-5 text-[clamp(3.2rem,6vw,6.5rem)] font-bold uppercase leading-[0.84] tracking-[-0.06em]">
+                Put it<br />where people<br /><span className="text-[#A7E348]">already look.</span>
+              </h2>
+            </div>
+            <div className="mt-16 grid grid-cols-2 border-l border-t border-white/30 font-mono text-[10px] font-bold uppercase tracking-[0.12em] md:grid-cols-4">
+              {['Instagram bio', 'Your website', 'QR code', 'Text alerts'].map((item) => (
+                <div key={item} className="border-b border-r border-white/30 px-3 py-5">{item}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b-2 border-black bg-[#F4F1E8]" id="pricing">
+        <div className="mx-auto max-w-[1440px] px-5 py-20 md:px-8 md:py-28">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr]">
+            <div>
+              <Eyebrow>Simple pricing</Eyebrow>
+              <h2 className="mt-5 text-[clamp(3.5rem,7vw,7rem)] font-bold uppercase leading-[0.83] tracking-[-0.065em]">
+                Status is<br /><span className="text-[#2F6B3B]">free.</span><br />Insight is pro.
+              </h2>
+              <p className="mt-8 max-w-md text-lg leading-relaxed text-black/60">
+                Every business should be able to keep customers informed. Pay only when you want deeper insight and direct reach.
+              </p>
+            </div>
+
+            <div className="border-2 border-black bg-white">
+              <div className="grid md:grid-cols-2">
+                <div className="border-b-2 border-black p-6 md:border-b-0 md:border-r-2 md:p-8">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]">Free / forever</p>
+                  <p className="mt-4 text-6xl font-bold tracking-[-0.06em]">$0</p>
+                  <ul className="mt-8 space-y-3">
+                    {freeFeatures.map((item) => (
+                      <li key={item} className="flex gap-2.5 text-sm"><Check /><span>{item}</span></li>
+                    ))}
+                  </ul>
+                  <Link href="/signup" className="group mt-9 flex items-center justify-between border-2 border-black bg-black px-4 py-3.5 text-sm font-bold uppercase text-white transition hover:bg-[#A7E348] hover:text-black">
+                    Start free <Arrow size={18} />
+                  </Link>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
-      {/* WEBSITE EMBED */}
-      <section className="bg-[#1C2D32] py-20 px-6">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
-          <div className="rounded-[24px] bg-white/5 border border-white/10 p-6">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-[#AAC1AD] font-bold">On their website</p>
-            <div className="mt-3 rounded-[18px] bg-[#EAAA42]/20 border border-[#EAAA42]/30 px-4 py-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#E9633E]" />
-                <p className="text-sm font-medium text-[#E9633E]">Closing early today</p>
+                <div className="bg-[#A7E348] p-6 md:p-8">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]">Pro / more signal</p>
+                  <p className="mt-4 text-6xl font-bold tracking-[-0.06em]">$15<span className="ml-1 text-sm tracking-normal">/MO</span></p>
+                  <ul className="mt-8 space-y-3">
+                    {proFeatures.map((item) => (
+                      <li key={item} className="flex gap-2.5 text-sm"><Check /><span>{item}</span></li>
+                    ))}
+                  </ul>
+                  <Link href="/signup" className="group mt-9 flex items-center justify-between border-2 border-black bg-[#F4F1E8] px-4 py-3.5 text-sm font-bold uppercase transition hover:bg-black hover:text-white">
+                    Start with Pro <Arrow size={18} />
+                  </Link>
+                </div>
               </div>
-              <p className="mt-1.5 text-xl font-bold tracking-tight text-white">Open until 3:00 PM</p>
-              <p className="text-xs text-[#AAC1AD]">Normally until 8:00 PM</p>
             </div>
-            <p className="mt-3 text-[10px] text-white/40 font-mono">Kept current by OpenStatus</p>
-          </div>
-          <div className="text-white">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#E3A58A]">Website embed</span>
-            <h2 className="mt-3 text-4xl font-bold tracking-[-0.03em] leading-tight">
-              Your website stops<br />telling people the{' '}
-              <span className="text-[#EAAA42] italic">wrong thing.</span>
-            </h2>
-            <p className="mt-4 text-white/60 leading-relaxed">
-              Paste one line into your site. From then on it shows whatever&rsquo;s actually true — taken from the posts you were already making. Free, like the rest of it.
-            </p>
           </div>
         </div>
       </section>
 
-      {/* PRICING */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
-        <div className="text-center max-w-2xl mx-auto">
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#A0AF72]">Pricing</span>
-          <h2 className="mt-3 text-4xl font-bold tracking-[-0.03em] leading-tight">
-            The status is free.{' '}
-            <span className="text-[#537987] italic">Always.</span>
+      <section className="relative border-b-2 border-black bg-[#2F6B3B] px-5 py-24 text-center text-white md:px-8 md:py-32">
+        <div className="noise absolute inset-0 opacity-20" />
+        <div className="relative mx-auto max-w-5xl">
+          <Eyebrow dark>No more crossed fingers</Eyebrow>
+          <h2 className="mt-6 text-[clamp(4rem,10vw,9rem)] font-bold uppercase leading-[0.8] tracking-[-0.075em]">
+            Make the<br />link useful.
           </h2>
-          <p className="mt-4 text-[#6C6A62] leading-relaxed">
-            We don&rsquo;t charge a business to keep its customers informed. Pay only if you want to know who&rsquo;s checking — and reach them directly.
-          </p>
-        </div>
-        <div className="mt-10 grid gap-5 lg:grid-cols-2">
-          <div className="rounded-[26px] bg-white border border-black/8 p-8">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#A0AF72]">Free</span>
-            <p className="mt-3 text-5xl font-bold tracking-tight">$0<span className="ml-2 text-base font-normal text-[#6C6A62]">forever</span></p>
-            <p className="mt-3 text-[#1A1A18] font-semibold">Keep customers in the know.</p>
-            <p className="mt-1 text-sm text-[#6C6A62]">Live status, current hours, everything they need before they go.</p>
-            <ul className="mt-6 space-y-3">
-              {freeFeatures.map(([title, body]) => (
-                <li key={title} className="flex gap-2.5">
-                  <Tick />
-                  <span>
-                    <span className="block text-sm font-medium">{title}</span>
-                    <span className="block text-xs text-[#6C6A62]">{body}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <a href="/signup" className="mt-7 block text-center py-3.5 rounded-full bg-[#1A1A18] text-white font-semibold hover:bg-[#537987] transition">Get started free</a>
-          </div>
-          <div className="rounded-[26px] bg-[#537987] text-white p-8">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#AAC1AD]">Pro</span>
-            <p className="mt-3 text-5xl font-bold tracking-tight">$15<span className="ml-2 text-base font-normal text-white/60">/ month</span></p>
-            <p className="mt-1 text-sm text-[#AAC1AD]">or $150 a year — saving 17%</p>
-            <p className="mt-3 font-semibold">Know who is checking.</p>
-            <p className="mt-1 text-sm text-white/70">Analytics, insight, and tools to reach the people paying attention.</p>
-            <ul className="mt-6 space-y-3">
-              {proFeatures.map(([title, body]) => (
-                <li key={title} className="flex gap-2.5">
-                  <Tick light />
-                  <span>
-                    <span className="block text-sm font-medium">{title}</span>
-                    <span className="block text-xs text-white/55">{body}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <a href="/signup" className="mt-7 block text-center py-3.5 rounded-full bg-[#E9633E] font-semibold hover:bg-[#EAAA42] hover:text-[#1A1A18] transition">Start with Pro</a>
-          </div>
+          <Link href="/signup" className="group mx-auto mt-10 flex max-w-sm items-center justify-between border-2 border-white bg-white px-5 py-4 font-bold uppercase text-black transition hover:border-[#A7E348] hover:bg-[#A7E348]">
+            Get your OpenStatus link <Arrow />
+          </Link>
+          <p className="mt-5 font-mono text-[9px] uppercase tracking-[0.18em] text-white/60">Free forever · No credit card · Two-minute setup</p>
         </div>
       </section>
 
-      {/* BOTTOM CTA */}
-      <section className="max-w-6xl mx-auto px-6 pb-20">
-        <div className="rounded-[30px] bg-[#E9633E] px-8 py-14 text-center text-white">
-          <span className="text-[#EAAA42] text-3xl">✦</span>
-          <h2 className="mt-4 text-4xl font-bold tracking-[-0.03em]">Keep posting there.</h2>
-          <p className="mt-2 text-white/80 text-lg">We&rsquo;ll take it from there.</p>
-          <a href="/signup" className="mt-8 inline-block px-8 py-4 rounded-full bg-white text-[#E9633E] font-bold text-base hover:bg-[#FAF8F4] transition">Get your OpenStatus link →</a>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="max-w-6xl mx-auto px-6 pb-10">
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-black/10 text-[11px] uppercase tracking-[0.2em] text-[#9B998F]">
-          <div className="flex items-center gap-2">
-            <span className="text-[#537987]"><Keyhole size={16} /></span>
-            <span>OpenStatus</span>
+      <footer className="bg-[#0A0A0A] px-5 py-7 text-white md:px-8">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-5 font-mono text-[10px] font-bold uppercase tracking-[0.15em] md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2"><Keyhole size={18} /><span>OpenStatus</span></div>
+          <p className="text-white/45">Know before you go.</p>
+          <div className="flex gap-5">
+            <Link href="/login" className="hover:text-[#A7E348]">Log in</Link>
+            <Link href="/signup" className="hover:text-[#A7E348]">Get started</Link>
           </div>
-          <a href="/login" className="hover:text-[#537987] transition">Log in</a>
         </div>
       </footer>
-    </div>
+    </main>
   );
 }
