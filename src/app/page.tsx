@@ -119,16 +119,20 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid items-end gap-5 md:grid-cols-[1fr_auto_1fr]">
-            <div className="hidden font-mono text-[9px] uppercase leading-relaxed tracking-[0.16em] text-white/55 md:block">
-              Post like you already do.<br />OpenStatus handles the rest.
-            </div>
-            <Link href="/signup" className="group flex min-w-[250px] items-center justify-between border-2 border-white bg-white px-5 py-4 font-bold uppercase tracking-tight text-black transition hover:border-[#A7E348] hover:bg-[#A7E348]">
-              Start free
+          <div className="mx-auto grid w-full max-w-[620px] gap-3 sm:grid-cols-2">
+            <Link href="/signup" className="group flex min-h-[64px] items-center justify-between border-2 border-white bg-white px-5 py-3.5 text-left text-black transition hover:border-[#A7E348] hover:bg-[#A7E348]">
+              <span>
+                <span className="block font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-black/55">For your business</span>
+                <span className="mt-0.5 block font-bold uppercase tracking-tight">Start free</span>
+              </span>
               <span className="transition-transform group-hover:translate-x-1"><Arrow /></span>
             </Link>
-            <Link href="/herban" className="justify-self-end font-mono text-[10px] font-bold uppercase tracking-[0.15em] underline decoration-1 underline-offset-4 hover:text-[#A7E348]">
-              See a live business ↗
+            <Link href="/herban" className="group flex min-h-[64px] items-center justify-between border-2 border-white bg-black/45 px-5 py-3.5 text-left text-white backdrop-blur-sm transition hover:border-[#A7E348] hover:bg-[#A7E348] hover:text-black">
+              <span>
+                <span className="block font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-current opacity-65">Live status page</span>
+                <span className="mt-0.5 block font-bold uppercase tracking-tight">View Herban Market</span>
+              </span>
+              <span className="transition-transform group-hover:translate-x-1"><Arrow /></span>
             </Link>
           </div>
         </div>
