@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import { extractFromCaption, AUTO_PUBLISH_THRESHOLD } from '@/lib/extract';
+import { extractFromCaption } from '@/lib/extract';
 
 export const maxDuration = 60;
 
@@ -40,15 +40,13 @@ export async function POST(req: NextRequest) {
   if (!posts || posts.length === 0) {
     return NextResponse.json({
       checked: 0,
-      published: 0,
-      held: 0,
+      suggested: 0,
       ignored: 0,
       results: [],
     });
   }
 
-  let published = 0;
-  let held = 0;
+  let suggested = 0;
   let ignored = 0;
   const results: { caption: string; verdict: string; why: string }[] = [];
 
@@ -67,9 +65,6 @@ export async function POST(req: NextRequest) {
       why = out.why;
 
       if (out.matters && out.headline) {
-        const status =
-          out.confidence >= AUTO_PUBLISH_THRESHOLD ? 'active' : 'needs_review';
-
         const { error: insErr } = await admin.from('status_updates').insert({
           business_id: business.id,
           post_id: post.id,
@@ -81,17 +76,15 @@ export async function POST(req: NextRequest) {
           effective_date: out.effective_date,
           expires_at: out.expires_at,
           confidence: out.confidence,
-          status,
+          status: 'needs_review',
+          source: 'instagram',
         });
 
         if (insErr) {
           why = insErr.message;
-        } else if (status === 'active') {
-          published++;
-          verdict = 'published';
         } else {
-          held++;
-          verdict = 'held for review';
+          suggested++;
+          verdict = 'ready for review';
         }
       } else {
         ignored++;
@@ -114,8 +107,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     checked: posts.length,
-    published,
-    held,
+    suggested,
     ignored,
     results,
   });
