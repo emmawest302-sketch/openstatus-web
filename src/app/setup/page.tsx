@@ -481,7 +481,7 @@ export default function SetupPage() {
               <div className="mt-8 space-y-5">
                 <label className="block">
                   <span className="mb-2 block text-sm font-bold">Business name</span>
-                  <input value={name} onChange={(event) => { const nextName = event.target.value; setName(nextName); if (!handleTouched) setHandle(suggestHandle(nextName)); }} placeholder="Herban Market" className="w-full border-2 border-black bg-white px-4 py-3.5 text-base outline-none focus:bg-[#A7E348]/20" />
+                  <input value={name} onChange={(event) => { const nextName = event.target.value; setName(nextName); if (!handleTouched) setHandle(suggestHandle(nextName)); }} placeholder="Emma's Coffee" className="w-full border-2 border-black bg-white px-4 py-3.5 text-base outline-none focus:bg-[#A7E348]/20" />
                 </label>
                 <label className="block">
                   <span className="mb-2 block text-sm font-bold">Short description or location</span>
