@@ -100,13 +100,19 @@ export async function findInstagramAccount(
     throw new Error(body?.error?.message ?? 'Could not list pages');
   }
 
-  const pages: any[] = body.data ?? [];
+  const pages: Array<{
+    id: string;
+    name?: string;
+    access_token?: string;
+    instagram_business_account?: { id: string; username?: string };
+  }> = body.data ?? [];
   const withIg = pages.find((p) => p.instagram_business_account?.id);
-  if (!withIg) return null;
+  const instagramAccount = withIg?.instagram_business_account;
+  if (!withIg || !instagramAccount) return null;
 
   return {
-    igUserId: withIg.instagram_business_account.id,
-    username: withIg.instagram_business_account.username ?? '',
+    igUserId: instagramAccount.id,
+    username: instagramAccount.username ?? '',
     pageId: withIg.id,
     pageName: withIg.name ?? '',
     pageAccessToken: withIg.access_token ?? userToken,
@@ -140,7 +146,14 @@ export async function fetchRecentPosts(
     throw new Error(body?.error?.message ?? 'Could not fetch media');
   }
 
-  return (body.data ?? []).map((m: any) => ({
+  const media: Array<{
+    id: string;
+    caption?: string;
+    permalink?: string;
+    timestamp: string;
+  }> = body.data ?? [];
+
+  return media.map((m) => ({
     id: m.id,
     caption: m.caption ?? '',
     permalink: m.permalink ?? '',
