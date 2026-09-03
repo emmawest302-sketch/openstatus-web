@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import EmmasCoffeeDemo from '@/components/emmas-coffee-demo';
 
 const freeFeatures = [
   'Your own openstatus.co link',
@@ -74,7 +75,7 @@ export default function HomePage() {
           <nav className="hidden items-center gap-8 font-mono text-[10px] font-bold uppercase tracking-[0.14em] md:flex" aria-label="Main navigation">
             <a href="#how" className="underline-offset-4 hover:underline">How it works</a>
             <a href="#pricing" className="underline-offset-4 hover:underline">Pricing</a>
-            <Link href="/herban" className="underline-offset-4 hover:underline">Live example</Link>
+            <Link href="/emmas-coffee" className="underline-offset-4 hover:underline">Live example</Link>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -127,10 +128,10 @@ export default function HomePage() {
               </span>
               <span className="transition-transform group-hover:translate-x-1"><Arrow /></span>
             </Link>
-            <Link href="/herban" className="group flex min-h-[64px] items-center justify-between border-2 border-white bg-black/45 px-5 py-3.5 text-left text-white backdrop-blur-sm transition hover:border-[#A7E348] hover:bg-[#A7E348] hover:text-black">
+            <Link href="/emmas-coffee" className="group flex min-h-[64px] items-center justify-between border-2 border-white bg-black/45 px-5 py-3.5 text-left text-white backdrop-blur-sm transition hover:border-[#A7E348] hover:bg-[#A7E348] hover:text-black">
               <span>
                 <span className="block font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-current opacity-65">Live status page</span>
-                <span className="mt-0.5 block font-bold uppercase tracking-tight">View Herban Market</span>
+                <span className="mt-0.5 block font-bold uppercase tracking-tight">View Emma&rsquo;s Coffee</span>
               </span>
               <span className="transition-transform group-hover:translate-x-1"><Arrow /></span>
             </Link>
@@ -187,21 +188,24 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-b-2 border-black bg-[#111] text-white">
-        <div className="mx-auto grid max-w-[1440px] lg:grid-cols-2">
-          <div className="relative min-h-[520px] border-b-2 border-white/25 lg:border-b-0 lg:border-r-2">
-            <Image src="/herban-market-franklin-sign-768x1024.jpg" alt="A local business sign" fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover grayscale" />
-            <div className="noise absolute inset-0 opacity-30" />
-            <div className="absolute left-5 top-5 border border-white bg-black/75 px-3 py-2 font-mono text-[9px] uppercase tracking-[0.16em] backdrop-blur-sm">
-              A real place deserves a real answer
-            </div>
+      <section className="border-b-2 border-black bg-[#111] text-white" id="live-demo">
+        <div className="mx-auto grid max-w-[1440px] lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="relative flex min-h-[760px] items-center justify-center overflow-hidden border-b-2 border-white/25 bg-[#A7E348] px-5 py-14 lg:border-b-0 lg:border-r-2">
+            <div className="noise absolute inset-0 opacity-15" />
+            <div className="relative w-full"><EmmasCoffeeDemo phone /></div>
           </div>
           <div className="flex flex-col justify-between p-6 md:p-10 lg:p-14">
             <div>
-              <Eyebrow dark>Live on every surface</Eyebrow>
+              <Eyebrow dark>The actual product</Eyebrow>
               <h2 className="mt-5 text-[clamp(3.2rem,6vw,6.5rem)] font-bold uppercase leading-[0.84] tracking-[-0.06em]">
-                Put it<br />where people<br /><span className="text-[#A7E348]">already look.</span>
+                One mobile<br />link with the<br /><span className="text-[#A7E348]">real answer.</span>
               </h2>
+              <p className="mt-8 max-w-xl text-lg leading-relaxed text-white/65">
+                This is what customers actually open: today&rsquo;s status, changed hours, menu, ordering, and directions in one thumb-friendly page. Emma&rsquo;s Coffee is fictional; the product is real.
+              </p>
+              <Link href="/emmas-coffee" className="group mt-8 flex min-h-14 max-w-sm items-center justify-between border-2 border-white bg-white px-4 font-bold uppercase text-black hover:border-[#A7E348] hover:bg-[#A7E348]">
+                Try the full demo <Arrow size={18} />
+              </Link>
             </div>
             <div className="mt-16 grid grid-cols-2 border-l border-t border-white/30 font-mono text-[10px] font-bold uppercase tracking-[0.12em] md:grid-cols-4">
               {['Instagram bio', 'Your website', 'QR code', 'Text alerts'].map((item) => (
