@@ -117,6 +117,7 @@ export default function SetupPage() {
   const [links, setLinks] = useState<QuickLink[]>([]);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headerUrl, setHeaderUrl] = useState('');
+  const [uploading, setUploading] = useState<'avatar' | 'header' | null>(null);
   const [igHandle, setIgHandle] = useState<string | null>(null);
 
   useEffect(() => {
@@ -301,6 +302,56 @@ export default function SetupPage() {
     setStep(4);
   };
 
+  const uploadImage = async (file: File, kind: 'avatar' | 'header') => {
+    setUploading(kind);
+    setError('');
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Session expired. Sign in again.');
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+
+      const prepareResponse = await fetch('/api/assets', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          action: 'prepare',
+          kind,
+          contentType: file.type,
+          size: file.size,
+        }),
+      });
+      const prepared = await prepareResponse.json();
+      if (!prepareResponse.ok) throw new Error(prepared.error ?? 'Could not prepare upload');
+
+      const { error: uploadError } = await supabase.storage
+        .from(prepared.bucket)
+        .uploadToSignedUrl(prepared.path, prepared.token, file, {
+          contentType: file.type,
+          cacheControl: '3600',
+        });
+      if (uploadError) throw uploadError;
+
+      const completeResponse = await fetch('/api/assets', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action: 'complete', kind, path: prepared.path }),
+      });
+      const completed = await completeResponse.json();
+      if (!completeResponse.ok) throw new Error(completed.error ?? 'Could not save image');
+
+      if (kind === 'avatar') setAvatarUrl(completed.url);
+      else setHeaderUrl(completed.url);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Upload failed');
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const connectInstagram = async () => {
     setSaving(true);
     setError('');
@@ -438,16 +489,50 @@ export default function SetupPage() {
               <p className="mt-5 max-w-xl text-lg text-black/60">Add your photos and only the actions customers actually need. The preview updates as you edit.</p>
 
               <div className="mt-8 grid gap-5 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-bold">Logo or profile image URL</span>
-                  <input value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} placeholder="https://..." className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" />
+                <label className={`group block cursor-pointer border-2 border-black bg-white p-4 hover:bg-[#A7E348]/20 ${uploading ? 'pointer-events-none opacity-60' : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void uploadImage(file, 'avatar');
+                      event.target.value = '';
+                    }}
+                  />
+                  <span className="block text-sm font-bold">Logo or profile image</span>
+                  <span className="mt-4 flex items-center gap-3">
+                    <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-black bg-[#F4F1E8]">
+                      {avatarUrl ? <img src={avatarUrl} alt="Current logo" className="h-full w-full object-cover" /> : <Keyhole size={26} />}
+                    </span>
+                    <span>
+                      <span className="block font-bold underline underline-offset-4">{uploading === 'avatar' ? 'Uploading...' : avatarUrl ? 'Replace image' : 'Choose image'}</span>
+                      <span className="mt-1 block text-xs text-black/45">Square works best</span>
+                    </span>
+                  </span>
                 </label>
-                <label className="block">
-                  <span className="mb-2 block text-sm font-bold">Cover image URL</span>
-                  <input value={headerUrl} onChange={(event) => setHeaderUrl(event.target.value)} placeholder="https://..." className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" />
+
+                <label className={`group block cursor-pointer border-2 border-black bg-white p-4 hover:bg-[#A7E348]/20 ${uploading ? 'pointer-events-none opacity-60' : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void uploadImage(file, 'header');
+                      event.target.value = '';
+                    }}
+                  />
+                  <span className="block text-sm font-bold">Cover image</span>
+                  <span className="mt-4 block">
+                    <span className="flex h-16 w-full items-center justify-center overflow-hidden border-2 border-black bg-[#2F6B3B]">
+                      {headerUrl ? <img src={headerUrl} alt="Current cover" className="h-full w-full object-cover" /> : <span className="font-mono text-[9px] font-bold uppercase text-white/70">Add cover</span>}
+                    </span>
+                    <span className="mt-2 block font-bold underline underline-offset-4">{uploading === 'header' ? 'Uploading...' : headerUrl ? 'Replace image' : 'Choose image'}</span>
+                  </span>
                 </label>
               </div>
-              <p className="mt-2 text-xs text-black/45">Direct uploads can be added next; these fields work with images already on your website or social profiles.</p>
+              <p className="mt-2 text-xs text-black/45">JPG, PNG, or WebP · maximum 5 MB</p>
 
               <div className="mt-8 border-t-2 border-black pt-6">
                 <h2 className="text-xl font-bold uppercase">Quick links</h2>
