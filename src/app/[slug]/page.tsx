@@ -167,7 +167,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   // Say exactly what we know, and nothing more. An update the owner set is a
   // confirmation. Silence is not: it only means regular hours still apply.
   const ownerSet = lead?.source === 'owner';
-  const confirmedFromInstagram = lead?.source === 'instagram_confirmed';
+  const confirmedFromInstagram = lead?.source === 'instagram' || lead?.source === 'instagram_confirmed';
   const sourceLine = lead
     ? (ownerSet
         ? 'Updated by ' + business.name + ' '
