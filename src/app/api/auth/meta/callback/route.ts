@@ -8,10 +8,14 @@ import {
 } from '@/lib/meta';
 
 function back(req: NextRequest, params: Record<string, string>) {
-  const url = new URL('/dashboard', req.nextUrl.origin);
+  const destination = req.cookies.get('os_meta_return')?.value === 'setup'
+    ? '/setup'
+    : '/dashboard';
+  const url = new URL(destination, req.nextUrl.origin);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = NextResponse.redirect(url);
   res.cookies.delete('os_meta_state');
+  res.cookies.delete('os_meta_return');
   return res;
 }
 
