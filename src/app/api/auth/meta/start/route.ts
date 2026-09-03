@@ -35,9 +35,18 @@ export async function POST(req: NextRequest) {
 
   const nonce = crypto.randomUUID();
   const url = buildAuthUrl(nonce);
+  const body = await req.json().catch(() => ({}));
+  const returnTo = body?.returnTo === 'setup' ? 'setup' : 'dashboard';
 
   const res = NextResponse.json({ url });
   res.cookies.set('os_meta_state', nonce + '.' + business.id, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 600,
+  });
+  res.cookies.set('os_meta_return', returnTo, {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
