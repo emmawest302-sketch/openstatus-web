@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import OwnerQuickStatus from '@/components/owner-quick-status';
 
 type QuickLink = { label: string; url: string; note?: string };
 
@@ -326,6 +327,8 @@ export default function DashboardPage() {
 
         {error ? <div className="mb-5 border-2 border-black bg-[#F8AE9D] p-4">{error}</div> : null}
         {syncNote ? <div className="mb-5 border-2 border-black bg-white p-4">{syncNote}</div> : null}
+
+        {business ? <OwnerQuickStatus businessId={business.id} businessName={business.name} variant="dashboard" /> : null}
 
         <section className="grid border-2 border-black bg-black text-white lg:grid-cols-[1.35fr_0.65fr]">
           <div className="border-b-2 border-white/30 p-6 md:p-9 lg:border-b-0 lg:border-r-2">
