@@ -72,7 +72,7 @@ export default function SignupPage() {
           <p className="mt-4 text-black/55">Your account protects the business page only you can edit.</p>
 
           <form onSubmit={handleSignup} className="mt-8 space-y-5">
-            <label className="block"><span className="mb-2 block text-sm font-bold">Business name</span><input type="text" autoComplete="organization" value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Herban Market" className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" required /></label>
+            <label className="block"><span className="mb-2 block text-sm font-bold">Business name</span><input type="text" autoComplete="organization" value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Emma's Coffee" className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" required /></label>
             <label className="block"><span className="mb-2 block text-sm font-bold">Email</span><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@business.com" className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" required /></label>
             <label className="block"><span className="mb-2 block text-sm font-bold">Password</span><input type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 6 characters" minLength={6} className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" required /></label>
 
