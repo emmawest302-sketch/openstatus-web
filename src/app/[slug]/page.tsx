@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAdminClient } from '@/lib/supabaseAdmin';
+import OwnerQuickStatus from '@/components/owner-quick-status';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
@@ -323,12 +324,15 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           </details>
 
           {quickLinks.length > 0 ? (
-            <div className="mt-3 grid grid-cols-3 gap-2.5">
+            <div className="mt-3 space-y-2.5">
               {quickLinks.map((l) => (
-                <a key={l.label + l.url} href={l.url} target="_blank" rel="noreferrer" className={'px-3 py-4 hover:bg-white/90 transition rounded-[20px] bg-white/75 backdrop-blur-xl border border-white/70'}>
-                  <span className="text-[#C08A5E] block"><Icon name={iconFor(l.label)} /></span>
-                  <span className="mt-2 block text-sm font-medium leading-tight">{l.label}</span>
-                  {l.note ? <span className="block text-[11px] text-[#6C6A62] mt-0.5 leading-tight">{l.note}</span> : null}
+                <a key={l.label + l.url} href={l.url} target="_blank" rel="noreferrer" className="flex min-h-16 items-center gap-3 rounded-[20px] border border-white/70 bg-white/75 px-4 py-3 backdrop-blur-xl transition hover:bg-white/90">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/70 text-[#C08A5E]"><Icon name={iconFor(l.label)} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium leading-tight">{l.label}</span>
+                    {l.note ? <span className="mt-0.5 block text-sm leading-tight text-[#6C6A62]">{l.note}</span> : null}
+                  </span>
+                  <span className="text-lg text-[#2E7D5B]" aria-hidden="true">↗</span>
                 </a>
               ))}
             </div>
@@ -383,6 +387,8 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             Powered by OpenStatus
           </Link>
         </div>
+
+        <OwnerQuickStatus businessId={business.id} businessName={business.name} />
       </div>
     </div>
   );
