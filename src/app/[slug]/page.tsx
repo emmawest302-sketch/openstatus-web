@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 
 export const revalidate = 60;
@@ -166,8 +167,13 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   // Say exactly what we know, and nothing more. An update the owner set is a
   // confirmation. Silence is not: it only means regular hours still apply.
   const ownerSet = lead?.source === 'owner';
+  const confirmedFromInstagram = lead?.source === 'instagram_confirmed';
   const sourceLine = lead
-    ? (ownerSet ? 'Updated by ' + business.name + ' ' : 'Detected from a post by ' + business.name + ' ') + ago(lead.created_at)
+    ? (ownerSet
+        ? 'Updated by ' + business.name + ' '
+        : confirmedFromInstagram
+          ? 'Detected from Instagram · confirmed by ' + business.name + ' '
+          : 'Detected from a post by ' + business.name + ' ') + ago(lead.created_at)
     : 'Based on regular ' + DAY_NAMES[today] + ' hours';
   const sourceNote = lead ? null : 'No temporary change is currently active';
 
@@ -311,9 +317,9 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             </p>
           ) : null}
 
-          <a href="/" className="mt-3 block text-center text-[10px] uppercase tracking-[0.18em] text-[#9B998F] hover:text-[#1A1A18] transition" style={{ fontFamily: 'var(--font-mono)' }}>
+          <Link href="/" className="mt-3 block text-center text-[10px] uppercase tracking-[0.18em] text-[#9B998F] hover:text-[#1A1A18] transition" style={{ fontFamily: 'var(--font-mono)' }}>
             Powered by OpenStatus
-          </a>
+          </Link>
         </div>
       </div>
     </div>
