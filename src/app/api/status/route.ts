@@ -72,7 +72,6 @@ export async function POST(req: NextRequest) {
     .from('status_updates')
     .update({
       status: 'active',
-      source: 'instagram_confirmed',
     })
     .eq('id', id)
     .eq('business_id', actor.businessId)
