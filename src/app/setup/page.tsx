@@ -1,44 +1,140 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { normaliseHandle, suggestHandle } from '@/lib/handles';
 
-const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-const PRESETS = [
-  'Menu','Order Online','Directions','Reserve','Catering','Gift Cards','Website','Call',
-];
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const PRESETS = ['Menu', 'Order Online', 'Directions', 'Reserve', 'Catering', 'Gift Cards', 'Website', 'Call'];
 
 type Row = { open: string; close: string; closed: boolean };
-
-const DEFAULT_ROWS: Row[] = DAYS.map((_, i) => ({
-  open: '09:00',
-  close: '17:00',
-  closed: i === 0,
-}));
-
+type QuickLink = { label: string; url: string };
 type HandleState = 'idle' | 'checking' | 'free' | 'taken';
 
-export default function Setup() {
+const DEFAULT_ROWS: Row[] = DAYS.map((_, index) => ({
+  open: '09:00',
+  close: '17:00',
+  closed: index === 0,
+}));
+
+function Keyhole({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
+      <mask id="setup-keyhole">
+        <rect width="100" height="100" fill="#fff" />
+        <circle cx="50" cy="42" r="13" fill="#000" />
+        <path d="M44 52 L56 52 L60 74 L40 74 Z" fill="#000" />
+      </mask>
+      <circle cx="50" cy="50" r="48" fill="currentColor" mask="url(#setup-keyhole)" />
+    </svg>
+  );
+}
+
+function prettyTime(value: string) {
+  const [hourText, minute] = value.split(':');
+  let hour = Number(hourText);
+  const meridiem = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12 || 12;
+  return `${hour}:${minute} ${meridiem}`;
+}
+
+function PagePreview({
+  name,
+  tagline,
+  avatarUrl,
+  headerUrl,
+  rows,
+  links,
+}: {
+  name: string;
+  tagline: string;
+  avatarUrl: string;
+  headerUrl: string;
+  rows: Row[];
+  links: QuickLink[];
+}) {
+  const today = rows[new Date().getDay()];
+  const visibleLinks = links.filter((link) => link.url.trim()).slice(0, 3);
+
+  return (
+    <div className="overflow-hidden border-2 border-black bg-[#EDE9E2] shadow-[10px_10px_0_#0A0A0A]">
+      <div className="relative h-44 bg-[#2F6B3B]">
+        {headerUrl ? <img src={headerUrl} alt="" className="h-full w-full object-cover" /> : null}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/65" />
+        <div className="absolute inset-x-5 bottom-5 flex items-end gap-3 text-white">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white bg-white text-black">
+            {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <Keyhole size={25} />}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xl font-bold leading-tight">{name || 'Your business'}</p>
+            <p className="truncate text-xs text-white/75">{tagline || 'A short description or location'}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="rounded-3xl border border-black/10 bg-white/80 p-4">
+          <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#2F6B3B]">
+            <span className="h-2 w-2 rounded-full bg-[#2F6B3B]" /> Regular hours
+          </div>
+          <p className="mt-2 text-2xl font-bold">{today?.closed ? 'Closed today' : 'Open today'}</p>
+          {!today?.closed ? <p className="text-sm text-black/55">{prettyTime(today.open)} – {prettyTime(today.close)}</p> : null}
+        </div>
+
+        {visibleLinks.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2">
+            {visibleLinks.map((link) => (
+              <div key={link.label} className="min-h-20 rounded-2xl border border-black/10 bg-white/80 p-3 text-xs font-medium">
+                <span className="mb-3 block text-lg">↗</span>{link.label}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-black/25 p-4 text-center text-xs text-black/45">Your quick links will appear here</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function SetupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [tagline, setTagline] = useState('');
   const [handle, setHandle] = useState('');
+  const [initialHandle, setInitialHandle] = useState('');
   const [handleTouched, setHandleTouched] = useState(false);
   const [handleState, setHandleState] = useState<HandleState>('idle');
   const [handleReason, setHandleReason] = useState('');
   const [rows, setRows] = useState<Row[]>(DEFAULT_ROWS);
-  const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
+  const [links, setLinks] = useState<QuickLink[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [headerUrl, setHeaderUrl] = useState('');
   const [igHandle, setIgHandle] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const query = new URLSearchParams(window.location.search);
+      const requestedStep = Number(query.get('step'));
+      if (requestedStep >= 1 && requestedStep <= 4) setStep(requestedStep);
+      if (query.get('connect') === 'ok') {
+        setStep(4);
+        setIgHandle(query.get('handle'));
+      }
+      if (query.get('connect') === 'error' || query.get('connect') === 'no_instagram') {
+        setStep(4);
+        setError(query.get('reason') || 'Instagram could not be connected.');
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const load = useCallback(async () => {
     const { data: userData } = await supabase.auth.getUser();
@@ -46,34 +142,63 @@ export default function Setup() {
       router.replace('/login');
       return;
     }
-    const { data: biz } = await supabase
+
+    const fields = 'id, name, tagline, slug, links, avatar_url, header_url, instagram_handle';
+    const { data: existing, error: readError } = await supabase
       .from('businesses')
-      .select('id, name, tagline, slug, links, instagram_handle')
+      .select(fields)
       .eq('user_id', userData.user.id)
       .maybeSingle();
 
-    if (biz) {
-      setBusinessId(biz.id);
-      setName(biz.name === 'My business' ? '' : biz.name);
-      setTagline(biz.tagline ?? '');
-      setIgHandle(biz.instagram_handle ?? null);
-      if (biz.slug) {
-        setHandle(biz.slug);
-        setHandleTouched(true);
+    let business = existing;
+    if (!business && !readError) {
+      const fallbackName = String(userData.user.user_metadata?.business_name || 'My business');
+      const { data: created, error: createError } = await supabase
+        .from('businesses')
+        .insert({ user_id: userData.user.id, name: fallbackName })
+        .select(fields)
+        .single();
+      if (createError) {
+        setError(createError.message);
+        setLoading(false);
+        return;
       }
-      if (Array.isArray(biz.links) && biz.links.length > 0) setLinks(biz.links);
+      business = created;
+    }
 
-      const { data: h } = await supabase
+    if (readError) {
+      setError(readError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (business) {
+      setBusinessId(business.id);
+      setName(business.name === 'My business' ? '' : business.name);
+      setTagline(business.tagline ?? '');
+      setAvatarUrl(business.avatar_url ?? '');
+      setHeaderUrl(business.header_url ?? '');
+      setIgHandle(business.instagram_handle ?? null);
+      if (business.slug) {
+        setHandle(business.slug);
+        setInitialHandle(business.slug);
+        setHandleTouched(true);
+        setHandleState('free');
+      }
+      if (Array.isArray(business.links)) setLinks(business.links as QuickLink[]);
+
+      const { data: hourRows } = await supabase
         .from('business_hours')
         .select('day_of_week, opens_at, closes_at, is_closed')
-        .eq('business_id', biz.id);
-      if (h && h.length > 0) {
-        const next = [...DEFAULT_ROWS];
-        h.forEach((r) => {
-          next[r.day_of_week] = {
-            open: (r.opens_at ?? '09:00').slice(0, 5),
-            close: (r.closes_at ?? '17:00').slice(0, 5),
-            closed: r.is_closed,
+        .eq('business_id', business.id);
+
+      if (hourRows && hourRows.length > 0) {
+        const next = DEFAULT_ROWS.map((row) => ({ ...row }));
+        hourRows.forEach((row) => {
+          next[row.day_of_week] = {
+            open: (row.opens_at ?? '09:00').slice(0, 5),
+            close: (row.closes_at ?? '17:00').slice(0, 5),
+            closed: row.is_closed,
           };
         });
         setRows(next);
@@ -83,53 +208,52 @@ export default function Setup() {
   }, [router]);
 
   useEffect(() => {
-    load();
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
-  // Suggest a handle from the name until the owner edits it themselves.
   useEffect(() => {
-    if (!handleTouched && name.trim().length > 0) {
-      setHandle(suggestHandle(name));
-    }
-  }, [name, handleTouched]);
-
-  // Check availability as they type, but wait for them to pause first.
-  useEffect(() => {
-    const h = normaliseHandle(handle);
-    if (h.length < 3) {
-      setHandleState('idle');
-      setHandleReason('');
-      return;
-    }
-    setHandleState('checking');
-    const t = setTimeout(async () => {
+    const timer = window.setTimeout(async () => {
+      const normalized = normaliseHandle(handle);
+      if (normalized.length < 3) {
+        setHandleState('idle');
+        setHandleReason('');
+        return;
+      }
+      if (normalized === initialHandle) {
+        setHandleState('free');
+        setHandleReason('');
+        return;
+      }
+      setHandleState('checking');
       try {
-        const res = await fetch('/api/handle?handle=' + encodeURIComponent(h));
-        const body = await res.json();
+        const response = await fetch(`/api/handle?handle=${encodeURIComponent(normalized)}`);
+        const body = await response.json();
         if (normaliseHandle(handle) !== body.handle) return;
         setHandleState(body.available ? 'free' : 'taken');
         setHandleReason(body.reason ?? '');
       } catch {
         setHandleState('idle');
       }
-    }, 450);
-    return () => clearTimeout(t);
-  }, [handle]);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [handle, initialHandle]);
 
   const saveBasics = async () => {
     if (!businessId) return;
     setSaving(true);
     setError('');
     const chosen = normaliseHandle(handle);
-    const { error: e } = await supabase
+    const { error: updateError } = await supabase
       .from('businesses')
-      .update({ name, tagline, slug: chosen })
+      .update({ name: name.trim(), tagline: tagline.trim() || null, slug: chosen })
       .eq('id', businessId);
     setSaving(false);
-    if (e) {
-      setError(e.message.includes('duplicate') ? 'That address was just taken, try another' : e.message);
+    if (updateError) {
+      setError(updateError.message.includes('duplicate') ? 'That address was just taken. Try another.' : updateError.message);
       return;
     }
+    setInitialHandle(chosen);
     setStep(2);
   };
 
@@ -137,37 +261,43 @@ export default function Setup() {
     if (!businessId) return;
     setSaving(true);
     setError('');
-    const payload = rows.map((r, i) => ({
+    const payload = rows.map((row, index) => ({
       business_id: businessId,
-      day_of_week: i,
-      opens_at: r.closed ? null : r.open,
-      closes_at: r.closed ? null : r.close,
-      is_closed: r.closed,
+      day_of_week: index,
+      opens_at: row.closed ? null : row.open,
+      closes_at: row.closed ? null : row.close,
+      is_closed: row.closed,
     }));
-    const { error: e } = await supabase
+    const { error: updateError } = await supabase
       .from('business_hours')
       .upsert(payload, { onConflict: 'business_id,day_of_week' });
     setSaving(false);
-    if (e) { setError(e.message); return; }
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     setStep(3);
   };
 
-  const copyDayToAll = (from: number) => {
-    const src = rows[from];
-    setRows(rows.map((r, i) => (i === 0 ? r : { ...src })));
-  };
-
-  const saveLinks = async () => {
+  const saveAppearance = async () => {
     if (!businessId) return;
     setSaving(true);
     setError('');
-    const clean = links.filter((l) => l.url.trim().length > 0);
-    const { error: e } = await supabase
+    const cleanLinks = links.filter((link) => link.url.trim());
+    const { error: updateError } = await supabase
       .from('businesses')
-      .update({ links: clean })
+      .update({
+        links: cleanLinks,
+        avatar_url: avatarUrl.trim() || null,
+        header_url: headerUrl.trim() || null,
+      })
       .eq('id', businessId);
     setSaving(false);
-    if (e) { setError(e.message); return; }
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    setLinks(cleanLinks);
     setStep(4);
   };
 
@@ -177,298 +307,220 @@ export default function Setup() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      if (!token) throw new Error('Session expired, sign in again');
-      const res = await fetch('/api/auth/meta/start', {
+      if (!token) throw new Error('Session expired. Sign in again.');
+      const response = await fetch('/api/auth/meta/start', {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + token },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ returnTo: 'setup' }),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'Could not start');
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? 'Could not connect Instagram');
       window.location.href = body.url;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Something went wrong');
       setSaving(false);
     }
   };
 
+  const finish = () => router.push('/dashboard?welcome=1');
+
+  const cleanHandle = normaliseHandle(handle);
+  const canContinue = Boolean(businessId && name.trim() && handleState === 'free');
+  const pageUrl = `openstatus.co/${cleanHandle || 'yourbusiness'}`;
+  const stepNames = ['Claim your link', 'Set regular hours', 'Make it yours', 'Connect Instagram'];
+
+  const previewLinks = useMemo(() => links.filter((link) => link.url.trim()), [links]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-[#6C6A62]">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F1E8]">
+        <p className="font-mono text-xs font-bold uppercase tracking-[0.18em]">Preparing your link...</p>
       </div>
     );
   }
 
-  const clean = normaliseHandle(handle);
-  const pageUrl = 'openstatus.co/' + clean;
-  const canContinue = name.trim().length > 0 && handleState === 'free';
-
   return (
-    <div className="min-h-screen bg-white text-[#1A1A18]" style={{ fontFamily: 'var(--font-display)' }}>
-      <div className="max-w-lg mx-auto px-6 py-10">
-        <div className="flex items-center gap-1.5">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <span key={n} className={'h-1 flex-1 rounded-full ' + (n <= step ? 'bg-[#2E7D5B]' : 'bg-[#E8E6E0]')} />
-          ))}
+    <div className="min-h-screen bg-[#F4F1E8] text-[#0A0A0A]">
+      <header className="border-b-2 border-black">
+        <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 md:px-8">
+          <Link href="/" className="flex items-center gap-2.5"><Keyhole /><span className="font-bold tracking-[-0.03em]">OPENSTATUS</span></Link>
+          <Link href="/dashboard" className="font-mono text-[10px] font-bold uppercase tracking-[0.13em] hover:underline">Save & exit</Link>
         </div>
-        <p className="mt-3 text-[11px] uppercase tracking-[0.22em] text-[#9B998F]" style={{ fontFamily: 'var(--font-mono)' }}>
-          Step {step} of 5
-        </p>
+      </header>
 
-        {step === 1 ? (
-          <div className="mt-6">
-            <h1 className="text-3xl font-bold tracking-tight">What is your business called?</h1>
-            <p className="mt-2 text-[#6C6A62]">We will suggest your link as you type.</p>
-
-            <div className="mt-7 space-y-3">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Herban Market"
-                className="w-full px-4 py-3 rounded-2xl bg-[#F5F7F5] placeholder-[#9B998F] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B]/30"
-              />
-              <input
-                value={tagline}
-                onChange={(e) => setTagline(e.target.value)}
-                placeholder="Grocery and coffee · Columbia, TN"
-                className="w-full px-4 py-3 rounded-2xl bg-[#F5F7F5] placeholder-[#9B998F] focus:outline-none focus:ring-2 focus:ring-[#2E7D5B]/30"
-              />
-
-              <div className="rounded-2xl bg-[#F5F7F5] px-4 py-3">
-                <p className="text-xs text-[#6C6A62]">Your link</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span className="text-[#9B998F]">openstatus.co/</span>
-                  <input
-                    value={handle}
-                    onChange={(e) => { setHandleTouched(true); setHandle(e.target.value); }}
-                    placeholder="yourbusiness"
-                    className="flex-1 bg-transparent focus:outline-none font-medium min-w-0"
-                  />
-                  {handleState === 'checking' ? (
-                    <span className="text-xs text-[#9B998F] shrink-0">checking</span>
-                  ) : handleState === 'free' ? (
-                    <span className="text-xs text-[#2E7D5B] shrink-0">available</span>
-                  ) : handleState === 'taken' ? (
-                    <span className="text-xs text-[#C4453F] shrink-0">{handleReason || 'taken'}</span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-            {error ? <p className="mt-4 text-sm text-[#C4453F]">{error}</p> : null}
-
-            <button
-              onClick={saveBasics}
-              disabled={saving || !canContinue}
-              className="mt-7 w-full py-3.5 rounded-full bg-[#1A1A18] text-white font-medium hover:bg-[#2E7D5B] disabled:opacity-40 transition"
-            >
-              {saving ? 'Saving...' : 'Claim this link'}
-            </button>
+      <main className="mx-auto grid max-w-[1200px] gap-10 px-5 py-7 md:px-8 md:py-10 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-16">
+        <section>
+          <div className="flex gap-1.5">
+            {[1, 2, 3, 4].map((number) => (
+              <button key={number} onClick={() => number < step && setStep(number)} className={`h-2 flex-1 border border-black ${number <= step ? 'bg-[#A7E348]' : 'bg-white'}`} aria-label={`Go to step ${number}`} />
+            ))}
           </div>
-        ) : null}
+          <div className="mt-3 flex items-center justify-between gap-3 font-mono text-[10px] font-bold uppercase tracking-[0.15em] text-black/45">
+            <span>Step {step} of 4</span><span>{stepNames[step - 1]}</span>
+          </div>
 
-        {step === 2 ? (
-          <div className="mt-6">
-            <h1 className="text-3xl font-bold tracking-tight">What are your regular hours?</h1>
-            <p className="mt-2 text-[#6C6A62]">
-              Set these once. When something is different we update your page, then
-              put it back to normal on its own.
-            </p>
+          {step === 1 ? (
+            <div className="mt-9">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-black/45">First, the essentials</p>
+              <h1 className="mt-3 text-4xl font-bold uppercase leading-[0.9] tracking-[-0.055em] md:text-6xl">Claim your<br /><span className="text-[#2F6B3B]">live link.</span></h1>
+              <p className="mt-5 max-w-xl text-lg text-black/60">This is the permanent link customers can check before they visit. You only set it up once.</p>
 
-            <div className="mt-7 space-y-2">
-              {DAYS.map((d, i) => (
-                <div key={d} className="flex items-center gap-3 rounded-2xl bg-[#F5F7F5] px-4 py-2.5">
-                  <span className="w-20 text-sm shrink-0">{d.slice(0, 3)}</span>
-                  {rows[i].closed ? (
-                    <span className="flex-1 text-sm text-[#9B998F]">Closed</span>
-                  ) : (
-                    <span className="flex-1 flex items-center gap-2">
-                      <input
-                        type="time"
-                        value={rows[i].open}
-                        onChange={(e) => {
-                          const next = [...rows];
-                          next[i] = { ...next[i], open: e.target.value };
-                          setRows(next);
-                        }}
-                        className="bg-white rounded-lg px-2 py-1 text-sm focus:outline-none"
-                      />
-                      <span className="text-[#9B998F]">to</span>
-                      <input
-                        type="time"
-                        value={rows[i].close}
-                        onChange={(e) => {
-                          const next = [...rows];
-                          next[i] = { ...next[i], close: e.target.value };
-                          setRows(next);
-                        }}
-                        className="bg-white rounded-lg px-2 py-1 text-sm focus:outline-none"
-                      />
+              <div className="mt-8 space-y-5">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">Business name</span>
+                  <input value={name} onChange={(event) => { const nextName = event.target.value; setName(nextName); if (!handleTouched) setHandle(suggestHandle(nextName)); }} placeholder="Herban Market" className="w-full border-2 border-black bg-white px-4 py-3.5 text-base outline-none focus:bg-[#A7E348]/20" />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">Short description or location</span>
+                  <input value={tagline} onChange={(event) => setTagline(event.target.value)} placeholder="Grocery and coffee · Columbia, TN" className="w-full border-2 border-black bg-white px-4 py-3.5 text-base outline-none focus:bg-[#A7E348]/20" />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">Your OpenStatus address</span>
+                  <div className="flex flex-wrap items-center border-2 border-black bg-white px-4 py-3.5">
+                    <span className="text-black/40">openstatus.co/</span>
+                    <input value={handle} onChange={(event) => { setHandleTouched(true); setHandle(event.target.value); }} placeholder="yourbusiness" className="min-w-[140px] flex-1 bg-transparent font-medium outline-none" />
+                    <span className={`ml-2 font-mono text-[9px] font-bold uppercase ${handleState === 'free' ? 'text-[#2F6B3B]' : handleState === 'taken' ? 'text-[#C4453F]' : 'text-black/35'}`}>
+                      {handleState === 'checking' ? 'Checking...' : handleState === 'free' ? 'Available' : handleState === 'taken' ? handleReason || 'Taken' : ''}
                     </span>
-                  )}
-                  <button
-                    onClick={() => {
-                      const next = [...rows];
-                      next[i] = { ...next[i], closed: !next[i].closed };
-                      setRows(next);
-                    }}
-                    className="text-xs px-3 py-1.5 rounded-full bg-white text-[#6C6A62] hover:text-[#1A1A18] transition shrink-0"
-                  >
-                    {rows[i].closed ? 'Open' : 'Closed'}
-                  </button>
-                </div>
-              ))}
+                  </div>
+                </label>
+              </div>
+
+              {error ? <p className="mt-4 border-2 border-black bg-[#F8AE9D] p-4 text-sm">{error}</p> : null}
+              <button onClick={saveBasics} disabled={saving || !canContinue} className="mt-7 flex min-h-14 w-full items-center justify-between border-2 border-black bg-black px-5 font-bold uppercase text-white hover:bg-[#A7E348] hover:text-black disabled:opacity-35">
+                {saving ? 'Saving...' : 'Claim this link'} <span>→</span>
+              </button>
             </div>
+          ) : null}
 
-            <button
-              onClick={() => copyDayToAll(1)}
-              className="mt-3 text-sm text-[#2E7D5B] underline"
-            >
-              Use Monday&rsquo;s hours for every other day
-            </button>
+          {step === 2 ? (
+            <div className="mt-9">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-black/45">The normal week</p>
+              <h1 className="mt-3 text-4xl font-bold uppercase leading-[0.9] tracking-[-0.055em] md:text-6xl">Set regular<br /><span className="text-[#2F6B3B]">hours once.</span></h1>
+              <p className="mt-5 max-w-xl text-lg text-black/60">Temporary changes sit on top of these hours, then disappear automatically when they are over.</p>
 
-            {error ? <p className="mt-4 text-sm text-[#C4453F]">{error}</p> : null}
-
-            <button
-              onClick={saveHours}
-              disabled={saving}
-              className="mt-6 w-full py-3.5 rounded-full bg-[#1A1A18] text-white font-medium hover:bg-[#2E7D5B] disabled:opacity-40 transition"
-            >
-              {saving ? 'Saving...' : 'Continue'}
-            </button>
-            <button onClick={() => setStep(1)} className="mt-3 w-full text-sm text-[#6C6A62]">Back</button>
-          </div>
-        ) : null}
-
-        {step === 3 ? (
-          <div className="mt-6">
-            <h1 className="text-3xl font-bold tracking-tight">Add the things customers need</h1>
-            <p className="mt-2 text-[#6C6A62]">Paste a link for anything you want on your page.</p>
-
-            <div className="mt-6 flex flex-wrap gap-2">
-              {PRESETS.filter((p) => !links.some((l) => l.label === p)).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setLinks([...links, { label: p, url: '' }])}
-                  className="text-sm px-4 py-2 rounded-full bg-[#F5F7F5] hover:bg-[#E2EFE7] transition"
-                >
-                  + {p}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-5 space-y-2">
-              {links.map((l, i) => (
-                <div key={l.label + i} className="rounded-2xl bg-[#F5F7F5] px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{l.label}</span>
-                    <button
-                      onClick={() => setLinks(links.filter((_, j) => j !== i))}
-                      className="text-xs text-[#9B998F] hover:text-[#C4453F]"
-                    >
-                      Remove
+              <div className="mt-8 divide-y border-2 border-black bg-white">
+                {DAYS.map((day, index) => (
+                  <div key={day} className="flex flex-wrap items-center gap-3 p-3.5 sm:flex-nowrap">
+                    <span className="w-12 shrink-0 font-mono text-[10px] font-bold uppercase">{day.slice(0, 3)}</span>
+                    {rows[index].closed ? (
+                      <span className="flex-1 text-sm text-black/40">Closed</span>
+                    ) : (
+                      <div className="flex flex-1 items-center gap-2">
+                        <input aria-label={`${day} opening time`} type="time" value={rows[index].open} onChange={(event) => { const next = [...rows]; next[index] = { ...next[index], open: event.target.value }; setRows(next); }} className="min-w-0 flex-1 border border-black/25 px-2 py-1.5 text-sm" />
+                        <span className="text-black/35">to</span>
+                        <input aria-label={`${day} closing time`} type="time" value={rows[index].close} onChange={(event) => { const next = [...rows]; next[index] = { ...next[index], close: event.target.value }; setRows(next); }} className="min-w-0 flex-1 border border-black/25 px-2 py-1.5 text-sm" />
+                      </div>
+                    )}
+                    <button onClick={() => { const next = [...rows]; next[index] = { ...next[index], closed: !next[index].closed }; setRows(next); }} className="border border-black px-3 py-1.5 font-mono text-[9px] font-bold uppercase hover:bg-[#F4F1E8]">
+                      {rows[index].closed ? 'Open' : 'Close'}
                     </button>
                   </div>
-                  <input
-                    value={l.url}
-                    onChange={(e) => {
-                      const next = [...links];
-                      next[i] = { ...next[i], url: e.target.value };
-                      setLinks(next);
-                    }}
-                    placeholder="https://"
-                    className="mt-1.5 w-full bg-white rounded-lg px-3 py-2 text-sm focus:outline-none"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {error ? <p className="mt-4 text-sm text-[#C4453F]">{error}</p> : null}
-
-            <button
-              onClick={saveLinks}
-              disabled={saving}
-              className="mt-7 w-full py-3.5 rounded-full bg-[#1A1A18] text-white font-medium hover:bg-[#2E7D5B] disabled:opacity-40 transition"
-            >
-              {saving ? 'Saving...' : 'Continue'}
-            </button>
-            <button onClick={() => setStep(2)} className="mt-3 w-full text-sm text-[#6C6A62]">Back</button>
-          </div>
-        ) : null}
-
-        {step === 4 ? (
-          <div className="mt-6">
-            <h1 className="text-3xl font-bold tracking-tight">Connect Instagram</h1>
-            <p className="mt-2 text-[#6C6A62]">
-              Optional. If you connect it, we can spot a change you posted and ask you
-              to confirm it. We never publish anything without you.
-            </p>
-
-            <div className="mt-6 rounded-2xl bg-[#F5F7F5] px-5 py-4">
-              <p className="text-sm text-[#4A4842]">
-                Needs a Business or Creator account linked to a Facebook page. We only
-                read posts.
-              </p>
-            </div>
-
-            {igHandle ? (
-              <div className="mt-4 rounded-2xl bg-[#E2EFE7] px-5 py-4">
-                <p className="text-[#2E7D5B] font-medium">Connected to @{igHandle}</p>
+                ))}
               </div>
-            ) : (
-              <button
-                onClick={connectInstagram}
-                disabled={saving}
-                className="mt-5 w-full py-3.5 rounded-full bg-[#2E7D5B] text-white font-medium hover:bg-[#256349] disabled:opacity-40 transition"
-              >
-                {saving ? 'Opening...' : 'Connect Instagram'}
+              <button onClick={() => { const monday = rows[1]; setRows(rows.map((row, index) => index === 1 ? row : { ...monday })); }} className="mt-3 text-sm font-medium underline underline-offset-4">Use Monday for the whole week</button>
+
+              {error ? <p className="mt-4 border-2 border-black bg-[#F8AE9D] p-4 text-sm">{error}</p> : null}
+              <button onClick={saveHours} disabled={saving} className="mt-7 flex min-h-14 w-full items-center justify-between border-2 border-black bg-black px-5 font-bold uppercase text-white hover:bg-[#A7E348] hover:text-black disabled:opacity-35">
+                {saving ? 'Saving...' : 'Save regular hours'} <span>→</span>
               </button>
-            )}
-
-            {error ? <p className="mt-4 text-sm text-[#C4453F]">{error}</p> : null}
-
-            <button
-              onClick={() => setStep(5)}
-              className="mt-3 w-full py-3.5 rounded-full border border-black/15 font-medium hover:border-black/50 transition"
-            >
-              {igHandle ? 'Continue' : 'Skip for now'}
-            </button>
-            <button onClick={() => setStep(3)} className="mt-3 w-full text-sm text-[#6C6A62]">Back</button>
-          </div>
-        ) : null}
-
-        {step === 5 ? (
-          <div className="mt-6">
-            <h1 className="text-3xl font-bold tracking-tight">Your live status is ready</h1>
-            <p className="mt-2 text-[#6C6A62]">Put this in your Instagram bio and you are done.</p>
-
-            <div className="mt-6 rounded-2xl bg-[#12251D] text-white px-5 py-5">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-[#9FE1CB]" style={{ fontFamily: 'var(--font-mono)' }}>
-                Add to your bio
-              </p>
-              <p className="mt-2 text-lg font-medium">Current hours + LIVE STATUS</p>
-              <p className="text-[#9FE1CB]">{pageUrl}</p>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText('Current hours + LIVE STATUS\n' + pageUrl);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                className="mt-4 w-full py-2.5 rounded-full bg-[#2E7D5B] font-medium hover:bg-white hover:text-[#12251D] transition"
-              >
-                {copied ? 'Copied' : 'Copy'}
-              </button>
+              <button onClick={() => setStep(1)} className="mt-3 w-full py-2 text-sm text-black/50 hover:text-black">Back</button>
             </div>
+          ) : null}
 
-            <a href={'/' + clean} className="mt-4 block text-center py-3.5 rounded-full border border-black/15 font-medium hover:border-black/50 transition">
-              View my page
-            </a>
-            <a href="/dashboard" className="mt-3 block text-center py-3.5 rounded-full bg-[#1A1A18] text-white font-medium hover:bg-[#2E7D5B] transition">
-              Go to dashboard
-            </a>
+          {step === 3 ? (
+            <div className="mt-9">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-black/45">What customers see</p>
+              <h1 className="mt-3 text-4xl font-bold uppercase leading-[0.9] tracking-[-0.055em] md:text-6xl">Make the page<br /><span className="text-[#2F6B3B]">feel like you.</span></h1>
+              <p className="mt-5 max-w-xl text-lg text-black/60">Add your photos and only the actions customers actually need. The preview updates as you edit.</p>
+
+              <div className="mt-8 grid gap-5 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">Logo or profile image URL</span>
+                  <input value={avatarUrl} onChange={(event) => setAvatarUrl(event.target.value)} placeholder="https://..." className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold">Cover image URL</span>
+                  <input value={headerUrl} onChange={(event) => setHeaderUrl(event.target.value)} placeholder="https://..." className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" />
+                </label>
+              </div>
+              <p className="mt-2 text-xs text-black/45">Direct uploads can be added next; these fields work with images already on your website or social profiles.</p>
+
+              <div className="mt-8 border-t-2 border-black pt-6">
+                <h2 className="text-xl font-bold uppercase">Quick links</h2>
+                <p className="mt-1 text-sm text-black/50">Choose what belongs on your page. Leave everything else off.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {PRESETS.filter((preset) => !links.some((link) => link.label === preset)).map((preset) => (
+                    <button key={preset} onClick={() => setLinks([...links, { label: preset, url: '' }])} className="border-2 border-black bg-white px-3 py-2 text-sm font-medium hover:bg-[#A7E348]">+ {preset}</button>
+                  ))}
+                </div>
+                <div className="mt-4 space-y-2">
+                  {links.map((link, index) => (
+                    <div key={`${link.label}-${index}`} className="border-2 border-black bg-white p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-bold">{link.label}</span>
+                        <button onClick={() => setLinks(links.filter((_, itemIndex) => itemIndex !== index))} className="font-mono text-[9px] font-bold uppercase text-black/45 hover:text-[#C4453F]">Remove</button>
+                      </div>
+                      <input value={link.url} onChange={(event) => { const next = [...links]; next[index] = { ...next[index], url: event.target.value }; setLinks(next); }} placeholder="https://" className="mt-2 w-full border border-black/20 bg-[#F4F1E8] px-3 py-2 text-sm outline-none focus:border-black" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {error ? <p className="mt-4 border-2 border-black bg-[#F8AE9D] p-4 text-sm">{error}</p> : null}
+              <button onClick={saveAppearance} disabled={saving} className="mt-7 flex min-h-14 w-full items-center justify-between border-2 border-black bg-black px-5 font-bold uppercase text-white hover:bg-[#A7E348] hover:text-black disabled:opacity-35">
+                {saving ? 'Saving...' : 'Save page'} <span>→</span>
+              </button>
+              <button onClick={() => setStep(2)} className="mt-3 w-full py-2 text-sm text-black/50 hover:text-black">Back</button>
+            </div>
+          ) : null}
+
+          {step === 4 ? (
+            <div className="mt-9">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-black/45">Last step · optional</p>
+              <h1 className="mt-3 text-4xl font-bold uppercase leading-[0.9] tracking-[-0.055em] md:text-6xl">Connect<br /><span className="text-[#2F6B3B]">Instagram.</span></h1>
+              <p className="mt-5 max-w-xl text-lg text-black/60">When a post mentions changed hours, a closure, or another visit-changing detail, OpenStatus prepares the update for you to approve.</p>
+
+              <div className="mt-8 border-2 border-black bg-white p-5">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="font-bold">Instagram Business or Creator</p>
+                    <p className="mt-1 text-sm text-black/50">Must be linked to a Facebook Page. Read-only access.</p>
+                  </div>
+                  {igHandle ? <span className="border-2 border-black bg-[#A7E348] px-3 py-2 font-mono text-[9px] font-bold uppercase">@{igHandle} connected</span> : null}
+                </div>
+              </div>
+
+              {!igHandle ? (
+                <button onClick={connectInstagram} disabled={saving} className="mt-4 flex min-h-14 w-full items-center justify-between border-2 border-black bg-[#A7E348] px-5 font-bold uppercase hover:bg-white disabled:opacity-35">
+                  {saving ? 'Opening Meta...' : 'Connect Instagram'} <span>↗</span>
+                </button>
+              ) : null}
+
+              <div className="mt-6 border-l-4 border-[#2F6B3B] pl-4 text-sm text-black/60">
+                OpenStatus never posts to Instagram and never changes your public status without your approval.
+              </div>
+              {error ? <p className="mt-4 border-2 border-black bg-[#F8AE9D] p-4 text-sm">{error}</p> : null}
+
+              <button onClick={finish} className="mt-7 flex min-h-14 w-full items-center justify-between border-2 border-black bg-black px-5 font-bold uppercase text-white hover:bg-[#A7E348] hover:text-black">
+                {igHandle ? 'Finish setup' : 'Finish without Instagram'} <span>→</span>
+              </button>
+              <button onClick={() => setStep(3)} className="mt-3 w-full py-2 text-sm text-black/50 hover:text-black">Back</button>
+            </div>
+          ) : null}
+        </section>
+
+        <aside className="hidden lg:block">
+          <div className="sticky top-6">
+            <div className="mb-3 flex items-center justify-between font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-black/45"><span>Live preview</span><span>{pageUrl}</span></div>
+            <PagePreview name={name} tagline={tagline} avatarUrl={avatarUrl} headerUrl={headerUrl} rows={rows} links={previewLinks} />
+            <p className="mt-5 text-sm leading-relaxed text-black/50">Customers see the current answer first. Your images, hours, and quick links stay secondary and easy to scan.</p>
           </div>
-        ) : null}
-      </div>
+        </aside>
+      </main>
     </div>
   );
 }
