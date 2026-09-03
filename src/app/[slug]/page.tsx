@@ -23,7 +23,22 @@ type Update = {
   source: string | null;
 };
 
-type Link = { label: string; url: string; note?: string };
+type MenuItem = {
+  name: string;
+  price: string | null;
+  description: string | null;
+  section: string | null;
+};
+
+type Link = {
+  label: string;
+  url: string;
+  note?: string;
+  mode?: 'structured';
+  source_url?: string;
+  source_type?: 'url' | 'image';
+  items?: MenuItem[];
+};
 
 function pretty(t: string | null): string {
   if (!t) return '';
@@ -125,6 +140,17 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const hours: Hours[] = hoursRows ?? [];
   const updates: Update[] = updateRows ?? [];
   const links: Link[] = Array.isArray(business.links) ? business.links : [];
+  const structuredMenu = links.find((link) => link.label.toLowerCase() === 'menu' && link.items?.length);
+  const quickLinks = links.filter((link) => link.url && link !== structuredMenu);
+  const menuSections = structuredMenu
+    ? Array.from(new Set(structuredMenu.items?.map((item) => item.section || 'Menu') ?? []))
+    : [];
+  const avatarSrc = typeof business.avatar_url === 'string' && business.avatar_url.startsWith('storage:')
+    ? `/api/assets?businessId=${business.id}&kind=avatar`
+    : business.avatar_url;
+  const headerSrc = typeof business.header_url === 'string' && business.header_url.startsWith('storage:')
+    ? `/api/assets?businessId=${business.id}&kind=header`
+    : business.header_url;
 
   const now = new Date();
   const today = now.getDay();
@@ -183,8 +209,8 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   return (
     <div className="min-h-screen bg-[#EDE9E2] text-[#1A1A18] flex justify-center" style={{ fontFamily: 'var(--font-display)' }}>
       <div className="relative w-full max-w-[440px] min-h-screen overflow-hidden">
-        {business.header_url ? (
-          <img src={business.header_url} alt="" className="absolute inset-x-0 top-0 h-[420px] w-full object-cover" style={{ objectPosition: 'center 55%' }} />
+        {headerSrc ? (
+          <img src={headerSrc} alt="" className="absolute inset-x-0 top-0 h-[420px] w-full object-cover" style={{ objectPosition: 'center 55%' }} />
         ) : (
           <div className="absolute inset-x-0 top-0 h-[420px] bg-[#2E4A3E]" />
         )}
@@ -192,8 +218,8 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
         <div className="relative px-4 pb-10">
           <div className="pt-28 flex items-end gap-4">
-            {business.avatar_url ? (
-              <img src={business.avatar_url} alt="" className="w-[74px] h-[74px] rounded-[20px] object-cover bg-white p-1.5 shadow-[0_6px_20px_rgba(0,0,0,0.18)] shrink-0" />
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="" className="w-[74px] h-[74px] rounded-[20px] object-cover bg-white p-1.5 shadow-[0_6px_20px_rgba(0,0,0,0.18)] shrink-0" />
             ) : (
               <div className="w-[74px] h-[74px] rounded-[20px] bg-white shrink-0" />
             )}
@@ -296,16 +322,52 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             </ul>
           </details>
 
-          {links.length > 0 ? (
+          {quickLinks.length > 0 ? (
             <div className="mt-3 grid grid-cols-3 gap-2.5">
-              {links.map((l) => (
-                <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className={'px-3 py-4 hover:bg-white/90 transition rounded-[20px] bg-white/75 backdrop-blur-xl border border-white/70'}>
+              {quickLinks.map((l) => (
+                <a key={l.label + l.url} href={l.url} target="_blank" rel="noreferrer" className={'px-3 py-4 hover:bg-white/90 transition rounded-[20px] bg-white/75 backdrop-blur-xl border border-white/70'}>
                   <span className="text-[#C08A5E] block"><Icon name={iconFor(l.label)} /></span>
                   <span className="mt-2 block text-sm font-medium leading-tight">{l.label}</span>
                   {l.note ? <span className="block text-[11px] text-[#6C6A62] mt-0.5 leading-tight">{l.note}</span> : null}
                 </a>
               ))}
             </div>
+          ) : null}
+
+          {structuredMenu ? (
+            <details className={'mt-3 overflow-hidden ' + glass}>
+              <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-5">
+                <span className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-[#C08A5E]"><Icon name="book" /></span>
+                  <span>
+                    <span className="block text-lg font-medium">Menu</span>
+                    <span className="block text-xs text-[#6C6A62]">{structuredMenu.items?.length} items · names and prices</span>
+                  </span>
+                </span>
+                <span className="text-sm text-[#2E7D5B]">View</span>
+              </summary>
+              <div className="border-t border-white/70 px-5 pb-5 pt-2">
+                {menuSections.map((section) => (
+                  <section key={section} className="pt-5">
+                    <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#6C6A62]">{section}</h2>
+                    <ul className="mt-2 divide-y divide-black/10">
+                      {structuredMenu.items?.filter((item) => (item.section || 'Menu') === section).map((item, index) => (
+                        <li key={`${section}-${item.name}-${index}`} className="flex items-start justify-between gap-4 py-3">
+                          <span className="min-w-0">
+                            <span className="block font-medium">{item.name}</span>
+                            {item.description ? <span className="mt-0.5 block text-sm leading-snug text-[#6C6A62]">{item.description}</span> : null}
+                          </span>
+                          <span className="shrink-0 font-medium text-[#2E7D5B]">{item.price || '—'}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+                {structuredMenu.source_type === 'url' && structuredMenu.source_url ? (
+                  <a href={structuredMenu.source_url} target="_blank" rel="noreferrer" className="mt-5 block text-center text-xs font-medium text-[#2E7D5B] underline underline-offset-4">View original menu ↗</a>
+                ) : null}
+              </div>
+            </details>
           ) : null}
 
           {business.instagram_handle ? (
