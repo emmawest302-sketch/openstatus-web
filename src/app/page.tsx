@@ -90,12 +90,12 @@ export default function HomePage() {
 
       <section className="relative min-h-[calc(100svh-108px)] border-b-2 border-black bg-black text-white">
         <Image
-          src="/image.png"
-          alt="Two local business workers photographed with direct flash"
+          src="/hero.jpg.jpg"
+          alt="Two friends sharing ice cream in a candid overhead photo"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-center"
+          className="object-cover object-[52%_45%] md:object-center"
         />
         <div className="absolute inset-0 bg-black/42" />
         <div className="photo-vignette absolute inset-0" />
