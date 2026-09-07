@@ -7,6 +7,16 @@ const menu = [
   { name: 'Morning bun', description: 'Cinnamon sugar, orange zest', price: '$4.25' },
 ];
 
+const weeklyHours = [
+  { day: 'Monday', hours: '7:00 AM–6:00 PM' },
+  { day: 'Tuesday', hours: '7:00 AM–6:00 PM' },
+  { day: 'Wednesday', hours: '7:00 AM–6:00 PM' },
+  { day: 'Thursday', hours: '7:00 AM–6:00 PM' },
+  { day: 'Friday', hours: '7:00 AM–6:00 PM' },
+  { day: 'Saturday', hours: '8:00 AM–4:00 PM' },
+  { day: 'Sunday', hours: 'Closed' },
+];
+
 function DemoIcon({ name }: { name: 'clock' | 'menu' | 'bag' | 'pin' }) {
   const paths = {
     clock: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
@@ -28,8 +38,8 @@ export default function EmmasCoffeeDemo({ phone = false }: { phone?: boolean }) 
         <Image src="/emmas-coffee-cover.jpg" alt="Iced coffee and a pastry on the counter at the fictional Emma's Coffee" fill sizes={phone ? '390px' : '440px'} className="object-cover" priority={!phone} />
         <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/10 to-[#EDE9E2]" />
         <div className="absolute inset-x-4 bottom-5 flex items-end gap-3">
-          <div className="relative h-[70px] w-[70px] shrink-0 overflow-hidden rounded-[20px] border-4 border-white bg-white shadow-lg">
-            <Image src="/emmas-coffee-logo.png" alt="Emma's Coffee logo" fill sizes="70px" className="object-contain p-1" />
+          <div className="flex h-[70px] w-[70px] shrink-0 items-center justify-center rounded-[20px] border-4 border-white bg-white px-1 shadow-lg" aria-label="EMMA'S logo">
+            <span className="text-center text-[13px] font-black tracking-[-0.04em] text-black">EMMA&rsquo;S</span>
           </div>
           <div className="min-w-0 pb-1">
             <p className="truncate text-[26px] font-bold leading-none tracking-[-0.03em]">Emma&rsquo;s Coffee</p>
@@ -54,12 +64,21 @@ export default function EmmasCoffeeDemo({ phone = false }: { phone?: boolean }) 
           </div>
         </section>
 
-        <details className="overflow-hidden rounded-[22px] border border-white/70 bg-white/75 backdrop-blur-xl">
+        <details open className="overflow-hidden rounded-[22px] border border-white/70 bg-white/75 backdrop-blur-xl">
           <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between px-4">
-            <span className="flex items-center gap-3"><span className="text-[#2E7D5B]"><DemoIcon name="clock" /></span><span className="font-medium">Today&rsquo;s hours</span></span>
-            <span className="text-sm text-black/50">7:00 AM–4:00 PM</span>
+            <span className="flex items-center gap-3"><span className="text-[#2E7D5B]"><DemoIcon name="clock" /></span><span className="font-medium">Today &amp; weekly hours</span></span>
+            <span className="text-right text-sm text-black/50"><span className="block">7:00 AM–4:00 PM</span><span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#9A7434]">Changed today</span></span>
           </summary>
-          <div className="border-t border-black/10 px-4 py-3 text-sm text-black/60">Regular hours are 7:00 AM–6:00 PM.</div>
+          <div className="border-t border-black/10 px-4 py-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-black/40">Usual hours</p>
+            <ul className="space-y-1.5">
+              {weeklyHours.map((row) => (
+                <li key={row.day} className="flex justify-between text-sm text-black/60">
+                  <span>{row.day}</span><span>{row.hours}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </details>
 
         <div className="space-y-2">
