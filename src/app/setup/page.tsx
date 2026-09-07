@@ -85,10 +85,21 @@ function PagePreview({
       <div className="space-y-3 p-4">
         <div className="rounded-3xl border border-black/10 bg-white/80 p-4">
           <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-[#2F6B3B]">
-            <span className="h-2 w-2 rounded-full bg-[#2F6B3B]" /> Regular hours
+            <span className="h-2 w-2 rounded-full bg-[#2F6B3B]" /> Today
           </div>
           <p className="mt-2 text-2xl font-bold">{today?.closed ? 'Closed today' : 'Open today'}</p>
           {!today?.closed ? <p className="text-sm text-black/55">{prettyTime(today.open)} – {prettyTime(today.close)}</p> : null}
+          <div className="mt-4 border-t border-black/10 pt-3">
+            <p className="mb-2 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-black/40">Usual weekly hours</p>
+            <ul className="space-y-1">
+              {DAYS.map((day, index) => (
+                <li key={day} className={`flex justify-between text-[11px] ${index === new Date().getDay() ? 'font-bold text-black' : 'text-black/50'}`}>
+                  <span>{day}</span>
+                  <span>{rows[index]?.closed ? 'Closed' : `${prettyTime(rows[index].open)} – ${prettyTime(rows[index].close)}`}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {visibleLinks.length > 0 ? (
