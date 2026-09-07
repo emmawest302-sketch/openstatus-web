@@ -288,11 +288,11 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             ) : null}
           </div>
 
-          <details className={'mt-3 overflow-hidden ' + glass}>
+          <details open className={'mt-3 overflow-hidden ' + glass}>
             <summary className="list-none cursor-pointer px-5 py-4">
               <div className="flex items-center justify-between">
-                <span className="font-medium">Today&rsquo;s hours</span>
-                <span className="text-sm text-[#6C6A62]">View all</span>
+                <span className="font-medium">Today &amp; weekly hours</span>
+                <span className="text-sm text-[#6C6A62]">Usual week</span>
               </div>
               <div className="mt-3 flex items-center gap-4">
                 <span className="w-12 h-12 rounded-full bg-white/70 flex items-center justify-center text-[#4A4842] shrink-0">
@@ -313,7 +313,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
                 </span>
               </div>
             </summary>
-            <ul className="px-5 pb-4 space-y-1.5 border-t border-white/60 pt-3">
+            <ul className="px-5 pb-4 space-y-1.5 border-t border-white/60 pt-3" aria-label="Usual weekly hours">
               {DAY_NAMES.map((d, i) => (
                 <li key={d} className={'flex justify-between text-sm ' + (i === today ? 'font-medium' : 'text-[#6C6A62]')}>
                   <span>{d}</span>
