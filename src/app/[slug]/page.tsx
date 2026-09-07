@@ -24,23 +24,6 @@ type Update = {
   source: string | null;
 };
 
-type MenuItem = {
-  name: string;
-  price: string | null;
-  description: string | null;
-  section: string | null;
-};
-
-type Link = {
-  label: string;
-  url: string;
-  note?: string;
-  mode?: 'structured';
-  source_url?: string;
-  source_type?: 'url' | 'image';
-  items?: MenuItem[];
-};
-
 function pretty(t: string | null): string {
   if (!t) return '';
   const [hStr, m] = t.split(':');
@@ -83,33 +66,12 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
     clock: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
     calendarCheck: 'M4 6h16v14H4zM8 3v4M16 3v4M4 10h16M9 15l2 2 4-4',
     cup: 'M4 8h13v5a5 5 0 01-5 5H9a5 5 0 01-5-5V8zM17 9h2a2 2 0 010 4h-2',
-    book: 'M4 5a2 2 0 012-2h12v18H6a2 2 0 01-2-2V5zM8 3v18',
-    bag: 'M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 016 0v2',
-    pin: 'M3 11l18-8-8 18-2-8-8-2z',
-    calendar: 'M4 6h16v14H4zM8 3v4M16 3v4M4 10h16',
-    users: 'M16 19v-1a4 4 0 00-8 0v1M12 11a3 3 0 100-6 3 3 0 000 6M20 19v-1a3 3 0 00-2-2.8',
-    gift: 'M4 11h16v9H4zM3 7h18v4H3zM12 7v13',
-    globe: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18',
-    phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a1 1 0 01-1 1A16 16 0 014 5a1 1 0 011-1z',
-    bell: 'M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6zM10 20a2 2 0 004 0',
   };
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
-      <path d={p[name] ?? p.globe} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={p[name] ?? p.clock} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
-}
-
-function iconFor(label: string): string {
-  const s = label.toLowerCase();
-  if (s.includes('menu')) return 'book';
-  if (s.includes('order')) return 'bag';
-  if (s.includes('direction') || s.includes('map')) return 'pin';
-  if (s.includes('reserv') || s.includes('table') || s.includes('book')) return 'calendar';
-  if (s.includes('cater') || s.includes('event')) return 'users';
-  if (s.includes('gift')) return 'gift';
-  if (s.includes('call') || s.includes('phone')) return 'phone';
-  return 'globe';
 }
 
 export default async function LiveStatus({ params }: { params: Promise<{ slug: string }> }) {
@@ -118,7 +80,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
   const { data: business } = await admin
     .from('businesses')
-    .select('id, name, tagline, avatar_url, header_url, links, instagram_handle')
+    .select('id, name, tagline, avatar_url, header_url, timezone')
     .eq('slug', slug.toLowerCase())
     .maybeSingle();
 
@@ -140,12 +102,6 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
   const hours: Hours[] = hoursRows ?? [];
   const updates: Update[] = updateRows ?? [];
-  const links: Link[] = Array.isArray(business.links) ? business.links : [];
-  const structuredMenu = links.find((link) => link.label.toLowerCase() === 'menu' && link.items?.length);
-  const quickLinks = links.filter((link) => link.url && link !== structuredMenu);
-  const menuSections = structuredMenu
-    ? Array.from(new Set(structuredMenu.items?.map((item) => item.section || 'Menu') ?? []))
-    : [];
   const avatarSrc = typeof business.avatar_url === 'string' && business.avatar_url.startsWith('storage:')
     ? `/api/assets?businessId=${business.id}&kind=avatar`
     : business.avatar_url;
@@ -154,9 +110,20 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
     : business.header_url;
 
   const now = new Date();
-  const today = now.getDay();
+  const timezone = business.timezone || 'America/Chicago';
+  const localParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const weekday = localParts.find((part) => part.type === 'weekday')?.value ?? 'Sun';
+  const today = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(weekday);
   const todayRow = hours.find((h) => h.day_of_week === today) ?? null;
-  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const localHour = Number(localParts.find((part) => part.type === 'hour')?.value ?? 0);
+  const localMinute = Number(localParts.find((part) => part.type === 'minute')?.value ?? 0);
+  const nowMins = localHour * 60 + localMinute;
 
   const lead = updates[0] ?? null;
   const also = updates.slice(1);
@@ -323,67 +290,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             </ul>
           </details>
 
-          {quickLinks.length > 0 ? (
-            <div className="mt-3 space-y-2.5">
-              {quickLinks.map((l) => (
-                <a key={l.label + l.url} href={l.url} target="_blank" rel="noreferrer" className="flex min-h-16 items-center gap-3 rounded-[20px] border border-white/70 bg-white/75 px-4 py-3 backdrop-blur-xl transition hover:bg-white/90">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/70 text-[#C08A5E]"><Icon name={iconFor(l.label)} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium leading-tight">{l.label}</span>
-                    {l.note ? <span className="mt-0.5 block text-sm leading-tight text-[#6C6A62]">{l.note}</span> : null}
-                  </span>
-                  <span className="text-lg text-[#2E7D5B]" aria-hidden="true">↗</span>
-                </a>
-              ))}
-            </div>
-          ) : null}
-
-          {structuredMenu ? (
-            <details className={'mt-3 overflow-hidden ' + glass}>
-              <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-5">
-                <span className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-[#C08A5E]"><Icon name="book" /></span>
-                  <span>
-                    <span className="block text-lg font-medium">Menu</span>
-                    <span className="block text-xs text-[#6C6A62]">{structuredMenu.items?.length} items · names and prices</span>
-                  </span>
-                </span>
-                <span className="text-sm text-[#2E7D5B]">View</span>
-              </summary>
-              <div className="border-t border-white/70 px-5 pb-5 pt-2">
-                {menuSections.map((section) => (
-                  <section key={section} className="pt-5">
-                    <h2 className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#6C6A62]">{section}</h2>
-                    <ul className="mt-2 divide-y divide-black/10">
-                      {structuredMenu.items?.filter((item) => (item.section || 'Menu') === section).map((item, index) => (
-                        <li key={`${section}-${item.name}-${index}`} className="flex items-start justify-between gap-4 py-3">
-                          <span className="min-w-0">
-                            <span className="block font-medium">{item.name}</span>
-                            {item.description ? <span className="mt-0.5 block text-sm leading-snug text-[#6C6A62]">{item.description}</span> : null}
-                          </span>
-                          <span className="shrink-0 font-medium text-[#2E7D5B]">{item.price || '—'}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ))}
-                {structuredMenu.source_type === 'url' && structuredMenu.source_url ? (
-                  <a href={structuredMenu.source_url} target="_blank" rel="noreferrer" className="mt-5 block text-center text-xs font-medium text-[#2E7D5B] underline underline-offset-4">View original menu ↗</a>
-                ) : null}
-              </div>
-            </details>
-          ) : null}
-
-          {business.instagram_handle ? (
-            <p className="mt-6 text-center text-sm text-[#6C6A62]">
-              Follow us{' '}
-              <a href={'https://instagram.com/' + business.instagram_handle} target="_blank" rel="noreferrer" className="text-[#2E7D5B]">
-                @{business.instagram_handle}
-              </a>
-            </p>
-          ) : null}
-
-          <Link href="/" className="mt-3 block text-center text-[10px] uppercase tracking-[0.18em] text-[#9B998F] hover:text-[#1A1A18] transition" style={{ fontFamily: 'var(--font-mono)' }}>
+          <Link href="/" className="mt-6 block text-center text-[10px] uppercase tracking-[0.18em] text-[#9B998F] hover:text-[#1A1A18] transition" style={{ fontFamily: 'var(--font-mono)' }}>
             Powered by OpenStatus
           </Link>
         </div>
