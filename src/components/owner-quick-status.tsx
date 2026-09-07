@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 type Variant = 'floating' | 'dashboard';
-type Mode = 'closed' | 'early' | 'note';
+type Mode = 'closed' | 'early';
 
 type OwnerQuickStatusProps = {
   businessId: string;
@@ -28,7 +28,6 @@ export default function OwnerQuickStatus({
   const [expanded, setExpanded] = useState(variant === 'dashboard');
   const [mode, setMode] = useState<Mode>('closed');
   const [closeTime, setCloseTime] = useState(nextHour);
-  const [note, setNote] = useState('');
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -78,7 +77,6 @@ export default function OwnerQuickStatus({
       const cleared = payload.action === 'clear';
       setHasOwnerUpdate(!cleared);
       setMessage(cleared ? 'Back to regular hours.' : 'Live page updated.');
-      setNote('');
       setReason('');
       router.refresh();
       if (variant === 'floating') window.setTimeout(() => setExpanded(false), 900);
@@ -90,16 +88,10 @@ export default function OwnerQuickStatus({
   };
 
   const publish = () => {
-    if (mode === 'note' && !note.trim()) {
-      setMessage('Write the update customers should see.');
-      return;
-    }
-
     void request({
       action: 'publish',
-      preset: mode === 'closed' ? 'closed_today' : mode === 'early' ? 'early_close' : 'note_today',
+      preset: mode === 'closed' ? 'closed_today' : 'early_close',
       closesAt: mode === 'early' ? closeTime : null,
-      note: mode === 'note' ? note.trim() : null,
       reason: reason.trim() || null,
     });
   };
@@ -118,11 +110,10 @@ export default function OwnerQuickStatus({
         ) : null}
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2" role="group" aria-label="Status type">
+      <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="Status type">
         {([
           ['closed', 'Close now'],
           ['early', 'Close early'],
-          ['note', 'Post a note'],
         ] as const).map(([value, label]) => (
           <button
             key={value}
@@ -143,19 +134,10 @@ export default function OwnerQuickStatus({
         </label>
       ) : null}
 
-      {mode === 'note' ? (
-        <label className="mt-4 block">
-          <span className="mb-1.5 block text-sm font-bold">Customer update</span>
-          <input value={note} onChange={(event) => setNote(event.target.value)} maxLength={100} placeholder="Kitchen closes at 3 PM" className="min-h-12 w-full border-2 border-black bg-white px-3 text-base" />
-        </label>
-      ) : null}
-
-      {mode !== 'note' ? (
-        <label className="mt-4 block">
-          <span className="mb-1.5 block text-sm font-bold">Reason <span className="font-normal text-black/45">(optional)</span></span>
-          <input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={120} placeholder="Private event, weather, sold out…" className="min-h-12 w-full border-2 border-black bg-white px-3 text-base" />
-        </label>
-      ) : null}
+      <label className="mt-4 block">
+        <span className="mb-1.5 block text-sm font-bold">Reason <span className="font-normal text-black/45">(optional)</span></span>
+        <input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={120} placeholder="Holiday, weather, or private event…" className="min-h-12 w-full border-2 border-black bg-white px-3 text-base" />
+      </label>
 
       {message ? <p className="mt-3 bg-white px-3 py-2 text-sm font-medium" role="status">{message}</p> : null}
 
