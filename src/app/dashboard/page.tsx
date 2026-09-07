@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import OwnerQuickStatus from '@/components/owner-quick-status';
 
-type QuickLink = { label: string; url: string; note?: string };
-
 type Business = {
   id: string;
   name: string;
@@ -15,7 +13,6 @@ type Business = {
   slug: string | null;
   avatar_url: string | null;
   header_url: string | null;
-  links: QuickLink[] | null;
   instagram_handle: string | null;
   instagram_account_id: string | null;
 };
@@ -120,7 +117,7 @@ export default function DashboardPage() {
 
     const { data: biz, error: businessError } = await supabase
       .from('businesses')
-      .select('id, name, tagline, slug, avatar_url, header_url, links, instagram_handle, instagram_account_id')
+      .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, instagram_account_id')
       .eq('user_id', userData.user.id)
       .maybeSingle();
 
@@ -402,7 +399,7 @@ export default function DashboardPage() {
             ) : (
               <div className="p-7 md:p-10">
                 <p className="text-xl font-bold">Nothing needs approval.</p>
-                <p className="mt-2 max-w-lg text-black/55">When a connected Instagram post mentions a closure, unusual hours, or another visit-changing detail, it appears here first.</p>
+                <p className="mt-2 max-w-lg text-black/55">When a connected Instagram post mentions a closure or unusual hours, it appears here first.</p>
               </div>
             )}
           </section>
@@ -436,7 +433,7 @@ export default function DashboardPage() {
               {[
                 ['Business & link', business?.slug ? 'Ready' : 'Finish', '/setup?step=1'],
                 ['Regular hours', 'Edit', '/setup?step=2'],
-                ['Look & quick links', `${business?.links?.length ?? 0} links`, '/setup?step=3'],
+                ['Branding', 'Edit', '/setup?step=3'],
                 ['Instagram', instagramConnected ? 'Connected' : 'Connect', '/setup?step=4'],
               ].map(([label, value, href]) => (
                 <Link key={label} href={href} className="flex items-center justify-between border-b border-black/20 px-5 py-4 last:border-b-0 hover:bg-[#F4F1E8]">
