@@ -5,11 +5,11 @@ import EmmasCoffeeDemo from '@/components/emmas-coffee-demo';
 const freeFeatures = [
   'Your own openstatus.co link',
   'Instagram connection',
-  'Unlimited automatic updates',
+  'Automatic hours suggestions',
   'Automatic expiry',
-  'Regular hours + quick links',
+  'Regular weekly hours',
   'Website status embed',
-  'Manual corrections',
+  'One-tap hours changes',
 ];
 
 const proFeatures = [
@@ -62,7 +62,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#F4F1E8] text-[#0A0A0A]" style={{ fontFamily: 'var(--font-display)' }}>
       <div className="bg-[#A7E348] px-4 py-2.5 text-center font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-black">
-        The door changes. Your link keeps up. <span aria-hidden="true">↗</span>
+        Your hours change. Your link keeps up. <span aria-hidden="true">↗</span>
       </div>
 
       <header className="relative z-50 border-b-2 border-black bg-[#F4F1E8]">
@@ -110,13 +110,13 @@ export default function HomePage() {
           </div>
 
           <div className="my-auto py-20 text-center">
-            <Eyebrow dark>Know before you go</Eyebrow>
+            <Eyebrow dark>The smart link-in-bio for live hours</Eyebrow>
             <h1 className="mx-auto mt-5 max-w-6xl text-[clamp(4rem,11vw,10rem)] font-bold uppercase leading-[0.78] tracking-[-0.075em]">
-              Are they<br />
-              <span className="text-[#A7E348]">actually open?</span>
+              Your hours<br />
+              <span className="text-[#A7E348]">update themselves.</span>
             </h1>
             <p className="mx-auto mt-8 max-w-xl text-base font-medium leading-relaxed text-white/80 md:text-lg">
-              One link that shows customers what is true right now—current hours, closures, sold-out items, pop-ups, and the updates they would otherwise miss.
+              Stop losing customers to outdated online hours. Run your shop; OpenStatus keeps your live link current.
             </p>
           </div>
 
@@ -141,29 +141,29 @@ export default function HomePage() {
 
       <div className="ticker border-b-2 border-black bg-[#A7E348] py-3 font-mono text-xs font-bold uppercase tracking-[0.2em]">
         <div className="ticker-track">
-          <span>Closing early today&nbsp;&nbsp;◆&nbsp;&nbsp;Sold out&nbsp;&nbsp;◆&nbsp;&nbsp;Pop-up moved&nbsp;&nbsp;◆&nbsp;&nbsp;Opening late&nbsp;&nbsp;◆&nbsp;&nbsp;Private event&nbsp;&nbsp;◆&nbsp;&nbsp;</span>
-          <span aria-hidden="true">Closing early today&nbsp;&nbsp;◆&nbsp;&nbsp;Sold out&nbsp;&nbsp;◆&nbsp;&nbsp;Pop-up moved&nbsp;&nbsp;◆&nbsp;&nbsp;Opening late&nbsp;&nbsp;◆&nbsp;&nbsp;Private event&nbsp;&nbsp;◆&nbsp;&nbsp;</span>
+          <span>Closing early today&nbsp;&nbsp;◆&nbsp;&nbsp;Holiday hours&nbsp;&nbsp;◆&nbsp;&nbsp;Closed today&nbsp;&nbsp;◆&nbsp;&nbsp;Opening late&nbsp;&nbsp;◆&nbsp;&nbsp;Hours confirmed&nbsp;&nbsp;◆&nbsp;&nbsp;</span>
+          <span aria-hidden="true">Closing early today&nbsp;&nbsp;◆&nbsp;&nbsp;Holiday hours&nbsp;&nbsp;◆&nbsp;&nbsp;Closed today&nbsp;&nbsp;◆&nbsp;&nbsp;Opening late&nbsp;&nbsp;◆&nbsp;&nbsp;Hours confirmed&nbsp;&nbsp;◆&nbsp;&nbsp;</span>
         </div>
       </div>
 
       <section className="border-b-2 border-black" id="how">
         <div className="mx-auto grid max-w-[1440px] lg:grid-cols-[0.75fr_1.25fr]">
           <div className="border-b-2 border-black p-6 md:p-10 lg:border-b-0 lg:border-r-2">
-            <Eyebrow>What OpenStatus does</Eyebrow>
+            <Eyebrow>The problem</Eyebrow>
             <p className="mt-8 max-w-sm font-serif text-3xl italic leading-tight md:text-4xl">
-              The internet should not make people guess whether the door will be open.
+              You post the change. Half your customers miss it and still drive to a closed door.
             </p>
           </div>
           <div className="p-6 md:p-10 lg:p-14">
             <h2 className="max-w-4xl text-[clamp(3.2rem,7.5vw,7.2rem)] font-bold uppercase leading-[0.83] tracking-[-0.065em]">
-              One post.<br />One link.<br />The actual answer.
+              Post once.<br />Your live hours<br />keep up.
             </h2>
             <div className="mt-10 grid gap-6 border-t-2 border-black pt-7 md:grid-cols-2">
               <p className="max-w-md text-lg leading-relaxed">
-                You post an update on Instagram. OpenStatus spots the useful part and turns it into a clean live notice for customers.
+                Post a closure, late opening, or holiday-hours change where you already communicate with customers.
               </p>
               <p className="max-w-md text-lg leading-relaxed text-black/60">
-                When the change is over, the notice expires automatically and your page goes back to showing regular hours.
+                OpenStatus prepares the hours change, keeps the live link current, then returns to the usual schedule when it expires.
               </p>
             </div>
           </div>
@@ -174,9 +174,9 @@ export default function HomePage() {
         <div className="mx-auto max-w-[1440px]">
           <div className="grid md:grid-cols-3">
             {[
-              ['01', 'POST', 'Share the update where you already have your audience.'],
-              ['02', 'OPENSTATUS READS', 'We identify only the details that could change someone’s trip.'],
-              ['03', 'CUSTOMERS KNOW', 'Your status link and website show the current answer immediately.'],
+              ['01', 'POST THE CHANGE', 'Share the hours update where you already have your audience.'],
+              ['02', 'OPENSTATUS READS', 'We identify the date and the hours without pulling in unrelated content.'],
+              ['03', 'YOUR LINK UPDATES', 'Customers see whether you are open, closed, or on special hours.'],
             ].map(([number, title, body], index) => (
               <article key={number} className={`min-h-[320px] p-6 md:p-9 ${index < 2 ? 'border-b-2 border-black md:border-b-0 md:border-r-2' : ''}`}>
                 <p className="font-mono text-xs font-bold tracking-[0.18em]">/{number}</p>
@@ -196,12 +196,12 @@ export default function HomePage() {
           </div>
           <div className="flex flex-col justify-between p-6 md:p-10 lg:p-14">
             <div>
-              <Eyebrow dark>The actual product</Eyebrow>
+              <Eyebrow dark>The live-hours link</Eyebrow>
               <h2 className="mt-5 text-[clamp(3.2rem,6vw,6.5rem)] font-bold uppercase leading-[0.84] tracking-[-0.06em]">
-                One mobile<br />link with the<br /><span className="text-[#A7E348]">real answer.</span>
+                One mobile<br />link. One<br /><span className="text-[#A7E348]">real answer.</span>
               </h2>
               <p className="mt-8 max-w-xl text-lg leading-relaxed text-white/65">
-                This is what customers actually open: today&rsquo;s status, changed hours, menu, ordering, and directions in one thumb-friendly page. Emma&rsquo;s Coffee is fictional; the product is real.
+                This is what customers actually open: a live answer for today, any temporary change, and the usual weekly hours. Emma&rsquo;s Coffee is fictional; the product is real.
               </p>
               <Link href="/emmas-coffee" className="group mt-8 flex min-h-14 max-w-sm items-center justify-between border-2 border-white bg-white px-4 font-bold uppercase text-black hover:border-[#A7E348] hover:bg-[#A7E348]">
                 Try the full demo <Arrow size={18} />
