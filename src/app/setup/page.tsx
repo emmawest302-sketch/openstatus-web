@@ -1,24 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { normaliseHandle, suggestHandle } from '@/lib/handles';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const PRESETS = ['Menu', 'Order Online', 'Directions', 'Reserve', 'Catering', 'Gift Cards', 'Website', 'Call'];
-
 type Row = { open: string; close: string; closed: boolean };
-type MenuItem = { name: string; price: string | null; description: string | null; section: string | null };
-type QuickLink = {
-  label: string;
-  url: string;
-  mode?: 'structured';
-  source_url?: string;
-  source_type?: 'url' | 'image';
-  items?: MenuItem[];
-};
 type HandleState = 'idle' | 'checking' | 'free' | 'taken';
 
 const DEFAULT_ROWS: Row[] = DAYS.map((_, index) => ({
@@ -54,17 +43,14 @@ function PagePreview({
   avatarUrl,
   headerUrl,
   rows,
-  links,
 }: {
   name: string;
   tagline: string;
   avatarUrl: string;
   headerUrl: string;
   rows: Row[];
-  links: QuickLink[];
 }) {
   const today = rows[new Date().getDay()];
-  const visibleLinks = links.filter((link) => link.url.trim() || link.items?.length).slice(0, 3);
 
   return (
     <div className="overflow-hidden border-2 border-black bg-[#EDE9E2] shadow-[10px_10px_0_#0A0A0A]">
@@ -101,18 +87,6 @@ function PagePreview({
             </ul>
           </div>
         </div>
-
-        {visibleLinks.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2">
-            {visibleLinks.map((link) => (
-              <div key={link.label} className="min-h-20 rounded-2xl border border-black/10 bg-white/80 p-3 text-xs font-medium">
-                <span className="mb-3 block text-lg">↗</span>{link.label}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-black/25 p-4 text-center text-xs text-black/45">Your quick links will appear here</div>
-        )}
       </div>
     </div>
   );
@@ -133,13 +107,9 @@ export default function SetupPage() {
   const [handleState, setHandleState] = useState<HandleState>('idle');
   const [handleReason, setHandleReason] = useState('');
   const [rows, setRows] = useState<Row[]>(DEFAULT_ROWS);
-  const [links, setLinks] = useState<QuickLink[]>([]);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [headerUrl, setHeaderUrl] = useState('');
-  const [uploading, setUploading] = useState<'avatar' | 'header' | 'menu' | null>(null);
-  const [menuMode, setMenuMode] = useState<'url' | 'image'>('url');
-  const [menuUrl, setMenuUrl] = useState('');
-  const [menuExtracting, setMenuExtracting] = useState(false);
+  const [uploading, setUploading] = useState<'avatar' | 'header' | null>(null);
   const [igHandle, setIgHandle] = useState<string | null>(null);
 
   useEffect(() => {
@@ -166,7 +136,7 @@ export default function SetupPage() {
       return;
     }
 
-    const fields = 'id, name, tagline, slug, links, avatar_url, header_url, instagram_handle';
+    const fields = 'id, name, tagline, slug, avatar_url, header_url, instagram_handle';
     const { data: existing, error: readError } = await supabase
       .from('businesses')
       .select(fields)
@@ -208,14 +178,6 @@ export default function SetupPage() {
         setHandleTouched(true);
         setHandleState('free');
       }
-      if (Array.isArray(business.links)) {
-        const loadedLinks = business.links as QuickLink[];
-        setLinks(loadedLinks);
-        const existingMenu = loadedLinks.find((link) => link.label.toLowerCase() === 'menu');
-        if (existingMenu?.source_url) setMenuUrl(existingMenu.source_url);
-        if (existingMenu?.source_type) setMenuMode(existingMenu.source_type);
-      }
-
       const { data: hourRows } = await supabase
         .from('business_hours')
         .select('day_of_week, opens_at, closes_at, is_closed')
@@ -312,11 +274,9 @@ export default function SetupPage() {
     if (!businessId) return;
     setSaving(true);
     setError('');
-    const cleanLinks = links.filter((link) => link.url.trim() || Boolean(link.items?.length));
     const { error: updateError } = await supabase
       .from('businesses')
       .update({
-        links: cleanLinks,
         avatar_url: avatarUrl.trim() || null,
         header_url: headerUrl.trim() || null,
       })
@@ -326,11 +286,10 @@ export default function SetupPage() {
       setError(updateError.message);
       return;
     }
-    setLinks(cleanLinks);
     setStep(4);
   };
 
-  const uploadImage = async (file: File, kind: 'avatar' | 'header' | 'menu') => {
+  const uploadImage = async (file: File, kind: 'avatar' | 'header') => {
     setUploading(kind);
     setError('');
     try {
@@ -382,40 +341,6 @@ export default function SetupPage() {
     }
   };
 
-  const extractMenu = async (sourceUrl: string, sourceType: 'url' | 'image') => {
-    setMenuExtracting(true);
-    setError('');
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error('Session expired. Sign in again.');
-      const response = await fetch('/api/menu/extract', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ sourceUrl, sourceType }),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? 'Could not read this menu');
-      setLinks((current) => [
-        ...current.filter((link) => link.label.toLowerCase() !== 'menu'),
-        body.menu as QuickLink,
-      ]);
-      setMenuUrl(body.menu.source_url ?? sourceUrl);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not read this menu');
-    } finally {
-      setMenuExtracting(false);
-    }
-  };
-
-  const uploadMenuPhoto = async (file: File) => {
-    const uploadedUrl = await uploadImage(file, 'menu');
-    if (uploadedUrl) await extractMenu(uploadedUrl, 'image');
-  };
-
   const connectInstagram = async () => {
     setSaving(true);
     setError('');
@@ -452,8 +377,6 @@ export default function SetupPage() {
     ? `/api/assets?businessId=${businessId}&kind=header`
     : headerUrl;
   const stepNames = ['Claim your link', 'Set regular hours', 'Make it yours', 'Connect Instagram'];
-
-  const previewLinks = useMemo(() => links.filter((link) => link.url.trim() || link.items?.length), [links]);
 
   if (loading) {
     return (
@@ -556,7 +479,7 @@ export default function SetupPage() {
             <div className="mt-9">
               <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-black/45">What customers see</p>
               <h1 className="mt-3 text-4xl font-bold uppercase leading-[0.9] tracking-[-0.055em] md:text-6xl">Make the page<br /><span className="text-[#2F6B3B]">feel like you.</span></h1>
-              <p className="mt-5 max-w-xl text-lg text-black/60">Add your photos and only the actions customers actually need. The preview updates as you edit.</p>
+              <p className="mt-5 max-w-xl text-lg text-black/60">Add your logo and cover so the link feels like your business. The hours stay simple and easy to trust.</p>
 
               <div className="mt-8 grid gap-5 sm:grid-cols-2">
                 <label className={`group block cursor-pointer border-2 border-black bg-white p-4 hover:bg-[#A7E348]/20 ${uploading ? 'pointer-events-none opacity-60' : ''}`}>
@@ -604,61 +527,6 @@ export default function SetupPage() {
               </div>
               <p className="mt-2 text-xs text-black/45">JPG, PNG, or WebP · maximum 5 MB</p>
 
-              <div className="mt-8 border-t-2 border-black pt-6">
-                <h2 className="text-xl font-bold uppercase">Quick links</h2>
-                <p className="mt-1 text-sm text-black/50">Choose what belongs on your page. Leave everything else off.</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {PRESETS.filter((preset) => !links.some((link) => link.label === preset)).map((preset) => (
-                    <button key={preset} onClick={() => setLinks([...links, { label: preset, url: '' }])} className="border-2 border-black bg-white px-3 py-2 text-sm font-medium hover:bg-[#A7E348]">+ {preset}</button>
-                  ))}
-                </div>
-                <div className="mt-4 space-y-2">
-                  {links.map((link, index) => (
-                    <div key={`${link.label}-${index}`} className="border-2 border-black bg-white p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-bold">{link.label}</span>
-                        <button onClick={() => setLinks(links.filter((_, itemIndex) => itemIndex !== index))} className="font-mono text-[9px] font-bold uppercase text-black/45 hover:text-[#C4453F]">Remove</button>
-                      </div>
-
-                      {link.label.toLowerCase() === 'menu' ? (
-                        <div className="mt-4">
-                          {link.items?.length ? (
-                            <div className="mb-4 flex items-center justify-between gap-3 border-2 border-black bg-[#A7E348] p-3">
-                              <span className="font-medium">Menu built from {link.source_type === 'image' ? 'your photo' : 'your link'}</span>
-                              <span className="font-mono text-[9px] font-bold uppercase">{link.items.length} items</span>
-                            </div>
-                          ) : null}
-
-                          <div className="grid grid-cols-2 border-2 border-black">
-                            <button onClick={() => setMenuMode('url')} className={`min-h-11 border-r-2 border-black px-3 text-sm font-bold ${menuMode === 'url' ? 'bg-black text-white' : 'bg-white'}`}>Use menu link</button>
-                            <button onClick={() => setMenuMode('image')} className={`min-h-11 px-3 text-sm font-bold ${menuMode === 'image' ? 'bg-black text-white' : 'bg-white'}`}>Upload menu photo</button>
-                          </div>
-
-                          {menuMode === 'url' ? (
-                            <div className="mt-3">
-                              <input value={menuUrl} onChange={(event) => setMenuUrl(event.target.value)} placeholder="https://yourwebsite.com/menu" className="w-full border-2 border-black bg-[#F4F1E8] px-3 py-3 text-sm outline-none focus:bg-white" />
-                              <button onClick={() => void extractMenu(menuUrl, 'url')} disabled={menuExtracting || !menuUrl.trim()} className="mt-2 flex min-h-11 w-full items-center justify-between border-2 border-black bg-black px-4 text-sm font-bold uppercase text-white hover:bg-[#A7E348] hover:text-black disabled:opacity-35">
-                                {menuExtracting ? 'Reading menu...' : link.items?.length ? 'Rebuild from link' : 'Build menu from link'} <span>→</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <label className={`mt-3 flex min-h-28 cursor-pointer flex-col items-center justify-center border-2 border-dashed border-black bg-[#F4F1E8] p-5 text-center hover:bg-[#A7E348]/20 ${(uploading === 'menu' || menuExtracting) ? 'pointer-events-none opacity-60' : ''}`}>
-                              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMenuPhoto(file); event.target.value = ''; }} />
-                              <span className="text-2xl">↑</span>
-                              <span className="mt-2 font-bold underline underline-offset-4">{uploading === 'menu' ? 'Uploading photo...' : menuExtracting ? 'Reading items and prices...' : link.items?.length ? 'Replace menu photo' : 'Choose menu photo'}</span>
-                              <span className="mt-1 text-xs text-black/45">Clear, straight-on photos work best</span>
-                            </label>
-                          )}
-                          <p className="mt-3 text-xs leading-relaxed text-black/45">OpenStatus turns the source into item names, sections, descriptions, and prices. You can rebuild it anytime.</p>
-                        </div>
-                      ) : (
-                        <input value={link.url} onChange={(event) => { const next = [...links]; next[index] = { ...next[index], url: event.target.value }; setLinks(next); }} placeholder={link.label === 'Call' ? 'tel:+16155551234' : 'https://'} className="mt-3 w-full border border-black/20 bg-[#F4F1E8] px-3 py-2 text-sm outline-none focus:border-black" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {error ? <p className="mt-4 border-2 border-black bg-[#F8AE9D] p-4 text-sm">{error}</p> : null}
               <button onClick={saveAppearance} disabled={saving} className="mt-7 flex min-h-14 w-full items-center justify-between border-2 border-black bg-black px-5 font-bold uppercase text-white hover:bg-[#A7E348] hover:text-black disabled:opacity-35">
                 {saving ? 'Saving...' : 'Save page'} <span>→</span>
@@ -705,8 +573,8 @@ export default function SetupPage() {
         <aside className="hidden lg:block">
           <div className="sticky top-6">
             <div className="mb-3 flex items-center justify-between font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-black/45"><span>Live preview</span><span>{pageUrl}</span></div>
-            <PagePreview name={name} tagline={tagline} avatarUrl={avatarPreviewUrl} headerUrl={headerPreviewUrl} rows={rows} links={previewLinks} />
-            <p className="mt-5 text-sm leading-relaxed text-black/50">Customers see the current answer first. Your images, hours, and quick links stay secondary and easy to scan.</p>
+            <PagePreview name={name} tagline={tagline} avatarUrl={avatarPreviewUrl} headerUrl={headerPreviewUrl} rows={rows} />
+            <p className="mt-5 text-sm leading-relaxed text-black/50">Customers see the live answer first, followed by today&rsquo;s hours and the usual week.</p>
           </div>
         </aside>
       </main>
