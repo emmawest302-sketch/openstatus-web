@@ -1,290 +1,269 @@
-import Image from 'next/image';
+'use client';
+
 import Link from 'next/link';
-import EmmasCoffeeDemo from '@/components/emmas-coffee-demo';
+import { useEffect, useMemo, useState } from 'react';
 
-const freeFeatures = [
-  'Your own openstatus.co link',
-  'Instagram connection',
-  'Automatic hours suggestions',
-  'Automatic expiry',
-  'Regular weekly hours',
-  'Website status embed',
-  'One-tap hours changes',
+const blocks = [
+  { label: 'Order', icon: '↗', tone: 'dark' },
+  { label: 'Menu', icon: '☰', tone: 'light' },
+  { label: 'Directions', icon: '⌖', tone: 'light' },
+  { label: 'Book', icon: '＋', tone: 'glass' },
 ];
 
-const proFeatures = [
-  'Visitor and tap analytics',
-  'Change performance',
-  'Busiest-day trends',
-  'SMS alerts',
-  'Subscriber management',
-  'More brand control',
+const analytics = [
+  ['2,481', 'Visitors'],
+  ['642', 'Directions'],
+  ['381', 'Menu views'],
+  ['219', 'Orders'],
 ];
 
-function Keyhole({ size = 30 }: { size?: number }) {
+function Dot({ color = '#50D890' }: { color?: string }) {
+  return <span className="status-dot" style={{ background: color }} aria-hidden="true" />;
+}
+
+function Arrow() {
+  return <span aria-hidden="true">↗</span>;
+}
+
+function MiniPhone({ compact = false }: { compact?: boolean }) {
   return (
-    <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
-      <mask id="keyhole-mask">
-        <rect width="100" height="100" fill="#fff" />
-        <circle cx="50" cy="42" r="13" fill="#000" />
-        <path d="M44 52 L56 52 L60 74 L40 74 Z" fill="#000" />
-      </mask>
-      <circle cx="50" cy="50" r="48" fill="currentColor" mask="url(#keyhole-mask)" />
-    </svg>
+    <div className={`mini-phone ${compact ? 'mini-phone--compact' : ''}`}>
+      <div className="mini-phone__screen">
+        <div className="mini-phone__hero" />
+        <div className="mini-phone__overlay" />
+        <div className="mini-phone__content">
+          <div className="mini-phone__brand-row">
+            <div className="mini-phone__logo">HM</div>
+            <div>
+              <p className="mini-phone__eyebrow">HERBAN MARKET</p>
+              <p className="mini-phone__location">Franklin, Tennessee</p>
+            </div>
+          </div>
+
+          <div className="mini-phone__live">
+            <div>
+              <p className="mini-phone__live-label"><Dot /> LIVE STATUS</p>
+              <p className="mini-phone__live-title">Open now</p>
+              <p className="mini-phone__live-copy">Closes at 4:00 PM · Pickup available</p>
+            </div>
+            <span className="mini-phone__live-pill">LIVE</span>
+          </div>
+
+          <div className="mini-phone__actions">
+            {blocks.slice(0, compact ? 3 : 4).map((block) => (
+              <div key={block.label} className={`mini-action mini-action--${block.tone}`}>
+                <span>{block.label}</span><span>{block.icon}</span>
+              </div>
+            ))}
+          </div>
+
+          {!compact && (
+            <>
+              <div className="mini-phone__feature">
+                <div className="mini-phone__feature-image" />
+                <div>
+                  <p>Today at Herban</p>
+                  <strong>Fall drinks are here.</strong>
+                </div>
+              </div>
+              <div className="mini-phone__website">Visit our full website <Arrow /></div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
-function Arrow({ size = 22 }: { size?: number }) {
+function BrandCard({ title, subtitle, className }: { title: string; subtitle: string; className: string }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
-      <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter" />
-    </svg>
-  );
-}
-
-function Check() {
-  return (
-    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
-      <path d="M4 12.5l5 5L20 6.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" />
-    </svg>
-  );
-}
-
-function Eyebrow({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
-  return (
-    <p className={`font-mono text-[10px] font-bold uppercase tracking-[0.22em] ${dark ? 'text-white/55' : 'text-black/55'}`}>
-      {'// '}{children}
-    </p>
+    <div className={`brand-card ${className}`}>
+      <div className="brand-card__top"><span className="brand-card__mark">{title.slice(0, 1)}</span><span>● LIVE</span></div>
+      <div className="brand-card__bottom"><strong>{title}</strong><span>{subtitle}</span></div>
+    </div>
   );
 }
 
 export default function HomePage() {
+  const [period, setPeriod] = useState<'morning' | 'afternoon' | 'closed'>('morning');
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setPeriod((current) => current === 'morning' ? 'afternoon' : current === 'afternoon' ? 'closed' : 'morning');
+    }, 3500);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const status = useMemo(() => {
+    if (period === 'morning') return { time: '10:30 AM', title: 'Open now', copy: 'Breakfast until 11 · Pickup available', color: '#50D890', action: 'Order breakfast' };
+    if (period === 'afternoon') return { time: '3:45 PM', title: 'Closing soon', copy: 'Order before 4 PM · Patio open', color: '#F5C45E', action: 'Order before close' };
+    return { time: '7:00 PM', title: 'Closed', copy: 'Opens tomorrow at 7 AM', color: '#FF7A6E', action: 'Preorder tomorrow' };
+  }, [period]);
+
   return (
-    <main className="min-h-screen overflow-hidden bg-[#F4F1E8] text-[#0A0A0A]" style={{ fontFamily: 'var(--font-display)' }}>
-      <div className="bg-[#A7E348] px-4 py-2.5 text-center font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-black">
-        Your hours change. Your link keeps up. <span aria-hidden="true">↗</span>
-      </div>
-
-      <header className="relative z-50 border-b-2 border-black bg-[#F4F1E8]">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-4 md:px-8">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="OpenStatus home">
-            <span className="text-black"><Keyhole size={27} /></span>
-            <span className="text-lg font-bold tracking-[-0.03em]">OPENSTATUS</span>
-          </Link>
-
-          <nav className="hidden items-center gap-8 font-mono text-[10px] font-bold uppercase tracking-[0.14em] md:flex" aria-label="Main navigation">
-            <a href="#how" className="underline-offset-4 hover:underline">How it works</a>
-            <a href="#pricing" className="underline-offset-4 hover:underline">Pricing</a>
-            <Link href="/emmas-coffee" className="underline-offset-4 hover:underline">Live example</Link>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="hidden border-2 border-black px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition hover:bg-black hover:text-white sm:block">
-              Log in
-            </Link>
-            <Link href="/signup" className="flex items-center gap-2 border-2 border-black bg-black px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white transition hover:bg-[#A7E348] hover:text-black">
-              Get your link <Arrow size={16} />
-            </Link>
-          </div>
+    <main className="site-shell">
+      <header className="site-header">
+        <Link href="/" className="wordmark" aria-label="OpenStatus home">
+          <span className="wordmark__orb" />
+          <span>OpenStatus</span>
+        </Link>
+        <nav className="site-nav" aria-label="Primary navigation">
+          <a href="#product">Product</a>
+          <a href="#analytics">Analytics</a>
+          <a href="#business">For business</a>
+        </nav>
+        <div className="site-header__actions">
+          <Link href="/login" className="text-link">Log in</Link>
+          <Link href="/signup" className="pill-button pill-button--dark">Build your page <Arrow /></Link>
         </div>
       </header>
 
-      <section className="relative min-h-[calc(100svh-108px)] border-b-2 border-black bg-black text-white">
-        <Image
-          src="/hero.jpg.jpg"
-          alt="Two friends sharing ice cream in a candid overhead photo"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-[52%_45%] md:object-center"
-        />
-        <div className="absolute inset-0 bg-black/42" />
-        <div className="photo-vignette absolute inset-0" />
-        <div className="noise absolute inset-0 opacity-35" />
-
-        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-108px)] max-w-[1440px] flex-col px-5 py-7 md:px-8 md:py-9">
-          <div className="grid grid-cols-2 gap-4 font-mono text-[9px] font-bold uppercase leading-relaxed tracking-[0.16em] text-white/75 md:grid-cols-3 md:text-[10px]">
-            <p>The hours online say open.<br />The lights say otherwise.</p>
-            <p className="hidden text-center md:block">Live status for local businesses<br />No app required</p>
-            <p className="text-right">Nashville, Franklin + beyond<br />Built for right now</p>
+      <section className="hero-section">
+        <div className="ambient ambient--one" />
+        <div className="ambient ambient--two" />
+        <div className="hero-copy">
+          <span className="eyebrow-pill">BUILT FOR SMALL BUSINESS</span>
+          <h1>Your business.<br /><span>Right now.</span></h1>
+          <p>One beautiful link for your bio that knows when you&apos;re open, shows customers what matters, and sends them exactly where they need to go.</p>
+          <div className="hero-actions">
+            <Link href="/signup" className="pill-button pill-button--dark pill-button--large">Build your OpenStatus <Arrow /></Link>
+            <a href="#product" className="pill-button pill-button--glass pill-button--large">See how it works ↓</a>
           </div>
-
-          <div className="my-auto py-20 text-center">
-            <Eyebrow dark>The smart link-in-bio for live hours</Eyebrow>
-            <h1 className="mx-auto mt-5 max-w-6xl text-[clamp(4rem,11vw,10rem)] font-bold uppercase leading-[0.78] tracking-[-0.075em]">
-              Your hours<br />
-              <span className="text-[#A7E348]">update themselves.</span>
-            </h1>
-            <p className="mx-auto mt-8 max-w-xl text-base font-medium leading-relaxed text-white/80 md:text-lg">
-              Stop losing customers to outdated online hours. Run your shop; OpenStatus keeps your live link current.
-            </p>
+          <div className="hero-proof">
+            <span>Live status</span><span>Branded blocks</span><span>Business analytics</span>
           </div>
+        </div>
 
-          <div className="mx-auto grid w-full max-w-[620px] gap-3 sm:grid-cols-2">
-            <Link href="/signup" className="group flex min-h-[64px] items-center justify-between border-2 border-white bg-white px-5 py-3.5 text-left text-black transition hover:border-[#A7E348] hover:bg-[#A7E348]">
-              <span>
-                <span className="block font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-black/55">For your business</span>
-                <span className="mt-0.5 block font-bold uppercase tracking-tight">Start free</span>
-              </span>
-              <span className="transition-transform group-hover:translate-x-1"><Arrow /></span>
-            </Link>
-            <Link href="/emmas-coffee" className="group flex min-h-[64px] items-center justify-between border-2 border-white bg-black/45 px-5 py-3.5 text-left text-white backdrop-blur-sm transition hover:border-[#A7E348] hover:bg-[#A7E348] hover:text-black">
-              <span>
-                <span className="block font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-current opacity-65">Live status page</span>
-                <span className="mt-0.5 block font-bold uppercase tracking-tight">View Emma&rsquo;s Coffee</span>
-              </span>
-              <span className="transition-transform group-hover:translate-x-1"><Arrow /></span>
-            </Link>
-          </div>
+        <div className="hero-visual" aria-label="Example OpenStatus page on a phone">
+          <div className="glass-orb glass-orb--one" />
+          <div className="glass-orb glass-orb--two" />
+          <MiniPhone />
+          <div className="floating-chip floating-chip--status"><Dot /> OPEN NOW · 4 PM</div>
+          <div className="floating-chip floating-chip--metric">+642 directions this month</div>
         </div>
       </section>
 
-      <div className="ticker border-b-2 border-black bg-[#A7E348] py-3 font-mono text-xs font-bold uppercase tracking-[0.2em]">
-        <div className="ticker-track">
-          <span>Closing early today&nbsp;&nbsp;◆&nbsp;&nbsp;Holiday hours&nbsp;&nbsp;◆&nbsp;&nbsp;Closed today&nbsp;&nbsp;◆&nbsp;&nbsp;Opening late&nbsp;&nbsp;◆&nbsp;&nbsp;Hours confirmed&nbsp;&nbsp;◆&nbsp;&nbsp;</span>
-          <span aria-hidden="true">Closing early today&nbsp;&nbsp;◆&nbsp;&nbsp;Holiday hours&nbsp;&nbsp;◆&nbsp;&nbsp;Closed today&nbsp;&nbsp;◆&nbsp;&nbsp;Opening late&nbsp;&nbsp;◆&nbsp;&nbsp;Hours confirmed&nbsp;&nbsp;◆&nbsp;&nbsp;</span>
-        </div>
-      </div>
-
-      <section className="border-b-2 border-black" id="how">
-        <div className="mx-auto grid max-w-[1440px] lg:grid-cols-[0.75fr_1.25fr]">
-          <div className="border-b-2 border-black p-6 md:p-10 lg:border-b-0 lg:border-r-2">
-            <Eyebrow>The problem</Eyebrow>
-            <p className="mt-8 max-w-sm font-serif text-3xl italic leading-tight md:text-4xl">
-              You post the change. Half your customers miss it and still drive to a closed door.
-            </p>
-          </div>
-          <div className="p-6 md:p-10 lg:p-14">
-            <h2 className="max-w-4xl text-[clamp(3.2rem,7.5vw,7.2rem)] font-bold uppercase leading-[0.83] tracking-[-0.065em]">
-              Post once.<br />Your live hours<br />keep up.
-            </h2>
-            <div className="mt-10 grid gap-6 border-t-2 border-black pt-7 md:grid-cols-2">
-              <p className="max-w-md text-lg leading-relaxed">
-                Post a closure, late opening, or holiday-hours change where you already communicate with customers.
-              </p>
-              <p className="max-w-md text-lg leading-relaxed text-black/60">
-                OpenStatus prepares the hours change, keeps the live link current, then returns to the usual schedule when it expires.
-              </p>
-            </div>
-          </div>
-        </div>
+      <section className="statement-section">
+        <p>Creators have link pages.</p>
+        <h2>Businesses need a <span>live storefront.</span></h2>
       </section>
 
-      <section className="border-b-2 border-black bg-white">
-        <div className="mx-auto max-w-[1440px]">
-          <div className="grid md:grid-cols-3">
-            {[
-              ['01', 'POST THE CHANGE', 'Share the hours update where you already have your audience.'],
-              ['02', 'OPENSTATUS READS', 'We identify the date and the hours without pulling in unrelated content.'],
-              ['03', 'YOUR LINK UPDATES', 'Customers see whether you are open, closed, or on special hours.'],
-            ].map(([number, title, body], index) => (
-              <article key={number} className={`min-h-[320px] p-6 md:p-9 ${index < 2 ? 'border-b-2 border-black md:border-b-0 md:border-r-2' : ''}`}>
-                <p className="font-mono text-xs font-bold tracking-[0.18em]">/{number}</p>
-                <h3 className="mt-16 text-4xl font-bold uppercase tracking-[-0.05em] md:text-5xl">{title}</h3>
-                <p className="mt-5 max-w-xs text-base leading-relaxed text-black/60">{body}</p>
-              </article>
+      <section className="live-section" id="product">
+        <div className="live-copy">
+          <span className="section-kicker">THE DIFFERENCE</span>
+          <h2>The top of your page is <em>true right now.</em></h2>
+          <p>Hours power the baseline. Temporary changes override them. The page changes automatically throughout the day, so customers always know what they can do next.</p>
+          <div className="period-tabs" role="tablist" aria-label="Status demo times">
+            {(['morning', 'afternoon', 'closed'] as const).map((item) => (
+              <button key={item} onClick={() => setPeriod(item)} className={period === item ? 'active' : ''}>
+                {item === 'morning' ? 'Morning' : item === 'afternoon' ? 'Afternoon' : 'After hours'}
+              </button>
             ))}
           </div>
         </div>
-      </section>
-
-      <section className="border-b-2 border-black bg-[#111] text-white" id="live-demo">
-        <div className="mx-auto grid max-w-[1440px] lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="relative flex min-h-[760px] items-center justify-center overflow-hidden border-b-2 border-white/25 bg-[#A7E348] px-5 py-14 lg:border-b-0 lg:border-r-2">
-            <div className="noise absolute inset-0 opacity-15" />
-            <div className="relative w-full"><EmmasCoffeeDemo phone /></div>
+        <div className="live-demo-card">
+          <div className="live-demo-card__time">{status.time}</div>
+          <div className="live-demo-card__status">
+            <div><p><Dot color={status.color} /> LIVE STATUS</p><h3>{status.title}</h3><span>{status.copy}</span></div>
+            <span className="live-badge">LIVE</span>
           </div>
-          <div className="flex flex-col justify-between p-6 md:p-10 lg:p-14">
-            <div>
-              <Eyebrow dark>The live-hours link</Eyebrow>
-              <h2 className="mt-5 text-[clamp(3.2rem,6vw,6.5rem)] font-bold uppercase leading-[0.84] tracking-[-0.06em]">
-                One mobile<br />link. One<br /><span className="text-[#A7E348]">real answer.</span>
-              </h2>
-              <p className="mt-8 max-w-xl text-lg leading-relaxed text-white/65">
-                This is what customers actually open: a live answer for today, any temporary change, and the usual weekly hours. Emma&rsquo;s Coffee is fictional; the product is real.
-              </p>
-              <Link href="/emmas-coffee" className="group mt-8 flex min-h-14 max-w-sm items-center justify-between border-2 border-white bg-white px-4 font-bold uppercase text-black hover:border-[#A7E348] hover:bg-[#A7E348]">
-                Try the full demo <Arrow size={18} />
-              </Link>
-            </div>
-            <div className="mt-16 grid grid-cols-2 border-l border-t border-white/30 font-mono text-[10px] font-bold uppercase tracking-[0.12em] md:grid-cols-4">
-              {['Instagram bio', 'Your website', 'QR code', 'Text alerts'].map((item) => (
-                <div key={item} className="border-b border-r border-white/30 px-3 py-5">{item}</div>
-              ))}
-            </div>
-          </div>
+          <div className="live-demo-card__cta">{status.action} <Arrow /></div>
+          <div className="live-demo-card__note">Temporary updates clear themselves. Regular hours take back over automatically.</div>
         </div>
       </section>
 
-      <section className="border-b-2 border-black bg-[#F4F1E8]" id="pricing">
-        <div className="mx-auto max-w-[1440px] px-5 py-20 md:px-8 md:py-28">
-          <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr]">
-            <div>
-              <Eyebrow>Simple pricing</Eyebrow>
-              <h2 className="mt-5 text-[clamp(3.5rem,7vw,7rem)] font-bold uppercase leading-[0.83] tracking-[-0.065em]">
-                Status is<br /><span className="text-[#2F6B3B]">free.</span><br />Insight is pro.
-              </h2>
-              <p className="mt-8 max-w-md text-lg leading-relaxed text-black/60">
-                Every business should be able to keep customers informed. Pay only when you want deeper insight and direct reach.
-              </p>
-            </div>
+      <section className="brand-section">
+        <div className="brand-section__copy">
+          <span className="section-kicker">LOOKS LIKE YOU</span>
+          <h2>Your brand stays the hero.</h2>
+          <p>Logo, photography, video, colors, type and layout. OpenStatus should feel like your business built its own tiny app — not like your business rented a generic button list.</p>
+        </div>
+        <div className="brand-grid">
+          <BrandCard title="Aster Salon" subtitle="Appointments today" className="brand-card--cream" />
+          <BrandCard title="Southbound" subtitle="Kitchen open until 10" className="brand-card--black" />
+          <BrandCard title="Marlow Goods" subtitle="Pickup available" className="brand-card--pink" />
+          <BrandCard title="Field House" subtitle="4 spots left tonight" className="brand-card--blue" />
+        </div>
+      </section>
 
-            <div className="border-2 border-black bg-white">
-              <div className="grid md:grid-cols-2">
-                <div className="border-b-2 border-black p-6 md:border-b-0 md:border-r-2 md:p-8">
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]">Free / forever</p>
-                  <p className="mt-4 text-6xl font-bold tracking-[-0.06em]">$0</p>
-                  <ul className="mt-8 space-y-3">
-                    {freeFeatures.map((item) => (
-                      <li key={item} className="flex gap-2.5 text-sm"><Check /><span>{item}</span></li>
-                    ))}
-                  </ul>
-                  <Link href="/signup" className="group mt-9 flex items-center justify-between border-2 border-black bg-black px-4 py-3.5 text-sm font-bold uppercase text-white transition hover:bg-[#A7E348] hover:text-black">
-                    Start free <Arrow size={18} />
-                  </Link>
-                </div>
+      <section className="blocks-section">
+        <div className="blocks-copy">
+          <span className="section-kicker">NOT JUST LINKS</span>
+          <h2>Every block has a job.</h2>
+          <p>Businesses toggle on only what they need. Add a cover photo, make a block compact or featured, then drag it where it belongs.</p>
+        </div>
+        <div className="blocks-canvas">
+          <div className="block-card block-card--wide"><span>Menu</span><strong>Render it beautifully.</strong><small>Not a PDF nobody opens.</small></div>
+          <div className="block-card block-card--image"><span>Order</span><strong>Order lunch</strong><small>Pickup available now</small></div>
+          <div className="block-card"><span>Directions</span><strong>Open maps</strong><small>123 Main Street</small></div>
+          <div className="block-card"><span>Website</span><strong>Your real website</strong><small>Always one tap away</small></div>
+          <div className="block-card block-card--accent"><span>Book</span><strong>2 openings today</strong><small>Next: 3:30 PM</small></div>
+        </div>
+      </section>
 
-                <div className="bg-[#A7E348] p-6 md:p-8">
-                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]">Pro / more signal</p>
-                  <p className="mt-4 text-6xl font-bold tracking-[-0.06em]">$15<span className="ml-1 text-sm tracking-normal">/MO</span></p>
-                  <ul className="mt-8 space-y-3">
-                    {proFeatures.map((item) => (
-                      <li key={item} className="flex gap-2.5 text-sm"><Check /><span>{item}</span></li>
-                    ))}
-                  </ul>
-                  <Link href="/signup" className="group mt-9 flex items-center justify-between border-2 border-black bg-[#F4F1E8] px-4 py-3.5 text-sm font-bold uppercase transition hover:bg-black hover:text-white">
-                    Start with Pro <Arrow size={18} />
-                  </Link>
-                </div>
-              </div>
+      <section className="analytics-section" id="analytics">
+        <div className="analytics-copy">
+          <span className="section-kicker section-kicker--dark">BUSINESS ANALYTICS</span>
+          <h2>Know what customers actually want.</h2>
+          <p>Go beyond link clicks. See when people check your page, what they&apos;re trying to do, and which actions turn social traffic into real business.</p>
+          <div className="insight-pill">27% of customers checked your business while you were closed.</div>
+        </div>
+        <div className="analytics-board">
+          <div className="analytics-board__header"><span>Last 30 days</span><span className="live-indicator"><Dot /> LIVE</span></div>
+          <div className="metric-grid">
+            {analytics.map(([value, label]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}
+          </div>
+          <div className="chart-shell">
+            <div className="chart-bars" aria-label="Traffic by day chart">
+              {[44, 63, 49, 78, 66, 92, 70, 84, 58, 96, 72, 88].map((height, index) => <span key={index} style={{ height: `${height}%` }} />)}
             </div>
+            <div className="chart-labels"><span>Mon</span><span>Wed</span><span>Fri</span><span>Sun</span></div>
           </div>
         </div>
       </section>
 
-      <section className="relative border-b-2 border-black bg-[#2F6B3B] px-5 py-24 text-center text-white md:px-8 md:py-32">
-        <div className="noise absolute inset-0 opacity-20" />
-        <div className="relative mx-auto max-w-5xl">
-          <Eyebrow dark>No more crossed fingers</Eyebrow>
-          <h2 className="mt-6 text-[clamp(4rem,10vw,9rem)] font-bold uppercase leading-[0.8] tracking-[-0.075em]">
-            Make the<br />link useful.
-          </h2>
-          <Link href="/signup" className="group mx-auto mt-10 flex max-w-sm items-center justify-between border-2 border-white bg-white px-5 py-4 font-bold uppercase text-black transition hover:border-[#A7E348] hover:bg-[#A7E348]">
-            Get your OpenStatus link <Arrow />
-          </Link>
-          <p className="mt-5 font-mono text-[9px] uppercase tracking-[0.18em] text-white/60">Free forever · No credit card · Two-minute setup</p>
+      <section className="website-section">
+        <span className="section-kicker">YOUR WEBSITE STILL MATTERS</span>
+        <h2>OpenStatus gets people there.</h2>
+        <div className="flow-diagram">
+          <div className="flow-node flow-node--source">Instagram</div>
+          <span>→</span>
+          <div className="flow-node flow-node--openstatus">OpenStatus</div>
+          <span>→</span>
+          <div className="flow-destinations"><span>Order</span><span>Website</span><span>Book</span><span>Directions</span></div>
+        </div>
+        <p>Your website remains the home of your brand and SEO. OpenStatus becomes the fast, mobile front door that sends customers to the right place.</p>
+      </section>
+
+      <section className="business-section" id="business">
+        <div className="business-shell">
+          <div className="business-copy">
+            <span className="section-kicker section-kicker--dark">COMING INTO THE SAME HUB</span>
+            <h2>One source for customer-facing info.</h2>
+            <p>Hours, temporary updates, links, menu, booking, ordering and eventually automated Instagram replies — all in your brand voice, all pointing back to the same live page.</p>
+            <div className="integration-row"><span>Instagram</span><span>Square</span><span>Shopify</span><span>Calendly</span></div>
+          </div>
+          <div className="dm-card">
+            <div className="dm-card__top"><span>Instagram DMs</span><span className="toggle-on">ON</span></div>
+            <div className="dm-bubble dm-bubble--customer">What time do you close today?</div>
+            <div className="dm-bubble dm-bubble--brand">We&apos;re open until 4 PM today 🌿 You can view today&apos;s menu, order, or get directions here.</div>
+            <div className="dm-link">herbanmarket.openstatus.co <Arrow /></div>
+          </div>
         </div>
       </section>
 
-      <footer className="bg-[#0A0A0A] px-5 py-7 text-white md:px-8">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-5 font-mono text-[10px] font-bold uppercase tracking-[0.15em] md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2"><Keyhole size={18} /><span>OpenStatus</span></div>
-          <p className="text-white/45">Know before you go.</p>
-          <div className="flex gap-5">
-            <Link href="/login" className="hover:text-[#A7E348]">Log in</Link>
-            <Link href="/signup" className="hover:text-[#A7E348]">Get started</Link>
-          </div>
-        </div>
+      <section className="final-cta">
+        <div className="final-cta__orb" />
+        <span className="section-kicker">OPENSTATUS</span>
+        <h2>One beautiful link.<br />Built for business.</h2>
+        <p>Live status. Branded blocks. Better analytics. Your website always one tap away.</p>
+        <Link href="/signup" className="pill-button pill-button--dark pill-button--large">Build your page <Arrow /></Link>
+      </section>
+
+      <footer className="site-footer">
+        <div className="wordmark"><span className="wordmark__orb" /><span>OpenStatus</span></div>
+        <p>The live link in bio for small businesses.</p>
+        <div><Link href="/login">Log in</Link><Link href="/signup">Start free</Link></div>
       </footer>
     </main>
   );
