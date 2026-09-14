@@ -17,18 +17,52 @@ function rowLabel(r:Hours|undefined){return !r?'-':r.is_closed?'Closed':`${prett
 function Icon({name}:{name:string}){const p:Record<string,string>={clock:'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',cup:'M4 8h13v5a5 5 0 01-5 5H9a5 5 0 01-5-5V8zM17 9h2a2 2 0 010 4h-2'};return <svg viewBox="0 0 24 24" width="24" height="24" fill="none"><path d={p[name]??p.clock} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>}
 
 export default async function LiveStatus({params}:{params:Promise<{slug:string}>}){
- const{slug}=await params;const admin=getAdminClient();
- const{data:business}=await admin.from('businesses').select('id, user_id, name, tagline, avatar_url, header_url, timezone').eq('slug',slug.toLowerCase()).maybeSingle();
+ const{slug}=await params;
+ const admin=getAdminClient();
+ const{data:business}=await admin.from('businesses').select('id,user_id,name,tagline,avatar_url,header_url,timezone').eq('slug',slug.toLowerCase()).maybeSingle();
  if(!business)notFound();
  const[{data:hoursRows},{data:updateRows},pageConfig]=await Promise.all([
-  admin.from('business_hours').select('day_of_week, opens_at, closes_at, is_closed').eq('business_id',business.id),
-  admin.from('status_updates').select('kind, headline, detail, reason, closes_at, created_at, source').eq('business_id',business.id).eq('status','active').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(4),
+  admin.from('business_hours').select('day_of_week,opens_at,closes_at,is_closed').eq('business_id',business.id),
+  admin.from('status_updates').select('kind,headline,detail,reason,closes_at,created_at,source').eq('business_id',business.id).eq('status','active').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(4),
   loadPublishedPageConfig(business.user_id),
  ]);
- const hours:Hours[]=hoursRows??[];const updates:Update[]=updateRows??[];
+ const hours:Hours[]=hoursRows??[];
+ const updates:Update[]=updateRows??[];
  const avatar=typeof business.avatar_url==='string'&&business.avatar_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url;
- const header=typeof business.header_url==='string'&&business.header_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=header`:business.header_url;
- const now=new Date();const timezone=business.timezone||'America/Chicago';const parts=new Intl.DateTimeFormat('en-US',{timeZone:timezone,weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now);const weekday=parts.find(p=>p.type==='weekday')?.value??'Sun';const today=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday);const todayRow=hours.find(h=>h.day_of_week===today)??null;const nowMins=Number(parts.find(p=>p.type==='hour')?.value??0)*60+Number(parts.find(p=>p.type==='minute')?.value??0);const lead=updates[0]??null;const override=updates.find(u=>u.closes_at)?.closes_at??null;const effectiveClose=override??todayRow?.closes_at??null;const closedAllDay=!todayRow||todayRow.is_closed||updates.some(u=>u.kind==='closed');const openMins=mins(todayRow?.opens_at??null);const closeMins=mins(effectiveClose);const isOpen=!closedAllDay&&openMins!==null&&closeMins!==null&&nowMins>=openMins&&nowMins<closeMins;const changed=Boolean(lead)&&!closedAllDay;const dot=closedAllDay?'#C4453F':changed?'#E0921B':'#2E7D5B';let big='Closed now',sub='Back tomorrow',accent='';if(closedAllDay){big='Closed today';sub=lead?.detail??'Back tomorrow'}else if(isOpen){big='Open now';sub='Closes at ';accent=pretty(effectiveClose)}else if(openMins!==null&&nowMins<openMins){big='Opens later';sub='Opens at ';accent=pretty(todayRow?.opens_at??null)}
- const bg=pageConfig.bg==='blue'?'#E9EEF5':pageConfig.bg==='lime'?'#E7F7C8':pageConfig.bg==='dark'?'#181817':'#EDE9E2';const glass='rounded-[26px] bg-white/75 backdrop-blur-xl border border-white/70';
- return <div className="min-h-screen flex justify-center" style={{background:bg,color:pageConfig.bg==='dark'?'#F6F2E9':'#1A1A18',fontFamily:'var(--font-poppins)'}}><AnalyticsTracker businessId={business.id}/><div className="relative w-full max-w-[440px] min-h-screen overflow-hidden">{header?<img src={header} alt="" className="absolute inset-x-0 top-0 h-[420px] w-full object-cover"/>:<div className="absolute inset-x-0 top-0 h-[420px] bg-[#33402F]"/>}<div className="absolute inset-x-0 top-0 h-[430px] bg-gradient-to-b from-black/45 via-black/20 to-transparent"/><div className="relative px-4 pb-10"><div className="pt-28 flex items-end gap-4">{avatar?<img src={avatar} alt="" className="h-[74px] w-[74px] rounded-[22px] bg-white p-1.5 object-cover shadow-xl"/>:<div className="h-[74px] w-[74px] rounded-[22px] bg-white"/>}<div className="pb-1 min-w-0"><h1 className="truncate text-[28px] font-bold tracking-[-.04em] text-white drop-shadow">{business.name}</h1>{business.tagline&&<p className="truncate text-sm text-white/85">{business.tagline}</p>}</div></div><div className={`mt-5 p-4 ${glass}`}><div className="flex items-center gap-4"><span className="grid h-[64px] w-[64px] shrink-0 place-items-center rounded-full bg-[#2E7D5B] text-white"><Icon name="cup"/></span><div><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{background:dot}}/><span className="text-[10px] font-bold uppercase tracking-[.16em]" style={{color:dot}}>Live status</span></div><p className="mt-1 text-[30px] font-bold leading-none tracking-[-.04em] text-[#1A1A18]">{big}</p><p className="mt-2 text-sm text-[#5C5952]">{sub}{accent&&<strong style={{color:dot}}>{accent}</strong>}</p></div></div>{lead&&<div className="mt-4 rounded-[18px] bg-[#FBF0DC] p-3 text-sm text-[#805619]"><strong>{lead.headline}</strong>{lead.detail&&<p className="mt-1 opacity-75">{lead.detail}</p>}</div>}</div><PublishedBusinessBlocks businessId={business.id} businessName={business.name} location={business.tagline||business.name} config={pageConfig}/><details className={`mt-3 overflow-hidden ${glass}`}><summary className="cursor-pointer list-none px-5 py-4 text-[#1A1A18]"><div className="flex items-center justify-between"><strong>Hours</strong><span className="text-xs text-black/40">Today & weekly</span></div><div className="mt-3 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-full bg-white"><Icon name="clock"/></span><div><strong>{todayRow&&!todayRow.is_closed?`${pretty(todayRow.opens_at)} - ${pretty(todayRow.closes_at)}`:'Closed today'}</strong><p className="text-xs text-black/40">{DAY_NAMES[today]}</p></div></div></summary><ul className="border-t border-white/60 px-5 py-4">{DAY_NAMES.map((d,i)=><li key={d} className="flex justify-between py-1 text-xs text-[#6C6A62]"><span>{d}</span><span>{rowLabel(hours.find(h=>h.day_of_week===i))}</span></li>)}</ul></details><PublicSocialLinks businessId={business.id} socials={pageConfig.socials}/><Link href="/" className="mt-7 block text-center text-[10px] uppercase tracking-[.16em] opacity-40">Powered by OpenStatus</Link></div><OwnerQuickStatus businessId={business.id} businessName={business.name}/></div></div>;
+ const background=typeof business.header_url==='string'&&business.header_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=header`:business.header_url;
+ const timezone=business.timezone||'America/Chicago';
+ const parts=new Intl.DateTimeFormat('en-US',{timeZone:timezone,weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+ const weekday=parts.find(p=>p.type==='weekday')?.value??'Sun';
+ const today=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday);
+ const todayRow=hours.find(h=>h.day_of_week===today)??null;
+ const nowMins=Number(parts.find(p=>p.type==='hour')?.value??0)*60+Number(parts.find(p=>p.type==='minute')?.value??0);
+ const lead=updates[0]??null;
+ const effectiveClose=updates.find(u=>u.closes_at)?.closes_at??todayRow?.closes_at??null;
+ const closedAllDay=!todayRow||todayRow.is_closed||updates.some(u=>u.kind==='closed');
+ const openMins=mins(todayRow?.opens_at??null);
+ const closeMins=mins(effectiveClose);
+ const isOpen=!closedAllDay&&openMins!==null&&closeMins!==null&&nowMins>=openMins&&nowMins<closeMins;
+ const changed=Boolean(lead)&&!closedAllDay;
+ const dot=closedAllDay?'#C4453F':changed?'#E0921B':'#2E7D5B';
+ let big='Closed now',sub='Back tomorrow',accent='';
+ if(closedAllDay){big='Closed today';sub=lead?.detail??'Back tomorrow'}
+ else if(isOpen){big='Open now';sub='Closes at ';accent=pretty(effectiveClose)}
+ else if(openMins!==null&&nowMins<openMins){big='Opens later';sub='Opens at ';accent=pretty(todayRow?.opens_at??null)}
+ const bg=pageConfig.bg==='blue'?'#E9EEF5':pageConfig.bg==='lime'?'#E7F7C8':pageConfig.bg==='dark'?'#181817':'#EDE9E2';
+ const glass='rounded-[26px] bg-white/75 backdrop-blur-xl border border-white/70';
+ return <div className="min-h-screen flex justify-center" style={{background:bg,fontFamily:'var(--font-poppins)'}}>
+  <AnalyticsTracker businessId={business.id}/>
+  <div className="relative w-full max-w-[440px] min-h-screen overflow-hidden" style={background?{backgroundImage:`url(${background})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{background:bg}}>
+   <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/40"/>
+   <div className="relative px-4 pb-10">
+    <div className="pt-28 flex items-end gap-4">{avatar?<img src={avatar} alt="" className="h-[74px] w-[74px] rounded-[22px] bg-white p-1.5 object-cover shadow-xl"/>:<div className="h-[74px] w-[74px] rounded-[22px] bg-white"/>}<div className="pb-1 min-w-0"><h1 className="truncate text-[28px] font-bold tracking-[-.04em] text-white drop-shadow">{business.name}</h1>{business.tagline&&<p className="truncate text-sm text-white/85">{business.tagline}</p>}</div></div>
+    <div className={`mt-5 p-4 ${glass}`}><div className="flex items-center gap-4"><span className="grid h-[64px] w-[64px] shrink-0 place-items-center rounded-full bg-[#2E7D5B] text-white"><Icon name="cup"/></span><div><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{background:dot}}/><span className="text-[10px] font-bold uppercase tracking-[.16em]" style={{color:dot}}>Live status</span></div><p className="mt-1 text-[30px] font-bold leading-none tracking-[-.04em] text-[#1A1A18]">{big}</p><p className="mt-2 text-sm text-[#5C5952]">{sub}{accent&&<strong style={{color:dot}}>{accent}</strong>}</p></div></div>{lead&&<div className="mt-4 rounded-[18px] bg-[#FBF0DC] p-3 text-sm text-[#805619]"><strong>{lead.headline}</strong>{lead.detail&&<p className="mt-1 opacity-75">{lead.detail}</p>}</div>}</div>
+    <PublishedBusinessBlocks businessId={business.id} businessName={business.name} location={pageConfig.location||business.tagline||business.name} config={pageConfig}/>
+    <details className={`mt-3 overflow-hidden ${glass}`}><summary className="cursor-pointer list-none px-5 py-4 text-[#1A1A18]"><div className="flex items-center justify-between"><strong>Hours</strong><span className="text-xs text-black/40">Today & weekly</span></div><div className="mt-3 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-full bg-white"><Icon name="clock"/></span><div><strong>{todayRow&&!todayRow.is_closed?`${pretty(todayRow.opens_at)} - ${pretty(todayRow.closes_at)}`:'Closed today'}</strong><p className="text-xs text-black/40">{DAY_NAMES[today]}</p></div></div></summary><ul className="border-t border-white/60 px-5 py-4">{DAY_NAMES.map((d,i)=><li key={d} className="flex justify-between py-1 text-xs text-[#6C6A62]"><span>{d}</span><span>{rowLabel(hours.find(h=>h.day_of_week===i))}</span></li>)}</ul></details>
+    <PublicSocialLinks businessId={business.id} socials={pageConfig.socials}/>
+    <Link href="/" className="mt-7 block text-center text-[10px] uppercase tracking-[.16em] text-white/60">Powered by OpenStatus</Link>
+   </div>
+   <OwnerQuickStatus businessId={business.id} businessName={business.name}/>
+  </div>
+ </div>;
 }
