@@ -1,82 +1,97 @@
 import Link from 'next/link';
 
 const cards = [
-  { title: 'Order now', sub: 'Pickup available', badge: 'Square', tone: 'photo-one' },
-  { title: 'View menu', sub: 'Breakfast + lunch', badge: 'Menu', tone: 'photo-two' },
-  { title: 'Directions', sub: 'Franklin, Tennessee', badge: 'Maps', tone: 'cream' },
-  { title: 'Join waitlist', sub: 'About 15 min', badge: 'Waitlist', tone: 'charcoal' },
-  { title: 'Catering', sub: 'Office + events', badge: 'Website', tone: 'photo-three' },
-  { title: 'Gift cards', sub: 'Send breakfast', badge: 'Shop', tone: 'butter' },
+  { title: 'Order now', sub: 'Pickup available', badge: 'Square', style: 'from-[#D5A56F] to-[#714A34] text-white' },
+  { title: 'View menu', sub: 'Breakfast + lunch', badge: 'Menu', style: 'from-[#E9D39A] to-[#718052] text-[#182015]' },
+  { title: 'Directions', sub: 'Franklin, Tennessee', badge: 'Maps', style: 'from-[#F0E7D7] to-[#D8CCB6] text-[#1B1B1B]' },
+  { title: 'Join waitlist', sub: 'About 15 min', badge: 'Waitlist', style: 'from-[#2B2B2B] to-[#111111] text-white' },
+  { title: 'Catering', sub: 'Office + events', badge: 'Website', style: 'from-[#DDA174] to-[#6A774A] text-white' },
+  { title: 'Gift cards', sub: 'Send breakfast', badge: 'Shop', style: 'from-[#F0D77C] to-[#D3B24C] text-[#201D11]' },
 ];
 
-function Arrow() { return <span aria-hidden="true">↗</span>; }
+function Arrow() {
+  return <span aria-hidden="true">↗</span>;
+}
 
 export default function BreakfastHausPage() {
   return (
-    <main className="bh-page">
-      <div className="bh-bg" />
-      <section className="bh-shell">
-        <div className="bh-hero">
-          <div className="bh-hero__wash" />
-          <div className="bh-topbar">
-            <div className="bh-logo">BH</div>
-            <a className="bh-share" href="#links" aria-label="Jump to links">•••</a>
-          </div>
-          <div className="bh-title">
-            <span className="bh-kicker">BREAKFAST · BRUNCH · COFFEE</span>
-            <h1>Breakfast Haus</h1>
-            <p>Bright mornings, strong coffee, really good breakfast.</p>
-          </div>
-        </div>
+    <main className="min-h-screen bg-[#DDD8CE] py-0 text-[#181818] md:py-10" style={{ fontFamily: 'var(--font-poppins)' }}>
+      <div className="mx-auto min-h-screen w-full max-w-[470px] overflow-hidden bg-[#F6F2E9] shadow-[0_30px_100px_rgba(0,0,0,0.16)] md:min-h-0 md:rounded-[42px]">
+        <section className="relative flex h-[410px] flex-col justify-between overflow-hidden px-5 py-5 text-white">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_25%,#efd5a1_0_9%,transparent_24%),radial-gradient(circle_at_65%_42%,#c57b4f_0_10%,transparent_28%),radial-gradient(circle_at_72%_70%,#6c7d51_0_12%,transparent_30%),linear-gradient(145deg,#6e412f,#d0a06e_38%,#31402f)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/15 to-black/60" />
 
-        <section className="bh-live" aria-label="Live business status">
-          <div className="bh-live__top">
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-white/90 text-xs font-extrabold text-[#263829] shadow-lg">BH</div>
+            <button className="grid h-12 w-12 place-items-center rounded-full border border-white/30 bg-white/15 text-lg backdrop-blur-xl" aria-label="More options">•••</button>
+          </div>
+
+          <div className="relative z-10 pb-5">
+            <p className="text-[10px] font-bold tracking-[0.18em] text-white/70">BREAKFAST · BRUNCH · COFFEE</p>
+            <h1 className="mt-2 text-[44px] font-bold leading-[0.95] tracking-[-0.06em]">Breakfast Haus</h1>
+            <p className="mt-3 max-w-[330px] text-[14px] leading-6 text-white/80">Bright mornings, strong coffee, really good breakfast.</p>
+          </div>
+        </section>
+
+        <section className="relative z-20 mx-3.5 -mt-7 rounded-[28px] border border-white/70 bg-white/85 p-5 shadow-[0_18px_50px_rgba(0,0,0,0.12)] backdrop-blur-2xl" aria-label="Live business status">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="bh-live__label"><i /> LIVE STATUS</span>
-              <h2>Open now</h2>
-              <p>Closes at 3:00 PM</p>
+              <p className="flex items-center gap-2 text-[9px] font-bold tracking-[0.16em] text-[#3D7150]"><span className="h-2 w-2 rounded-full bg-[#55B979] shadow-[0_0_0_4px_rgba(85,185,121,0.13)]" /> LIVE STATUS</p>
+              <h2 className="mt-2 text-[31px] font-bold tracking-[-0.05em]">Open now</h2>
+              <p className="mt-1 text-[13px] text-black/55">Closes at 3:00 PM</p>
             </div>
-            <span className="bh-live__pill">LIVE</span>
+            <span className="rounded-full border border-black/10 px-2.5 py-1.5 text-[8px] font-bold tracking-[0.12em]">LIVE</span>
           </div>
-          <div className="bh-live__meta">
-            <span>Breakfast served all day</span>
-            <span>Pickup available</span>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full bg-[#F1ECE3] px-3 py-2 text-[10px] font-medium">Breakfast served all day</span>
+            <span className="rounded-full bg-[#F1ECE3] px-3 py-2 text-[10px] font-medium">Pickup available</span>
           </div>
         </section>
 
-        <section className="bh-actions" id="links">
-          <a className="bh-primary" href="#menu"><span>Order breakfast</span><Arrow /></a>
-          <a className="bh-secondary" href="#menu"><span>See today&apos;s menu</span><Arrow /></a>
+        <section className="grid grid-cols-2 gap-2 px-3.5 pt-3" id="links">
+          <a className="flex min-h-14 items-center justify-between rounded-[18px] bg-[#171717] px-4 text-[12px] font-bold text-white" href="#menu"><span>Order breakfast</span><Arrow /></a>
+          <a className="flex min-h-14 items-center justify-between rounded-[18px] bg-white px-4 text-[12px] font-bold" href="#menu"><span>See today&apos;s menu</span><Arrow /></a>
         </section>
 
-        <section className="bh-grid">
+        <section className="grid grid-cols-2 gap-2.5 px-3.5 pt-2.5">
           {cards.map((card) => (
-            <a key={card.title} className={`bh-card ${card.tone}`} href="#footer">
-              <div className="bh-card__badge">{card.badge}</div>
-              <div className="bh-card__bottom">
-                <div><strong>{card.title}</strong><span>{card.sub}</span></div>
+            <a key={card.title} href="#footer" className={`flex min-h-[166px] flex-col justify-between rounded-[24px] bg-gradient-to-br p-3.5 ${card.style}`}>
+              <span className="w-fit rounded-full bg-white/75 px-2.5 py-1.5 text-[8px] font-bold text-black">{card.badge}</span>
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <strong className="block text-[18px] font-bold tracking-[-0.04em]">{card.title}</strong>
+                  <span className="mt-1 block text-[9px] opacity-65">{card.sub}</span>
+                </div>
                 <Arrow />
               </div>
             </a>
           ))}
         </section>
 
-        <section className="bh-menu" id="menu">
-          <div className="bh-menu__head"><span>TODAY&apos;S MENU</span><span>Updated this morning</span></div>
-          <div className="bh-menu__row"><div><strong>Haus Breakfast</strong><span>eggs, crispy potatoes, sourdough</span></div><b>$15</b></div>
-          <div className="bh-menu__row"><div><strong>Lemon Ricotta Pancakes</strong><span>berries, whipped ricotta, maple</span></div><b>$14</b></div>
-          <div className="bh-menu__row"><div><strong>Breakfast Sandwich</strong><span>egg, cheddar, bacon, brioche</span></div><b>$11</b></div>
-          <a className="bh-menu__more" href="#footer">View full menu <Arrow /></a>
+        <section className="mx-3.5 mt-2.5 rounded-[26px] bg-white p-5" id="menu">
+          <div className="flex items-center justify-between text-[9px] text-black/45"><span className="font-bold tracking-[0.12em]">TODAY&apos;S MENU</span><span>Updated this morning</span></div>
+          {[
+            ['Haus Breakfast', 'eggs, crispy potatoes, sourdough', '$15'],
+            ['Lemon Ricotta Pancakes', 'berries, whipped ricotta, maple', '$14'],
+            ['Breakfast Sandwich', 'egg, cheddar, bacon, brioche', '$11'],
+          ].map(([name, desc, price]) => (
+            <div key={name} className="flex items-start justify-between border-b border-black/8 py-4">
+              <div><strong className="block text-[13px]">{name}</strong><span className="mt-1 block text-[10px] text-black/45">{desc}</span></div><b className="text-[12px]">{price}</b>
+            </div>
+          ))}
+          <a className="mt-4 flex items-center justify-between text-[11px] font-bold" href="#footer">View full menu <Arrow /></a>
         </section>
 
-        <a className="bh-website" href="#footer"><div><span>OUR FULL WEBSITE</span><strong>Visit breakfasthaus.com</strong></div><Arrow /></a>
+        <a className="mx-3.5 mt-2.5 flex items-center justify-between rounded-[22px] bg-[#263829] px-5 py-4 text-white" href="#footer">
+          <div><span className="block text-[8px] font-bold tracking-[0.14em] text-white/50">OUR FULL WEBSITE</span><strong className="mt-1 block text-[13px]">Visit breakfasthaus.com</strong></div><Arrow />
+        </a>
 
-        <footer className="bh-footer" id="footer">
-          <div className="bh-footer__brand"><span className="bh-footer__mark">BH</span><div><strong>Breakfast Haus</strong><span>Franklin, Tennessee</span></div></div>
-          <div className="bh-footer__links"><span>Instagram</span><span>Call</span><span>Website</span></div>
-          <Link href="/" className="bh-powered">Powered by OpenStatus</Link>
+        <footer className="px-5 pb-8 pt-8" id="footer">
+          <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-full bg-[#263829] text-[10px] font-extrabold text-white">BH</span><div><strong className="block text-[13px]">Breakfast Haus</strong><span className="block text-[10px] text-black/45">Franklin, Tennessee</span></div></div>
+          <div className="mt-5 flex gap-4 text-[10px] text-black/50"><span>Instagram</span><span>Call</span><span>Website</span></div>
+          <Link href="/" className="mt-7 block text-center text-[9px] font-semibold uppercase tracking-[0.13em] text-black/35">Powered by OpenStatus</Link>
         </footer>
-      </section>
+      </div>
     </main>
   );
 }
