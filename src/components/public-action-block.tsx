@@ -4,22 +4,7 @@ import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
 
 type PublicActionBlockProps = { block: OpenStatusBlock; businessId: string };
-
-function safeUrl(value?: string) {
-  const raw = value?.trim();
-  if (!raw) return '';
-  if (/^(https?:\/\/|tel:|mailto:)/i.test(raw)) return raw;
-  return `https://${raw}`;
-}
-
-export default function PublicActionBlock({ block, businessId }: PublicActionBlockProps) {
-  const wide = block.id === 'website';
-  const tone = block.tone === 'dark'
-    ? 'border border-white/15 bg-black/55 text-white backdrop-blur-2xl'
-    : 'border border-white/60 bg-white/68 text-black backdrop-blur-2xl';
-  const href = safeUrl(block.url);
-  const classes = `${wide ? 'col-span-2' : ''} ${tone} flex min-h-[126px] flex-col justify-between rounded-[24px] p-4 shadow-[0_14px_36px_rgba(0,0,0,.10)] transition ${href ? 'cursor-pointer hover:-translate-y-0.5 hover:bg-white/78 hover:shadow-lg' : ''}`;
-  const content = <><span className="text-[8px] font-bold uppercase tracking-[.14em] opacity-45">{block.id}</span><div className="flex items-end justify-between gap-3"><div><strong className="block text-[18px] tracking-[-.04em]">{block.title}</strong><span className="mt-1 block text-[9px] opacity-55">{block.sub}</span></div><span aria-hidden="true" className="grid h-9 w-9 place-items-center rounded-full bg-white/20">{block.icon || '↗'}</span></div></>;
-
-  return href ? <a href={href} target="_blank" rel="noreferrer" className={classes} aria-label={`${block.title}: ${block.sub}`} onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}>{content}</a> : <div className={classes}>{content}</div>;
-}
+function safeUrl(value?:string){const raw=value?.trim();if(!raw)return'';if(/^(https?:\/\/|tel:|mailto:)/i.test(raw))return raw;return`https://${raw}`}
+function provider(url=''){const v=url.toLowerCase();if(v.includes('doordash'))return'DD';if(v.includes('squareup')||v.includes('square.site'))return'□';if(v.includes('toasttab'))return'T';if(v.includes('ubereats'))return'UE';if(v.includes('grubhub'))return'GH';if(v.includes('calendly'))return'C';if(v.includes('shopify'))return'S';return''}
+function LineIcon({id}:{id:string}){const paths:Record<string,string>={order:'M7 8h10l-1 11H8L7 8zm2-3h6l1 3H8l1-3z',menu:'M6 7h12M6 12h12M6 17h12',book:'M7 4v3M17 4v3M5 9h14M6 6h12a1 1 0 011 1v12H5V7a1 1 0 011-1z',website:'M12 3a9 9 0 100 18 9 9 0 000-18zm0 0c2.2 2.5 3.3 5.5 3.3 9S14.2 18.5 12 21m0-18C9.8 5.5 8.7 8.5 8.7 12s1.1 6.5 3.3 9M3.5 12h17',call:'M7 4l3 4-2 2c1.5 3 3 4.5 6 6l2-2 4 3-2 3c-1 1-3 .5-5-.5C8 17 5 14 3.5 9 3 7 3 5.5 4 5l3-1z',email:'M4 6h16v12H4V6zm0 1l8 6 8-6'};return <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d={paths[id]||'M5 12h14M14 7l5 5-5 5'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+export default function PublicActionBlock({block,businessId}:PublicActionBlockProps){const wide=block.id==='website';const href=safeUrl(block.url);const brand=provider(block.url);const classes=`${wide?'col-span-2':''} border border-white/55 bg-white/72 text-black backdrop-blur-2xl flex min-h-[116px] flex-col justify-between rounded-[24px] p-4 shadow-[0_14px_36px_rgba(0,0,0,.10)] transition ${href?'cursor-pointer hover:-translate-y-0.5 hover:bg-white/82':''}`;const content=<><div className="flex items-center justify-between"><span className="text-[8px] font-bold uppercase tracking-[.14em] opacity-40">{block.title}</span><span className="grid h-8 min-w-8 place-items-center rounded-full border border-black/8 bg-white/60 px-2 text-[9px] font-bold">{brand||<LineIcon id={block.id.split('-')[0]}/>}</span></div><div><strong className="block text-[18px] tracking-[-.04em]">{block.title}</strong><span className="mt-1 block text-[9px] opacity-55">{block.sub}</span></div></>;return href?<a href={href} target="_blank" rel="noreferrer" className={classes} onClick={()=>trackOpenStatusEvent(businessId,'block_click',block.id)}>{content}</a>:<div className={classes}>{content}</div>}
