@@ -19,6 +19,8 @@ export type OpenStatusPageConfig = {
   blocks: OpenStatusBlock[];
   bg: string;
   socials: OpenStatusSocial[];
+  location: string;
+  tags: string[];
 };
 
 export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
@@ -30,7 +32,7 @@ export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
 ];
 
 export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageConfig {
-  const raw = value && typeof value === 'object' ? value as { blocks?: unknown; bg?: unknown; socials?: unknown } : {};
+  const raw = value && typeof value === 'object' ? value as { blocks?: unknown; bg?: unknown; socials?: unknown; location?: unknown; tags?: unknown } : {};
   const blocks = Array.isArray(raw.blocks)
     ? raw.blocks.map((block) => ({ ...(block as OpenStatusBlock), url: typeof (block as OpenStatusBlock).url === 'string' ? (block as OpenStatusBlock).url : '' }))
     : defaultOpenStatusBlocks;
@@ -52,5 +54,7 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
     blocks,
     bg: typeof raw.bg === 'string' ? raw.bg : 'warm',
     socials,
+    location: typeof raw.location === 'string' ? raw.location : '',
+    tags: Array.isArray(raw.tags) ? raw.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 5) : [],
   };
 }
