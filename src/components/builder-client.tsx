@@ -520,17 +520,17 @@ export default function BuilderClient() {
       {/* Add Link Modal */}
       {addStep && (
         <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:p-4"
           onMouseDown={closeAddModal}
         >
           <div
-            className="w-full max-w-lg rounded-[32px] bg-[#F8F7F2] shadow-2xl"
+            className="w-full max-h-[88vh] overflow-y-auto rounded-t-[28px] bg-[#F8F7F2] shadow-2xl sm:max-w-lg sm:rounded-[32px]"
             onMouseDown={e => e.stopPropagation()}
           >
 
             {/* Step 1: Category */}
             {addStep === 'category' && (
-              <div className="p-6">
+              <div className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="text-[9px] font-bold tracking-[.14em] text-black/35">ADD TO YOUR PAGE</span>
@@ -540,18 +540,17 @@ export default function BuilderClient() {
                     <XIcon />
                   </button>
                 </div>
-                <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                <div className="mt-3 grid grid-cols-3 gap-2">
                   {CATEGORIES.map(cat => (
                     <button
                       key={cat.id}
                       onClick={() => pickCategory(cat)}
-                      className="flex flex-col gap-2.5 rounded-[20px] border border-black/8 bg-white p-4 text-left transition hover:shadow-md active:scale-[.98]"
+                      className="flex flex-col gap-1.5 rounded-[20px] border border-black/8 bg-white p-3 text-left transition hover:shadow-md active:scale-[.98]"
                     >
                       <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-[#F0EDE6] text-black/55">
                         <CategoryIcon id={cat.id} />
                       </span>
                       <span className="text-sm font-semibold">{cat.label}</span>
-                      <span className="text-[10px] leading-4 text-black/40">{cat.desc}</span>
                     </button>
                   ))}
                 </div>
@@ -560,7 +559,7 @@ export default function BuilderClient() {
 
             {/* Step 2: Provider */}
             {addStep === 'provider' && addCat && (
-              <div className="p-6">
+              <div className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <button
@@ -576,7 +575,7 @@ export default function BuilderClient() {
                     <XIcon />
                   </button>
                 </div>
-                <div className="mt-5 space-y-2">
+                <div className="mt-3 space-y-2">
                   {addCat.providers?.map(prov => (
                     <button
                       key={prov.id}
@@ -595,7 +594,7 @@ export default function BuilderClient() {
 
             {/* Step 3: URL */}
             {addStep === 'url' && (
-              <div className="p-6">
+              <div className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <button
@@ -611,7 +610,7 @@ export default function BuilderClient() {
                     <XIcon />
                   </button>
                 </div>
-                <div className="mt-5 space-y-3">
+                <div className="mt-3 space-y-3">
                   <div>
                     <label className="text-[9px] font-bold uppercase tracking-[.1em] text-black/35">Button title</label>
                     <input
@@ -641,14 +640,6 @@ export default function BuilderClient() {
                       placeholder={addProv?.ph ?? 'https://...'}
                       className="mt-1.5 w-full rounded-[14px] border border-black/10 bg-white px-4 py-3 font-mono text-xs outline-none focus:border-black/25"
                     />
-                  </div>
-                </div>
-                {/* Preview card */}
-                <div className="mt-4 rounded-[18px] border border-black/8 bg-white p-4">
-                  <span className="text-[9px] font-bold uppercase tracking-[.12em] text-black/30">Preview</span>
-                  <div className="mt-2">
-                    <strong className="block text-base">{addTitle || <span className="text-black/25">Your link title</span>}</strong>
-                    {addSub && <span className="mt-0.5 block text-xs text-black/40">{addSub}</span>}
                   </div>
                 </div>
                 <button
