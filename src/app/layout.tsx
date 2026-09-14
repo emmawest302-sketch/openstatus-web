@@ -1,30 +1,18 @@
 import type { Metadata } from 'next';
-import { Space_Grotesk, Space_Mono, Instrument_Serif } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 import './globals.css';
 
-const display = Space_Grotesk({
+const poppins = Poppins({
   subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-display',
-});
-
-const mono = Space_Mono({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-mono',
-});
-
-const serif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: ['400'],
-  style: ['italic', 'normal'],
-  variable: '--font-serif',
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-poppins',
 });
 
 export const metadata: Metadata = {
-  title: 'OpenStatus — know before you go',
+  title: 'OpenStatus — the link in bio for small businesses',
   description:
-    'One link in your Instagram bio that always shows what customers need to know before they visit.',
+    'A beautiful mobile link for small businesses with live status, hours, actions, branding, and analytics.',
 };
 
 export default function RootLayout({
@@ -32,13 +20,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body
-        className={
-          display.variable + ' ' + mono.variable + ' ' + serif.variable
-        }
-      >
-        {children}
-      </body>
+      <body className={poppins.variable}>{children}</body>
     </html>
   );
 }
