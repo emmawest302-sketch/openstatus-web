@@ -43,6 +43,7 @@ export default function BuilderClient(){
  const[saved,setSaved]=useState(false);
  const[error,setError]=useState('');
  const[showLibrary,setShowLibrary]=useState(false);
+ const[draggedId,setDraggedId]=useState<string|null>(null);
 
  useEffect(()=>{void(async()=>{
   const{data:userData}=await supabase.auth.getUser();
@@ -55,7 +56,25 @@ export default function BuilderClient(){
  })()},[router]);
 
  const dirty=()=>setSaved(false);
- const move=(i:number,d:number)=>{const j=i+d;if(j<0||j>=blocks.length)return;const next=[...blocks];[next[i],next[j]]=[next[j],next[i]];setBlocks(next);dirty()};
+ const reorder=(fromId:string,toId:string)=>{
+  if(fromId===toId)return;
+  setBlocks(current=>{
+   const from=current.findIndex(block=>block.id===fromId);
+   const to=current.findIndex(block=>block.id===toId);
+   if(from<0||to<0)return current;
+   const next=[...current];
+   const[moved]=next.splice(from,1);
+   next.splice(to,0,moved);
+   return next;
+  });
+  dirty();
+ };
+ const dragOverPoint=(clientX:number,clientY:number)=>{
+  if(!draggedId)return;
+  const target=document.elementFromPoint(clientX,clientY)?.closest('[data-block-id]') as HTMLElement|null;
+  const targetId=target?.dataset.blockId;
+  if(targetId&&targetId!==draggedId)reorder(draggedId,targetId);
+ };
  const toggle=(id:string)=>{setBlocks(v=>v.map(b=>b.id===id?{...b,on:!b.on}:b));dirty()};
  const edit=(id:string,key:'title'|'sub'|'url',value:string)=>{setBlocks(v=>v.map(b=>b.id===id?{...b,[key]:value}:b));dirty()};
  const remove=(id:string)=>{setBlocks(v=>v.filter(b=>b.id!==id));dirty()};
@@ -74,7 +93,8 @@ export default function BuilderClient(){
 
    <section className="rounded-[30px] border border-black/8 bg-white/55 p-5 md:p-7"><div className="flex items-end justify-between gap-4"><div><span className="text-[9px] font-bold tracking-[.14em] text-black/35">{business?.name?.toUpperCase()}</span><h1 className="mt-2 text-4xl font-semibold tracking-[-.055em]">Build the front door.</h1><p className="mt-2 text-xs text-black/40">Everything here publishes directly to your customer-facing page.</p></div><button onClick={()=>setShowLibrary(true)} className="shrink-0 rounded-full border border-black/10 bg-white px-4 py-2.5 text-xs font-bold shadow-sm">＋ Add block</button></div>
     <div className="mt-7 rounded-[24px] bg-[#F5F3ED] p-4"><div className="flex items-center justify-between"><div><strong className="text-sm">Background</strong><span className="mt-1 block text-xs text-black/40">Choose the page mood</span></div><div className="flex gap-1">{['warm','blue','lime','dark'].map(x=><button key={x} onClick={()=>{setBg(x);dirty()}} className={`h-8 w-8 rounded-full border-2 ${bg===x?'border-black':'border-white'} ${x==='warm'?'bg-[#E8D5BF]':x==='blue'?'bg-[#CBD9FF]':x==='lime'?'bg-[#C8FF62]':'bg-[#222]'}`} aria-label={x}/>)}</div></div></div>
-    <div className="mt-4 space-y-3">{blocks.map((b,i)=><div key={b.id} className={`rounded-[22px] border border-black/8 bg-white p-4 ${!b.on?'opacity-50':''}`}><div className="flex items-center gap-3"><span className="text-black/25">⋮⋮</span><div className={`grid h-11 w-11 place-items-center rounded-[14px] ${b.tone==='dark'?'bg-black text-white':b.tone==='map'?'bg-[#DCE5D0]':'bg-[#F2EFE8]'}`}>{b.icon}</div><div className="flex-1"><strong className="text-sm">{b.title}</strong><span className="ml-2 text-[9px] uppercase text-black/30">{b.id}</span></div><button onClick={()=>move(i,-1)} className="h-8 w-8 rounded-full bg-black/5 text-xs">↑</button><button onClick={()=>move(i,1)} className="h-8 w-8 rounded-full bg-black/5 text-xs">↓</button><button onClick={()=>toggle(b.id)} className={`h-8 rounded-full px-3 text-[9px] font-bold ${b.on?'bg-[#C8FF62]/65':'bg-black/5'}`}>{b.on?'ON':'OFF'}</button><button onClick={()=>remove(b.id)} className="h-8 w-8 rounded-full bg-black/5 text-xs">×</button></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><input value={b.title} onChange={e=>edit(b.id,'title',e.target.value)} className="rounded-[14px] bg-[#F5F3ED] px-3 py-2.5 text-xs outline-none"/><input value={b.sub} onChange={e=>edit(b.id,'sub',e.target.value)} className="rounded-[14px] bg-[#F5F3ED] px-3 py-2.5 text-xs outline-none"/></div><label className="mt-2 block"><span className="mb-1 block text-[9px] font-bold uppercase tracking-[.1em] text-black/30">{b.id==='map'?'Business address':'Destination URL'}</span><input value={b.url||''} onChange={e=>edit(b.id,'url',e.target.value)} placeholder={placeholders[b.id]||'https://...'} className="w-full rounded-[14px] border border-black/8 bg-white px-3 py-3 text-xs outline-none focus:ring-4 focus:ring-[#CBD9FF]/40"/></label></div>)}</div>
+    <div className="mt-5 flex items-center gap-2 text-[10px] font-semibold text-black/35"><span className="text-base leading-none">⋮⋮</span><span>Drag blocks to rearrange them — the phone preview updates instantly.</span></div>
+    <div className="mt-3 space-y-3">{blocks.map((b)=><div key={b.id} data-block-id={b.id} onDragOver={e=>e.preventDefault()} onDragEnter={e=>{e.preventDefault();if(draggedId)reorder(draggedId,b.id)}} className={`rounded-[22px] border bg-white p-4 transition-all ${draggedId===b.id?'scale-[.985] border-black/25 opacity-60 shadow-lg':'border-black/8'} ${!b.on?'opacity-50':''}`}><div className="flex items-center gap-3"><button type="button" draggable onDragStart={e=>{setDraggedId(b.id);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',b.id)}} onDragEnd={()=>setDraggedId(null)} onPointerDown={e=>{setDraggedId(b.id);e.currentTarget.setPointerCapture(e.pointerId)}} onPointerMove={e=>{if(draggedId){e.preventDefault();dragOverPoint(e.clientX,e.clientY)}}} onPointerUp={e=>{if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);setDraggedId(null)}} onPointerCancel={()=>setDraggedId(null)} className="grid h-11 w-8 shrink-0 cursor-grab touch-none place-items-center rounded-[12px] text-xl tracking-[-.2em] text-black/28 transition active:cursor-grabbing active:bg-black/5" aria-label={`Drag ${b.title} to rearrange`}>⋮⋮</button><div className={`grid h-11 w-11 place-items-center rounded-[14px] ${b.tone==='dark'?'bg-black text-white':b.tone==='map'?'bg-[#DCE5D0]':'bg-[#F2EFE8]'}`}>{b.icon}</div><div className="flex-1"><strong className="text-sm">{b.title}</strong><span className="ml-2 text-[9px] uppercase text-black/30">{b.id}</span></div><button onClick={()=>toggle(b.id)} className={`h-8 rounded-full px-3 text-[9px] font-bold ${b.on?'bg-[#C8FF62]/65':'bg-black/5'}`}>{b.on?'ON':'OFF'}</button><button onClick={()=>remove(b.id)} className="h-8 w-8 rounded-full bg-black/5 text-xs">×</button></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><input value={b.title} onChange={e=>edit(b.id,'title',e.target.value)} className="rounded-[14px] bg-[#F5F3ED] px-3 py-2.5 text-xs outline-none"/><input value={b.sub} onChange={e=>edit(b.id,'sub',e.target.value)} className="rounded-[14px] bg-[#F5F3ED] px-3 py-2.5 text-xs outline-none"/></div><label className="mt-2 block"><span className="mb-1 block text-[9px] font-bold uppercase tracking-[.1em] text-black/30">{b.id==='map'?'Business address':'Destination URL'}</span><input value={b.url||''} onChange={e=>edit(b.id,'url',e.target.value)} placeholder={placeholders[b.id]||'https://...'} className="w-full rounded-[14px] border border-black/8 bg-white px-3 py-3 text-xs outline-none focus:ring-4 focus:ring-[#CBD9FF]/40"/></label></div>)}</div>
     <SocialLinksEditor socials={socials} onChange={changeSocials}/>
     {error?<p className="mt-5 rounded-[16px] bg-[#F8AE9D]/65 p-4 text-sm">{error}</p>:null}
    </section>
