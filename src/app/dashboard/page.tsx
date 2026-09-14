@@ -1,510 +1,66 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+type Hours={day_of_week:number;opens_at:string|null;closes_at:string|null;is_closed:boolean};
+type Update={id:string;kind:string;headline:string;detail:string|null;reason:string|null;created_at:string};
+type Business={id:string;name:string;tagline:string|null;slug:string|null;avatar_url:string|null;header_url:string|null;instagram_handle:string|null};
 
-const CREAM = '#F4F1E8';
-const INK = '#0A0A0A';
-const LIME = '#A7E348';
-const PEACH = '#F8AE9D';
+function Mark(){return <svg viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="#050505"/><circle cx="50" cy="50" r="21" fill="#F7F7F3"/><circle cx="50" cy="44" r="7.4" fill="#050505"/><path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#050505"/></svg>}
+function pretty(t:string|null){if(!t)return'';const[h,m]=t.split(':');let n=Number(h);const mer=n>=12?'PM':'AM';n=n%12||12;return `${n}:${m} ${mer}`}
+function endOfToday(){const d=new Date();d.setHours(23,59,59,0);return d.toISOString()}
 
-type Hours = {
-  day_of_week: number;
-  opens_at: string | null;
-  closes_at: string | null;
-  is_closed: boolean;
-};
+export default function Dashboard(){
+ const router=useRouter();
+ const[loading,setLoading]=useState(true);const[busy,setBusy]=useState(false);const[error,setError]=useState('');const[note,setNote]=useState('');
+ const[biz,setBiz]=useState<Business|null>(null);const[hours,setHours]=useState<Hours[]>([]);const[active,setActive]=useState<Update|null>(null);const[copied,setCopied]=useState(false);
+ const[statusMode,setStatusMode]=useState<'close'|'late'|'early'|null>(null);const[time,setTime]=useState('15:00');const[reason,setReason]=useState('');const[showHours,setShowHours]=useState(false);const[draftHours,setDraftHours]=useState<Hours[]>([]);
 
-type Update = {
-  id: string;
-  kind: string;
-  headline: string;
-  detail: string | null;
-  reason: string | null;
-  source: string | null;
-  created_at: string;
-};
+ const load=useCallback(async()=>{const{data:u}=await supabase.auth.getUser();if(!u.user){router.replace('/login');return}const{data:b}=await supabase.from('businesses').select('id,name,tagline,slug,avatar_url,header_url,instagram_handle').eq('user_id',u.user.id).maybeSingle();if(!b){router.replace('/setup');return}setBiz(b);const[{data:h},{data:a}]=await Promise.all([supabase.from('business_hours').select('day_of_week,opens_at,closes_at,is_closed').eq('business_id',b.id),supabase.from('status_updates').select('id,kind,headline,detail,reason,created_at').eq('business_id',b.id).eq('status','active').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(1).maybeSingle()]);const hrs=h??[];setHours(hrs);setDraftHours(hrs);setActive(a??null);setLoading(false)},[router]);
+ useEffect(()=>{void load()},[load]);
 
-type Business = {
-  id: string;
-  name: string;
-  tagline: string | null;
-  slug: string | null;
-  avatar_url: string | null;
-  header_url: string | null;
-  instagram_handle: string | null;
-  google_location_id: string | null;
-};
+ const today=new Date().getDay();const todayRow=hours.find(h=>h.day_of_week===today);const normalToday=todayRow&&!todayRow.is_closed?`${pretty(todayRow.opens_at)} – ${pretty(todayRow.closes_at)}`:'Closed';
+ const link=biz?.slug?`openstatus.co/${biz.slug}`:'openstatus.co/yourbusiness';
+ const avatar=biz?.avatar_url?.startsWith('storage:')&&biz?`/api/assets?businessId=${biz.id}&kind=avatar`:biz?.avatar_url||'';
+ const liveLabel=active?active.headline:'Open as usual';const liveSub=active?(active.detail||active.reason||'Temporary update active'):`Today ${normalToday}`;
+ const completion=useMemo(()=>{let score=0;if(biz?.slug)score++;if(biz?.avatar_url)score++;if(biz?.header_url)score++;if(hours.length)score++;if(biz?.instagram_handle)score++;return Math.round(score/5*100)},[biz,hours]);
 
-function pretty(t: string | null): string {
-  if (!t) return '';
-  const [hStr, m] = t.split(':');
-  let h = parseInt(hStr, 10);
-  const mer = h >= 12 ? 'PM' : 'AM';
-  if (h === 0) h = 12;
-  else if (h > 12) h -= 12;
-  return m === '00' ? h + ':00 ' + mer : h + ':' + m + ' ' + mer;
-}
+ const setStatus=async(kind:'closed'|'hours_change',headline:string,detail:string|null,closesAt:string|null)=>{if(!biz)return;setBusy(true);setError('');setNote('');if(active)await supabase.from('status_updates').delete().eq('id',active.id);const{error:e}=await supabase.from('status_updates').insert({business_id:biz.id,kind,headline,detail,reason:reason.trim()||null,closes_at:closesAt,effective_date:new Date().toISOString().slice(0,10),expires_at:endOfToday(),confidence:1,status:'active',source:'owner'});setBusy(false);setStatusMode(null);setReason('');if(e){setError(e.message);return}setNote('Live status updated');void load()};
+ const backToNormal=async()=>{if(!active)return;setBusy(true);await supabase.from('status_updates').delete().eq('id',active.id);setBusy(false);setNote('Back to regular hours');void load()};
+ const saveHours=async()=>{if(!biz)return;setBusy(true);const payload=draftHours.map(r=>({business_id:biz.id,day_of_week:r.day_of_week,opens_at:r.is_closed?null:r.opens_at,closes_at:r.is_closed?null:r.closes_at,is_closed:r.is_closed}));const{error:e}=await supabase.from('business_hours').upsert(payload,{onConflict:'business_id,day_of_week'});setBusy(false);if(e){setError(e.message);return}setNote('Regular hours saved');setShowHours(false);void load()};
 
-function endOfToday(): string {
-  const d = new Date();
-  d.setHours(23, 59, 59, 0);
-  return d.toISOString();
-}
+ if(loading)return <main className="grid min-h-screen place-items-center bg-[#F5F3ED]" style={{fontFamily:'var(--font-poppins)'}}>Loading dashboard…</main>;
+ if(!biz)return null;
 
-export default function Dashboard() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState('');
-  const [error, setError] = useState('');
+ return <main className="min-h-screen bg-[#F5F3ED] text-[#111]" style={{fontFamily:'var(--font-poppins)'}}>
+  <header className="sticky top-0 z-30 border-b border-black/8 bg-[#F5F3ED]/88 backdrop-blur-2xl"><div className="mx-auto flex w-[min(95%,1280px)] items-center justify-between py-4"><Link href="/" className="flex items-center gap-2.5 font-bold tracking-[-.04em]"><Mark/>OpenStatus</Link><div className="flex items-center gap-2"><Link href="/builder" className="rounded-full border border-black/10 bg-white/70 px-4 py-2.5 text-xs font-semibold">Edit page</Link><button onClick={async()=>{await supabase.auth.signOut();router.replace('/')}} className="rounded-full px-4 py-2.5 text-xs font-semibold text-black/45">Sign out</button></div></div></header>
 
-  const [biz, setBiz] = useState<Business | null>(null);
-  const [hours, setHours] = useState<Hours[]>([]);
-  const [active, setActive] = useState<Update | null>(null);
+  <div className="mx-auto grid w-[min(95%,1280px)] gap-5 py-6 lg:grid-cols-[1.2fr_.8fr]">
+   <section className="space-y-5">
+    <div className="overflow-hidden rounded-[34px] border border-black/8 bg-white/65 shadow-[0_24px_80px_rgba(0,0,0,.06)] backdrop-blur-xl"><div className="relative h-56 bg-gradient-to-br from-[#C8B09B] via-[#7D6858] to-[#3C4738]">{biz.header_url?<img src={biz.header_url.startsWith('storage:')?`/api/assets?businessId=${biz.id}&kind=header`:biz.header_url} alt="" className="absolute inset-0 h-full w-full object-cover"/>:null}<div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/65"/><div className="absolute inset-x-6 bottom-6 flex items-end justify-between gap-4 text-white"><div className="flex items-end gap-4">{avatar?<img src={avatar} alt="" className="h-16 w-16 rounded-full border border-white/50 bg-white object-cover"/>:<div className="grid h-16 w-16 place-items-center rounded-full bg-white text-black"><Mark/></div>}<div><span className="text-[9px] font-bold uppercase tracking-[.16em] text-white/60">BUSINESS DASHBOARD</span><h1 className="mt-1 text-3xl font-semibold tracking-[-.05em]">{biz.name}</h1><p className="mt-1 text-xs text-white/65">{biz.tagline||'Your live business page'}</p></div></div><Link href={`/${biz.slug}`} target="_blank" className="rounded-full bg-white/15 px-4 py-2 text-xs font-semibold backdrop-blur-xl">View live ↗</Link></div></div></div>
 
-  const [showHours, setShowHours] = useState(false);
-  const [showLook, setShowLook] = useState(false);
-  const [askTime, setAskTime] = useState<null | 'close' | 'open'>(null);
-  const [time, setTime] = useState('15:00');
-  const [reason, setReason] = useState('');
-  const [avatar, setAvatar] = useState('');
-  const [header, setHeader] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [findOpen, setFindOpen] = useState(false);
-  const [findQuery, setFindQuery] = useState('');
-  const [findResults, setFindResults] = useState<{ id: string; name: string; address: string }[]>([]);
-  const [finding, setFinding] = useState(false);
-
-  const today = new Date().getDay();
-  const todayRow = hours.find((h) => h.day_of_week === today) ?? null;
-
-  const load = useCallback(async () => {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) { router.replace('/login'); return; }
-
-    const { data: b } = await supabase
-      .from('businesses')
-      .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, google_location_id')
-      .eq('user_id', userData.user.id)
-      .maybeSingle();
-
-    if (!b) { setLoading(false); return; }
-    setBiz(b);
-    setAvatar(b.avatar_url ?? '');
-    setHeader(b.header_url ?? '');
-
-    const { data: h } = await supabase
-      .from('business_hours')
-      .select('day_of_week, opens_at, closes_at, is_closed')
-      .eq('business_id', b.id);
-    setHours(h ?? []);
-
-    const { data: up } = await supabase
-      .from('status_updates')
-      .select('id, kind, headline, detail, reason, source, created_at')
-      .eq('business_id', b.id)
-      .eq('status', 'active')
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    setActive(up ?? null);
-
-    setLoading(false);
-  }, [router]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const setStatus = async (
-    kind: 'closed' | 'hours_change',
-    headline: string,
-    detail: string | null,
-    closesAt: string | null
-  ) => {
-    if (!biz) return;
-    setBusy(true); setError(''); setNote('');
-    if (active) await supabase.from('status_updates').delete().eq('id', active.id);
-    const { error: e } = await supabase.from('status_updates').insert({
-      business_id: biz.id,
-      kind,
-      headline,
-      detail,
-      reason: reason.trim() || null,
-      closes_at: closesAt,
-      effective_date: new Date().toISOString().slice(0, 10),
-      expires_at: endOfToday(),
-      confidence: 1,
-      status: 'active',
-      source: 'owner',
-    });
-    setBusy(false);
-    setAskTime(null);
-    setReason('');
-    if (e) { setError(e.message); return; }
-    setNote('Your page is updated');
-    load();
-  };
-
-  const backToNormal = async () => {
-    if (!active) return;
-    setBusy(true);
-    await supabase.from('status_updates').delete().eq('id', active.id);
-    setBusy(false);
-    setNote('Back to regular hours');
-    load();
-  };
-
-  const saveHours = async (rows: Hours[]) => {
-    if (!biz) return;
-    setBusy(true);
-    await supabase.from('business_hours').upsert(
-      rows.map((r) => ({
-        business_id: biz.id,
-        day_of_week: r.day_of_week,
-        opens_at: r.is_closed ? null : r.opens_at,
-        closes_at: r.is_closed ? null : r.closes_at,
-        is_closed: r.is_closed,
-      })),
-      { onConflict: 'business_id,day_of_week' }
-    );
-    setBusy(false);
-    setNote('Hours saved');
-    load();
-  };
-
-  const saveLook = async () => {
-    if (!biz) return;
-    setBusy(true);
-    await supabase
-      .from('businesses')
-      .update({ avatar_url: avatar || null, header_url: header || null })
-      .eq('id', biz.id);
-    setBusy(false);
-    setShowLook(false);
-    setNote('Saved');
-    load();
-  };
-
-  const searchPlaces = async () => {
-    setFinding(true); setError(''); setFindResults([]);
-    try {
-      const { data: sd } = await supabase.auth.getSession();
-      const token = sd.session?.access_token;
-      if (!token) throw new Error('Sign in again');
-      const res = await fetch('/api/places', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: findQuery }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'Search failed');
-      setFindResults(body.places ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
-    } finally {
-      setFinding(false);
-    }
-  };
-
-  const importPlace = async (placeId: string) => {
-    setFinding(true); setError('');
-    try {
-      const { data: sd } = await supabase.auth.getSession();
-      const token = sd.session?.access_token;
-      if (!token) throw new Error('Sign in again');
-      const res = await fetch('/api/places', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ placeId }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'Import failed');
-      if (!body.imported) { setError(body.reason ?? 'No hours on that listing'); return; }
-      setNote('Hours brought in from Google');
-      setFindOpen(false);
-      setFindResults([]);
-      setFindQuery('');
-      load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed');
-    } finally {
-      setFinding(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: CREAM }}>
-        <p className="text-[#0A0A0A]/60">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!biz) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: CREAM }}>
-        <a href="/setup" className="px-6 py-3 font-bold border-2 border-[#0A0A0A]" style={{ background: LIME }}>
-          Finish setting up
-        </a>
-      </div>
-    );
-  }
-
-  const link = 'openstatus.co/' + (biz.slug ?? '');
-  const normalToday = todayRow && !todayRow.is_closed
-    ? pretty(todayRow.opens_at) + ' to ' + pretty(todayRow.closes_at)
-    : 'Closed';
-
-  return (
-    <div className="min-h-screen" style={{ background: CREAM, color: INK, fontFamily: 'var(--font-display)' }}>
-      <div className="max-w-lg mx-auto px-4 py-6">
-
-        <div className="flex items-center justify-between">
-          <p className="text-xl font-bold tracking-tight">{biz.name}</p>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); router.replace('/'); }}
-            className="text-xs uppercase tracking-widest text-[#0A0A0A]/50"
-          >
-            Sign out
-          </button>
-        </div>
-
-        <div className="mt-5 border-2 border-[#0A0A0A] p-5" style={{ background: active ? PEACH : LIME }}>
-          <p className="text-[11px] uppercase tracking-[0.2em]">Right now</p>
-          <p className="mt-2 text-3xl font-bold tracking-tight leading-none">
-            {active ? active.headline : 'Open as usual'}
-          </p>
-          <p className="mt-2 text-[15px]">
-            {active ? active.detail ?? '' : 'Today ' + normalToday}
-          </p>
-          {active ? (
-            <button
-              onClick={backToNormal}
-              disabled={busy}
-              className="mt-4 w-full py-3 font-bold border-2 border-[#0A0A0A] bg-white"
-            >
-              Back to normal
-            </button>
-          ) : null}
-        </div>
-
-        {!active ? (
-          <div className="mt-3 grid gap-2.5">
-            <button
-              onClick={() => setStatus('closed', 'Closed today', null, null)}
-              disabled={busy}
-              className="py-5 text-lg font-bold border-2 border-[#0A0A0A] bg-[#0A0A0A] text-white"
-            >
-              Closed today
-            </button>
-            <button
-              onClick={() => { setAskTime('close'); setTime(todayRow?.closes_at?.slice(0,5) ?? '15:00'); }}
-              disabled={busy}
-              className="py-5 text-lg font-bold border-2 border-[#0A0A0A] bg-white"
-            >
-              Closing early
-            </button>
-            <button
-              onClick={() => { setAskTime('open'); setTime(todayRow?.opens_at?.slice(0,5) ?? '10:00'); }}
-              disabled={busy}
-              className="py-5 text-lg font-bold border-2 border-[#0A0A0A] bg-white"
-            >
-              Opening late
-            </button>
-          </div>
-        ) : null}
-
-        {askTime ? (
-          <div className="mt-3 border-2 border-[#0A0A0A] p-5 bg-white">
-            <p className="font-bold">
-              {askTime === 'close' ? 'What time are you closing?' : 'What time are you opening?'}
-            </p>
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="mt-3 w-full border-2 border-[#0A0A0A] px-3 py-3 text-xl"
-            />
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Why? Weather, staffing... optional"
-              className="mt-2.5 w-full border-2 border-[#0A0A0A] px-3 py-3"
-            />
-            <button
-              onClick={() =>
-                askTime === 'close'
-                  ? setStatus('hours_change', 'Closing early today', 'Closing at ' + pretty(time), time)
-                  : setStatus('hours_change', 'Opening late today', 'Opening at ' + pretty(time), null)
-              }
-              disabled={busy}
-              className="mt-3 w-full py-4 text-lg font-bold border-2 border-[#0A0A0A]"
-              style={{ background: LIME }}
-            >
-              Update my page
-            </button>
-            <button onClick={() => setAskTime(null)} className="mt-2 w-full py-2 text-sm text-[#0A0A0A]/60">
-              Cancel
-            </button>
-          </div>
-        ) : null}
-
-        {note ? <p className="mt-3 text-sm font-bold">{note}</p> : null}
-        {error ? <p className="mt-3 text-sm text-[#B3261E]">{error}</p> : null}
-
-        <div className="mt-6 border-2 border-[#0A0A0A] bg-[#0A0A0A] text-white p-5">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-white/60">Your link</p>
-          <p className="mt-1.5 text-lg font-bold break-all">{link}</p>
-          <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <button
-              onClick={() => { navigator.clipboard.writeText('https://' + link); setCopied(true); setTimeout(()=>setCopied(false),2000); }}
-              className="py-3 font-bold border-2 border-white"
-            >
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-            <a href={'/' + (biz.slug ?? '')} className="py-3 font-bold border-2 border-white text-center" style={{ background: LIME, color: INK, borderColor: LIME }}>
-              View
-            </a>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setShowHours(!showHours)}
-          className="mt-3 w-full border-2 border-[#0A0A0A] bg-white px-5 py-4 flex items-center justify-between"
-        >
-          <span className="font-bold">Regular hours</span>
-          <span className="text-sm text-[#0A0A0A]/60">{showHours ? 'Close' : 'Edit'}</span>
-        </button>
-
-        {showHours ? (
-          <div className="border-2 border-t-0 border-[#0A0A0A] bg-white p-4 space-y-2">
-            {DAYS.map((d, i) => {
-              const row = hours.find((h) => h.day_of_week === i) ?? {
-                day_of_week: i, opens_at: '09:00', closes_at: '17:00', is_closed: false,
-              };
-              const update = (patch: Partial<Hours>) => {
-                const next = DAYS.map((_, j) => {
-                  const cur = hours.find((h) => h.day_of_week === j) ?? {
-                    day_of_week: j, opens_at: '09:00', closes_at: '17:00', is_closed: j === 0,
-                  };
-                  return j === i ? { ...cur, ...patch } : cur;
-                });
-                setHours(next);
-              };
-              return (
-                <div key={d} className="flex items-center gap-2">
-                  <span className="w-12 text-sm">{d.slice(0,3)}</span>
-                  {row.is_closed ? (
-                    <span className="flex-1 text-sm text-[#0A0A0A]/50">Closed</span>
-                  ) : (
-                    <span className="flex-1 flex items-center gap-1.5">
-                      <input type="time" value={(row.opens_at ?? '09:00').slice(0,5)}
-                        onChange={(e) => update({ opens_at: e.target.value })}
-                        className="border-2 border-[#0A0A0A] px-2 py-1.5 text-sm w-[110px]" />
-                      <input type="time" value={(row.closes_at ?? '17:00').slice(0,5)}
-                        onChange={(e) => update({ closes_at: e.target.value })}
-                        className="border-2 border-[#0A0A0A] px-2 py-1.5 text-sm w-[110px]" />
-                    </span>
-                  )}
-                  <button onClick={() => update({ is_closed: !row.is_closed })}
-                    className="text-xs border-2 border-[#0A0A0A] px-2 py-1.5">
-                    {row.is_closed ? 'Open' : 'Shut'}
-                  </button>
-                </div>
-              );
-            })}
-            <button
-              onClick={() => setFindOpen(!findOpen)}
-              className="mt-1 w-full py-2.5 text-sm border-2 border-[#0A0A0A] bg-white"
-            >
-              {findOpen ? 'Cancel' : 'Bring my hours in from Google'}
-            </button>
-
-            {findOpen ? (
-              <div className="mt-2 border-2 border-[#0A0A0A] p-3">
-                <input
-                  value={findQuery}
-                  onChange={(e) => setFindQuery(e.target.value)}
-                  placeholder="Business name and town"
-                  className="w-full border-2 border-[#0A0A0A] px-3 py-2.5"
-                />
-                <button
-                  onClick={searchPlaces}
-                  disabled={finding}
-                  className="mt-2 w-full py-2.5 font-bold border-2 border-[#0A0A0A]"
-                  style={{ background: LIME }}
-                >
-                  {finding ? 'Looking...' : 'Find it'}
-                </button>
-                {findResults.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => importPlace(p.id)}
-                    disabled={finding}
-                    className="mt-2 w-full text-left border-2 border-[#0A0A0A] px-3 py-2.5"
-                  >
-                    <span className="block font-bold text-sm">{p.name}</span>
-                    <span className="block text-xs text-[#0A0A0A]/60">{p.address}</span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <button onClick={() => saveHours(DAYS.map((_, j) => hours.find((h) => h.day_of_week === j) ?? { day_of_week: j, opens_at: '09:00', closes_at: '17:00', is_closed: j === 0 }))}
-              disabled={busy}
-              className="mt-2 w-full py-3 font-bold border-2 border-[#0A0A0A]" style={{ background: LIME }}>
-              Save hours
-            </button>
-          </div>
-        ) : null}
-
-        <button
-          onClick={() => setShowLook(!showLook)}
-          className="mt-3 w-full border-2 border-[#0A0A0A] bg-white px-5 py-4 flex items-center justify-between"
-        >
-          <span className="font-bold">Photos</span>
-          <span className="text-sm text-[#0A0A0A]/60">{showLook ? 'Close' : 'Edit'}</span>
-        </button>
-
-        {showLook ? (
-          <div className="border-2 border-t-0 border-[#0A0A0A] bg-white p-4">
-            <p className="text-sm text-[#0A0A0A]/60">Logo image address</p>
-            <input value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://"
-              className="mt-1.5 w-full border-2 border-[#0A0A0A] px-3 py-2.5" />
-            <p className="mt-3 text-sm text-[#0A0A0A]/60">Cover photo address</p>
-            <input value={header} onChange={(e) => setHeader(e.target.value)} placeholder="https://"
-              className="mt-1.5 w-full border-2 border-[#0A0A0A] px-3 py-2.5" />
-            <button onClick={saveLook} disabled={busy}
-              className="mt-3 w-full py-3 font-bold border-2 border-[#0A0A0A]" style={{ background: LIME }}>
-              Save photos
-            </button>
-          </div>
-        ) : null}
-
-        <div className="mt-6 border-2 border-[#0A0A0A] bg-white p-5">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[#0A0A0A]/50">Connected</p>
-          <div className="mt-3 flex items-center justify-between">
-            <span>Instagram</span>
-            {biz.instagram_handle
-              ? <span className="text-sm font-bold">@{biz.instagram_handle}</span>
-              : <a href="/setup" className="text-sm font-bold underline">Connect</a>}
-          </div>
-          <div className="mt-2.5 flex items-center justify-between">
-            <span>Google</span>
-            {biz.google_location_id
-              ? <span className="text-sm font-bold">Connected</span>
-              : <a href="/connect/google" className="text-sm font-bold underline">Connect</a>}
-          </div>
-          <a href="/connect/google/status" className="mt-4 block text-xs text-[#0A0A0A]/50 underline">
-            Check Google connection
-          </a>
-        </div>
-
-      </div>
+    <div className={`rounded-[30px] border border-white/70 p-6 shadow-[0_18px_60px_rgba(0,0,0,.06)] ${active?'bg-[#F8AE9D]/60':'bg-[#E5FFB8]/65'}`}><div className="flex items-start justify-between"><div><p className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-black/40"><span className={`h-2 w-2 rounded-full ${active?'bg-[#A24D45]':'bg-[#4D8B58]'}`}/> RIGHT NOW</p><h2 className="mt-3 text-4xl font-semibold tracking-[-.055em]">{liveLabel}</h2><p className="mt-2 text-sm text-black/55">{liveSub}</p></div>{active?<button onClick={backToNormal} disabled={busy} className="rounded-full border border-black/10 bg-white/65 px-4 py-2 text-xs font-bold">Back to normal</button>:null}</div>
+     {!active?<div className="mt-6 grid gap-2 sm:grid-cols-3"><button onClick={()=>setStatusMode('close')} className="rounded-[20px] bg-black px-4 py-4 text-sm font-bold text-white">Closed today</button><button onClick={()=>{setStatusMode('early');setTime(todayRow?.closes_at?.slice(0,5)||'15:00')}} className="rounded-[20px] bg-white/80 px-4 py-4 text-sm font-bold">Closing early</button><button onClick={()=>{setStatusMode('late');setTime(todayRow?.opens_at?.slice(0,5)||'10:00')}} className="rounded-[20px] bg-white/80 px-4 py-4 text-sm font-bold">Opening late</button></div>:null}
+     {statusMode?<div className="mt-4 rounded-[22px] bg-white/80 p-4"><div className="grid gap-3 sm:grid-cols-[150px_1fr]"><input type="time" value={time} onChange={e=>setTime(e.target.value)} disabled={statusMode==='close'} className="rounded-[14px] border border-black/10 bg-white px-3 py-3 text-sm disabled:opacity-30"/><input value={reason} onChange={e=>setReason(e.target.value)} placeholder="Optional note — weather, staffing, sold out..." className="rounded-[14px] border border-black/10 bg-white px-3 py-3 text-sm outline-none"/></div><div className="mt-3 flex gap-2"><button disabled={busy} onClick={()=>statusMode==='close'?setStatus('closed','Closed today',null,null):statusMode==='early'?setStatus('hours_change','Closing early today',`Closing at ${pretty(time)}`,time):setStatus('hours_change','Opening late today',`Opening at ${pretty(time)}`,null)} className="rounded-full bg-black px-5 py-3 text-xs font-bold text-white">Update live page</button><button onClick={()=>setStatusMode(null)} className="rounded-full px-4 py-3 text-xs font-semibold">Cancel</button></div></div>:null}
     </div>
-  );
+
+    <div className="grid gap-4 md:grid-cols-2"><Link href="/builder" className="rounded-[28px] border border-black/8 bg-white/70 p-5 transition hover:-translate-y-0.5 hover:shadow-lg"><span className="text-[9px] font-bold uppercase tracking-[.15em] text-black/35">PAGE</span><h3 className="mt-3 text-2xl font-semibold tracking-[-.04em]">Edit your page</h3><p className="mt-2 text-sm leading-6 text-black/45">Change blocks, links, socials, background and what customers can do.</p><span className="mt-7 block text-xs font-bold">Open builder →</span></Link><button onClick={()=>setShowHours(!showHours)} className="rounded-[28px] border border-black/8 bg-white/70 p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg"><span className="text-[9px] font-bold uppercase tracking-[.15em] text-black/35">HOURS</span><h3 className="mt-3 text-2xl font-semibold tracking-[-.04em]">Regular hours</h3><p className="mt-2 text-sm leading-6 text-black/45">Today: {normalToday}</p><span className="mt-7 block text-xs font-bold">{showHours?'Close editor':'Edit hours →'}</span></button></div>
+
+    {showHours?<div className="rounded-[28px] border border-black/8 bg-white/75 p-5"><div className="flex items-center justify-between"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-black/35">REGULAR WEEK</span><h3 className="mt-1 text-2xl font-semibold tracking-[-.04em]">Hours</h3></div><button onClick={saveHours} disabled={busy} className="rounded-full bg-black px-4 py-2.5 text-xs font-bold text-white">Save hours</button></div><div className="mt-4 space-y-2">{DAYS.map((day,i)=>{const row=draftHours.find(r=>r.day_of_week===i)||{day_of_week:i,opens_at:'09:00',closes_at:'17:00',is_closed:i===0};return <div key={day} className="flex items-center gap-2 rounded-[16px] bg-[#F5F3ED] p-3"><span className="w-12 text-xs font-semibold">{day.slice(0,3)}</span>{row.is_closed?<span className="flex-1 text-xs text-black/35">Closed</span>:<><input type="time" value={(row.opens_at||'09:00').slice(0,5)} onChange={e=>setDraftHours(v=>[...v.filter(x=>x.day_of_week!==i),{...row,opens_at:e.target.value}])} className="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-2 py-2 text-xs"/><span>–</span><input type="time" value={(row.closes_at||'17:00').slice(0,5)} onChange={e=>setDraftHours(v=>[...v.filter(x=>x.day_of_week!==i),{...row,closes_at:e.target.value}])} className="min-w-0 flex-1 rounded-xl border border-black/10 bg-white px-2 py-2 text-xs"/></>}<button onClick={()=>setDraftHours(v=>[...v.filter(x=>x.day_of_week!==i),{...row,is_closed:!row.is_closed}])} className="rounded-full bg-black/5 px-3 py-2 text-[9px] font-bold">{row.is_closed?'OPEN':'CLOSE'}</button></div>})}</div></div>:null}
+   </section>
+
+   <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+    <div className="rounded-[30px] border border-black/8 bg-[#111] p-5 text-white"><span className="text-[9px] font-bold uppercase tracking-[.15em] text-white/40">YOUR LINK</span><p className="mt-2 break-all text-xl font-semibold tracking-[-.03em]">{link}</p><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={()=>{navigator.clipboard.writeText(`https://${link}`);setCopied(true);setTimeout(()=>setCopied(false),1600)}} className="rounded-full border border-white/20 px-4 py-3 text-xs font-bold">{copied?'Copied ✓':'Copy link'}</button><Link href={`/${biz.slug}`} target="_blank" className="rounded-full bg-white px-4 py-3 text-center text-xs font-bold text-black">View page</Link></div></div>
+
+    <div className="rounded-[30px] border border-black/8 bg-white/70 p-5"><div className="flex items-center justify-between"><div><span className="text-[9px] font-bold uppercase tracking-[.15em] text-black/35">SETUP HEALTH</span><h3 className="mt-1 text-2xl font-semibold tracking-[-.04em]">{completion}% complete</h3></div><div className="grid h-14 w-14 place-items-center rounded-full bg-[#E5FFB8] text-sm font-bold">{completion}%</div></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-black/5"><div className="h-full rounded-full bg-black" style={{width:`${completion}%`}}/></div><div className="mt-4 space-y-2 text-xs"><div className="flex justify-between"><span className="text-black/45">Logo</span><strong>{biz.avatar_url?'Added':'Missing'}</strong></div><div className="flex justify-between"><span className="text-black/45">Cover photo</span><strong>{biz.header_url?'Added':'Missing'}</strong></div><div className="flex justify-between"><span className="text-black/45">Hours</span><strong>{hours.length?'Added':'Missing'}</strong></div><div className="flex justify-between"><span className="text-black/45">Meta</span><strong>{biz.instagram_handle?'Connected':'Optional'}</strong></div></div></div>
+
+    <div className="rounded-[30px] border border-black/8 bg-[#DCE5FF]/65 p-5"><span className="text-[9px] font-bold uppercase tracking-[.15em] text-black/35">ANALYTICS</span><h3 className="mt-2 text-2xl font-semibold tracking-[-.04em]">Coming into focus.</h3><p className="mt-2 text-sm leading-6 text-black/50">Page views, directions, calls, orders and other block clicks will live here next.</p><div className="mt-5 grid grid-cols-3 gap-2">{[['—','Views'],['—','Clicks'],['—','Directions']].map(([v,l])=><div key={l} className="rounded-[18px] bg-white/65 p-3"><strong className="text-xl">{v}</strong><span className="mt-1 block text-[9px] font-semibold uppercase tracking-[.1em] text-black/35">{l}</span></div>)}</div></div>
+   </aside>
+  </div>
+  {(note||error)?<div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black px-5 py-3 text-xs font-semibold text-white shadow-xl">{error||note}</div>:null}
+ </main>;
 }
