@@ -1,0 +1,14 @@
+'use client';
+
+import type { OpenStatusSocial } from '@/lib/openstatus-page-config';
+
+const NETWORKS=['Instagram','Facebook','TikTok','YouTube','LinkedIn','Pinterest','X','Threads'];
+const PLACEHOLDERS:Record<string,string>={Instagram:'instagram.com/yourbusiness',Facebook:'facebook.com/yourbusiness',TikTok:'tiktok.com/@yourbusiness',YouTube:'youtube.com/@yourbusiness',LinkedIn:'linkedin.com/company/yourbusiness',Pinterest:'pinterest.com/yourbusiness',X:'x.com/yourbusiness',Threads:'threads.net/@yourbusiness'};
+
+export default function SocialLinksEditor({socials,onChange}:{socials:OpenStatusSocial[];onChange:(socials:OpenStatusSocial[])=>void}){
+ const add=()=>{const label=NETWORKS.find(n=>!socials.some(s=>s.label===n))||'Instagram';onChange([...socials,{id:`social-${Date.now()}`,label,url:'',on:true}])};
+ const patch=(id:string,data:Partial<OpenStatusSocial>)=>onChange(socials.map(s=>s.id===id?{...s,...data}:s));
+ const move=(i:number,d:number)=>{const j=i+d;if(j<0||j>=socials.length)return;const next=[...socials];[next[i],next[j]]=[next[j],next[i]];onChange(next)};
+ const remove=(id:string)=>onChange(socials.filter(s=>s.id!==id));
+ return <div className="mt-7 border-t border-black/8 pt-6"><div className="flex items-center justify-between gap-3"><div><strong className="text-sm">Social icons</strong><span className="mt-1 block text-xs text-black/40">Add the social profiles you want customers to see. Meta connection stays separate.</span></div><button onClick={add} className="rounded-full bg-black px-4 py-2 text-xs font-bold text-white">＋ Add social</button></div><div className="mt-4 space-y-2">{socials.length===0?<div className="rounded-[20px] bg-[#F5F3ED] p-5 text-xs text-black/40">No social links yet.</div>:socials.map((social,i)=><div key={social.id} className={`${social.on?'':'opacity-45'} rounded-[20px] border border-black/8 bg-white p-3`}><div className="flex gap-2"><select value={social.label} onChange={e=>patch(social.id,{label:e.target.value})} className="w-32 rounded-[13px] bg-[#F5F3ED] px-3 py-2 text-xs font-semibold outline-none">{NETWORKS.map(n=><option key={n}>{n}</option>)}</select><input value={social.url} onChange={e=>patch(social.id,{url:e.target.value})} placeholder={PLACEHOLDERS[social.label]||'https://...'} className="min-w-0 flex-1 rounded-[13px] bg-[#F5F3ED] px-3 py-2 text-xs outline-none"/><button onClick={()=>move(i,-1)} className="h-9 w-9 rounded-full bg-black/5 text-xs">↑</button><button onClick={()=>move(i,1)} className="h-9 w-9 rounded-full bg-black/5 text-xs">↓</button><button onClick={()=>patch(social.id,{on:!social.on})} className={`h-9 rounded-full px-3 text-[9px] font-bold ${social.on?'bg-[#C8FF62]/65':'bg-black/5'}`}>{social.on?'ON':'OFF'}</button><button onClick={()=>remove(social.id)} className="h-9 w-9 rounded-full bg-black/5 text-sm">×</button></div></div>)}</div></div>;
+}
