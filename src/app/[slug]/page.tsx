@@ -51,6 +51,7 @@ export default async function LiveStatus({params}:{params:Promise<{slug:string}>
  const bg=pageConfig.bg==='blue'?'#E9EEF5':pageConfig.bg==='lime'?'#E7F7C8':pageConfig.bg==='dark'?'#181817':'#EDE9E2';
  const glass='rounded-[26px] bg-white/75 backdrop-blur-xl border border-white/70';
  const initials=business.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase();
+ const tags=pageConfig.tags??[];
  return <div className="min-h-screen flex justify-center" style={{background:bg,fontFamily:'var(--font-poppins)'}}>
   <AnalyticsTracker businessId={business.id}/>
   <div className="relative w-full max-w-[440px] min-h-screen overflow-hidden" style={background?{backgroundImage:`url(${background})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{background:bg}}>
@@ -61,7 +62,7 @@ export default async function LiveStatus({params}:{params:Promise<{slug:string}>
      <h1 className="mt-4 text-[32px] font-bold tracking-[-.05em] drop-shadow">{business.name}</h1>
      {pageConfig.location&&<p className="mt-1 text-sm font-medium text-white/90">{pageConfig.location}</p>}
      {business.tagline&&<p className="mx-auto mt-2 max-w-[320px] text-sm leading-5 text-white/75">{business.tagline}</p>}
-     {pageConfig.tags.length>0&&<div className="mt-3 flex flex-wrap justify-center gap-1.5">{pageConfig.tags.map(tag=><span key={tag} className="rounded-full border border-white/25 bg-black/20 px-2.5 py-1 text-[10px] font-semibold text-white/85 backdrop-blur-md">{tag}</span>)}</div>}
+     {tags.length>0&&<div className="mt-3 flex flex-wrap justify-center gap-1.5">{tags.map(tag=><span key={tag} className="rounded-full border border-white/25 bg-black/20 px-2.5 py-1 text-[10px] font-semibold text-white/85 backdrop-blur-md">{tag}</span>)}</div>}
     </div>
     <div className={`mt-6 p-4 ${glass}`}><div className="flex items-center gap-4"><span className="grid h-[64px] w-[64px] shrink-0 place-items-center rounded-full bg-[#2E7D5B] text-white"><Icon name="cup"/></span><div><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{background:dot}}/><span className="text-[10px] font-bold uppercase tracking-[.16em]" style={{color:dot}}>Live status</span></div><p className="mt-1 text-[30px] font-bold leading-none tracking-[-.04em] text-[#1A1A18]">{big}</p><p className="mt-2 text-sm text-[#5C5952]">{sub}{accent&&<strong style={{color:dot}}>{accent}</strong>}</p></div></div>{lead&&<div className="mt-4 rounded-[18px] bg-[#FBF0DC] p-3 text-sm text-[#805619]"><strong>{lead.headline}</strong>{lead.detail&&<p className="mt-1 opacity-75">{lead.detail}</p>}</div>}</div>
     <PublishedBusinessBlocks businessId={business.id} businessName={business.name} location={pageConfig.location||business.tagline||business.name} config={pageConfig}/>
