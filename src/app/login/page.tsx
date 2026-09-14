@@ -9,11 +9,20 @@ function Keyhole({ size = 28 }: { size?: number }) {
   return <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true"><circle cx="50" cy="50" r="48" fill="#050505"/><circle cx="50" cy="50" r="21" fill="#F7F7F3"/><circle cx="50" cy="44" r="7.4" fill="#050505"/><path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#050505"/></svg>;
 }
 
+function MetaLogo() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/>
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [metaLoading, setMetaLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleLogin = async (event: React.FormEvent) => {
@@ -27,6 +36,21 @@ export default function LoginPage() {
       }
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Login failed'); }
     finally { setLoading(false); }
+  };
+
+  const handleMetaSignIn = async () => {
+    setMetaLoading(true); setError('');
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (oauthError) throw oauthError;
+      // browser will redirect — no need to setMetaLoading(false)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Meta sign-in failed');
+      setMetaLoading(false);
+    }
   };
 
   return <main className="relative min-h-screen overflow-hidden bg-[#F5F3ED] text-[#101010]" style={{fontFamily:'var(--font-poppins)'}}>
@@ -51,7 +75,24 @@ export default function LoginPage() {
         <span className="text-[10px] font-bold tracking-[0.15em] text-black/40">SIGN IN</span>
         <h2 className="mt-3 text-4xl font-semibold tracking-[-0.055em]">Open your dashboard.</h2>
         <p className="mt-3 text-sm leading-6 text-black/50">Manage the live front door to your business.</p>
-        <form onSubmit={handleLogin} className="mt-8 space-y-4">
+
+        {/* Meta sign-in */}
+        <button
+          onClick={handleMetaSignIn}
+          disabled={metaLoading || loading}
+          className="mt-7 flex w-full items-center justify-center gap-2.5 rounded-full border border-[#1877F2]/25 bg-[#1877F2]/8 px-5 py-3.5 text-sm font-semibold text-[#1877F2] transition hover:bg-[#1877F2]/14 disabled:opacity-40"
+        >
+          <MetaLogo />
+          {metaLoading ? 'Opening Meta…' : 'Continue with Meta'}
+        </button>
+
+        <div className="my-6 flex items-center gap-3">
+          <div className="h-px flex-1 bg-black/10" />
+          <span className="text-[10px] font-bold tracking-[.12em] text-black/30">OR</span>
+          <div className="h-px flex-1 bg-black/10" />
+        </div>
+
+        <form onSubmit={handleLogin} className="space-y-4">
           <label className="block"><span className="mb-2 block text-xs font-semibold">Email</span><input type="email" autoComplete="email" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="you@business.com" className="w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#CBD9FF]/40" required/></label>
           <label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input type="password" autoComplete="current-password" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Your password" className="w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#CBD9FF]/40" required/></label>
           {error ? <p className="rounded-[16px] bg-[#F8AE9D]/65 p-4 text-sm" role="alert">{error}</p> : null}
