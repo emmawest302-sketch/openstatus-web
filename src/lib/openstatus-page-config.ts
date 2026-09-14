@@ -8,10 +8,17 @@ export type OpenStatusBlock = {
   url?: string;
 };
 
+export type OpenStatusSocial = {
+  id: string;
+  label: string;
+  url: string;
+  on: boolean;
+};
+
 export type OpenStatusPageConfig = {
   blocks: OpenStatusBlock[];
   bg: string;
-  socials: string[];
+  socials: OpenStatusSocial[];
 };
 
 export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
@@ -23,14 +30,27 @@ export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
 ];
 
 export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageConfig {
-  const raw = value && typeof value === 'object' ? value as Partial<OpenStatusPageConfig> : {};
+  const raw = value && typeof value === 'object' ? value as { blocks?: unknown; bg?: unknown; socials?: unknown } : {};
   const blocks = Array.isArray(raw.blocks)
-    ? raw.blocks.map((block) => ({ ...block, url: typeof block.url === 'string' ? block.url : '' }))
+    ? raw.blocks.map((block) => ({ ...(block as OpenStatusBlock), url: typeof (block as OpenStatusBlock).url === 'string' ? (block as OpenStatusBlock).url : '' }))
     : defaultOpenStatusBlocks;
+
+  const socials: OpenStatusSocial[] = Array.isArray(raw.socials)
+    ? raw.socials.map((item, index) => {
+        if (typeof item === 'string') return { id: `social-${index}`, label: item, url: '', on: true };
+        const social = item && typeof item === 'object' ? item as Partial<OpenStatusSocial> : {};
+        return {
+          id: typeof social.id === 'string' ? social.id : `social-${index}`,
+          label: typeof social.label === 'string' ? social.label : 'Social',
+          url: typeof social.url === 'string' ? social.url : '',
+          on: social.on !== false,
+        };
+      })
+    : [];
 
   return {
     blocks,
     bg: typeof raw.bg === 'string' ? raw.bg : 'warm',
-    socials: Array.isArray(raw.socials) ? raw.socials.filter((item): item is string => typeof item === 'string') : [],
+    socials,
   };
 }
