@@ -19,8 +19,8 @@ export type OpenStatusPageConfig = {
   blocks: OpenStatusBlock[];
   bg: string;
   socials: OpenStatusSocial[];
-  location: string;
-  tags: string[];
+  location?: string;
+  tags?: string[];
 };
 
 export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
