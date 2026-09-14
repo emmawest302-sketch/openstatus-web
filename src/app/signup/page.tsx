@@ -5,88 +5,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-function Keyhole({ size = 26 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true">
-      <mask id="signup-keyhole">
-        <rect width="100" height="100" fill="#fff" />
-        <circle cx="50" cy="42" r="13" fill="#000" />
-        <path d="M44 52 L56 52 L60 74 L40 74 Z" fill="#000" />
-      </mask>
-      <circle cx="50" cy="50" r="48" fill="currentColor" mask="url(#signup-keyhole)" />
-    </svg>
-  );
-}
+function Keyhole({ size = 28 }: { size?: number }) { return <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true"><circle cx="50" cy="50" r="48" fill="#050505"/><circle cx="50" cy="50" r="21" fill="#F7F7F3"/><circle cx="50" cy="44" r="7.4" fill="#050505"/><path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#050505"/></svg>; }
 
 export default function SignupPage() {
   const router = useRouter();
-  const [businessName, setBusinessName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [businessName,setBusinessName]=useState(''); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [loading,setLoading]=useState(false); const [error,setError]=useState(''); const [notice,setNotice]=useState('');
+  const handleSignup=async(event:React.FormEvent)=>{event.preventDefault();setLoading(true);setError('');setNotice('');try{const{data,error:signupError}=await supabase.auth.signUp({email,password,options:{data:{business_name:businessName.trim()}}});if(signupError)throw signupError;if(data.session)router.push('/setup');else setNotice('Check your email to confirm your account. Then sign in to build your page.');}catch(caught){setError(caught instanceof Error?caught.message:'Signup failed');}finally{setLoading(false);}};
 
-  const handleSignup = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setLoading(true);
-    setError('');
-    setNotice('');
-    try {
-      const { data, error: signupError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { business_name: businessName.trim() } },
-      });
-      if (signupError) throw signupError;
-      if (data.session) {
-        router.push('/setup');
-      } else {
-        setNotice('Check your email to confirm your account. Then sign in to claim your link.');
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Signup failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <main className="grid min-h-screen bg-[#F4F1E8] text-[#0A0A0A] lg:grid-cols-[0.9fr_1.1fr]">
-      <section className="relative flex min-h-[340px] flex-col justify-between overflow-hidden border-b-2 border-black bg-[#A7E348] p-6 md:p-10 lg:min-h-screen lg:border-b-0 lg:border-r-2 lg:p-14">
-        <div className="noise absolute inset-0 opacity-20" />
-        <Link href="/" className="relative flex items-center gap-2.5"><Keyhole /><span className="font-bold tracking-[-0.03em]">OPENSTATUS</span></Link>
-        <div className="relative mt-16 max-w-xl lg:mt-0">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em]">Free forever · about five minutes</p>
-          <h1 className="mt-4 text-[clamp(3.8rem,7vw,7.5rem)] font-bold uppercase leading-[0.79] tracking-[-0.075em]">Get your<br />live link.</h1>
-        </div>
-        <div className="relative mt-14 grid grid-cols-3 border-l-2 border-t-2 border-black font-mono text-[9px] font-bold uppercase tracking-[0.12em]">
-          {['Claim it', 'Make it yours', 'Connect Instagram'].map((label, index) => <div key={label} className="border-b-2 border-r-2 border-black p-3"><span className="block opacity-45">0{index + 1}</span><span className="mt-2 block">{label}</span></div>)}
-        </div>
-      </section>
-
-      <section className="flex items-center justify-center px-5 py-12 md:px-10">
-        <div className="w-full max-w-md">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-black/45">Start free</p>
-          <h2 className="mt-3 text-4xl font-bold uppercase leading-[0.9] tracking-[-0.055em] md:text-5xl">Create your account.</h2>
-          <p className="mt-4 text-black/55">Your account protects the business page only you can edit.</p>
-
-          <form onSubmit={handleSignup} className="mt-8 space-y-5">
-            <label className="block"><span className="mb-2 block text-sm font-bold">Business name</span><input type="text" autoComplete="organization" value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Emma's Coffee" className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" required /></label>
-            <label className="block"><span className="mb-2 block text-sm font-bold">Email</span><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@business.com" className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" required /></label>
-            <label className="block"><span className="mb-2 block text-sm font-bold">Password</span><input type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 6 characters" minLength={6} className="w-full border-2 border-black bg-white px-4 py-3.5 outline-none focus:bg-[#A7E348]/20" required /></label>
-
-            {error ? <p className="border-2 border-black bg-[#F8AE9D] p-4 text-sm" role="alert">{error}</p> : null}
-            {notice ? <p className="border-2 border-black bg-[#A7E348] p-4 text-sm" aria-live="polite">{notice}</p> : null}
-
-            <button type="submit" disabled={loading} className="flex min-h-14 w-full items-center justify-between border-2 border-black bg-black px-5 font-bold uppercase text-white hover:bg-[#A7E348] hover:text-black disabled:opacity-40">
-              {loading ? 'Creating account...' : 'Create account'} <span>→</span>
-            </button>
-          </form>
-
-          <p className="mt-6 text-sm text-black/55">Already have a link? <Link href="/login" className="font-bold text-black underline underline-offset-4">Sign in</Link></p>
-        </div>
-      </section>
-    </main>
-  );
+  const field='w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#C8FF62]/25';
+  return <main className="relative min-h-screen overflow-hidden bg-[#F5F3ED] text-[#101010]" style={{fontFamily:'var(--font-poppins)'}}>
+    <div className="absolute -left-24 top-20 h-80 w-80 rounded-full bg-[#C8FF62]/55 blur-3xl"/><div className="absolute right-[-80px] top-[18%] h-96 w-96 rounded-full bg-[#CBD9FF]/70 blur-3xl"/><div className="absolute bottom-[-80px] left-[38%] h-72 w-72 rounded-full bg-[#F8AE9D]/35 blur-3xl"/>
+    <header className="relative z-10 mx-auto flex w-[min(94%,1180px)] items-center justify-between pt-5"><Link href="/" className="flex items-center gap-2.5 font-bold tracking-[-0.04em]"><Keyhole/><span>OpenStatus</span></Link><Link href="/login" className="rounded-full border border-black/10 bg-white/60 px-5 py-3 text-sm font-semibold backdrop-blur-xl">Log in</Link></header>
+    <section className="relative z-10 mx-auto grid min-h-[calc(100vh-80px)] w-[min(94%,1180px)] items-center gap-10 py-10 lg:grid-cols-[1.05fr_.95fr]">
+      <div className="hidden lg:block"><span className="inline-flex rounded-full border border-black/10 bg-white/55 px-3 py-2 text-[10px] font-bold tracking-[0.16em] backdrop-blur-xl">THE LINK IN BIO FOR SMALL BUSINESS</span><h1 className="mt-7 max-w-[700px] text-[clamp(64px,7vw,112px)] font-semibold leading-[0.86] tracking-[-0.075em]">Build your<br/><span className="text-black/35">mobile front door.</span></h1><p className="mt-7 max-w-lg text-lg leading-8 text-black/55">Live hours, directions, ordering, booking, socials and your website — one beautiful page that feels like your business.</p><div className="mt-10 grid max-w-[560px] grid-cols-4 gap-2">{['Business','Hours','Design','Connect'].map((label,index)=><div key={label} className="rounded-[20px] border border-white/70 bg-white/55 p-4 backdrop-blur-xl"><span className="text-[9px] font-bold text-black/30">0{index+1}</span><strong className="mt-4 block text-[11px]">{label}</strong></div>)}</div></div>
+      <div className="mx-auto w-full max-w-[500px] rounded-[34px] border border-white/70 bg-white/72 p-5 shadow-[0_28px_90px_rgba(0,0,0,.10)] backdrop-blur-2xl sm:p-8"><span className="text-[10px] font-bold tracking-[0.15em] text-black/40">START BUILDING</span><h2 className="mt-3 text-4xl font-semibold tracking-[-0.055em]">Create your OpenStatus.</h2><p className="mt-3 text-sm leading-6 text-black/50">Start with your business. We&apos;ll help you shape the page next.</p>
+        <form onSubmit={handleSignup} className="mt-8 space-y-4"><label className="block"><span className="mb-2 block text-xs font-semibold">Business name</span><input type="text" autoComplete="organization" value={businessName} onChange={e=>setBusinessName(e.target.value)} placeholder="Breakfast Haus" className={field} required/></label><label className="block"><span className="mb-2 block text-xs font-semibold">Email</span><input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@business.com" className={field} required/></label><label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input type="password" autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} className={field} required/></label>{error?<p className="rounded-[16px] bg-[#F8AE9D]/65 p-4 text-sm" role="alert">{error}</p>:null}{notice?<p className="rounded-[16px] bg-[#C8FF62]/55 p-4 text-sm" aria-live="polite">{notice}</p>:null}<button type="submit" disabled={loading} className="flex min-h-14 w-full items-center justify-between rounded-full bg-black px-5 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-40"><span>{loading?'Creating account...':'Create account'}</span><span>↗</span></button></form><p className="mt-6 text-sm text-black/50">Already have an OpenStatus? <Link href="/login" className="font-semibold text-black">Sign in →</Link></p></div>
+    </section>
+  </main>;
 }
