@@ -50,7 +50,7 @@ export default async function LiveStatus({params}:{params:Promise<{slug:string}>
  else if(openMins!==null&&nowMins<openMins){big='Opens later';sub='Opens at ';accent=pretty(todayRow?.opens_at??null)}
  const bg=pageConfig.bg==='blue'?'#E9EEF5':pageConfig.bg==='lime'?'#E7F7C8':pageConfig.bg==='dark'?'#181817':'#EDE9E2';
  const glass='rounded-[26px] bg-white/75 backdrop-blur-xl border border-white/70';
- const initials=business.name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase();
+ const initials=business.name.split(/\s+/).filter(Boolean).slice(0,2).map((part:string)=>part[0]).join('').toUpperCase();
  const tags=pageConfig.tags??[];
  return <div className="min-h-screen flex justify-center" style={{background:bg,fontFamily:'var(--font-poppins)'}}>
   <AnalyticsTracker businessId={business.id}/>
