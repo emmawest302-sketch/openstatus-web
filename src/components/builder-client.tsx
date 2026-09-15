@@ -126,13 +126,13 @@ const BLOCK_COLORS = [
 ];
 
 const DEFAULT_BLOCKS: OpenStatusBlock[] = [
-  { id:'location', title:'Location & directions', sub:'Map + one-tap directions',     icon:'📍', on:true,  tone:'default' },
-  { id:'hours',    title:'Hours & status',        sub:'Live open / closed status',     icon:'🕐', on:true,  tone:'default' },
-  { id:'menu',     title:'Menu',                  sub:'Link, PDF, or photos',          icon:'🍽️', on:false, tone:'default', menuType:'url' },
-  { id:'order',    title:'Online ordering',        sub:'DoorDash, Uber Eats & more',    icon:'📦', on:false, tone:'default' },
-  { id:'book',     title:'Reservations & booking', sub:'OpenTable, Resy & more',       icon:'📅', on:false, tone:'default' },
-  { id:'socials',  title:'Follow us',              sub:'Social media links',            icon:'✨', on:false, tone:'default' },
-  { id:'website',  title:'Website',               sub:'Link to your site',             icon:'🌐', on:false, tone:'default' },
+  { id:'location', title:'Location & directions', sub:'Map + one-tap directions',     icon:'📍', on:true,  tone:'default', color:'#2563eb' },
+  { id:'hours',    title:'Hours & status',        sub:'Live open / closed status',     icon:'🕐', on:true,  tone:'default', color:'#059669' },
+  { id:'menu',     title:'Menu',                  sub:'Link, PDF, or photos',          icon:'🍽️', on:false, tone:'default', color:'#d97706', menuType:'url' },
+  { id:'order',    title:'Online ordering',        sub:'DoorDash, Uber Eats & more',    icon:'📦', on:false, tone:'default', color:'#dc2626' },
+  { id:'book',     title:'Reservations & booking', sub:'OpenTable, Resy & more',       icon:'📅', on:false, tone:'default', color:'#7c3aed' },
+  { id:'socials',  title:'Follow us',              sub:'Social media links',            icon:'✨', on:false, tone:'default', color:'#db2777' },
+  { id:'website',  title:'Website',               sub:'Link to your site',             icon:'🌐', on:false, tone:'default', color:'#0891b2' },
 ];
 
 // ── hours helpers ──────────────────────────────────────────────────────────
