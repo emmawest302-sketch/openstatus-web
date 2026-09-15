@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 function cn(...classes: (string | false | undefined | null)[]) {
   return classes.filter(Boolean).join(' ');
@@ -24,44 +25,79 @@ const STATUS_LABEL: Record<Status, string> = {
 
 function PhonePreview({ status }: { status: Status }) {
   return (
-    <div className="w-[220px] rounded-[36px] bg-white shadow-2xl border border-neutral-100 overflow-hidden select-none">
-      <div className="px-5 pt-3 pb-1 flex justify-between text-[9px] text-neutral-400">
-        <span>9:41</span>
-        <span>●●●</span>
-      </div>
-      <div className="px-5 pt-2 pb-4 text-center">
-        <div className="w-12 h-12 rounded-full bg-amber-50 mx-auto mb-2 flex items-center justify-center text-xl">
-          ☕
+    <div className="w-[220px] rounded-[36px] bg-[#f3f0e9] shadow-2xl border border-white/30 overflow-hidden select-none">
+      <div className="relative h-[252px] overflow-hidden">
+        <Image
+          src="/emmas-header.webp"
+          alt="Breakfast plates on a café table"
+          fill
+          sizes="220px"
+          className="object-cover object-center"
+          loading="eager"
+          fetchPriority="high"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-black/65" />
+
+        <div className="absolute inset-x-0 top-0 z-10 px-5 pt-3 flex justify-between text-[9px] font-medium text-white/80">
+          <span>9:41</span>
+          <span>●●●</span>
         </div>
-        <p className="font-semibold text-sm text-neutral-800">Corner Café</p>
-        <p className="text-[10px] text-neutral-400 mb-2.5">Hayes Valley · San Francisco</p>
-        <span
-          className={cn(
-            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white transition-all duration-500',
-            STATUS_COLORS[status],
-          )}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-white/70 inline-block" />
-          {STATUS_LABEL[status]}
-        </span>
-      </div>
-      <div className="px-3 pb-5 space-y-2">
-        {[
-          { icon: '🗺️', label: 'Get directions', sub: '0.4 mi away' },
-          { icon: '🍽️', label: 'View menu', sub: 'Updated today' },
-          { icon: '📦', label: 'Order online', sub: 'Uber Eats · DoorDash' },
-          { icon: '📅', label: 'Reserve a table', sub: 'OpenTable' },
-        ].map((b) => (
-          <div
-            key={b.label}
-            className="flex items-center gap-2.5 bg-neutral-50 rounded-xl px-3 py-2.5"
-          >
-            <span className="text-base">{b.icon}</span>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-neutral-800 leading-tight">{b.label}</p>
-              <p className="text-[10px] text-neutral-400 leading-tight">{b.sub}</p>
+
+        <div className="absolute inset-x-0 top-10 z-10 px-4 text-center text-white">
+          <div className="w-[58px] h-[58px] rounded-full bg-white mx-auto mb-2.5 flex items-center justify-center shadow-lg ring-1 ring-black/5">
+            <span className="text-[11px] font-black tracking-[-0.05em] text-neutral-900">EMMA&rsquo;S</span>
+          </div>
+          <p className="text-[9px] font-medium text-white/85">123 Main Street · Franklin, TN</p>
+          <div className="mt-2 flex items-center justify-center gap-1">
+            {['Coffee', 'Breakfast', 'Bakery'].map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-white/30 bg-black/20 px-2 py-1 text-[7px] font-medium text-white/90 backdrop-blur-md"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/25 bg-neutral-950/65 px-3.5 py-3 text-white shadow-lg backdrop-blur-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[7px] font-semibold uppercase tracking-[0.16em] text-white/60">Live status</p>
+              <p className="mt-1 text-base font-semibold tracking-tight transition-all duration-500">{STATUS_LABEL[status]}</p>
             </div>
-            <span className="ml-auto text-neutral-300 text-xs flex-shrink-0">›</span>
+            <span
+              className={cn(
+                'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-500',
+                STATUS_COLORS[status],
+              )}
+              aria-label={`${status} status`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5 px-3 pt-3">
+        {['Website', 'Directions', 'Call'].map((label) => (
+          <div key={label} className="rounded-xl bg-white px-1 py-2.5 text-center text-[9px] font-semibold text-neutral-800 shadow-sm">
+            {label}
+          </div>
+        ))}
+      </div>
+
+      <div className="px-3 pb-5 pt-2 space-y-2">
+        {[
+          { label: "Today's hours", sub: '7:00 AM – 3:00 PM' },
+          { label: 'Usual weekly hours', sub: 'View the full schedule' },
+        ].map((b) => (
+          <div key={b.label} className="flex items-center rounded-xl bg-white/75 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium leading-tight text-neutral-800">{b.label}</p>
+              <p className="text-[8px] leading-tight text-neutral-400">{b.sub}</p>
+            </div>
+            <span className="ml-auto flex-shrink-0 text-xs text-neutral-300">›</span>
           </div>
         ))}
       </div>
