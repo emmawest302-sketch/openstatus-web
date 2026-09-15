@@ -742,7 +742,9 @@ export default function BuilderClient({
   business: Business | null;
   initialConfig: OpenStatusPageConfig;
 }) {
-  const [config, setConfig] = useState<OpenStatusPageConfig>(initialConfig);
+  const [config, setConfig] = useState<OpenStatusPageConfig>(
+    initialConfig ?? normalizeOpenStatusPageConfig(undefined)
+  );
   const [tab, setTab]       = useState<'blocks' | 'style' | 'preview'>('blocks');
   const [openId, setOpenId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
