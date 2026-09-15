@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 // ── types ──────────────────────────────────────────────────────────────────
 
@@ -747,8 +747,6 @@ export default function BuilderClient({
   const [openId, setOpenId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
-  const supabase = createClient();
-
   const blocks    = config.blocks;
   const openBlock = blocks.find(b => b.id === openId) ?? null;
   const { status: liveStatus, todayLabel } = getLiveStatus(config.weeklyHours);
