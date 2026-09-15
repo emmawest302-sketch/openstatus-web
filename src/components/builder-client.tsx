@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import SocialLinksEditor from '@/components/social-links-editor';
 import BusinessBrandAssets from '@/components/business-brand-assets';
+import SocialLinksEditor from '@/components/social-links-editor';
 import {
   defaultOpenStatusBlocks,
   normalizeOpenStatusPageConfig,
@@ -13,6 +12,8 @@ import {
   type OpenStatusPageConfig,
   type OpenStatusSocial,
 } from '@/lib/openstatus-page-config';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Business = {
   id: string;
@@ -23,638 +24,894 @@ type Business = {
   header_url: string | null;
 };
 
-type ProviderOption = {
-  id: string;
-  label: string;
-  ph: string;
-  title: string;
-  sub: string;
-  blockId: string;
-};
+type PlacePrediction = { description: string; place_id: string };
 
-type CategoryDef = {
-  id: string;
-  label: string;
-  desc: string;
-  providers: ProviderOption[] | null;
-};
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES: CategoryDef[] = [
-  {
-    id: 'order',
-    label: 'Order food',
-    desc: 'Delivery, pickup & online ordering',
-    providers: [
-      { id: 'doordash', label: 'DoorDash', ph: 'doordash.com/store/your-restaurant', title: 'Order on DoorDash', sub: 'Delivery & pickup', blockId: 'order-doordash' },
-      { id: 'ubereats', label: 'Uber Eats', ph: 'ubereats.com/store/...', title: 'Order on Uber Eats', sub: 'Delivery & pickup', blockId: 'order-ubereats' },
-      { id: 'grubhub', label: 'Grubhub', ph: 'grubhub.com/restaurant/...', title: 'Order on Grubhub', sub: 'Delivery & pickup', blockId: 'order-grubhub' },
-      { id: 'square', label: 'Square', ph: 'squareup.com/store/your-business', title: 'Order online', sub: 'Pickup or delivery', blockId: 'order-square' },
-      { id: 'toast', label: 'Toast', ph: 'order.toasttab.com/...', title: 'Order on Toast', sub: 'Online ordering', blockId: 'order-toast' },
-      { id: 'other', label: 'Other', ph: 'https://...', title: 'Order online', sub: 'Order from us', blockId: 'order' },
-    ],
-  },
-  {
-    id: 'menu',
-    label: 'Menu',
-    desc: 'Show customers what you serve',
-    providers: null,
-  },
-  {
-    id: 'book',
-    label: 'Book',
-    desc: 'Appointments, reservations & scheduling',
-    providers: [
-      { id: 'calendly', label: 'Calendly', ph: 'calendly.com/your-business', title: 'Book a time', sub: 'Schedule online', blockId: 'book-calendly' },
-      { id: 'square', label: 'Square Appointments', ph: 'squareup.com/appointments/...', title: 'Book an appointment', sub: 'Schedule with us', blockId: 'book-square' },
-      { id: 'opentable', label: 'OpenTable', ph: 'opentable.com/...', title: 'Reserve a table', sub: 'Make a reservation', blockId: 'book-opentable' },
-      { id: 'other', label: 'Other', ph: 'https://...', title: 'Book now', sub: 'Reserve your spot', blockId: 'book' },
-    ],
-  },
-  {
-    id: 'shop',
-    label: 'Shop',
-    desc: 'Link to your online store',
-    providers: [
-      { id: 'shopify', label: 'Shopify', ph: 'your-store.myshopify.com', title: 'Shop online', sub: 'Browse our store', blockId: 'shop-shopify' },
-      { id: 'square', label: 'Square Online', ph: 'squareup.com/store/...', title: 'Shop online', sub: 'Browse our store', blockId: 'shop-square' },
-      { id: 'other', label: 'Other', ph: 'https://...', title: 'Shop online', sub: 'Browse our store', blockId: 'shop' },
-    ],
-  },
-  {
-    id: 'connect',
-    label: 'Connect',
-    desc: 'Phone, email, website or directions',
-    providers: [
-      { id: 'call', label: 'Phone call', ph: 'tel:+16155551234', title: 'Call us', sub: 'Tap to call', blockId: 'call' },
-      { id: 'email', label: 'Email', ph: 'mailto:hello@yourbusiness.com', title: 'Email us', sub: 'Send a message', blockId: 'email' },
-      { id: 'website', label: 'Website', ph: 'yourbusiness.com', title: 'Website', sub: 'Visit our site', blockId: 'website' },
-      { id: 'directions', label: 'Directions', ph: '123 Main St, Franklin, TN', title: 'Directions', sub: 'Open in maps', blockId: 'map' },
-    ],
-  },
-  {
-    id: 'more',
-    label: 'More',
-    desc: 'Gift cards, events, careers & custom links',
-    providers: [
-      { id: 'gift-cards', label: 'Gift Cards', ph: 'https://...', title: 'Gift Cards', sub: 'Give the gift of us', blockId: 'gift-cards' },
-      { id: 'catering', label: 'Catering', ph: 'https://...', title: 'Catering', sub: 'Large orders & events', blockId: 'catering' },
-      { id: 'events', label: 'Events', ph: 'https://...', title: 'Events', sub: "See what's coming up", blockId: 'events' },
-      { id: 'careers', label: 'Careers', ph: 'https://...', title: 'Careers', sub: 'Join our team', blockId: 'careers' },
-      { id: 'custom', label: 'Custom link', ph: 'https://...', title: '', sub: '', blockId: 'custom' },
-    ],
-  },
+const BOOK_PROVIDERS = [
+  { id: 'resy',         label: 'Resy',               icon: '🍽️',  color: '#e23b3b' },
+  { id: 'opentable',   label: 'OpenTable',            icon: '🍴',  color: '#da3743' },
+  { id: 'calendly',    label: 'Calendly',             icon: '📅',  color: '#006bff' },
+  { id: 'square-appt', label: 'Square Appts',         icon: '⬛',  color: '#000000' },
+  { id: 'acuity',      label: 'Acuity Scheduling',    icon: '🗓️', color: '#415fff' },
+  { id: 'mindbody',    label: 'Mindbody',             icon: '🧘',  color: '#00b5d4' },
+  { id: 'other',       label: 'Other',                icon: '🔗',  color: '#6b7280' },
 ];
 
-const URL_PLACEHOLDERS: Record<string, string> = {
-  order: 'squareup.com/store/your-business',
-  menu: 'yourbusiness.com/menu',
-  map: '123 Main St, Franklin, TN',
-  book: 'calendly.com/your-business',
-  website: 'yourbusiness.com',
-  call: 'tel:+16155551234',
-  email: 'mailto:hello@yourbusiness.com',
+const ORDER_PROVIDERS = [
+  { id: 'doordash',  label: 'DoorDash',  icon: '🚗', color: '#ff3008' },
+  { id: 'ubereats',  label: 'Uber Eats', icon: '🛵', color: '#06c167' },
+  { id: 'grubhub',   label: 'Grubhub',  icon: '🛺', color: '#f63440' },
+  { id: 'square',    label: 'Square',   icon: '⬛', color: '#000000' },
+  { id: 'toast',     label: 'Toast',    icon: '🍞', color: '#ff4c00' },
+  { id: 'other',     label: 'Other',    icon: '🔗', color: '#6b7280' },
+];
+
+const BUSINESS_TAGS = [
+  'Restaurant', 'Cafe', 'Bar', 'Bakery', 'Food Truck', 'Brewery',
+  'Coffee Shop', 'Non-Profit', 'Retail', 'Salon', 'Spa', 'Gym',
+  'Gallery', 'Boutique', 'Market', 'Pop-Up', 'Other',
+];
+
+const BLOCK_META: Record<string, { label: string; icon: string; description: string }> = {
+  order:   { label: 'Order',      icon: '🛒', description: 'Online ordering link' },
+  menu:    { label: 'Menu',       icon: '📋', description: 'Menu link, photo, or PDF' },
+  map:     { label: 'Map',        icon: '📍', description: 'Directions & map widget' },
+  book:    { label: 'Book',       icon: '📅', description: 'Reservations & bookings' },
+  website: { label: 'Website',    icon: '🌐', description: 'External website link' },
 };
 
-function GripIcon() {
-  return (
-    <svg viewBox="0 0 16 24" width="12" height="18" fill="currentColor" aria-hidden="true">
-      <circle cx="4" cy="5" r="1.5" />
-      <circle cx="12" cy="5" r="1.5" />
-      <circle cx="4" cy="12" r="1.5" />
-      <circle cx="12" cy="12" r="1.5" />
-      <circle cx="4" cy="19" r="1.5" />
-      <circle cx="12" cy="19" r="1.5" />
-    </svg>
-  );
-}
+// ─── Google Places autocomplete ───────────────────────────────────────────────
 
-function XIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" aria-hidden="true">
-      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CategoryIcon({ id }: { id: string }) {
-  const paths: Record<string, string> = {
-    order: 'M7 8h10l-1 11H8L7 8zm2-3h6l1 3H8l1-3z',
-    menu: 'M6 7h12M6 12h12M6 17h12',
-    book: 'M7 4v3M17 4v3M5 9h14M6 6h12a1 1 0 011 1v12H5V7a1 1 0 011-1z',
-    shop: 'M6 2l-1 4h14l-1-4H6zM5 6v14h14V6H5z',
-    connect: 'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71',
-    more: 'M5 12h.01M12 12h.01M19 12h.01',
-  };
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
-      <path d={paths[id] ?? paths.more} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function BlockIcon({ id }: { id: string }) {
-  const base = id.split('-')[0];
-  const paths: Record<string, string> = {
-    order: 'M7 8h10l-1 11H8L7 8zm2-3h6l1 3H8l1-3z',
-    menu: 'M6 7h12M6 12h12M6 17h12',
-    book: 'M7 4v3M17 4v3M5 9h14M6 6h12a1 1 0 011 1v12H5V7a1 1 0 011-1z',
-    website: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 0c2.2 2.5 3.3 5.5 3.3 9S14.2 18.5 12 21m0-18C9.8 5.5 8.7 8.5 8.7 12s1.1 6.5 3.3 9M3.5 12h17',
-    call: 'M7 4l3 4-2 2c1.5 3 3 4.5 6 6l2-2 4 3-2 3c-1 1-3 .5-5-.5C8 17 5 14 3.5 9 3 7 3 5.5 4 5l3-1z',
-    email: 'M4 6h16v12H4V6zm0 1l8 6 8-6',
-    map: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z',
-    shop: 'M6 2l-1 4h14l-1-4H6zM5 6v14h14V6H5z',
-    gift: 'M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z',
-    catering: 'M3 11l19-9-9 19-2-8-8-2z',
-    events: 'M8 6V4M16 6V4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
-    careers: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-    custom: 'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71',
-  };
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-      <path d={paths[base] ?? 'M5 12h14M14 7l5 5-5 5'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function Mark() {
-  return (
-    <svg viewBox="0 0 100 100" width="27" height="27">
-      <circle cx="50" cy="50" r="48" />
-      <circle cx="50" cy="50" r="21" fill="#F7F7F3" />
-      <circle cx="50" cy="44" r="7.4" />
-      <path d="M45.2 50.2h9.6l2.2 16.3H43z" />
-    </svg>
-  );
-}
-
-const socialMark = (label: string) =>
-  ({ Instagram: 'IG', Facebook: 'f', TikTok: 'TT', YouTube: 'YT', LinkedIn: 'in', Pinterest: 'P', X: 'X', Threads: '@' } as Record<string, string>)[label] || label.slice(0, 2);
-
-export default function BuilderClient() {
-  const router = useRouter();
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [blocks, setBlocks] = useState<OpenStatusBlock[]>(defaultOpenStatusBlocks);
-  const [bg, setBg] = useState('warm');
-  const [socials, setSocials] = useState<OpenStatusSocial[]>([]);
-  const [location, setLocation] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagDraft, setTagDraft] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState('');
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-
-  // Add Link multi-step flow
-  const [addStep, setAddStep] = useState<'category' | 'provider' | 'url' | null>(null);
-  const [addCat, setAddCat] = useState<CategoryDef | null>(null);
-  const [addProv, setAddProv] = useState<ProviderOption | null>(null);
-  const [addTitle, setAddTitle] = useState('');
-  const [addSub, setAddSub] = useState('');
-  const [addUrl, setAddUrl] = useState('');
-
-  const closeAddModal = () => {
-    setAddStep(null);
-    setAddCat(null);
-    setAddProv(null);
-    setAddTitle('');
-    setAddSub('');
-    setAddUrl('');
-  };
-
+function usePlaces(query: string) {
+  const [preds, setPreds] = useState<PlacePrediction[]>([]);
   useEffect(() => {
-    void (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) { router.replace('/login'); return; }
-      const c = normalizeOpenStatusPageConfig(u.user.user_metadata?.openstatus_page);
-      setBlocks(c.blocks);
-      setBg(c.bg);
-      setSocials(c.socials);
-      setLocation(c.location ?? '');
-      setTags(c.tags ?? []);
-      const { data: b } = await supabase.from('businesses').select('id,name,tagline,slug,avatar_url,header_url').eq('user_id', u.user.id).maybeSingle();
-      if (!b) { router.replace('/setup'); return; }
-      setBusiness(b);
-      setLoading(false);
-    })();
-  }, [router]);
+    if (!query || query.length < 3) { setPreds([]); return; }
+    const ctrl = new AbortController();
+    fetch(`/api/places/autocomplete?input=${encodeURIComponent(query)}`, { signal: ctrl.signal })
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.predictions)) setPreds(d.predictions.slice(0, 5)); })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [query]);
+  return preds;
+}
 
-  const dirty = () => setSaved(false);
-  const reorder = (a: string, z: string) => {
-    if (a === z) return;
-    setBlocks(v => {
-      const x = v.findIndex(b => b.id === a), y = v.findIndex(b => b.id === z);
-      if (x < 0 || y < 0) return v;
-      const n = [...v];
-      const [m] = n.splice(x, 1);
-      n.splice(y, 0, m);
-      return n;
-    });
-    dirty();
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function ColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [hex, setHex] = useState(value || '#1a1a2e');
+  useEffect(() => { setHex(value || '#1a1a2e'); }, [value]);
+  const handleHex = (v: string) => {
+    setHex(v);
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
   };
-  const toggle = (id: string) => { setBlocks(v => v.map(b => b.id === id ? { ...b, on: !b.on } : b)); dirty(); };
-  const edit = (id: string, k: 'title' | 'sub' | 'url', value: string) => { setBlocks(v => v.map(b => b.id === id ? { ...b, [k]: value } : b)); dirty(); };
-  const remove = (id: string) => { setBlocks(v => v.filter(b => b.id !== id)); dirty(); };
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={hex}
+        onChange={e => { setHex(e.target.value); onChange(e.target.value); }}
+        className="w-9 h-9 rounded-lg cursor-pointer border-0 bg-transparent p-0"
+        style={{ appearance: 'none' }}
+      />
+      <input
+        type="text"
+        value={hex}
+        onChange={e => handleHex(e.target.value)}
+        placeholder="#1a1a2e"
+        maxLength={7}
+        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm font-mono text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+      />
+    </div>
+  );
+}
 
-  const addTag = () => {
-    const t = tagDraft.trim().replace(/^#/, '');
-    if (!t || tags.length >= 5 || tags.some(x => x.toLowerCase() === t.toLowerCase())) return;
-    setTags(v => [...v, t]);
-    setTagDraft('');
-    dirty();
-  };
+function SizeToggle({ value, onChange }: { value?: 'half' | 'full'; onChange: (v: 'half' | 'full') => void }) {
+  const v = value || 'full';
+  return (
+    <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
+      {(['full', 'half'] as const).map(s => (
+        <button
+          key={s}
+          onClick={() => onChange(s)}
+          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+            v === s ? 'bg-white text-black' : 'text-white/50 hover:text-white'
+          }`}
+        >
+          {s === 'half' ? '½ Width' : 'Full Width'}
+        </button>
+      ))}
+    </div>
+  );
+}
 
-  const pickCategory = (cat: CategoryDef) => {
-    setAddCat(cat);
-    if (cat.providers === null) {
-      setAddTitle(cat.id === 'menu' ? 'Menu' : cat.label);
-      setAddSub(cat.id === 'menu' ? 'See our menu' : '');
-      setAddStep('url');
-    } else {
-      setAddStep('provider');
+// ─── Block Settings Panels ────────────────────────────────────────────────────
+
+function OrderSettings({ block, onUpdate }: { block: OpenStatusBlock; onUpdate: (b: Partial<OpenStatusBlock>) => void }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Quick Pick</label>
+        <div className="grid grid-cols-2 gap-2">
+          {ORDER_PROVIDERS.map(p => (
+            <button
+              key={p.id}
+              className="flex items-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-white text-left transition-all"
+            >
+              <span>{p.icon}</span>
+              <span className="truncate text-xs">{p.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Order URL</label>
+        <input
+          type="url"
+          value={block.url || ''}
+          onChange={e => onUpdate({ url: e.target.value })}
+          placeholder="https://order.toasttab.com/…"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+        />
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Widget Size</label>
+        <SizeToggle value={block.size} onChange={s => onUpdate({ size: s })} />
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Widget Color</label>
+        <ColorPicker value={block.color || '#1a1a2e'} onChange={c => onUpdate({ color: c })} />
+      </div>
+    </div>
+  );
+}
+
+function MenuSettings({ block, onUpdate }: { block: OpenStatusBlock; onUpdate: (b: Partial<OpenStatusBlock>) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const menuType = block.mentType || 'url';
+
+  const handleFileUpload = async (file: File) => {
+    const ext = file.name.split('.').pop();
+    const path = `menus/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('assets').upload(path, file);
+    if (!error) {
+      const { data } = supabase.storage.from('assets').getPublicUrl(path);
+      onUpdate({ menuFile: data.publicUrl, url: data.publicUrl });
     }
   };
 
-  const pickProvider = (prov: ProviderOption) => {
-    setAddProv(prov);
-    setAddTitle(prov.title);
-    setAddSub(prov.sub);
-    setAddUrl('');
-    setAddStep('url');
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Menu Type</label>
+        <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
+          {(['url', 'photo', 'pdf'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => onUpdate({ menuType: t, url: '', menuFile: '' })}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+                menuType === t ? 'bg-white text-black' : 'text-white/50 hover:text-white'
+              }`}
+            >
+              {t === 'url' ? '🔗 Link' : t === 'photo' ? '📷 Photo' : '📄 PDF'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {menuType === 'url' && (
+        <div>
+          <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Menu URL</label>
+          <input
+            type="url"
+            value={block.url || ''}
+            onChange={e => onUpdate({ url: e.target.value })}
+            placeholder="https://yourmenu.com"
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+          />
+        </div>
+      )}
+
+      {(menuType === 'photo' || menuType === 'pdf') && (
+        <div>
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="w-full py-8 border-2 border-dashed border-white/20 rounded-xl text-white/40 hover:text-white/60 hover:border-white/30 transition-all flex flex-col items-center gap-2 text-sm"
+          >
+            <span className="text-2xl">{menuType === 'photo' ? '📷' : '📄'}</span>
+            <span>Click to upload {menuType === 'photo' ? 'image' : 'PDF'}</span>
+            {block.menuFile && <span className="text-xs text-green-400 mt-1">✓ File uploaded</span>}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept={menuType === 'photo' ? 'image/*' : 'application/pdf'}
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
+          />
+        </div>
+      )}
+
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Widget Size</label>
+        <SizeToggle value={block.size} onChange={s => onUpdate({ size: s })} />
+      </div>
+    </div>
+  );
+}
+
+function MapSettings({ block, onUpdate }: { block: OpenStatusBlock; onUpdate: (b: Partial<OpenStatusBlock>) => void }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Address</label>
+        <input
+          type="text"
+          value={block.url || ''}
+          onChange={e => onUpdate({ url: e.target.value })}
+          placeholder="123 Main St, City, State"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+        />
+        <p className="text-xs text-white/30 mt-1">Paste an address or Google Maps link — the widget shows a live map</p>
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Widget Size</label>
+        <SizeToggle value={block.size} onChange={s => onUpdate({ size: s })} />
+      </div>
+    </div>
+  );
+}
+
+function BookSettings({ block, onUpdate }: { block: OpenStatusBlock; onUpdate: (b: Partial<OpenStatusBlock>) => void }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Booking Platform</label>
+        <div className="grid grid-cols-2 gap-2">
+          {BOOK_PROVIDERS.map(p => (
+            <button
+              key={p.id}
+              onClick={() => onUpdate({ sub: `Book via ${p.label}` })}
+              className="flex items-center gap-2 p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all text-left"
+            >
+              <span className="text-lg leading-none">{p.icon}</span>
+              <span className="text-xs font-medium text-white truncate">{p.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Booking URL</label>
+        <input
+          type="url"
+          value={block.url || ''}
+          onChange={e => onUpdate({ url: e.target.value })}
+          placeholder="https://resy.com/cities/ny/your-restaurant"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+        />
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Widget Size</label>
+        <SizeToggle value={block.size} onChange={s => onUpdate({ size: s })} />
+      </div>
+    </div>
+  );
+}
+
+function WebsiteSettings({ block, onUpdate }: { block: OpenStatusBlock; onUpdate: (b: Partial<OpenStatusBlock>) => void }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Website URL</label>
+        <input
+          type="url"
+          value={block.url || ''}
+          onChange={e => onUpdate({ url: e.target.value })}
+          placeholder="https://yourwebsite.com"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30"
+        />
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Widget Size</label>
+        <SizeToggle value={block.size} onChange={s => onUpdate({ size: s })} />
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Widget Color</label>
+        <ColorPicker value={block.color || '#1a1a2e'} onChange={c => onUpdate({ color: c })} />
+      </div>
+    </div>
+  );
+}
+
+function BlockSettingsPanel({
+  block,
+  onUpdate,
+}: {
+  block: OpenStatusBlock;
+  onUpdate: (b: Partial<OpenStatusBlock>) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+        <span className="text-3xl">{BLOCK_META[block.id]?.icon}</span>
+        <div className="flex-1">
+          <div className="font-semibold text-white">{BLOCK_META[block.id]?.label}</div>
+          <div className="text-xs text-white/40">{BLOCK_META[block.id]?.description}</div>
+        </div>
+        {/* Visible toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-white/40">{block.on ? 'On' : 'Off'}</span>
+          <button
+            onClick={() => onUpdate({ on: !block.on })}
+            className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${block.on ? 'bg-green-500' : 'bg-white/20'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${block.on ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Common fields */}
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-1.5 block">Title</label>
+        <input
+          type="text"
+          value={block.title}
+          onChange={e => onUpdate({ title: e.target.value })}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/30"
+        />
+      </div>
+      <div>
+        <label className="text-xs text-white/50 uppercase tracking-wider mb-1.5 block">Subtitle</label>
+        <input
+          type="text"
+          value={block.sub}
+          onChange={e => onUpdate({ sub: e.target.value })}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/30"
+        />
+      </div>
+
+      {/* Block-specific settings */}
+      {block.id === 'order'   && <OrderSettings   block={block} onUpdate={onUpdate} />}
+      {block.id === 'menu'    && <MenuSettings    block={block} onUpdate={onUpdate} />}
+      {block.id === 'map'     && <MapSettings     block={block} onUpdate={onUpdate} />}
+      {block.id === 'book'    && <BookSettings    block={block} onUpdate={onUpdate} />}
+      {block.id === 'website' && <WebsiteSettings block={block} onUpdate={onUpdate} />}
+    </div>
+  );
+}
+
+// ─── Preview block rendering ──────────────────────────────────────────────────
+
+function PreviewBlock({ block }: { block: OpenStatusBlock }) {
+  const isHalf = block.size === 'half';
+  const colSpan = isHalf ? '' : 'col-span-2';
+
+  if (block.id === 'map') {
+    return (
+      <div className={`relative rounded-2xl overflow-hidden ${colSpan}`} style={{ height: isHalf ? '90px' : '120px' }}>
+        <iframe
+          src="https://www.openstreetmap.org/export/embed.html?bbox=-74.01,40.70,-73.96,40.75&layer=mapnik"
+          className="w-full h-full border-0 pointer-events-none"
+          style={{ transform: 'scale(1.1)', transformOrigin: 'center' }}
+          title="Map"
+        />
+        <div className="absolute inset-0 bg-black/30 flex items-end p-3">
+          <div className="flex items-center gap-2">
+            <span>📍</span>
+            <div>
+              <div className="text-white font-semibold text-xs">{block.title}</div>
+              <div className="text-white/70 text-[10px]">{block.sub}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-2xl p-3 flex items-center gap-3 ${colSpan}`}
+      style={{ background: block.color || 'rgba(255,255,255,0.08)' }}
+    >
+      <span className="text-xl">{BLOCK_META[block.id]?.icon || '🔗'}</span>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-white text-xs truncate">{block.title}</div>
+        <div className="text-white/50 text-[10px] truncate">{block.sub}</div>
+      </div>
+      <svg className="w-3.5 h-3.5 text-white/30 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </div>
+  );
+}
+
+function MobilePreview({
+  business,
+  config,
+  logoScale,
+  logoPos,
+}: {
+  business: Business | null;
+  config: OpenStatusPageConfig;
+  logoScale: number;
+  logoPos: { x: number; y: number };
+}) {
+  const name = business?.name || 'Your Business';
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((p: string) => p[0]).join('').toUpperCase();
+  const activeBlocks = config.blocks.filter(b => b.on);
+  const logo = business?.avatar_url?.startsWith('storage:')
+    ? `/api/assets?businessId=${business.id}&kind=avatar`
+    : business?.avatar_url || '';
+
+  // Build row groups for half/full layout
+  const rows: Array<OpenStatusBlock | [OpenStatusBlock, OpenStatusBlock]> = [];
+  let i = 0;
+  while (i < activeBlocks.length) {
+    if (activeBlocks[i].size === 'half' && activeBlocks[i + 1]?.size === 'half') {
+      rows.push([activeBlocks[i], activeBlocks[i + 1]]);
+      i += 2;
+    } else {
+      rows.push(activeBlocks[i]);
+      i++;
+    }
+  }
+
+  return (
+    <div className="w-[272px] mx-auto select-none">
+      <div className="bg-[#111] rounded-[40px] p-2 shadow-2xl ring-1 ring-white/10">
+        <div className="bg-black rounded-[32px] overflow-hidden">
+          {/* Status bar */}
+          <div className="flex justify-between items-center px-5 pt-3 pb-1">
+            <span className="text-white/80 text-[10px] font-semibold">9:41</span>
+            <div className="w-16 h-3.5 bg-black rounded-full border border-white/20" />
+            <div className="w-8 h-3 bg-white/20 rounded-sm" />
+          </div>
+
+          <div className="px-3 pb-6 space-y-3">
+            {/* Logo + name + tags */}
+            <div className="flex flex-col items-center pt-2 gap-2">
+              <div className="w-[72px] h-[72px] rounded-full overflow-hidden bg-white/10 flex items-center justify-center relative">
+                {logo ? (
+                  <img
+                    src={logo}
+                    alt="logo"
+                    style={{
+                      transform: `translate(${logoPos.x}px, ${logoPos.y}px) scale(${logoScale})`,
+                      width: '100%', height: '100%', objectFit: 'cover',
+                      transformOrigin: 'center',
+                    }}
+                  />
+                ) : (
+                  <span className="text-xl font-bold text-white">{initials}</span>
+                )}
+              </div>
+              <div className="text-center">
+                <h1 className="text-white font-bold text-base">{name}</h1>
+                {config.tags && config.tags.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-1">
+                    {config.tags.map(tag => (
+                      <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/60 border border-white/10">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {config.location && (
+                  <p className="text-white/40 text-[10px] mt-1">📍 {config.location}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Status pill */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-2 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
+              <span className="text-green-400 text-[10px] font-medium">Open Now · Closes at 10 PM</span>
+            </div>
+
+            {/* Widgets */}
+            <div className="grid grid-cols-2 gap-1.5">
+              {rows.map((row, ri) => {
+                if (Array.isArray(row)) {
+                  return (
+                    <>
+                      <PreviewBlock key={row[0].id} block={row[0]} />
+                      <PreviewBlock key={row[1].id} block={row[1]} />
+                    </>
+                  );
+                }
+                return <PreviewBlock key={row.id} block={row} />;
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main BuilderClient ───────────────────────────────────────────────────────
+
+export default function BuilderClient() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [blocks, setBlocks] = useState<OpenStatusBlock[]>(defaultOpenStatusBlocks);
+  const [socials, setSocials] = useState<OpenStatusSocial[]>([]);
+  const [bg, setBg] = useState('warm');
+  const [location, setLocation] = useState('');
+  const [locationInput, setLocationInput] = useState('');
+  const [showPlaces, setShowPlaces] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'blocks' | 'profile' | 'style'>('blocks');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  // Logo crop/scale state
+  const [logoScale, setLogoScale] = useState(1);
+  const [logoPos, setLogoPos] = useState({ x: 0, y: 0 });
+  const logoDragging = useRef(false);
+  const logoDragStart = useRef({ x: 0, y: 0, px: 0, py: 0 });
+
+  const predictions = usePlaces(locationInput);
+  const activeBlock = blocks.find(b => b.id === activeBlockId) ?? null;
+
+  // ── Load ─────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push('/login'); return; }
+
+      const cfg = normalizeOpenStatusPageConfig(user.user_metadata?.openstatus_page);
+      setBlocks(cfg.blocks);
+      setSocials(cfg.socials);
+      setBg(cfg.bg);
+      setLocation(cfg.location || '');
+      setLocationInput(cfg.location || '');
+      setTags(cfg.tags || []);
+
+      const { data: biz } = await supabase
+        .from('businesses')
+        .select('id,name,tagline,slug,avatar_url,header_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (biz) setBusiness(biz);
+      setLoading(false);
+    }
+    init();
+  }, [router]);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  const updateBlock = useCallback((id: string, updates: Partial<OpenStatusBlock>) => {
+    setBlocks(bs => bs.map(b => b.id === id ? { ...b, ...updates } : b));
+  }, []);
+
+  const toggleTag = (tag: string) => {
+    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
 
-  const confirmAdd = () => {
-    const blockId = addProv?.blockId ?? addCat?.id ?? 'custom';
-    let id = blockId, n = 2;
-    while (blocks.some(b => b.id === id)) id = `${blockId}-${n++}`;
-    setBlocks(v => [...v, { id, title: addTitle, sub: addSub, icon: '', on: true, tone: 'glass', url: addUrl }]);
-    closeAddModal();
-    dirty();
-  };
+  const config: OpenStatusPageConfig = { blocks, bg, socials, location: locationInput.trim(), tags };
 
   const save = async () => {
     setSaving(true);
     setError('');
-    const config: OpenStatusPageConfig = { blocks, bg, socials, location: location.trim(), tags };
     const { error: e } = await supabase.auth.updateUser({ data: { openstatus_page: config } });
     setSaving(false);
     if (e) { setError(e.message); return; }
     setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   };
 
-  const asset = (k: 'avatar' | 'header', v: string | null | undefined) =>
-    v?.startsWith('storage:') ? `/api/assets?businessId=${business?.id}&kind=${k}&v=${encodeURIComponent(v)}` : v || '';
-  const logo = asset('avatar', business?.avatar_url);
-  const cover = asset('header', business?.header_url);
-  const initials = business?.name?.split(/\s+/).slice(0, 2).map(x => x[0]).join('').toUpperCase() || 'OS';
+  // ── Logo drag ─────────────────────────────────────────────────────────────
+  const onLogoMouseDown = (e: React.MouseEvent) => {
+    logoDragging.current = true;
+    logoDragStart.current = { x: e.clientX, y: e.clientY, px: logoPos.x, py: logoPos.y };
+  };
+  const onLogoMouseMove = (e: React.MouseEvent) => {
+    if (!logoDragging.current) return;
+    setLogoPos({
+      x: logoDragStart.current.px + (e.clientX - logoDragStart.current.x),
+      y: logoDragStart.current.py + (e.clientY - logoDragStart.current.y),
+    });
+  };
+  const onLogoMouseUp = () => { logoDragging.current = false; };
 
-  if (loading) return <main className="grid min-h-screen place-items-center bg-[#F5F3ED]">Loading your page builder…</main>;
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#0a0a0a]">
+        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[#F5F3ED] text-[#101010]" style={{ fontFamily: 'var(--font-poppins)' }}>
+    <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans">
 
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-black/8 bg-[#F5F3ED]/90 backdrop-blur-2xl">
-        <div className="mx-auto flex w-[min(96%,1440px)] flex-wrap items-center gap-3 py-3 sm:flex-nowrap sm:justify-between sm:py-4">
-          <Link href="/" className="flex shrink-0 items-center gap-2 font-bold"><Mark /><span>OpenStatus</span></Link>
-          <div className="ml-auto flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
-            {business?.slug
-              ? <Link href={`/${business.slug}`} target="_blank" className="whitespace-nowrap rounded-full border border-black/10 bg-white/70 px-3 py-2 text-[11px] font-semibold sm:px-4 sm:py-2.5 sm:text-xs">View live</Link>
-              : null}
-            <Link href="/dashboard" className="hidden whitespace-nowrap rounded-full px-3 py-2 text-[11px] font-semibold sm:inline-flex sm:px-4 sm:py-2.5 sm:text-xs">Dashboard</Link>
-            <button onClick={save} disabled={saving} className="whitespace-nowrap rounded-full bg-black px-3.5 py-2.5 text-[11px] font-bold text-white disabled:opacity-40 sm:px-5 sm:py-3 sm:text-xs">
-              {saving ? 'Publishing…' : saved ? 'Published' : 'Publish changes'}
-            </button>
-          </div>
+      {/* ── LEFT SIDEBAR ── */}
+      <div className="w-60 flex flex-col border-r border-white/8 bg-[#111] flex-shrink-0">
+
+        {/* Logo */}
+        <div className="p-4 border-b border-white/8 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">OS</div>
+          <span className="font-semibold text-sm text-white">OpenStatus</span>
+          {business?.slug && (
+            <a
+              href={`/${business.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-auto text-[10px] text-white/30 hover:text-white/60 transition-colors"
+            >
+              ↗
+            </a>
+          )}
         </div>
-      </header>
 
-      {/* Main layout */}
-      <div className="mx-auto grid w-[min(96%,1440px)] gap-5 py-5 lg:grid-cols-[220px_minmax(420px,1fr)_420px]">
-
-        {/* Left nav */}
-        <aside className="rounded-[28px] bg-white/65 p-4">
-          <span className="text-[9px] font-bold tracking-[.14em] text-black/35">PAGE BUILDER</span>
-          <nav className="mt-4 space-y-1">
-            <div className="rounded-[16px] bg-black px-3 py-3 text-sm font-semibold text-white">Edit profile</div>
-            <Link href="/dashboard" className="block rounded-[16px] px-3 py-3 text-sm font-semibold">Status</Link>
-            <Link href="/analytics" className="block rounded-[16px] px-3 py-3 text-sm font-semibold">Analytics</Link>
-            <Link href="/settings" className="block rounded-[16px] px-3 py-3 text-sm font-semibold">Settings</Link>
-          </nav>
-        </aside>
-
-        {/* Editor */}
-        <section className="rounded-[30px] border border-black/8 bg-white/55 p-5 md:p-7">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <span className="text-[9px] font-bold tracking-[.14em] text-black/35">EDIT PROFILE</span>
-              <h1 className="mt-2 text-4xl font-semibold tracking-[-.055em]">Make it yours.</h1>
-            </div>
-            <button onClick={() => setAddStep('category')} className="rounded-full bg-black px-5 py-3 text-xs font-bold text-white">
-              Add link
+        {/* Tab bar */}
+        <div className="flex border-b border-white/8">
+          {(['blocks', 'profile', 'style'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => { setActiveTab(t); setActiveBlockId(null); }}
+              className={`flex-1 py-2.5 text-[10px] uppercase tracking-wider font-semibold transition-all ${
+                activeTab === t ? 'text-white border-b-2 border-white' : 'text-white/30 hover:text-white/60'
+              }`}
+            >
+              {t}
             </button>
+          ))}
+        </div>
+
+        {/* ── Blocks tab ── */}
+        {activeTab === 'blocks' && (
+          <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+            <p className="text-[9px] text-white/25 uppercase tracking-widest px-1 py-1">Widgets</p>
+            {blocks.map(block => {
+              const meta = BLOCK_META[block.id];
+              return (
+                <button
+                  key={block.id}
+                  onClick={() => setActiveBlockId(block.id === activeBlockId ? null : block.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
+                    activeBlockId === block.id
+                      ? 'bg-white/15 ring-1 ring-white/20'
+                      : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="text-base leading-none">{meta?.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-white">{meta?.label}</div>
+                    <div className="text-[9px] text-white/35">{block.on ? 'Visible' : 'Hidden'}</div>
+                  </div>
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${block.on ? 'bg-green-400' : 'bg-white/15'}`} />
+                </button>
+              );
+            })}
           </div>
+        )}
 
-          {business
-            ? <div className="mt-7">
-              <BusinessBrandAssets
-                business={business}
-                onChange={next => { setBusiness(c => c ? { ...c, avatar_url: next.avatar_url, header_url: next.header_url } : c); dirty(); }}
-              />
-            </div>
-            : null}
-
-          {/* Profile details */}
-          <div className="mt-4 rounded-[24px] bg-[#F5F3ED] p-4">
-            <strong className="text-sm">Profile details</strong>
-            <label className="mt-3 block text-[9px] font-bold uppercase tracking-[.1em] text-black/35">
-              Location
+        {/* ── Profile tab ── */}
+        {activeTab === 'profile' && (
+          <div className="flex-1 overflow-y-auto p-4 space-y-5">
+            <div>
+              <label className="text-[9px] text-white/35 uppercase tracking-widest mb-2 block">Business Name</label>
               <input
-                value={location}
-                onChange={e => { setLocation(e.target.value); dirty(); }}
-                placeholder="Franklin, Tennessee"
-                className="mt-1 w-full rounded-[14px] border border-black/8 bg-white px-3 py-3 text-xs font-normal normal-case tracking-normal"
+                type="text"
+                value={business?.name || ''}
+                onChange={e => setBusiness(b => b ? { ...b, name: e.target.value } : b)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/30"
               />
-            </label>
-            <div className="mt-3">
-              <span className="text-[9px] font-bold uppercase tracking-[.1em] text-black/35">Tags · up to 5</span>
-              <div className="mt-2 flex gap-2">
-                <input
-                  value={tagDraft}
-                  onChange={e => setTagDraft(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-                  placeholder="Coffee, Breakfast, Dog Friendly…"
-                  className="min-w-0 flex-1 rounded-[14px] border border-black/8 bg-white px-3 py-3 text-xs"
-                />
-                <button onClick={addTag} className="rounded-[14px] bg-black px-4 text-xs font-bold text-white">Add</button>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {tags.map(t => (
-                  <button key={t} onClick={() => { setTags(v => v.filter(x => x !== t)); dirty(); }}
-                    className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-semibold">
-                    {t}
-                    <XIcon size={10} />
-                  </button>
-                ))}
-              </div>
             </div>
-          </div>
 
-          {/* Blocks */}
-          <div className="mt-6 flex items-center justify-between">
-            <div>
-              <strong className="text-sm">Links & actions</strong>
-              <p className="text-xs text-black/40">Drag to reorder. Tap to edit.</p>
-            </div>
-            <button onClick={() => setAddStep('category')} className="rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold">
-              Add link
-            </button>
-          </div>
-
-          <div className="mt-3 space-y-3">
-            {blocks.map(b => (
-              <div
-                key={b.id}
-                data-block-id={b.id}
-                onDragOver={e => e.preventDefault()}
-                onDragEnter={() => { if (draggedId) reorder(draggedId, b.id); }}
-                className={`rounded-[22px] border border-black/8 bg-white p-4 transition ${!b.on ? 'opacity-50' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  <button
-                    draggable
-                    onDragStart={() => setDraggedId(b.id)}
-                    onDragEnd={() => setDraggedId(null)}
-                    className="cursor-grab text-black/20 hover:text-black/50 active:cursor-grabbing"
-                  >
-                    <GripIcon />
-                  </button>
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] bg-[#F2EFE8] text-black/50">
-                    <BlockIcon id={b.id} />
-                  </div>
-                  <strong className="flex-1 truncate text-sm">{b.title}</strong>
-                  <button
-                    onClick={() => toggle(b.id)}
-                    className={`rounded-full px-3 py-2 text-[9px] font-bold transition ${b.on ? 'bg-[#C8FF62]/65' : 'bg-black/5'}`}
-                  >
-                    {b.on ? 'ON' : 'OFF'}
-                  </button>
-                  <button
-                    onClick={() => remove(b.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-black/35 transition hover:bg-black/10 hover:text-black/60"
-                  >
-                    <XIcon size={14} />
-                  </button>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <input value={b.title} onChange={e => edit(b.id, 'title', e.target.value)} placeholder="Button title" className="rounded-[14px] bg-[#F5F3ED] px-3 py-2.5 text-xs" />
-                  <input value={b.sub} onChange={e => edit(b.id, 'sub', e.target.value)} placeholder="Subtitle" className="rounded-[14px] bg-[#F5F3ED] px-3 py-2.5 text-xs" />
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <input
-                    value={b.url || ''}
-                    onChange={e => edit(b.id, 'url', e.target.value)}
-                    placeholder={URL_PLACEHOLDERS[b.id.split('-')[0]] || 'https://...'}
-                    className="min-w-0 flex-1 rounded-[14px] border border-black/8 bg-white px-3 py-3 text-xs"
-                  />
-                  <span className={`grid min-w-16 place-items-center rounded-[14px] px-3 text-[9px] font-bold ${b.url?.trim() ? 'bg-[#C8FF62]/55' : 'bg-black/5 text-black/35'}`}>
-                    {b.url?.trim() ? 'LINKED' : 'ADD URL'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <SocialLinksEditor socials={socials} onChange={n => { setSocials(n); dirty(); }} />
-          {error ? <p className="mt-4 rounded-[14px] bg-[#F8AE9D]/55 p-3 text-xs">{error}</p> : null}
-        </section>
-
-        {/* Live preview */}
-        <aside className="rounded-[30px] bg-[#E8E4DA] p-5">
-          <div className="mb-3 flex justify-between text-[9px] font-bold tracking-[.13em] text-black/35">
-            <span>LIVE PREVIEW</span>
-            <span>Mobile</span>
-          </div>
-          <div className="relative mx-auto min-h-[700px] max-w-[360px] overflow-hidden rounded-[42px] border-[8px] border-black bg-[#333] shadow-[0_28px_70px_rgba(0,0,0,.22)]">
-            {cover
-              ? <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
-              : <div className={`absolute inset-0 ${bg === 'warm' ? 'bg-[#E8D5BF]' : bg === 'blue' ? 'bg-[#CBD9FF]' : bg === 'lime' ? 'bg-[#DFFFA8]' : 'bg-[#333]'}`} />}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/45" />
-            <div className="relative px-3 pb-5 pt-14 text-white">
-              <div className="text-center">
-                {logo
-                  ? <img src={logo} alt="" className="mx-auto h-20 w-20 rounded-full border-4 border-white bg-white object-cover shadow-xl" />
-                  : <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-white font-bold text-black">{initials}</div>}
-                <strong className="mt-3 block text-2xl">{business?.name}</strong>
-                {location ? <span className="mt-1 block text-[11px] text-white/85">{location}</span> : null}
-                <div className="mt-2 flex flex-wrap justify-center gap-1">
-                  {tags.map(t => <span key={t} className="rounded-full border border-white/25 bg-black/20 px-2 py-1 text-[8px]">{t}</span>)}
-                </div>
-              </div>
-              <div className="mt-5 rounded-[20px] border border-white/50 bg-white/70 p-3 text-black backdrop-blur-xl">
-                <span className="text-[8px] font-bold text-[#2E7D5B]">LIVE STATUS</span>
-                <strong className="mt-1 block text-xl">Open now</strong>
-                <span className="text-[10px] text-black/45">Closes at 4:00 PM</span>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {blocks.filter(b => b.on).map(b => (
-                  <div key={b.id} className={`${b.id === 'website' || b.id.startsWith('map') ? 'col-span-2' : ''} rounded-[18px] border border-white/50 bg-white/65 p-3 text-black backdrop-blur-xl`}>
-                    <strong className="block text-xs">{b.title}</strong>
-                    <span className="text-[9px] opacity-45">{b.sub}</span>
-                  </div>
-                ))}
-              </div>
-              {socials.some(s => s.on && s.url) && (
-                <div className="mt-3 flex justify-center gap-2">
-                  {socials.filter(s => s.on && s.url).map(s => (
-                    <span key={s.id} className="grid h-8 w-8 place-items-center rounded-full bg-white/70 text-[9px] font-bold text-black">{socialMark(s.label)}</span>
+            {/* Location with Places autocomplete */}
+            <div className="relative">
+              <label className="text-[9px] text-white/35 uppercase tracking-widest mb-2 block">Location</label>
+              <input
+                type="text"
+                value={locationInput}
+                onChange={e => { setLocationInput(e.target.value); setShowPlaces(true); }}
+                onFocus={() => setShowPlaces(true)}
+                onBlur={() => setTimeout(() => setShowPlaces(false), 200)}
+                placeholder="Search address…"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/30"
+              />
+              {showPlaces && predictions.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-[#1c1c1c] border border-white/15 rounded-xl overflow-hidden shadow-2xl">
+                  {predictions.map(p => (
+                    <button
+                      key={p.place_id}
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => {
+                        setLocationInput(p.description);
+                        setShowPlaces(false);
+                      }}
+                      className="w-full text-left px-3 py-2.5 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors border-b border-white/5 last:border-0"
+                    >
+                      📍 {p.description}
+                    </button>
                   ))}
                 </div>
               )}
-              <div className="mt-4 text-center text-[8px] tracking-[.13em] text-white/50">POWERED BY OPENSTATUS</div>
+            </div>
+
+            {/* Business type tags */}
+            <div>
+              <label className="text-[9px] text-white/35 uppercase tracking-widest mb-2 block">Business Type</label>
+              <div className="flex flex-wrap gap-1.5">
+                {BUSINESS_TAGS.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
+                      tags.includes(tag)
+                        ? 'bg-white text-black border-white'
+                        : 'border-white/15 text-white/40 hover:border-white/30 hover:text-white/70'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </aside>
-      </div>
+        )}
 
-      {/* Add Link Modal */}
-      {addStep && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:p-4"
-          onMouseDown={closeAddModal}
-        >
-          <div
-            className="w-full max-h-[88vh] overflow-y-auto rounded-t-[28px] bg-[#F8F7F2] shadow-2xl sm:max-w-lg sm:rounded-[32px]"
-            onMouseDown={e => e.stopPropagation()}
-          >
-
-            {/* Step 1: Category */}
-            {addStep === 'category' && (
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="text-[9px] font-bold tracking-[.14em] text-black/35">ADD TO YOUR PAGE</span>
-                    <h2 className="mt-2 text-[28px] font-semibold tracking-[-.04em]">What do you want to add?</h2>
-                  </div>
-                  <button onClick={closeAddModal} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/8 text-black/50 hover:bg-black/12 transition">
-                    <XIcon />
+        {/* ── Style tab ── */}
+        {activeTab === 'style' && (
+          <div className="flex-1 overflow-y-auto p-4 space-y-5">
+            <div>
+              <label className="text-[9px] text-white/35 uppercase tracking-widest mb-2 block">Background</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'warm', label: 'Warm', color: '#EDE9E2' },
+                  { id: 'blue', label: 'Blue', color: '#E9EEF5' },
+                  { id: 'lime', label: 'Lime', color: '#E7F7C8' },
+                  { id: 'dark', label: 'Dark', color: '#181817' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setBg(opt.id)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-medium transition-all ${
+                      bg === opt.id ? 'border-white text-white' : 'border-white/10 text-white/40 hover:border-white/30'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-full border border-white/20" style={{ background: opt.color }} />
+                    {opt.label}
                   </button>
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {CATEGORIES.map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => pickCategory(cat)}
-                      className="flex flex-col gap-1.5 rounded-[20px] border border-black/8 bg-white p-3 text-left transition hover:shadow-md active:scale-[.98]"
-                    >
-                      <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-[#F0EDE6] text-black/55">
-                        <CategoryIcon id={cat.id} />
-                      </span>
-                      <span className="text-sm font-semibold">{cat.label}</span>
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
+            </div>
 
-            {/* Step 2: Provider */}
-            {addStep === 'provider' && addCat && (
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <button
-                      onClick={() => setAddStep('category')}
-                      className="mb-2 text-[10px] font-semibold text-black/40 transition hover:text-black/70"
-                    >
-                      ← Back
-                    </button>
-                    <h2 className="text-[28px] font-semibold tracking-[-.04em]">{addCat.label}</h2>
-                    <p className="mt-1 text-sm text-black/45">Where should customers go?</p>
-                  </div>
-                  <button onClick={closeAddModal} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/8 text-black/50 hover:bg-black/12 transition">
-                    <XIcon />
-                  </button>
-                </div>
-                <div className="mt-3 space-y-2">
-                  {addCat.providers?.map(prov => (
-                    <button
-                      key={prov.id}
-                      onClick={() => pickProvider(prov)}
-                      className="flex w-full items-center justify-between rounded-[18px] border border-black/8 bg-white px-4 py-4 text-left transition hover:shadow-md active:scale-[.99]"
-                    >
-                      <span className="text-sm font-semibold">{prov.label}</span>
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" className="text-black/25">
-                        <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: URL */}
-            {addStep === 'url' && (
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <button
-                      onClick={() => addCat?.providers ? setAddStep('provider') : setAddStep('category')}
-                      className="mb-2 text-[10px] font-semibold text-black/40 transition hover:text-black/70"
-                    >
-                      ← Back
-                    </button>
-                    <h2 className="text-[28px] font-semibold tracking-[-.04em]">{addProv?.label ?? addCat?.label}</h2>
-                    <p className="mt-1 text-sm text-black/45">Paste the link customers should open.</p>
-                  </div>
-                  <button onClick={closeAddModal} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/8 text-black/50 hover:bg-black/12 transition">
-                    <XIcon />
-                  </button>
-                </div>
-                <div className="mt-3 space-y-3">
-                  <div>
-                    <label className="text-[9px] font-bold uppercase tracking-[.1em] text-black/35">Button title</label>
-                    <input
-                      value={addTitle}
-                      onChange={e => setAddTitle(e.target.value)}
-                      placeholder="Order on DoorDash"
-                      className="mt-1.5 w-full rounded-[14px] border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/25"
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-bold uppercase tracking-[.1em] text-black/35">
-                      Subtitle <span className="normal-case font-normal text-black/25">(optional)</span>
-                    </label>
-                    <input
-                      value={addSub}
-                      onChange={e => setAddSub(e.target.value)}
-                      placeholder="Delivery & pickup"
-                      className="mt-1.5 w-full rounded-[14px] border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/25"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-bold uppercase tracking-[.1em] text-black/35">Destination</label>
-                    <input
-                      value={addUrl}
-                      onChange={e => setAddUrl(e.target.value)}
-                      placeholder={addProv?.ph ?? 'https://...'}
-                      className="mt-1.5 w-full rounded-[14px] border border-black/10 bg-white px-4 py-3 font-mono text-xs outline-none focus:border-black/25"
-                    />
-                  </div>
+            {/* Logo crop/scale */}
+            {business?.avatar_url && (
+              <div>
+                <label className="text-[9px] text-white/35 uppercase tracking-widest mb-2 block">Logo Crop &amp; Scale</label>
+                <div className="text-xs text-white/30 mb-2">Drag logo in preview to reposition</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-white/35">Scale</span>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="3"
+                    step="0.05"
+                    value={logoScale}
+                    onChange={e => setLogoScale(parseFloat(e.target.value))}
+                    className="flex-1 accent-white h-1"
+                  />
+                  <span className="text-[10px] text-white/35 w-8">{logoScale.toFixed(1)}x</span>
                 </div>
                 <button
-                  onClick={confirmAdd}
-                  disabled={!addTitle.trim()}
-                  className="mt-4 w-full rounded-[16px] bg-black py-3.5 text-sm font-bold text-white transition disabled:opacity-30"
+                  onClick={() => { setLogoScale(1); setLogoPos({ x: 0, y: 0 }); }}
+                  className="mt-2 text-[10px] text-white/30 hover:text-white/60 transition-colors"
                 >
-                  Add to page
+                  Reset
                 </button>
               </div>
             )}
 
+            <div>
+              <label className="text-[9px] text-white/35 uppercase tracking-widest mb-2 block">Public URL</label>
+              <div className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white/40 font-mono">
+                openstatus.co/{business?.slug || 'your-business'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save */}
+        <div className="p-3 border-t border-white/8 space-y-2">
+          {error && <p className="text-xs text-red-400">{error}</p>}
+          <button
+            onClick={save}
+            disabled={saving}
+            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              saved ? 'bg-green-500 text-white' : 'bg-white text-black hover:bg-white/90 active:scale-[.98]'
+            }`}
+          >
+            {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── CENTER PANEL ── */}
+      <div className="flex-1 overflow-y-auto">
+        {activeBlock ? (
+          <div className="max-w-md mx-auto p-6">
+            <button
+              onClick={() => setActiveBlockId(null)}
+              className="flex items-center gap-1.5 text-white/35 hover:text-white text-xs mb-6 transition-colors"
+            >
+              ← All widgets
+            </button>
+            <div className="bg-white/[.06] rounded-2xl p-5 border border-white/10">
+              <BlockSettingsPanel
+                block={activeBlock}
+                onUpdate={updates => updateBlock(activeBlockId!, updates)}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full text-center">
+            <div className="space-y-2">
+              <div className="text-4xl opacity-20">←</div>
+              <p className="text-sm text-white/20">Select a widget to configure it</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── RIGHT PREVIEW ── */}
+      <div className="w-[340px] border-l border-white/8 bg-[#0d0d0d] flex flex-col flex-shrink-0">
+        <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
+          <span className="text-xs font-medium text-white/50">Live Preview</span>
+          <span className="text-[10px] text-white/20">Updates as you edit</span>
+        </div>
+
+        {/* Logo drag target overlay in preview */}
+        <div
+          className="flex-1 overflow-y-auto flex items-start justify-center pt-6 pb-8 px-4"
+          onMouseMove={onLogoMouseMove}
+          onMouseUp={onLogoMouseUp}
+          onMouseLeave={onLogoMouseUp}
+        >
+          <div
+            className={business?.avatar_url ? 'cursor-move' : ''}
+            onMouseDown={onLogoMouseDown}
+          >
+            <MobilePreview
+              business={business}
+              config={config}
+              logoScale={logoScale}
+              logoPos={logoPos}
+            />
           </div>
         </div>
-      )}
-    </main>
+
+        {/* Logo scale hint */}
+        {business?.avatar_url && activeTab === 'style' && (
+          <div className="px-4 pb-3">
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.05"
+              value={logoScale}
+              onChange={e => setLogoScale(parseFloat(e.target.value))}
+              className="w-full accent-white h-1"
+            />
+            <div className="flex justify-between text-[9px] text-white/20 mt-1">
+              <span>0.5×</span>
+              <span>Logo Scale</span>
+              <span>3×</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
