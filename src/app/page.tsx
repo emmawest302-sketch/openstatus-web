@@ -1,38 +1,340 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
 
-const blocks = [{ label: 'Order', icon: '↗', tone: 'dark' }, { label: 'Menu', icon: '☰', tone: 'light' }, { label: 'Directions', icon: '⌖', tone: 'light' }, { label: 'Book', icon: '＋', tone: 'glass' }];
-const analytics = [['2,481', 'Visitors'], ['642', 'Directions'], ['381', 'Menu views'], ['219', 'Orders']];
-
-function Dot({ color = '#50D890' }: { color?: string }) { return <span className="status-dot" style={{ background: color }} aria-hidden="true" />; }
-function Arrow() { return <span aria-hidden="true">↗</span>; }
-function OpenStatusMark({ size = 24 }: { size?: number }) { return <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="#050505"/><circle cx="50" cy="50" r="21" fill="#F7F7F3"/><circle cx="50" cy="44" r="7.4" fill="#050505"/><path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#050505" rx="2"/></svg>; }
-
-function MiniPhone({ compact = false }: { compact?: boolean }) {
-  return <div className={`mini-phone ${compact ? 'mini-phone--compact' : ''}`}><div className="mini-phone__screen"><div className="mini-phone__hero" /><div className="mini-phone__overlay" /><div className="mini-phone__content"><div className="mini-phone__brand-row"><div className="mini-phone__logo">BH</div><div><p className="mini-phone__eyebrow">BREAKFAST HAUS</p><p className="mini-phone__location">Franklin, Tennessee</p></div></div><div className="mini-phone__live"><div><p className="mini-phone__live-label"><Dot /> LIVE STATUS</p><p className="mini-phone__live-title">Open now</p><p className="mini-phone__live-copy">Closes at 3:00 PM · Pickup available</p></div><span className="mini-phone__live-pill">LIVE</span></div><div className="mini-phone__actions">{blocks.slice(0, compact ? 3 : 4).map((block) => <div key={block.label} className={`mini-action mini-action--${block.tone}`}><span>{block.label}</span><span>{block.icon}</span></div>)}</div>{!compact && <><div className="mini-phone__feature"><div className="mini-phone__feature-image" /><div><p>Today at Breakfast Haus</p><strong>Breakfast served all day.</strong></div></div><div className="mini-phone__website">Visit our full website <Arrow /></div></>}</div></div></div>;
+function cn(...classes: (string | false | undefined | null)[]) {
+  return classes.filter(Boolean).join(' ');
 }
 
-function BrandCard({ title, subtitle, className }: { title: string; subtitle: string; className: string }) { return <div className={`brand-card ${className}`}><div className="brand-card__top"><span className="brand-card__mark">{title.slice(0, 1)}</span><span>● LIVE</span></div><div className="brand-card__bottom"><strong>{title}</strong><span>{subtitle}</span></div></div>; }
+const STATUS_CYCLE = ['Open', 'Busy', 'Closed'] as const;
+type Status = (typeof STATUS_CYCLE)[number];
+
+const STATUS_COLORS: Record<Status, string> = {
+  Open: 'bg-emerald-500',
+  Busy: 'bg-amber-400',
+  Closed: 'bg-red-400',
+};
+
+const STATUS_LABEL: Record<Status, string> = {
+  Open: 'Open now',
+  Busy: 'Busy — order ahead',
+  Closed: 'Closed',
+};
+
+function PhonePreview({ status }: { status: Status }) {
+  return (
+    <div className="w-[220px] rounded-[36px] bg-white shadow-2xl border border-neutral-100 overflow-hidden select-none">
+      <div className="px-5 pt-3 pb-1 flex justify-between text-[9px] text-neutral-400">
+        <span>9:41</span>
+        <span>●●●</span>
+      </div>
+      <div className="px-5 pt-2 pb-4 text-center">
+        <div className="w-12 h-12 rounded-full bg-amber-50 mx-auto mb-2 flex items-center justify-center text-xl">
+          ☕
+        </div>
+        <p className="font-semibold text-sm text-neutral-800">Corner Café</p>
+        <p className="text-[10px] text-neutral-400 mb-2.5">Hayes Valley · San Francisco</p>
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-white transition-all duration-500',
+            STATUS_COLORS[status],
+          )}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-white/70 inline-block" />
+          {STATUS_LABEL[status]}
+        </span>
+      </div>
+      <div className="px-3 pb-5 space-y-2">
+        {[
+          { icon: '🗺️', label: 'Get directions', sub: '0.4 mi away' },
+          { icon: '🍽️', label: 'View menu', sub: 'Updated today' },
+          { icon: '📦', label: 'Order online', sub: 'Uber Eats · DoorDash' },
+          { icon: '📅', label: 'Reserve a table', sub: 'OpenTable' },
+        ].map((b) => (
+          <div
+            key={b.label}
+            className="flex items-center gap-2.5 bg-neutral-50 rounded-xl px-3 py-2.5"
+          >
+            <span className="text-base">{b.icon}</span>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-neutral-800 leading-tight">{b.label}</p>
+              <p className="text-[10px] text-neutral-400 leading-tight">{b.sub}</p>
+            </div>
+            <span className="ml-auto text-neutral-300 text-xs flex-shrink-0">›</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+  return (
+    <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 hover:bg-white/[0.05] transition-colors">
+      <div className="text-2xl mb-3">{icon}</div>
+      <p className="font-semibold text-white text-sm mb-1.5">{title}</p>
+      <p className="text-white/45 text-xs leading-relaxed">{desc}</p>
+    </div>
+  );
+}
+
+function AnalyticsBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  return (
+    <div className="mb-3.5">
+      <div className="flex justify-between text-xs mb-1.5">
+        <span className="text-white/50">{label}</span>
+        <span className="text-white/70 font-medium tabular-nums">{value.toLocaleString()}</span>
+      </div>
+      <div className="h-1.5 bg-white/8 rounded-full overflow-hidden">
+        <div
+          className={cn('h-full rounded-full', color)}
+          style={{ width: `${Math.round((value / max) * 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
-  const [period, setPeriod] = useState<'morning' | 'afternoon' | 'closed'>('morning');
-  useEffect(() => { const timer = window.setInterval(() => setPeriod((current) => current === 'morning' ? 'afternoon' : current === 'afternoon' ? 'closed' : 'morning'), 3500); return () => window.clearInterval(timer); }, []);
-  const status = useMemo(() => period === 'morning' ? { time: '10:30 AM', title: 'Open now', copy: 'Breakfast all day · Pickup available', color: '#50D890', action: 'Order breakfast' } : period === 'afternoon' ? { time: '2:30 PM', title: 'Closing soon', copy: 'Order before 3 PM · Pickup available', color: '#F5C45E', action: 'Order before close' } : { time: '7:00 PM', title: 'Closed', copy: 'Opens tomorrow at 7 AM', color: '#FF7A6E', action: 'See tomorrow’s menu' }, [period]);
+  const [statusIdx, setStatusIdx] = useState(0);
 
-  return <main className="site-shell">
-    <header className="site-header"><Link href="/" className="wordmark" aria-label="OpenStatus home"><OpenStatusMark size={26}/><span>OpenStatus</span></Link><nav className="site-nav" aria-label="Primary navigation"><a href="#product">Product</a><a href="#analytics">Analytics</a><a href="#business">For business</a></nav><div className="site-header__actions"><Link href="/login" className="text-link">Log in</Link><Link href="/signup" className="pill-button pill-button--dark">Build your page <Arrow /></Link></div></header>
-    <section className="hero-section"><div className="ambient ambient--one" /><div className="ambient ambient--two" /><div className="hero-copy"><span className="eyebrow-pill">THE LINK IN BIO FOR SMALL BUSINESS</span><h1>Your business.<br /><span>Right now.</span></h1><p>One beautiful link for your bio with your live status, hours, menu, ordering, booking, directions, website and everything customers actually need.</p><div className="hero-actions"><Link href="/signup" className="pill-button pill-button--dark pill-button--large">Build your OpenStatus <Arrow /></Link><a href="#product" className="pill-button pill-button--glass pill-button--large">See how it works ↓</a></div><div className="hero-proof"><span>Live status</span><span>Branded blocks</span><span>Business analytics</span></div></div><div className="hero-visual" aria-label="Example Breakfast Haus OpenStatus page on a phone"><div className="glass-orb glass-orb--one" /><div className="glass-orb glass-orb--two" /><MiniPhone /><div className="floating-chip floating-chip--status"><Dot /> OPEN NOW · 3 PM</div><div className="floating-chip floating-chip--metric">+642 directions this month</div></div></section>
-    <section className="statement-section"><p>Link pages were built for creators.</p><h2>This one is built for <span>business.</span></h2></section>
-    <section className="mx-auto my-8 w-[min(94%,1180px)] overflow-hidden rounded-[36px] border border-black/10 bg-[#111] px-6 py-8 text-white shadow-[0_30px_90px_rgba(0,0,0,.12)] md:px-10 md:py-10"><div className="grid gap-8 md:grid-cols-[.72fr_1.28fr] md:items-end"><div className="grid grid-cols-2 gap-3"><div className="rounded-[26px] bg-white/10 p-5 backdrop-blur-xl"><span className="block text-[10px] font-bold tracking-[.15em] text-white/45">DISCOVERY</span><strong className="mt-3 block text-5xl font-semibold tracking-[-.06em]">2/3</strong><span className="mt-2 block text-sm leading-5 text-white/60">of Gen Z look for a business on Instagram before Google.</span></div><div className="rounded-[26px] bg-[#C8FF62] p-5 text-black"><span className="block text-[10px] font-bold tracking-[.15em] text-black/45">TRUST</span><strong className="mt-3 block text-5xl font-semibold tracking-[-.06em]">77%</strong><span className="mt-2 block text-sm leading-5 text-black/60">say they won’t come back after showing up to a closed door.</span></div></div><div><span className="text-[10px] font-bold tracking-[.16em] text-white/45">STALE INFO COSTS REAL CUSTOMERS</span><h2 className="mt-3 text-[clamp(38px,5vw,68px)] font-semibold leading-[.94] tracking-[-.06em]">They found you.<br/><span className="text-white/35">Don’t lose them at the door.</span></h2><p className="mt-5 max-w-2xl text-base leading-7 text-white/60">If your hours are wrong in your bio, one bad trip can be enough to lose the customer. Put your live, real-time operating status one click away.</p></div></div></section>
-    <section className="live-section" id="product"><div className="live-copy"><span className="section-kicker">LIVE BY DEFAULT</span><h2>The top of your page is <em>true right now.</em></h2><p>Your regular hours power the baseline. Temporary changes override them. Customers instantly see whether you are open, closing soon, sold out or back tomorrow.</p><div className="period-tabs" role="tablist" aria-label="Status demo times">{(['morning', 'afternoon', 'closed'] as const).map((item) => <button key={item} onClick={() => setPeriod(item)} className={period === item ? 'active' : ''}>{item === 'morning' ? 'Morning' : item === 'afternoon' ? 'Afternoon' : 'After hours'}</button>)}</div></div><div className="live-demo-card"><div className="live-demo-card__time">{status.time}</div><div className="live-demo-card__status"><div><p><Dot color={status.color} /> LIVE STATUS</p><h3>{status.title}</h3><span>{status.copy}</span></div><span className="live-badge">LIVE</span></div><div className="live-demo-card__cta">{status.action} <Arrow /></div><div className="live-demo-card__note">Temporary updates clear themselves. Regular hours take back over automatically.</div></div></section>
-    <section className="brand-section"><div className="brand-section__copy"><span className="section-kicker">LOOKS LIKE YOU</span><h2>Your brand stays the hero.</h2><p>Logo, photography, colors and layout. Your OpenStatus should feel like your business built its own tiny mobile app — not like a generic stack of buttons.</p></div><div className="brand-grid"><BrandCard title="Aster Salon" subtitle="Appointments today" className="brand-card--cream" /><BrandCard title="Southbound" subtitle="Kitchen open until 10" className="brand-card--black" /><BrandCard title="Marlow Goods" subtitle="Pickup available" className="brand-card--pink" /><BrandCard title="Field House" subtitle="4 spots left tonight" className="brand-card--blue" /></div></section>
-    <section className="blocks-section"><div className="blocks-copy"><span className="section-kicker">NOT JUST LINKS</span><h2>Every block has a job.</h2><p>Turn on only what your business needs. Add a cover photo, choose how it displays, then drag it exactly where it belongs.</p></div><div className="blocks-canvas"><div className="block-card block-card--wide"><span>Menu</span><strong>Render it beautifully.</strong><small>Not a PDF nobody opens.</small></div><div className="block-card block-card--image"><span>Order</span><strong>Order lunch</strong><small>Pickup available now</small></div><div className="block-card"><span>Directions</span><strong>Open maps</strong><small>123 Main Street</small></div><div className="block-card"><span>Website</span><strong>Your real website</strong><small>Always one tap away</small></div><div className="block-card block-card--accent"><span>Book</span><strong>2 openings today</strong><small>Next: 3:30 PM</small></div></div></section>
-    <section className="analytics-section" id="analytics"><div className="analytics-copy"><span className="section-kicker section-kicker--dark">BUSINESS ANALYTICS</span><h2>Know what customers actually want.</h2><p>Go beyond link clicks. See when people check your page, what they&apos;re trying to do, and which actions turn social traffic into real business.</p><div className="insight-pill">27% of customers checked your business while you were closed.</div></div><div className="analytics-board"><div className="analytics-board__header"><span>Last 30 days</span><span className="live-indicator"><Dot /> LIVE</span></div><div className="metric-grid">{analytics.map(([value, label]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div><div className="chart-shell"><div className="chart-bars" aria-label="Traffic by day chart">{[44,63,49,78,66,92,70,84,58,96,72,88].map((height,index) => <span key={index} style={{height:`${height}%`}} />)}</div><div className="chart-labels"><span>Mon</span><span>Wed</span><span>Fri</span><span>Sun</span></div></div></div></section>
-    <section className="website-section"><span className="section-kicker">YOUR WEBSITE STILL MATTERS</span><h2>Your mobile front door.</h2><div className="flow-diagram"><div className="flow-node flow-node--source">Instagram</div><span>→</span><div className="flow-node flow-node--openstatus">OpenStatus</div><span>→</span><div className="flow-destinations"><span>Order</span><span>Website</span><span>Book</span><span>Directions</span></div></div><p>Your website remains the home of your brand and SEO. OpenStatus gives social visitors the fastest route to whatever they came for.</p></section>
-    <section className="business-section" id="business"><div className="business-shell"><div className="business-copy"><span className="section-kicker section-kicker--dark">BUILT AROUND A REAL BUSINESS</span><h2>One link. Everything customers need.</h2><p>A coffee shop needs menu and order. A salon needs booking and walk-ins. A boutique needs shop and pickup. OpenStatus adapts to the business instead of giving everyone the same blank list.</p><div className="integration-row"><span>Restaurant</span><span>Salon</span><span>Retail</span><span>Fitness</span></div></div><div className="business-preview"><MiniPhone compact /><div className="business-preview__labels"><span>Live hours</span><span>Menu</span><span>Order</span><span>Directions</span><span>Website</span></div></div></div></section>
-    <section className="final-cta"><div className="final-cta__orb" /><span className="section-kicker">OPENSTATUS</span><h2>One beautiful link.<br />Built for business.</h2><p>Live status. Branded blocks. Better analytics. Your website always one tap away.</p><Link href="/signup" className="pill-button pill-button--dark pill-button--large">Build your page <Arrow /></Link></section>
-    <footer className="site-footer"><div className="wordmark"><OpenStatusMark size={26}/><span>OpenStatus</span></div><p>The link in bio for small businesses.</p><div><Link href="/login">Log in</Link><Link href="/signup">Start free</Link></div></footer>
-  </main>;
+  useEffect(() => {
+    const t = setInterval(() => setStatusIdx((i) => (i + 1) % STATUS_CYCLE.length), 3500);
+    return () => clearInterval(t);
+  }, []);
+
+  const currentStatus = STATUS_CYCLE[statusIdx];
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+
+      {/* ── NAV ────────────────────────────────────────────────────────────── */}
+      <nav className="sticky top-0 z-50 border-b border-white/8 bg-[#0a0a0a]/90 backdrop-blur-md">
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+          <span className="font-bold tracking-tight text-sm">OpenStatus</span>
+          <div className="flex items-center gap-6">
+            <a href="#how" className="text-sm text-white/50 hover:text-white transition-colors hidden sm:block">
+              How it works
+            </a>
+            <a href="#features" className="text-sm text-white/50 hover:text-white transition-colors hidden sm:block">
+              Features
+            </a>
+            <Link href="/login" className="text-sm text-white/50 hover:text-white transition-colors">
+              Log in
+            </Link>
+            <Link
+              href="/signup"
+              className="text-sm bg-white text-black font-medium px-4 py-1.5 rounded-full hover:bg-white/90 transition-colors"
+            >
+              Get started
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── HERO ───────────────────────────────────────────────────────────── */}
+      <section className="max-w-5xl mx-auto px-6 pt-20 pb-16">
+        <div className="flex flex-col lg:flex-row items-center gap-14">
+          <div className="flex-1 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 bg-white/6 border border-white/10 rounded-full px-3 py-1 text-xs text-white/55 mb-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+              Free to get started — no credit card
+            </div>
+            <h1 className="text-4xl lg:text-5xl font-bold leading-[1.15] mb-5">
+              One link.<br />
+              Everything your<br />
+              customers need.
+            </h1>
+            <p className="text-white/50 text-lg leading-relaxed mb-8 max-w-md mx-auto lg:mx-0">
+              OpenStatus gives your business a single, beautiful page — with live hours, directions, your menu, ordering links, reservations, and more.
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+              <Link
+                href="/signup"
+                className="bg-white text-black font-semibold px-6 py-3 rounded-xl hover:bg-white/90 transition-colors text-sm"
+              >
+                Build your page — free
+              </Link>
+              <a
+                href="#how"
+                className="border border-white/15 text-white/65 px-6 py-3 rounded-xl hover:border-white/30 hover:text-white transition-colors text-sm"
+              >
+                See how it works
+              </a>
+            </div>
+          </div>
+
+          {/* Phone mockup */}
+          <div className="flex-shrink-0 relative">
+            <div className="absolute inset-0 bg-indigo-500/10 blur-[80px] rounded-full scale-150 pointer-events-none" />
+            <PhonePreview status={currentStatus} />
+          </div>
+        </div>
+      </section>
+
+      {/* ── STAT BAR ───────────────────────────────────────────────────────── */}
+      <section className="border-y border-white/8 bg-white/[0.02]">
+        <div className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+          {[
+            { value: '2,481', label: 'Customer visits' },
+            { value: '642', label: 'Direction taps' },
+            { value: '381', label: 'Menu views' },
+            { value: '219', label: 'Orders placed' },
+          ].map(({ value, label }) => (
+            <div key={label}>
+              <p className="text-2xl lg:text-3xl font-bold text-white">{value}</p>
+              <p className="text-white/35 text-xs mt-1">{label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ───────────────────────────────────────────────────── */}
+      <section id="how" className="max-w-5xl mx-auto px-6 py-24">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold mb-3">Up and running in minutes</h2>
+          <p className="text-white/40 text-sm max-w-xs mx-auto">No developer. No monthly fee to start.</p>
+        </div>
+        <div className="grid lg:grid-cols-3 gap-10">
+          {[
+            {
+              step: '01',
+              title: 'Build your page',
+              desc: 'Pick your blocks — hours, menu, ordering, reservations, map — and customize colors and layout to match your brand.',
+            },
+            {
+              step: '02',
+              title: 'Share your link',
+              desc: 'Add openstatus.co/yourname to your Instagram bio, Google listing, receipts, and signage. One link, everywhere.',
+            },
+            {
+              step: '03',
+              title: 'Customers get everything',
+              desc: 'Live hours, tap-to-navigate directions, your menu, order and booking links — all in one place, on any phone.',
+            },
+          ].map(({ step, title, desc }) => (
+            <div key={step} className="relative">
+              <p className="text-7xl font-black text-white/[0.035] leading-none mb-3 select-none">
+                {step}
+              </p>
+              <h3 className="font-semibold text-base mb-2">{title}</h3>
+              <p className="text-white/40 text-sm leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FEATURES ───────────────────────────────────────────────────────── */}
+      <section id="features" className="max-w-5xl mx-auto px-6 pb-24">
+        <div className="text-center mb-14">
+          <h2 className="text-3xl font-bold mb-3">Every block has a job</h2>
+          <p className="text-white/40 text-sm max-w-xs mx-auto">
+            Turn on only what's relevant to your business.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <FeatureCard
+            icon="📍"
+            title="Location & directions"
+            desc="Live map and your address. Customers tap once to get turn-by-turn directions, so they never get lost."
+          />
+          <FeatureCard
+            icon="🕐"
+            title="Live hours & status"
+            desc="Open, closed, or busy — update in seconds from your phone. Your status shows before customers even start driving."
+          />
+          <FeatureCard
+            icon="🍽️"
+            title="Menu"
+            desc="Link a URL, upload a PDF, or connect your photos. Your menu is always one tap away, never buried."
+          />
+          <FeatureCard
+            icon="📦"
+            title="Online ordering"
+            desc="Add your DoorDash, Uber Eats, Grubhub, or own ordering site. All your channels, one block."
+          />
+          <FeatureCard
+            icon="📅"
+            title="Reservations & booking"
+            desc="Connect OpenTable, Resy, Calendly, Square, or any booking URL. Customers book without leaving your page."
+          />
+          <FeatureCard
+            icon="📊"
+            title="Analytics"
+            desc="See which blocks get tapped, where traffic comes from, and what drives real visits — so you can focus on what works."
+          />
+        </div>
+      </section>
+
+      {/* ── ANALYTICS ──────────────────────────────────────────────────────── */}
+      <section className="border-t border-white/8 bg-white/[0.015]">
+        <div className="max-w-5xl mx-auto px-6 py-24 flex flex-col lg:flex-row items-center gap-16">
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold mb-4">
+              Know what customers<br />actually want
+            </h2>
+            <p className="text-white/50 text-sm leading-relaxed mb-8 max-w-sm">
+              See exactly which blocks get tapped, so you can stop guessing and start promoting the right things — whether that's your menu, your hours, or your ordering link.
+            </p>
+            <ul className="space-y-3">
+              {[
+                'Block tap counts and weekly trends',
+                'Traffic sources — Instagram, Google, direct',
+                'Peak times and day-of-week patterns',
+                'Directions vs menu vs ordering split',
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2.5 text-sm text-white/55">
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">
+                    ✓
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* Analytics card */}
+          <div className="flex-shrink-0 bg-[#111] border border-white/8 rounded-2xl p-5 w-full lg:w-72">
+            <div className="flex justify-between items-center mb-5">
+              <p className="text-xs font-medium text-white/60">Last 30 days</p>
+              <span className="text-[10px] text-white/30 bg-white/5 rounded-full px-2 py-0.5">Corner Café</span>
+            </div>
+            <AnalyticsBar label="Directions" value={642} max={700} color="bg-blue-500" />
+            <AnalyticsBar label="Menu views" value={381} max={700} color="bg-purple-500" />
+            <AnalyticsBar label="Orders" value={219} max={700} color="bg-emerald-500" />
+            <AnalyticsBar label="Booking clicks" value={97} max={700} color="bg-amber-400" />
+          </div>
+        </div>
+      </section>
+
+      {/* ── FINAL CTA ──────────────────────────────────────────────────────── */}
+      <section className="max-w-5xl mx-auto px-6 py-28 text-center">
+        <h2 className="text-4xl font-bold mb-4">
+          Your customers are already looking.
+        </h2>
+        <p className="text-white/40 text-sm mb-10 max-w-xs mx-auto">
+          Give them one link that answers every question.
+        </p>
+        <Link
+          href="/signup"
+          className="inline-block bg-white text-black font-semibold px-8 py-3.5 rounded-xl text-sm hover:bg-white/90 transition-colors"
+        >
+          Build your OpenStatus — free
+        </Link>
+        <p className="text-white/20 text-xs mt-4">No credit card. No monthly fee to start.</p>
+      </section>
+
+      {/* ── FOOTER ─────────────────────────────────────────────────────────── */}
+      <footer className="border-t border-white/8 py-8">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-white/25 text-xs">
+          <span>© 2026 OpenStatus</span>
+          <div className="flex gap-5">
+            <Link href="/login" className="hover:text-white/50 transition-colors">Log in</Link>
+            <Link href="/signup" className="hover:text-white/50 transition-colors">Sign up free</Link>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  );
 }
