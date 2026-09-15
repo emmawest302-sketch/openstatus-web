@@ -132,6 +132,78 @@ function AnalyticsBar({ label, value, max, color }: { label: string; value: numb
   );
 }
 
+const BRAND_SHOWCASE_CARDS = [
+  {
+    name: 'Aster Salon',
+    status: 'Appointments today',
+    mark: 'A',
+    image: '/brand-showcase/aster-salon.webp',
+    alt: 'A salon guest relaxing with a face mask',
+    position: 'object-[center_28%]',
+    tilt: 'lg:-rotate-1',
+  },
+  {
+    name: 'Southbound',
+    status: 'Kitchen open until 10',
+    mark: 'S',
+    image: '/brand-showcase/southbound.webp',
+    alt: 'Avocado toast plated with fresh vegetables and edible flowers',
+    position: 'object-center',
+    tilt: 'lg:rotate-1',
+  },
+  {
+    name: 'Marlow Goods',
+    status: '4 spots left tonight',
+    mark: 'M',
+    image: '/brand-showcase/marlow-goods.webp',
+    alt: 'Fresh ingredients being prepared behind the counter',
+    position: 'object-center',
+    tilt: 'lg:-rotate-1',
+  },
+  {
+    name: 'FieldHouse',
+    status: 'Open until 8',
+    mark: 'F',
+    image: '/brand-showcase/fieldhouse.webp',
+    alt: 'Protective tanning goggles under purple studio lights',
+    position: 'object-center',
+    tilt: 'lg:rotate-1',
+  },
+] as const;
+
+function BrandShowcaseCard({ card }: { card: (typeof BRAND_SHOWCASE_CARDS)[number] }) {
+  return (
+    <article
+      className={cn(
+        'group relative isolate min-h-[310px] overflow-hidden rounded-[30px] bg-neutral-900 shadow-[0_24px_70px_rgba(32,28,20,0.16)] sm:min-h-[360px]',
+        card.tilt,
+      )}
+    >
+      <Image
+        src={card.image}
+        alt={card.alt}
+        fill
+        sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 24vw"
+        className={cn('object-cover transition-transform duration-700 group-hover:scale-[1.03]', card.position)}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/5 to-black/75" />
+
+      <div className="absolute inset-x-0 top-0 flex items-start justify-between p-6 text-white">
+        <span className="text-3xl font-black italic tracking-[-0.08em] drop-shadow-md">{card.mark}</span>
+        <span className="flex items-center gap-1.5 pt-1 text-[9px] font-semibold uppercase tracking-[0.2em] drop-shadow-md">
+          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+          Live
+        </span>
+      </div>
+
+      <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-7">
+        <h3 className="text-2xl font-bold tracking-[-0.04em] drop-shadow-md">{card.name}</h3>
+        <p className="mt-1 text-sm text-white/80 drop-shadow-md">{card.status}</p>
+      </div>
+    </article>
+  );
+}
+
 export default function HomePage() {
   const [statusIdx, setStatusIdx] = useState(0);
 
@@ -210,6 +282,29 @@ export default function HomePage() {
       </section>
 
       {/* ── STAT BAR ───────────────────────────────────────────────────────── */}
+      {/* ── BRAND SHOWCASE ── */}
+      <section className="overflow-hidden bg-[#e9e4d9] text-neutral-950">
+        <div className="mx-auto grid max-w-7xl items-center gap-14 px-6 py-24 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20 lg:px-10 lg:py-32">
+          <div className="max-w-2xl">
+            <span className="inline-flex rounded-full border border-black/15 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em]">
+              Looks like you
+            </span>
+            <h2 className="mt-9 text-5xl font-medium leading-[0.95] tracking-[-0.065em] sm:text-6xl lg:text-7xl">
+              Your brand<br />stays the hero.
+            </h2>
+            <p className="mt-8 max-w-xl text-base leading-relaxed text-neutral-600 sm:text-lg">
+              Logo, photography, colors and layout. Your OpenStatus should feel like your business built its own tiny mobile app — not like a generic stack of buttons.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:gap-6">
+            {BRAND_SHOWCASE_CARDS.map((card) => (
+              <BrandShowcaseCard key={card.name} card={card} />
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="border-y border-white/8 bg-white/[0.02]">
         <div className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
           {[
@@ -266,7 +361,7 @@ export default function HomePage() {
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold mb-3">Every block has a job</h2>
           <p className="text-white/40 text-sm max-w-xs mx-auto">
-            Turn on only what's relevant to your business.
+            Turn on only what&apos;s relevant to your business.
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -311,7 +406,7 @@ export default function HomePage() {
               Know what customers<br />actually want
             </h2>
             <p className="text-white/50 text-sm leading-relaxed mb-8 max-w-sm">
-              See exactly which blocks get tapped, so you can stop guessing and start promoting the right things — whether that's your menu, your hours, or your ordering link.
+              See exactly which blocks get tapped, so you can stop guessing and start promoting the right things — whether that&apos;s your menu, your hours, or your ordering link.
             </p>
             <ul className="space-y-3">
               {[
