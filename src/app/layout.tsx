@@ -12,7 +12,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: 'OpenStatus — the link in bio for small businesses',
   other: {
-    'facebook-domain-verification': '82roy3ov469ougv55y7wqh8dm00gqo',
+    'facebook-domain-verification': 'ylhwtdpq7osfq3efgjf4fmvdsfkord',
   },
   description:
     'A beautiful mobile link for small businesses with live status, hours, actions, branding, and analytics.',
