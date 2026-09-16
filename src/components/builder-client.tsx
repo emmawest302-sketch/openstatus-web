@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 // ── types ──────────────────────────────────────────────────────────────────────
@@ -1483,6 +1483,224 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
   );
 }
 
+
+// ── TemplatesPanel ─────────────────────────────────────────────────────────────
+const TEMPLATE_DEFS = [
+  {
+    id: 'coffee-shop',
+    name: 'Coffee Shop',
+    emoji: '☕',
+    desc: 'Cozy and warm — highlights hours, location, and social feed.',
+    bg: '#f8f5f0',
+    tags: ['Dine-in', 'Takeout', 'Free WiFi', 'Dog friendly'],
+    blocks: {
+      hours:    { on:true,  color:'#059669', size:'full'  as const },
+      location: { on:true,  color:'#d97706', size:'full'  as const },
+      menu:     { on:true,  color:'#d97706', size:'full'  as const },
+      order:    { on:false, color:'#d97706', size:'half'  as const },
+      book:     { on:false, color:'#7c3aed', size:'half'  as const },
+      socials:  { on:true,  color:'#d97706', size:'full'  as const },
+      website:  { on:false, color:'#0891b2', size:'full'  as const },
+      updates:  { on:true,  color:'#E1306C', size:'full'  as const },
+    },
+  },
+  {
+    id: 'boutique',
+    name: 'Boutique',
+    emoji: '🛍️',
+    desc: 'Clean and stylish — shows website, hours, and Instagram.',
+    bg: '#fafafa',
+    tags: ['Curbside pickup', 'Contactless pay'],
+    blocks: {
+      hours:    { on:true,  color:'#111827', size:'full'  as const },
+      location: { on:true,  color:'#111827', size:'full'  as const },
+      menu:     { on:false, color:'#d97706', size:'full'  as const },
+      order:    { on:false, color:'#dc2626', size:'half'  as const },
+      book:     { on:false, color:'#7c3aed', size:'half'  as const },
+      socials:  { on:true,  color:'#111827', size:'full'  as const },
+      website:  { on:true,  color:'#111827', size:'full'  as const },
+      updates:  { on:true,  color:'#E1306C', size:'full'  as const },
+    },
+  },
+  {
+    id: 'etsy-storefront',
+    name: 'Etsy Storefront',
+    emoji: '🎨',
+    desc: 'Creator-first — leads with your website link and social presence.',
+    bg: '#fff0f5',
+    tags: ['Delivery', 'Contactless pay'],
+    blocks: {
+      hours:    { on:false, color:'#db2777', size:'full'  as const },
+      location: { on:false, color:'#db2777', size:'full'  as const },
+      menu:     { on:false, color:'#d97706', size:'full'  as const },
+      order:    { on:false, color:'#dc2626', size:'half'  as const },
+      book:     { on:false, color:'#7c3aed', size:'half'  as const },
+      socials:  { on:true,  color:'#db2777', size:'full'  as const },
+      website:  { on:true,  color:'#db2777', size:'full'  as const },
+      updates:  { on:true,  color:'#E1306C', size:'full'  as const },
+    },
+  },
+  {
+    id: 'food-truck',
+    name: 'Food Truck',
+    emoji: '🚚',
+    desc: 'On-the-go essentials — location front-and-center with order links.',
+    bg: '#0a0a0a',
+    tags: ['Takeout', 'Delivery', 'Cash only', 'Outdoor seating'],
+    blocks: {
+      hours:    { on:true,  color:'#dc2626', size:'full'  as const },
+      location: { on:true,  color:'#dc2626', size:'full'  as const },
+      menu:     { on:true,  color:'#dc2626', size:'full'  as const },
+      order:    { on:true,  color:'#dc2626', size:'half'  as const },
+      book:     { on:false, color:'#7c3aed', size:'half'  as const },
+      socials:  { on:true,  color:'#dc2626', size:'full'  as const },
+      website:  { on:false, color:'#0891b2', size:'full'  as const },
+      updates:  { on:false, color:'#E1306C', size:'full'  as const },
+    },
+  },
+  {
+    id: 'yoga-studio',
+    name: 'Yoga Studio',
+    emoji: '🧘',
+    desc: 'Calm and inviting — booking and hours take the spotlight.',
+    bg: '#f0fdf4',
+    tags: ['Dine-in', 'Wheelchair accessible', 'Kid friendly'],
+    blocks: {
+      hours:    { on:true,  color:'#059669', size:'full'  as const },
+      location: { on:true,  color:'#059669', size:'full'  as const },
+      menu:     { on:false, color:'#d97706', size:'full'  as const },
+      order:    { on:false, color:'#dc2626', size:'half'  as const },
+      book:     { on:true,  color:'#059669', size:'half'  as const },
+      socials:  { on:true,  color:'#059669', size:'full'  as const },
+      website:  { on:true,  color:'#059669', size:'full'  as const },
+      updates:  { on:false, color:'#E1306C', size:'full'  as const },
+    },
+  },
+  {
+    id: 'barbershop',
+    name: 'Barbershop',
+    emoji: '✂️',
+    desc: 'Bold and sharp — bookings, hours, and social all visible.',
+    bg: '#111827',
+    tags: ['Reservations required', 'Contactless pay', 'Free WiFi'],
+    blocks: {
+      hours:    { on:true,  color:'#2563eb', size:'full'  as const },
+      location: { on:true,  color:'#2563eb', size:'full'  as const },
+      menu:     { on:false, color:'#d97706', size:'full'  as const },
+      order:    { on:false, color:'#dc2626', size:'half'  as const },
+      book:     { on:true,  color:'#2563eb', size:'half'  as const },
+      socials:  { on:true,  color:'#2563eb', size:'full'  as const },
+      website:  { on:false, color:'#0891b2', size:'full'  as const },
+      updates:  { on:true,  color:'#E1306C', size:'full'  as const },
+    },
+  },
+] as const;
+
+function TemplatesPanel({ config, setConfig }: {
+  config: OpenStatusPageConfig;
+  setConfig: React.Dispatch<React.SetStateAction<OpenStatusPageConfig>>;
+}) {
+  const [confirming, setConfirming] = useState<string|null>(null);
+
+  function applyTemplate(tpl: typeof TEMPLATE_DEFS[number]) {
+    setConfig(prev => ({
+      ...prev,
+      bg: tpl.bg,
+      tags: tpl.tags as unknown as string[],
+      blocks: DEFAULT_BLOCKS.map(def => {
+        const patch = tpl.blocks[def.id as keyof typeof tpl.blocks];
+        const existing = prev.blocks.find(b => b.id === def.id) ?? def;
+        return patch
+          ? { ...existing, on: patch.on, color: patch.color, size: patch.size }
+          : existing;
+      }),
+    }));
+    setConfirming(null);
+  }
+
+  const isDark = (hex: string) => {
+    const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    return (r*299+g*587+b*114)/1000 < 128;
+  };
+
+  return (
+    <div className="p-4 space-y-3">
+      <p className="text-[11px] text-black/40 font-medium uppercase tracking-widest mb-4">
+        Choose a template — your hours and links are kept
+      </p>
+      {TEMPLATE_DEFS.map(tpl => {
+        const dark = isDark(tpl.bg);
+        const isConfirming = confirming === tpl.id;
+        const activeBlocks = Object.values(tpl.blocks).filter(b => b.on).length;
+        return (
+          <div
+            key={tpl.id}
+            className="rounded-2xl border border-black/[.06] overflow-hidden"
+            style={{ background: tpl.bg }}
+          >
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className={`font-bold text-sm ${dark ? 'text-white' : 'text-[#232323]'}`}>
+                    {tpl.emoji} {tpl.name}
+                  </p>
+                  <p className={`text-xs mt-0.5 leading-snug ${dark ? 'text-white/60' : 'text-black/50'}`}>
+                    {tpl.desc}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {Object.entries(tpl.blocks)
+                      .filter(([,v]) => v.on)
+                      .map(([k]) => (
+                        <span
+                          key={k}
+                          className={`text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
+                            dark ? 'bg-white/15 text-white/70' : 'bg-black/8 text-black/50'
+                          }`}
+                        >
+                          {k}
+                        </span>
+                      ))
+                    }
+                  </div>
+                </div>
+                <div className="shrink-0 pt-0.5">
+                  {isConfirming ? (
+                    <div className="flex flex-col gap-1.5 items-end">
+                      <button
+                        onClick={() => applyTemplate(tpl)}
+                        className="text-[11px] font-bold px-3 py-1.5 rounded-xl bg-[#232323] text-white whitespace-nowrap"
+                      >
+                        Yes, apply
+                      </button>
+                      <button
+                        onClick={() => setConfirming(null)}
+                        className={`text-[10px] font-medium px-2 py-1 rounded-lg ${dark ? 'text-white/50 hover:text-white/70' : 'text-black/40 hover:text-black/60'}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirming(tpl.id)}
+                      className={`text-[11px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap transition-colors ${
+                        dark
+                          ? 'bg-white/20 text-white hover:bg-white/30'
+                          : 'bg-black/[.08] text-[#232323] hover:bg-black/[.14]'
+                      }`}
+                    >
+                      Use template
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── main export ────────────────────────────────────────────────────────────────
 export default function BuilderClient({ business,initialConfig }: {
   business:Business|null; initialConfig:OpenStatusPageConfig;
@@ -1823,41 +2041,7 @@ export default function BuilderClient({ business,initialConfig }: {
 
             {/* TEMPLATES */}
             {!showEditPanel && tab==='templates' && (
-              <div>
-                <div className="mb-8">
-                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Templates</h2>
-                  <p className="text-[#9B9B9B] text-[13px] mt-1">Example layouts to inspire your page.</p>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {[
-                    { label:'Coffee Shop', sub:'Espresso bar · Austin, TX', color:'#C8A97E', bg:'#1a0f0a', tags:['Dine-in','Free WiFi','Dog friendly'] },
-                    { label:'Boutique', sub:'Curated fashion · Nashville, TN', color:'#E879A0', bg:'#0f0a14', tags:['Outdoor seating','Kid friendly'] },
-                    { label:'Etsy Storefront', sub:'Handmade goods · Portland, OR', color:'#F97316', bg:'#f8f5f0', tags:['Delivery','Curbside pickup'] },
-                    { label:'Food Truck', sub:'Street tacos · Miami, FL', color:'#22C55E', bg:'#0a1a0f', tags:['Takeout','Catering','Vegan options'] },
-                    { label:'Yoga Studio', sub:'Mind & body · Denver, CO', color:'#A78BFA', bg:'#0d0a1a', tags:['Wheelchair accessible','Kid friendly'] },
-                    { label:'Barbershop', sub:'Cuts & fades · Chicago, IL', color:'#38BDF8', bg:'#0a0f1a', tags:['Dine-in','Free WiFi'] },
-                  ].map(t=>(
-                    <div key={t.label} className="rounded-2xl overflow-hidden border border-[#EBEBEB] cursor-default">
-                      <div className="px-4 py-5" style={{ background:t.bg }}>
-                        <div className="w-9 h-9 rounded-full mb-3" style={{ background:t.color+'40', border:`2px solid ${t.color}60` }}/>
-                        <p className="font-bold text-white text-[15px] leading-tight">{t.label}</p>
-                        <p className="text-[11px] mt-0.5" style={{ color:t.color+'99' }}>{t.sub}</p>
-                        <div className="mt-3 flex gap-1 flex-wrap">
-                          {t.tags.map(tg=><span key={tg} className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-white/60">{tg}</span>)}
-                        </div>
-                        <div className="mt-3 rounded-xl p-2.5" style={{ background:t.color+'18' }}>
-                          <div className="h-1.5 rounded-full bg-white/20 w-3/4 mb-1.5"/>
-                          <div className="h-1.5 rounded-full bg-white/10 w-1/2"/>
-                        </div>
-                      </div>
-                      <div className="px-4 py-3 bg-white flex items-center justify-between">
-                        <span className="text-[12px] font-semibold text-[#9B9B9B]">Coming soon</span>
-                        <span className="text-[11px] text-[#C0C0C0]">Apply →</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <TemplatesPanel config={config} setConfig={setConfig} />
             )}
           </div>
 
