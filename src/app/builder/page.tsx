@@ -4,15 +4,34 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BuilderClient from '@/components/builder-client';
-import { normalizeOpenStatusPageConfig } from '@/lib/openstatus-page-config';
+import { normalizeOpenStatusPageConfig, type OpenStatusPageConfig } from '@/components/builder-client';
 
 export const dynamic = 'force-dynamic';
 
-// Convert business_hours table rows into the WeeklyHours shape the builder uses
-function dbHoursToWeekly(rows) {
-  const KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
-  const result = {};
-  KEYS.forEach((key, i) => {
+interface DbHoursRow {
+  day_of_week: number;
+  opens_at: string | null;
+  closes_at: string | null;
+  is_closed: boolean;
+}
+
+interface BusinessData {
+  id: string;
+  name: string;
+  slug: string;
+  avatar_url?: string;
+  description?: string;
+  category?: string;
+  instagram_handle?: string;
+  _businessId: string;
+}
+
+type WeeklyKey = 'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat';
+const WEEK_KEYS: WeeklyKey[] = ['sun','mon','tue','wed','thu','fri','sat'];
+
+function dbHoursToWeekly(rows: DbHoursRow[]): Record<WeeklyKey, { open:string; close:string; closed:boolean }> {
+  const result = {} as Record<WeeklyKey, { open:string; close:string; closed:boolean }>;
+  WEEK_KEYS.forEach((key, i) => {
     const row = rows.find(r => r.day_of_week === i);
     result[key] = row && !row.is_closed
       ? { open: (row.opens_at || '09:00').slice(0, 5), close: (row.closes_at || '17:00').slice(0, 5), closed: false }
@@ -21,26 +40,11 @@ function dbHoursToWeekly(rows) {
   return result;
 }
 
-// Convert the builder's WeeklyHours back to business_hours rows for saving
-export function weeklyToDbRows(businessId, weekly) {
-  const KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
-  return KEYS.map((key, i) => {
-    const day = weekly[key] || { open: '09:00', close: '17:00', closed: true };
-    return {
-      business_id: businessId,
-      day_of_week: i,
-      opens_at: day.closed ? null : day.open,
-      closes_at: day.closed ? null : day.close,
-      is_closed: day.closed,
-    };
-  });
-}
-
 export default function BuilderPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [business, setBusiness] = useState(null);
-  const [initialConfig, setInitialConfig] = useState(null);
+  const [business, setBusiness] = useState<BusinessData | null>(null);
+  const [initialConfig, setInitialConfig] = useState<OpenStatusPageConfig | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -55,12 +59,9 @@ export default function BuilderPage() {
 
       if (!biz) { router.replace('/setup'); return; }
 
-      // Load page config from user metadata
       const raw = user.user_metadata?.openstatus_page ?? null;
       const config = normalizeOpenStatusPageConfig(raw);
 
-      // If the builder has never saved weeklyHours, seed from business_hours table
-      // (which setup populates). This keeps the two sources in sync on first visit.
       const hasMetaHours = raw && raw.weeklyHours && typeof raw.weeklyHours === 'object';
       if (!hasMetaHours) {
         const { data: dbHours } = await supabase
@@ -68,7 +69,7 @@ export default function BuilderPage() {
           .select('day_of_week, opens_at, closes_at, is_closed')
           .eq('business_id', biz.id);
         if (dbHours && dbHours.length > 0) {
-          config.weeklyHours = dbHoursToWeekly(dbHours);
+          config.weeklyHours = dbHoursToWeekly(dbHours as DbHoursRow[]);
         }
       }
 
@@ -86,5 +87,5 @@ export default function BuilderPage() {
     );
   }
 
-  return <BuilderClient business={business} initialConfig={initialConfig} />;
+  return <BuilderClient business={business} initialConfig={initialConfig!} />;
 }

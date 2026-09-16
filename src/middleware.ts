@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: CookieOptions }>) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
@@ -28,7 +28,6 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session — keeps the cookie alive and validates the token
   const { data: { user } } = await supabase.auth.getUser();
 
   const isProtected = PROTECTED_PREFIXES.some(prefix =>

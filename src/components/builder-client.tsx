@@ -19,7 +19,7 @@ interface OpenStatusBlock {
   yelpUrl?: string; googleUrl?: string; tripAdvisorUrl?: string;
   blockStyle?: string;
 }
-interface OpenStatusPageConfig {
+export interface OpenStatusPageConfig {
   blocks: OpenStatusBlock[]; bg: string; bgImage?: string;
   socials: Record<string, string>;
   location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
