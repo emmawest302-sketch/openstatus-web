@@ -20,8 +20,16 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     void (async () => {
-      // Supabase automatically handles the code-exchange from the URL
-      // when getSession() is called after an OAuth redirect
+      // Exchange the OAuth code in the URL for a real session (PKCE flow)
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          router.replace('/login?error=oauth');
+          return;
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.user) {
@@ -29,8 +37,6 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // Route new users (no business yet) to the step-by-step setup wizard,
-      // returning users straight to the builder
       const { data: biz } = await supabase
         .from('businesses')
         .select('id')
@@ -43,7 +49,7 @@ export default function AuthCallbackPage() {
 
   return (
     <main
-      className="grid min-h-screen place-items-center bg-[#F5F3ED]"
+      className="grid min-h-screen place-items-center bg-white"
       style={{ fontFamily: 'var(--font-poppins)' }}
     >
       <div className="flex flex-col items-center gap-4">
