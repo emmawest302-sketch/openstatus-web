@@ -14,6 +14,8 @@ interface OpenStatusBlock {
   url?: string; size?: BlockSize; color?: string; coverPhoto?: string;
   menuType?: 'url' | 'pdf' | 'photos'; menuFile?: string;
   appleMapsUrl?: string; reviewStars?: number; reviewCount?: number;
+  provider?: string;
+  yelpUrl?: string; googleUrl?: string;
 }
 interface OpenStatusPageConfig {
   blocks: OpenStatusBlock[]; bg: string; bgImage?: string;
@@ -32,8 +34,23 @@ const BG_PRESETS = [
   '#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c',
 ];
 const BLOCK_COLORS = ['#2563eb','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0891b2','#0a0a0a'];
-const ORDER_PROVIDERS = ['DoorDash','Uber Eats','Grubhub','Square','Toast','Other'];
-const BOOK_PROVIDERS  = ['Resy','OpenTable','Calendly','Square Appts','Acuity','Mindbody','Other'];
+const ORDER_PROVIDERS = [
+  { key:'doordash',  label:'DoorDash'  },
+  { key:'ubereats',  label:'Uber Eats' },
+  { key:'grubhub',   label:'Grubhub'   },
+  { key:'square',    label:'Square'    },
+  { key:'toast',     label:'Toast'     },
+  { key:'other',     label:'Other'     },
+];
+const BOOK_PROVIDERS = [
+  { key:'resy',       label:'Resy'         },
+  { key:'opentable',  label:'OpenTable'    },
+  { key:'calendly',   label:'Calendly'     },
+  { key:'squareappts',label:'Square Appts' },
+  { key:'acuity',     label:'Acuity'       },
+  { key:'mindbody',   label:'Mindbody'     },
+  { key:'other',      label:'Other'        },
+];
 const SOCIAL_PLATFORMS = [
   { key:'instagram', label:'Instagram' },
   { key:'tiktok',    label:'TikTok'    },
@@ -224,6 +241,169 @@ function SocialIcon({ platform, size=22 }: { platform:string; size?:number }) {
   }
 }
 
+// ── Brand provider icons ──────────────────────────────────────────────────────
+function IconDoorDash({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#FF3008"/>
+      {/* D letterform — door shape */}
+      <path d="M9 9h7.5C20.1 9 23 11.9 23 16s-2.9 7-6.5 7H9V9z" fill="white" opacity="0.95"/>
+      <path d="M12 12.5h4.2c1.8 0 3.3 1.6 3.3 3.5s-1.5 3.5-3.3 3.5H12v-7z" fill="#FF3008"/>
+    </svg>
+  );
+}
+function IconUberEats({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#09091A"/>
+      {/* fork left */}
+      <path d="M11 8v5.5M11 13.5a2.5 2.5 0 0 0 0 5V24" stroke="white" strokeWidth="1.9" strokeLinecap="round" fill="none"/>
+      {/* circle right */}
+      <circle cx="20" cy="16" r="5" stroke="#06C167" strokeWidth="2" fill="none"/>
+    </svg>
+  );
+}
+function IconGrubhub({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#F63440"/>
+      {/* G mark */}
+      <path d="M20.5 13.5C19.4 11.6 17.4 10.5 15 10.5 11.4 10.5 8.5 13.4 8.5 17s2.9 6.5 6.5 6.5c3.3 0 6-2.4 6.4-5.5H15v-2h8.5v1.5c0 4.7-3.8 8.5-8.5 8.5C10.1 26 6 21.9 6 17S10.1 8 15 8c3 0 5.7 1.5 7.3 3.8l-1.8 1.7z" fill="white"/>
+    </svg>
+  );
+}
+function IconSquare({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#000"/>
+      {/* Square logo mark — rounded square inside */}
+      <rect x="9" y="9" width="14" height="14" rx="3" fill="white"/>
+      <rect x="12" y="12" width="8" height="8" rx="1.5" fill="#000"/>
+    </svg>
+  );
+}
+function IconToast({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#FF4C00"/>
+      <path d="M9 12h14M16 12v12" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconOpenTable({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#DA3743"/>
+      {/* fork */}
+      <path d="M11 8v16M11 11c0 0 3.5 1.5 3.5 4s-3.5 4-3.5 4" stroke="white" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      {/* knife */}
+      <path d="M20 8l-1.5 8H20v8" stroke="white" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    </svg>
+  );
+}
+function IconResy({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#000"/>
+      {/* Bold R */}
+      <path d="M11 8h7a4 4 0 0 1 0 8h-7V8z" fill="none" stroke="white" strokeWidth="2.2" strokeLinejoin="round"/>
+      <path d="M18 16l5 8" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+      <line x1="11" y1="8" x2="11" y2="24" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconCalendly({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#006BFF"/>
+      <rect x="7" y="10" width="18" height="15" rx="2.5" stroke="white" strokeWidth="1.9" fill="none"/>
+      <path d="M7 15h18" stroke="white" strokeWidth="1.5"/>
+      <path d="M12 7v5M20 7v5" stroke="white" strokeWidth="1.9" strokeLinecap="round"/>
+      <circle cx="12" cy="20" r="1.2" fill="white"/>
+      <circle cx="16" cy="20" r="1.2" fill="white"/>
+      <circle cx="20" cy="20" r="1.2" fill="white"/>
+    </svg>
+  );
+}
+function IconAcuity({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#5C2D91"/>
+      {/* A shape */}
+      <path d="M16 8l7 16h-14L16 8z" fill="none" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
+      <line x1="11.5" y1="19" x2="20.5" y2="19" stroke="white" strokeWidth="2"/>
+    </svg>
+  );
+}
+function IconMindbody({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#1D1D1D"/>
+      {/* M shape */}
+      <path d="M7 22V10l5 7 5-7v12" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      {/* person dot */}
+      <circle cx="24" cy="12" r="2.5" fill="white"/>
+      <path d="M24 15v7" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconYelp({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#D32323"/>
+      {/* Yelp star/burst */}
+      <path d="M16 5l2 6.5H24l-5 3.8 2 6.5L16 18l-5 3.8 2-6.5-5-3.8h6z" fill="white"/>
+    </svg>
+  );
+}
+function IconGoogle({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="white" stroke="#EBEBEB" strokeWidth="1"/>
+      {/* Google G */}
+      <path d="M24 16.3c0-.6-.1-1.2-.2-1.8H16v3.4h4.5c-.2 1-.8 1.9-1.7 2.4v2h2.7C23 20.6 24 18.6 24 16.3z" fill="#4285F4"/>
+      <path d="M16 25c2.3 0 4.2-.7 5.5-2l-2.7-2c-.7.5-1.7.8-2.8.8-2.2 0-4-1.4-4.6-3.4H8.6v2.1C9.9 23.1 12.7 25 16 25z" fill="#34A853"/>
+      <path d="M11.4 18.4c-.2-.5-.3-1-.3-1.6s.1-1.1.3-1.6v-2.1H8.6C8 14.5 7.5 15.7 7.5 17s.5 2.5 1.1 3.5l2.8-2.1z" fill="#FBBC05"/>
+      <path d="M16 11.8c1.3 0 2.4.4 3.3 1.3l2.4-2.4C20.2 9.2 18.3 8.5 16 8.5c-3.3 0-6.1 1.9-7.4 4.7l2.8 2.1c.6-2 2.4-3.5 4.6-3.5z" fill="#EA4335"/>
+    </svg>
+  );
+}
+function IconTripAdvisor({ size=32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="7" fill="#34E0A1"/>
+      {/* Owl eyes (TripAdvisor's icon) */}
+      <circle cx="11" cy="17" r="4" fill="white"/>
+      <circle cx="21" cy="17" r="4" fill="white"/>
+      <circle cx="11" cy="17" r="2.2" fill="#000"/>
+      <circle cx="21" cy="17" r="2.2" fill="#000"/>
+      <circle cx="11.7" cy="16.3" r="0.7" fill="white"/>
+      <circle cx="21.7" cy="16.3" r="0.7" fill="white"/>
+      {/* Beak */}
+      <path d="M14.5 21c.6.9 1.5 1.4 2 1.4s1.4-.5 2-1.4" stroke="#000" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
+      {/* Eyebrows */}
+      <path d="M7 14c1-2 2.5-3 4-3M25 14c-1-2-2.5-3-4-3" stroke="#000" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+    </svg>
+  );
+}
+
+function ProviderIcon({ providerKey, size=32 }: { providerKey: string; size?: number }) {
+  switch(providerKey) {
+    case 'doordash':   return <IconDoorDash size={size}/>;
+    case 'ubereats':   return <IconUberEats size={size}/>;
+    case 'grubhub':    return <IconGrubhub size={size}/>;
+    case 'square':
+    case 'squareappts':return <IconSquare size={size}/>;
+    case 'toast':      return <IconToast size={size}/>;
+    case 'opentable':  return <IconOpenTable size={size}/>;
+    case 'resy':       return <IconResy size={size}/>;
+    case 'calendly':   return <IconCalendly size={size}/>;
+    case 'acuity':     return <IconAcuity size={size}/>;
+    case 'mindbody':   return <IconMindbody size={size}/>;
+    default:           return <LucideGlobe size={size} color="#9B9B9B"/>;
+  }
+}
+
 // ── UI primitives ──────────────────────────────────────────────────────────────
 function Toggle({ on, onChange }: { on:boolean; onChange:(v:boolean)=>void }) {
   return (
@@ -253,6 +433,34 @@ function PillSelect({ options,selected,onSelect }: { options:string[]; selected:
           {o}
         </button>
       ))}
+    </div>
+  );
+}
+
+// Brand provider picker — logo cards
+function BrandProviderPicker({ providers, selectedKey, onSelect }: {
+  providers: { key: string; label: string }[];
+  selectedKey: string;
+  onSelect: (key: string, label: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {providers.map(({ key, label }) => {
+        const active = selectedKey === key;
+        return (
+          <button
+            key={key}
+            onClick={() => onSelect(key, label)}
+            className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3 transition-all ${active ? 'border-[#0A0A0A] bg-[#F5F5F5] shadow-sm' : 'border-[#EBEBEB] hover:border-[#C0C0C0] bg-white'}`}
+          >
+            {key === 'other'
+              ? <div className="w-8 h-8 rounded-xl border-2 border-dashed border-[#D4D4D4] flex items-center justify-center"><LucideGlobe size={14} color="#9B9B9B"/></div>
+              : <ProviderIcon providerKey={key} size={32}/>
+            }
+            <span className={`text-[10px] font-semibold leading-tight text-center ${active ? 'text-[#0A0A0A]' : 'text-[#6B6B6B]'}`}>{label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -521,6 +729,21 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
                       </div>
                     </div>
                   );
+                  // ordering / booking: show provider logo if set
+                  if((b.id==='order'||b.id==='book') && b.provider && b.provider!=='other') return (
+                    <div className="rounded-2xl border overflow-hidden" style={{ borderColor:bdr }}>
+                      <div className="flex items-center gap-1.5 px-2 py-1.5" style={{ background:cardBg }}>
+                        <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                          <ProviderIcon providerKey={b.provider} size={24}/>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
+                          {!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>}
+                        </div>
+                        <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
+                      </div>
+                    </div>
+                  );
                   return (
                     <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
                       <BlockIcon id={b.id} size={10} color={b.color}/>
@@ -610,19 +833,38 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                 <FieldLabel>Apple Maps URL</FieldLabel>
                 <Input value={block.appleMapsUrl??''} onChange={v=>onUpdateBlock({appleMapsUrl:v})} placeholder="Paste from Apple Maps → Share → Copy link"/>
               </div>
+              {/* Review platforms */}
+              <div>
+                <FieldLabel>Review profiles</FieldLabel>
+                <p className="text-xs text-[#9B9B9B] mb-3">Paste your listings — we pull your rating automatically</p>
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0"><IconYelp size={28}/></div>
+                    <Input value={block.yelpUrl??''} onChange={v=>onUpdateBlock({yelpUrl:v})} placeholder="Paste your Yelp listing URL…"/>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0"><IconGoogle size={28}/></div>
+                    <Input value={block.googleUrl??''} onChange={v=>onUpdateBlock({googleUrl:v})} placeholder="Paste your Google Business profile URL…"/>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0"><IconTripAdvisor size={28}/></div>
+                    <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste your TripAdvisor listing URL…"/>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <FieldLabel>Star rating (0–5)</FieldLabel>
+                  <FieldLabel>Combined star rating (0–5)</FieldLabel>
                   <Input type="number" value={block.reviewStars?.toString()??''} onChange={v=>onUpdateBlock({reviewStars:parseFloat(v)||undefined})} placeholder="e.g. 4.7"/>
                   {block.reviewStars&&block.reviewStars>0&&(
                     <p className="text-[11px] text-[#6B6B6B] mt-1.5 flex items-center gap-1">
                       <LucideStar size={10} color="#f59e0b" filled/>
-                      {block.reviewStars} → <strong>{starsToPercent(block.reviewStars)}% positive</strong>
+                      {block.reviewStars} stars → <strong>{starsToPercent(block.reviewStars)}% positive</strong>
                     </p>
                   )}
                 </div>
                 <div>
-                  <FieldLabel>Review count</FieldLabel>
+                  <FieldLabel>Total review count</FieldLabel>
                   <Input type="number" value={block.reviewCount?.toString()??''} onChange={v=>onUpdateBlock({reviewCount:parseInt(v)||undefined})} placeholder="e.g. 312"/>
                 </div>
               </div>
@@ -719,8 +961,15 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── ORDER ── */}
           {block.id==='order' && (
             <div className="space-y-5">
-              <div><FieldLabel>Platform</FieldLabel><PillSelect options={ORDER_PROVIDERS} selected={block.sub} onSelect={v=>onUpdateBlock({sub:v})}/></div>
-              <div><FieldLabel>Ordering URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
+              <div>
+                <FieldLabel>Platform</FieldLabel>
+                <BrandProviderPicker
+                  providers={ORDER_PROVIDERS}
+                  selectedKey={block.provider??''}
+                  onSelect={(key,label)=>onUpdateBlock({ provider:key, sub:label })}
+                />
+              </div>
+              <div><FieldLabel>Link to your listing</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste your DoorDash / Uber Eats / Grubhub link…"/></div>
             </div>
           )}
 
@@ -728,8 +977,15 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {block.id==='book' && (
             <div className="space-y-5">
               <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
-              <div><FieldLabel>Platform</FieldLabel><PillSelect options={BOOK_PROVIDERS} selected={block.sub} onSelect={v=>onUpdateBlock({sub:v})}/></div>
-              <div><FieldLabel>Booking URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
+              <div>
+                <FieldLabel>Platform</FieldLabel>
+                <BrandProviderPicker
+                  providers={BOOK_PROVIDERS}
+                  selectedKey={block.provider??''}
+                  onSelect={(key,label)=>onUpdateBlock({ provider:key, sub:label })}
+                />
+              </div>
+              <div><FieldLabel>Booking link</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste your Resy / OpenTable / Calendly link…"/></div>
             </div>
           )}
 
