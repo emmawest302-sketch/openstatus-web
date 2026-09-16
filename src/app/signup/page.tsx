@@ -66,10 +66,10 @@ export default function SignupPage() {
   };
 
   const busy = loading || oauthLoading !== null;
-  const field = 'w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#C8FF62]/25';
+  const field = 'w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#232323]/10';
 
-  return <main className="relative min-h-screen overflow-hidden bg-[#F5F3ED] text-[#101010]" style={{fontFamily:'var(--font-poppins)'}}>
-    <div className="absolute -left-24 top-20 h-80 w-80 rounded-full bg-[#C8FF62]/55 blur-3xl"/>
+  return <main className="relative min-h-screen overflow-hidden bg-white text-[#232323]" style={{fontFamily:'var(--font-poppins)'}}>
+    <div className="absolute -left-24 top-20 h-80 w-80 rounded-full bg-[#FFF2C1]/55 blur-3xl"/>
     <div className="absolute right-[-80px] top-[18%] h-96 w-96 rounded-full bg-[#CBD9FF]/70 blur-3xl"/>
     <div className="absolute bottom-[-80px] left-[38%] h-72 w-72 rounded-full bg-[#F8AE9D]/35 blur-3xl"/>
     <header className="relative z-10 mx-auto flex w-[min(94%,1180px)] items-center justify-between pt-5">
@@ -111,7 +111,7 @@ export default function SignupPage() {
           <label className="block"><span className="mb-2 block text-xs font-semibold">Email</span><input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@business.com" className={field} required/></label>
           <label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input type="password" autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} className={field} required/></label>
           {error ? <p className="rounded-[16px] bg-[#F8AE9D]/65 p-4 text-sm" role="alert">{error}</p> : null}
-          {notice ? <p className="rounded-[16px] bg-[#C8FF62]/55 p-4 text-sm" aria-live="polite">{notice}</p> : null}
+          {notice ? <p className="rounded-[16px] bg-[#FFF2C1]/55 p-4 text-sm" aria-live="polite">{notice}</p> : null}
           <button type="submit" disabled={busy} className="flex min-h-14 w-full items-center justify-between rounded-full bg-black px-5 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-40"><span>{loading?'Creating account...':'Create account'}</span><span>↗</span></button>
         </form>
         <p className="mt-6 text-sm text-black/50">Already have an OpenStatus? <Link href="/login" className="font-semibold text-black">Sign in →</Link></p>

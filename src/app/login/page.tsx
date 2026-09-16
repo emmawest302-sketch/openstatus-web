@@ -66,9 +66,9 @@ export default function LoginPage() {
 
   const busy = loading || oauthLoading !== null;
 
-  return <main className="relative min-h-screen overflow-hidden bg-[#F5F3ED] text-[#101010]" style={{fontFamily:'var(--font-poppins)'}}>
+  return <main className="relative min-h-screen overflow-hidden bg-white text-[#232323]" style={{fontFamily:'var(--font-poppins)'}}>
     <div className="absolute -right-28 top-16 h-80 w-80 rounded-full bg-[#CBD9FF]/75 blur-3xl" />
-    <div className="absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-[#C8FF62]/45 blur-3xl" />
+    <div className="absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-[#FFF2C1]/45 blur-3xl" />
     <div className="absolute right-[18%] bottom-[10%] h-56 w-56 rounded-full bg-[#F8AE9D]/30 blur-3xl" />
 
     <header className="relative z-10 mx-auto flex w-[min(94%,1180px)] items-center justify-between pt-5">
@@ -107,8 +107,8 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          <label className="block"><span className="mb-2 block text-xs font-semibold">Email</span><input type="email" autoComplete="email" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="you@business.com" className="w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#CBD9FF]/40" required/></label>
-          <label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input type="password" autoComplete="current-password" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Your password" className="w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#CBD9FF]/40" required/></label>
+          <label className="block"><span className="mb-2 block text-xs font-semibold">Email</span><input type="email" autoComplete="email" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="you@business.com" className="w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#232323]/10" required/></label>
+          <label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input type="password" autoComplete="current-password" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Your password" className="w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#232323]/10" required/></label>
           {error ? <p className="rounded-[16px] bg-[#F8AE9D]/65 p-4 text-sm" role="alert">{error}</p> : null}
           <button type="submit" disabled={busy} className="flex min-h-14 w-full items-center justify-between rounded-full bg-black px-5 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-40"><span>{loading?'Signing in...':'Sign in'}</span><span>↗</span></button>
         </form>

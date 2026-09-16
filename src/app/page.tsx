@@ -17,7 +17,7 @@ const STATUS_CYCLE = ['Open', 'Busy', 'Closing Early', 'Closed'] as const;
 type Status = (typeof STATUS_CYCLE)[number];
 
 const STATUS_DOT: Record<Status, string> = {
-  Open: 'bg-emerald-500',
+  Open: 'bg-[#74A36D]',
   Busy: 'bg-amber-400',
   'Closing Early': 'bg-orange-400',
   Closed: 'bg-red-400',
@@ -175,7 +175,7 @@ function PhonePreview({ status }: { status: Status }) {
 
       <div className="grid grid-cols-3 gap-1.5 px-3 pt-3">
         {['Website', 'Directions', 'Call'].map((label) => (
-          <div key={label} className="rounded-xl bg-[#F5F5F5] px-1 py-2.5 text-center text-[9px] font-semibold text-neutral-700">
+          <div key={label} className="rounded-xl bg-[#F3F2F2] px-1 py-2.5 text-center text-[9px] font-semibold text-neutral-700">
             {label}
           </div>
         ))}
@@ -186,7 +186,7 @@ function PhonePreview({ status }: { status: Status }) {
           { label: "Today's hours", sub: '7:00 AM – 3:00 PM' },
           { label: 'Usual weekly hours', sub: 'View the full schedule' },
         ].map((b) => (
-          <div key={b.label} className="flex items-center rounded-xl bg-[#F5F5F5] px-3 py-2.5">
+          <div key={b.label} className="flex items-center rounded-xl bg-[#F3F2F2] px-3 py-2.5">
             <div className="min-w-0">
               <p className="text-[10px] font-medium leading-tight text-neutral-800">{b.label}</p>
               <p className="text-[8px] leading-tight text-neutral-400">{b.sub}</p>
@@ -203,12 +203,12 @@ function PhonePreview({ status }: { status: Status }) {
 
 function FeatureCard({ icon, title, desc }: { icon: ReactNode; title: string; desc: string }) {
   return (
-    <div className="bg-white/[0.03] border border-white/8 rounded-2xl p-5 hover:bg-white/[0.05] transition-colors">
-      <div className="w-9 h-9 rounded-xl bg-white/8 flex items-center justify-center mb-3 text-white/60">
+    <div className="bg-[#F3F2F2] border border-black/7 rounded-2xl p-5 hover:bg-[#ECEAEA] transition-colors">
+      <div className="w-9 h-9 rounded-xl bg-black/8 flex items-center justify-center mb-3 text-[#232323]/60">
         {icon}
       </div>
-      <p className="font-semibold text-white text-sm mb-1.5">{title}</p>
-      <p className="text-white/45 text-xs leading-relaxed">{desc}</p>
+      <p className="font-semibold text-[#232323] text-sm mb-1.5">{title}</p>
+      <p className="text-[#232323]/50 text-xs leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -316,28 +316,28 @@ export default function HomePage() {
   const currentStatus = STATUS_CYCLE[statusIdx];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-white text-[#232323]">
 
       {/* ── NAV ── */}
-      <nav className="sticky top-0 z-50 border-b border-white/8 bg-[#0a0a0a]/90 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-black/8 bg-white/90 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <span className="font-bold tracking-tight text-sm">OpenStatus</span>
           <div className="flex items-center gap-5">
-            <a href="#how" className="text-sm text-white/50 hover:text-white transition-colors hidden sm:block">
+            <a href="#how" className="text-sm text-[#232323]/50 hover:text-[#232323] transition-colors hidden sm:block">
               How it works
             </a>
-            <a href="#features" className="text-sm text-white/50 hover:text-white transition-colors hidden sm:block">
+            <a href="#features" className="text-sm text-[#232323]/50 hover:text-[#232323] transition-colors hidden sm:block">
               Features
             </a>
-            <a href="#examples" className="text-sm text-white/50 hover:text-white transition-colors hidden md:block">
+            <a href="#examples" className="text-sm text-[#232323]/50 hover:text-[#232323] transition-colors hidden md:block">
               Examples
             </a>
-            <Link href="/login" className="text-sm text-white/50 hover:text-white transition-colors">
+            <Link href="/login" className="text-sm text-[#232323]/50 hover:text-[#232323] transition-colors">
               Log in
             </Link>
             <Link
               href="/signup"
-              className="text-sm bg-white text-black font-semibold px-4 py-1.5 rounded-full hover:bg-white/90 transition-colors"
+              className="text-sm bg-[#232323] text-white font-semibold px-4 py-1.5 rounded-full hover:bg-[#111] transition-colors"
             >
               Create your page
             </Link>
@@ -349,27 +349,27 @@ export default function HomePage() {
       <section className="max-w-5xl mx-auto px-6 pt-20 pb-16">
         <div className="flex flex-col lg:flex-row items-center gap-14">
           <div className="flex-1 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 bg-white/6 border border-white/10 rounded-full px-3 py-1 text-xs text-white/55 mb-8">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+            <div className="inline-flex items-center gap-2 bg-[#F3F2F2] border border-black/8 rounded-full px-3 py-1 text-xs text-[#232323]/55 mb-8">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#74A36D] inline-block animate-pulse" />
               Free to start — no credit card
             </div>
             <h1 className="text-4xl lg:text-5xl font-bold leading-[1.1] tracking-[-0.025em] mb-5">
               The live page<br />
               for your business.
             </h1>
-            <p className="text-white/50 text-lg leading-relaxed mb-8 max-w-md mx-auto lg:mx-0">
+            <p className="text-[#232323]/50 text-lg leading-relaxed mb-8 max-w-md mx-auto lg:mx-0">
               Hours, directions, your menu, ordering, reservations — one link, always current. Stop sending customers on a scavenger hunt.
             </p>
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
               <Link
                 href="/signup"
-                className="bg-white text-black font-semibold px-6 py-3 rounded-xl hover:bg-white/90 transition-colors text-sm"
+                className="bg-[#232323] text-white font-semibold px-6 py-3 rounded-full hover:bg-[#111] transition-colors text-sm"
               >
                 Build your page — free
               </Link>
               <a
                 href="#how"
-                className="border border-white/15 text-white/65 px-6 py-3 rounded-xl hover:border-white/30 hover:text-white transition-colors text-sm"
+                className="border-2 border-[#232323] text-[#232323] px-6 py-3 rounded-full hover:bg-[#F3F2F2] transition-colors text-sm font-semibold"
               >
                 See how it works
               </a>
@@ -377,28 +377,28 @@ export default function HomePage() {
           </div>
 
           <div className="flex-shrink-0 relative">
-            <div className="absolute inset-0 bg-white/[0.04] blur-[80px] rounded-full scale-150 pointer-events-none" />
+            <div className="absolute inset-0 bg-[#B4C1EF]/20 blur-[80px] rounded-full scale-150 pointer-events-none" />
             <PhonePreview status={currentStatus} />
           </div>
         </div>
       </section>
 
       {/* ── PROBLEM ── */}
-      <section className="border-t border-white/8 bg-[#0d0d0d]">
+      <section className="border-t border-black/8 bg-[#F3F2F2]">
         <div className="max-w-4xl mx-auto px-6 py-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold tracking-[-0.02em] mb-4">
               Your info is scattered.<br />
-              <span className="text-white/30">Customers give up before they find you.</span>
+              <span className="text-[#232323]/30">Customers give up before they find you.</span>
             </h2>
-            <p className="text-white/35 text-sm leading-relaxed max-w-sm mx-auto">
+            <p className="text-[#232323]/40 text-sm leading-relaxed max-w-sm mx-auto">
               Hours on Google, menu in your bio, booking link buried somewhere — one link fixes all of it.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
-            <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/25 mb-5">Before</p>
+            <div className="rounded-2xl border border-black/8 bg-white p-6">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#232323]/30 mb-5">Before</p>
               <div className="space-y-3">
                 {[
                   'Hours on Google (when someone updates them)',
@@ -408,17 +408,17 @@ export default function HomePage() {
                   'Phone number nowhere to be found',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3">
-                    <span className="mt-0.5 w-4 h-4 rounded-full bg-red-500/12 flex items-center justify-center flex-shrink-0">
-                      <IconX size={7} color="rgb(252 165 165)" />
+                    <span className="mt-0.5 w-4 h-4 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                      <IconX size={7} color="rgb(239 68 68)" />
                     </span>
-                    <p className="text-[12px] text-white/35 leading-snug">{item}</p>
+                    <p className="text-[12px] text-[#232323]/45 leading-snug">{item}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/25 mb-5">With OpenStatus</p>
+            <div className="rounded-2xl border border-black/8 bg-white p-6">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#232323]/30 mb-5">With OpenStatus</p>
               <div className="space-y-3">
                 {[
                   'Live hours and status — always accurate',
@@ -428,10 +428,10 @@ export default function HomePage() {
                   'Updated in seconds from your phone',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-3">
-                    <span className="mt-0.5 w-4 h-4 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-                      <IconCheck size={8} color="rgb(52 211 153)" />
+                    <span className="mt-0.5 w-4 h-4 rounded-full bg-[#74A36D]/15 flex items-center justify-center flex-shrink-0">
+                      <IconCheck size={8} color="#74A36D" />
                     </span>
-                    <p className="text-[12px] text-white/65 leading-snug">{item}</p>
+                    <p className="text-[12px] text-[#232323]/70 leading-snug">{item}</p>
                   </div>
                 ))}
               </div>
@@ -464,17 +464,17 @@ export default function HomePage() {
       </section>
 
       {/* ── LIVE STATUS ── */}
-      <section className="border-t border-white/8">
+      <section className="border-t border-black/8 bg-white">
         <div className="max-w-5xl mx-auto px-6 py-24 flex flex-col lg:flex-row items-center gap-16">
           <div className="flex-1 text-center lg:text-left">
-            <span className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/30 mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+            <span className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#232323]/35 mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#74A36D] animate-pulse inline-block" />
               Live status
             </span>
             <h2 className="text-3xl lg:text-4xl font-bold tracking-[-0.02em] mb-4">
               Your status, always current.
             </h2>
-            <p className="text-white/40 text-sm leading-relaxed mb-10 max-w-sm mx-auto lg:mx-0">
+            <p className="text-[#232323]/45 text-sm leading-relaxed mb-10 max-w-sm mx-auto lg:mx-0">
               Open, closing early, running a special — update in seconds from your phone. Customers see it before they start driving.
             </p>
             <div className="space-y-2 max-w-sm mx-auto lg:mx-0 text-left">
@@ -484,19 +484,19 @@ export default function HomePage() {
                   className={cn(
                     'flex items-center gap-3 rounded-xl px-4 py-3 border transition-all duration-500',
                     currentStatus === s
-                      ? 'border-white/12 bg-white/[0.05]'
+                      ? 'border-black/10 bg-[#F3F2F2]'
                       : 'border-transparent',
                   )}
                 >
                   <span className={cn('w-2.5 h-2.5 rounded-full flex-shrink-0 transition-all duration-500', STATUS_DOT[s])} />
                   <span className={cn(
                     'text-sm font-medium transition-all duration-500',
-                    currentStatus === s ? 'text-white' : 'text-white/25',
+                    currentStatus === s ? 'text-[#232323]' : 'text-[#232323]/25',
                   )}>
                     {STATUS_LABEL[s]}
                   </span>
                   {currentStatus === s && (
-                    <span className="ml-auto text-[10px] text-white/30 font-medium">Now showing</span>
+                    <span className="ml-auto text-[10px] text-[#232323]/35 font-medium">Now showing</span>
                   )}
                 </div>
               ))}
@@ -504,14 +504,14 @@ export default function HomePage() {
           </div>
 
           <div className="flex-shrink-0 relative">
-            <div className="absolute inset-0 bg-white/[0.03] blur-[80px] rounded-full scale-150 pointer-events-none" />
+            <div className="absolute inset-0 bg-[#B4C1EF]/15 blur-[80px] rounded-full scale-150 pointer-events-none" />
             <PhonePreview status={currentStatus} />
           </div>
         </div>
       </section>
 
       {/* ── STAT BAR ── */}
-      <section className="border-t border-white/8 bg-white/[0.02]">
+      <section className="border-t border-black/8 bg-[#F3F2F2]">
         <div className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
           {[
             { value: '2,481', label: 'Customer visits' },
@@ -520,8 +520,8 @@ export default function HomePage() {
             { value: '219', label: 'Orders placed' },
           ].map(({ value, label }) => (
             <div key={label}>
-              <p className="text-2xl lg:text-3xl font-bold text-white">{value}</p>
-              <p className="text-white/35 text-xs mt-1">{label}</p>
+              <p className="text-2xl lg:text-3xl font-bold text-[#232323]">{value}</p>
+              <p className="text-[#232323]/40 text-xs mt-1">{label}</p>
             </div>
           ))}
         </div>
@@ -531,7 +531,7 @@ export default function HomePage() {
       <section id="how" className="max-w-5xl mx-auto px-6 py-24">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold tracking-[-0.02em] mb-3">Up and running in minutes</h2>
-          <p className="text-white/40 text-sm max-w-xs mx-auto">No developer. No monthly fee to start.</p>
+          <p className="text-[#232323]/40 text-sm max-w-xs mx-auto">No developer. No monthly fee to start.</p>
         </div>
         <div className="grid lg:grid-cols-3 gap-10">
           {[
@@ -552,9 +552,9 @@ export default function HomePage() {
             },
           ].map(({ step, title, desc }) => (
             <div key={step}>
-              <p className="text-7xl font-black text-white/[0.04] leading-none mb-3 select-none">{step}</p>
-              <h3 className="font-semibold text-base mb-2">{title}</h3>
-              <p className="text-white/40 text-sm leading-relaxed">{desc}</p>
+              <p className="text-7xl font-black text-black/[0.05] leading-none mb-3 select-none">{step}</p>
+              <h3 className="font-semibold text-base mb-2 text-[#232323]">{title}</h3>
+              <p className="text-[#232323]/45 text-sm leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>
@@ -564,7 +564,7 @@ export default function HomePage() {
       <section id="features" className="max-w-5xl mx-auto px-6 pb-24">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold tracking-[-0.02em] mb-3">Every block has a job</h2>
-          <p className="text-white/40 text-sm max-w-xs mx-auto">
+          <p className="text-[#232323]/40 text-sm max-w-xs mx-auto">
             Turn on only what&apos;s relevant to your business.
           </p>
         </div>
@@ -602,8 +602,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── ANALYTICS ── */}
-      <section className="border-t border-white/8 bg-white/[0.015]">
+      {/* ── ANALYTICS — stays dark, single brand anchor ── */}
+      <section className="border-t border-black/8 bg-[#232323] text-white">
         <div className="max-w-5xl mx-auto px-6 py-24 flex flex-col lg:flex-row items-center gap-16">
           <div className="flex-1">
             <h2 className="text-3xl font-bold tracking-[-0.02em] mb-4">
@@ -620,8 +620,8 @@ export default function HomePage() {
                 'Directions vs menu vs ordering split',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-sm text-white/55">
-                  <span className="w-4 h-4 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <IconCheck size={8} color="rgb(52 211 153)" />
+                  <span className="w-4 h-4 rounded-full bg-[#74A36D]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <IconCheck size={8} color="#74A36D" />
                   </span>
                   {item}
                 </li>
@@ -629,14 +629,14 @@ export default function HomePage() {
             </ul>
           </div>
 
-          <div className="flex-shrink-0 bg-[#111] border border-white/8 rounded-2xl p-5 w-full lg:w-72">
+          <div className="flex-shrink-0 bg-[#1a1a1a] border border-white/8 rounded-2xl p-5 w-full lg:w-72">
             <div className="flex justify-between items-center mb-5">
               <p className="text-xs font-medium text-white/60">Last 30 days</p>
               <span className="text-[10px] text-white/30 bg-white/5 rounded-full px-2 py-0.5">Corner Café</span>
             </div>
-            <AnalyticsBar label="Directions" value={642} max={700} color="bg-blue-500" />
-            <AnalyticsBar label="Menu views" value={381} max={700} color="bg-purple-500" />
-            <AnalyticsBar label="Orders" value={219} max={700} color="bg-emerald-500" />
+            <AnalyticsBar label="Directions" value={642} max={700} color="bg-[#B4C1EF]" />
+            <AnalyticsBar label="Menu views" value={381} max={700} color="bg-[#F8AE9D]" />
+            <AnalyticsBar label="Orders" value={219} max={700} color="bg-[#74A36D]" />
             <AnalyticsBar label="Booking clicks" value={97} max={700} color="bg-amber-400" />
           </div>
         </div>
@@ -644,31 +644,31 @@ export default function HomePage() {
 
       {/* ── FINAL CTA ── */}
       <section className="max-w-5xl mx-auto px-6 py-28 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/25 mb-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#232323]/30 mb-6">
           Start for free
         </p>
         <h2 className="text-4xl lg:text-5xl font-bold tracking-[-0.025em] mb-4 leading-[1.1]">
           Your customers are looking.<br />
-          <span className="text-white/35">Give them one place to land.</span>
+          <span className="text-[#232323]/30">Give them one place to land.</span>
         </h2>
-        <p className="text-white/30 text-sm mb-10 max-w-xs mx-auto">
+        <p className="text-[#232323]/35 text-sm mb-10 max-w-xs mx-auto">
           No credit card. No developer. Live in minutes.
         </p>
         <Link
           href="/signup"
-          className="inline-block bg-white text-black font-semibold px-8 py-3.5 rounded-xl text-sm hover:bg-white/90 transition-colors"
+          className="inline-block bg-[#232323] text-white font-semibold px-8 py-3.5 rounded-full text-sm hover:bg-[#111] transition-colors"
         >
           Build your page — free
         </Link>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/8 py-8">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-white/25 text-xs">
+      <footer className="border-t border-black/8 bg-[#232323] py-8">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between text-white/30 text-xs">
           <span>© 2026 OpenStatus</span>
           <div className="flex gap-5">
-            <Link href="/login" className="hover:text-white/50 transition-colors">Log in</Link>
-            <Link href="/signup" className="hover:text-white/50 transition-colors">Sign up free</Link>
+            <Link href="/login" className="hover:text-white/55 transition-colors">Log in</Link>
+            <Link href="/signup" className="hover:text-white/55 transition-colors">Sign up free</Link>
           </div>
         </div>
       </footer>
