@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 
 // ─── SOCIAL ICONS ─────────────────────────────────────────────────────────────
 
@@ -39,21 +38,8 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
 
-      {/* ── HERO — full-bleed sky photo ── */}
-      <section className="relative flex-1 flex flex-col overflow-hidden" style={{ minHeight: '100svh' }}>
-
-        {/* Background: sky + cloud chain-link photo */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/hero-bg.png"
-            alt=""
-            fill
-            className="object-cover object-center"
-            priority
-          />
-          {/* soft dark wash at top so nav text reads clearly */}
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/20 to-transparent" />
-        </div>
+      {/* ── HERO — solid blue ── */}
+      <section className="relative flex-1 flex flex-col overflow-hidden" style={{ minHeight: '100svh', background: 'linear-gradient(180deg, #3d7fc1 0%, #5296d8 40%, #6eaee4 100%)' }}>
 
         {/* ── NAV ── */}
         <nav className="relative z-10 w-full px-8 pt-7 flex items-center justify-between">
