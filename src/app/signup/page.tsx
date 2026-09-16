@@ -44,7 +44,7 @@ export default function SignupPage() {
         options: { data: { business_name: businessName.trim() } },
       });
       if (signupError) throw signupError;
-      if (data.session) router.push('/setup/new');
+      if (data.session) router.push('/setup');
       else setNotice('Check your email to confirm your account, then sign in.');
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Signup failed'); }
     finally { setLoading(false); }

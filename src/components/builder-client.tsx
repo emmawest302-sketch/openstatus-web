@@ -1556,10 +1556,13 @@ export default function BuilderClient({ business,initialConfig }: {
             <LucideChevronRight size={14} color="#C0C0C0"/>
             <span className="text-sm text-[#9B9B9B] hidden sm:block">Builder</span>
           </div>
-          <button onClick={save} disabled={saving} data-tut="tut-save"
-            className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#F5F5F5] text-[#9B9B9B]':'bg-[#0A0A0A] text-white hover:bg-[#333]'}`}>
-            {saving?'Saving…':saved?'✓ Saved':'Save'}
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={async()=>{const{supabase:sb}=await import('@/lib/supabase');await sb.auth.signOut();window.location.href='/';}} className="px-4 py-1.5 rounded-full text-sm text-[#9B9B9B] hover:text-[#0A0A0A] transition-colors">Sign out</button>
+            <button onClick={save} disabled={saving} data-tut="tut-save"
+              className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#F5F5F5] text-[#9B9B9B]':'bg-[#0A0A0A] text-white hover:bg-[#333]'}`}>
+              {saving?'Saving…':saved?'✓ Saved':'Save'}
+            </button>
+          </div>
         </div>
       </header>
 
