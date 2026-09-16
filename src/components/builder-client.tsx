@@ -1777,14 +1777,16 @@ export default function BuilderClient({ business,initialConfig }: {
   }
 
   // When a block is open, show the edit panel instead of the block list
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [mobilePanel, setMobilePanel] = useState<'blocks'|'style'|'templates'|null>(null);
   const showEditPanel = !!openBlock && tab === 'blocks';
   const igHandle = (business as (Business & { instagram_handle?: string }) | null)?.instagram_handle ?? null;
 
   return (
-    <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A]" style={{ fontFamily:"'Poppins', system-ui, sans-serif" }}>
+    <div className="h-screen flex flex-col bg-[#F5F5F5] overflow-hidden" style={{ fontFamily:"'Poppins', system-ui, sans-serif" }}>
 
-      {/* header */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
+            {/* header */}
+      <header className="flex-shrink-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
         <div className="max-w-[1380px] mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <a href="/dashboard" className="flex items-center gap-1.5 text-sm text-[#9B9B9B] hover:text-[#0A0A0A] transition-colors flex-shrink-0">
@@ -1809,28 +1811,51 @@ export default function BuilderClient({ business,initialConfig }: {
         </div>
       </header>
 
-      {/* tab bar — hidden when edit panel is open */}
-      {!showEditPanel && (
-        <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
-          <div className="max-w-[1380px] mx-auto px-6 flex gap-0">
-            {(['blocks','style','templates'] as const).map(t=>(
-              <button key={t} onClick={()=>setTab(t)}
-                className={`py-3 px-1 mr-6 text-[13px] font-semibold capitalize transition-colors border-b-2 -mb-px ${tab===t?'text-[#0A0A0A] border-[#0A0A0A]':'text-[#9B9B9B] border-transparent hover:text-[#6B6B6B]'}`}>
-                {t==='blocks'?'Blocks':t==='style'?'Style':'Templates'}
+      {/* ── MAIN WORKSPACE ── */}
+      <div className="flex-1 flex overflow-hidden relative">
+
+        {/* ════════════════════════════════════════════════
+             DESKTOP: left icon rail
+        ════════════════════════════════════════════════ */}
+        <nav className="hidden lg:flex flex-col items-center py-3 gap-1 w-[64px] flex-shrink-0 bg-white border-r border-[#EBEBEB] z-20">
+          {([
+            { id:'blocks',    label:'Blocks',    icon:(active:boolean)=>(
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={"currentColor"} strokeWidth={active?2.5:2} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/>
+                <rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>
+              </svg>
+            )},
+            { id:'style',     label:'Style',     icon:(active:boolean)=>(
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={"currentColor"} strokeWidth={active?2.5:2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/>
+                <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>
+              </svg>
+            )},
+            { id:'templates', label:'Templates', icon:(active:boolean)=>(
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={"currentColor"} strokeWidth={active?2.5:2} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+              </svg>
+            )},
+          ] as const).map(item=>{
+            const active = tab === item.id && panelOpen;
+            return (
+              <button key={item.id}
+                onClick={()=>{ if(tab===item.id) { setPanelOpen(p=>!p); } else { setTab(item.id as 'blocks'|'style'|'templates'); setPanelOpen(true); if(item.id!=='blocks') setOpenId(null); } }}
+                className={`flex flex-col items-center gap-1 w-full py-2.5 px-1 rounded-lg mx-1 transition-colors ${active?'bg-[#F0F0F0] text-[#0A0A0A]':'text-[#ADADAD] hover:text-[#6B6B6B] hover:bg-[#F8F8F8]'}`}
+              >
+                {item.icon(active)}
+                <span className={`text-[9px] font-semibold uppercase tracking-wide ${active?'text-[#0A0A0A]':'text-[#ADADAD]'}`}>{item.label}</span>
               </button>
-            ))}
-          </div>
-        </div>
-      )}
+            );
+          })}
+        </nav>
 
-      {/* workspace */}
-      <div className="max-w-[1380px] mx-auto px-6 py-10">
-        <div className="lg:grid lg:grid-cols-[1fr_350px] lg:gap-16">
-
-          {/* LEFT */}
-          <div className="min-w-0">
-
-            {/* ── BLOCK EDIT PANEL ── (replaces block list when a block is open) */}
+        {/* ════════════════════════════════════════════════
+             DESKTOP: sliding panel
+        ════════════════════════════════════════════════ */}
+        <div className={`hidden lg:flex flex-col flex-shrink-0 bg-white border-r border-[#EBEBEB] overflow-hidden transition-all duration-200 ${panelOpen?'w-[340px]':'w-0'}`}>
+          <div className="w-[340px] flex flex-col h-full overflow-y-auto">
+                        {/* ── BLOCK EDIT PANEL ── (replaces block list when a block is open) */}
             {showEditPanel && openBlock && (
               <BlockEditPanel
                 block={openBlock} config={config}
@@ -2044,23 +2069,307 @@ export default function BuilderClient({ business,initialConfig }: {
               <TemplatesPanel config={config} setConfig={setConfig} />
             )}
           </div>
-
-          {/* RIGHT: sticky preview — always visible on desktop */}
-          <div className="hidden lg:block" data-tut="tut-preview">
-            <div className="sticky top-24">
-              <p className="text-[10px] font-semibold text-[#C0C0C0] uppercase tracking-widest mb-5 text-center">Live preview</p>
-              <LivePhonePreview
-                business={business} config={config}
-                selectedId={openId}
-                onSelectBlock={id=>{ setOpenId(id); setTab('blocks'); }}
-              />
-            </div>
-          </div>
-
         </div>
+
+        {/* ════════════════════════════════════════════════
+             CANVAS: phone preview (desktop: always; mobile: full)
+        ════════════════════════════════════════════════ */}
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#F5F5F5] overflow-auto p-8 pb-24 lg:pb-8" data-tut="tut-preview">
+          <p className="text-[10px] font-semibold text-[#C0C0C0] uppercase tracking-widest mb-5 text-center hidden lg:block">Live preview</p>
+          <LivePhonePreview
+            business={business} config={config}
+            selectedId={openId}
+            onSelectBlock={id=>{ setOpenId(id); setTab('blocks'); setPanelOpen(true); setMobilePanel('blocks'); }}
+          />
+          <p className="text-[10px] font-semibold text-[#C0C0C0] uppercase tracking-widest mt-5 text-center lg:hidden">Tap any block to edit</p>
+        </div>
+
+        {/* ════════════════════════════════════════════════
+             MOBILE: bottom sheet backdrop
+        ════════════════════════════════════════════════ */}
+        {mobilePanel && (
+          <div
+            className="lg:hidden fixed inset-0 z-30 bg-black/20 backdrop-blur-[1px]"
+            onClick={()=>setMobilePanel(null)}
+          />
+        )}
+
+        {/* ════════════════════════════════════════════════
+             MOBILE: bottom sheet
+        ════════════════════════════════════════════════ */}
+        <div
+          className={`lg:hidden fixed inset-x-0 bottom-16 z-40 bg-white rounded-t-3xl shadow-2xl flex flex-col transition-transform duration-300 ${mobilePanel?'translate-y-0':'translate-y-full'}`}
+          style={{ maxHeight:'75vh' }}
+        >
+          {/* drag pill */}
+          <div className="flex-shrink-0 flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 rounded-full bg-[#E0E0E0]"/>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {mobilePanel && (
+              <>
+                            {/* ── BLOCK EDIT PANEL ── (replaces block list when a block is open) */}
+            {showEditPanel && openBlock && (
+              <BlockEditPanel
+                block={openBlock} config={config}
+                onUpdateBlock={u=>updateBlock(openBlock.id,u)}
+                onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
+                onClose={()=>setOpenId(null)}
+              />
+            )}
+
+            {/* ── BLOCKS LIST ── */}
+            {!showEditPanel && tab==='blocks' && (
+              <div>
+                <div className="mb-8">
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Your page</h2>
+                  <p className="text-[#9B9B9B] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
+                </div>
+
+                {/* Active blocks list */}
+                <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden mb-1">
+                  {activeBlocks.length === 0 && (
+                    <div className="px-4 py-8 text-center text-[13px] text-[#9B9B9B]">No blocks added yet. Hit + Add block below.</div>
+                  )}
+                  {activeBlocks.map((block,i)=>(
+                    <div key={block.id}
+                      data-tut={i===0&&block.id==='hours'?'tut-hours':undefined}
+                      className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#FAFAFA]
+                        ${i<activeBlocks.length-1?'border-b border-[#F5F5F5]':''}
+                        ${openId===block.id?'bg-[#F8F8F8]':''}
+                        ${dragOverId===block.id&&dragId!==block.id?'border-l-[3px] border-l-[#0A0A0A]':''}
+                        ${dragId===block.id?'opacity-40':''}
+                      `}
+                      style={{ height:68 }}
+                      draggable={block.id!=='hours'}
+                      onDragStart={()=>{ if(block.id!=='hours') setDragId(block.id); }}
+                      onDragOver={e=>{ e.preventDefault(); setDragOverId(block.id); }}
+                      onDragLeave={()=>setDragOverId(null)}
+                      onDrop={()=>handleDrop(block.id)}
+                      onDragEnd={()=>{ setDragId(null); setDragOverId(null); }}
+                      onClick={()=>setOpenId(block.id)}
+                    >
+                      {/* drag handle */}
+                      {block.id!=='hours'
+                        ?<div className="flex-shrink-0 cursor-grab opacity-25 hover:opacity-60 transition-opacity" onClick={e=>e.stopPropagation()}>
+                          <LucideGrip size={14} color="#6B6B6B"/>
+                        </div>
+                        :<div className="w-[14px] flex-shrink-0"/>
+                      }
+                      {/* icon */}
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#EBEBEB] bg-[#F5F5F5]"
+                        style={block.color?{ backgroundColor:`${block.color}12`, borderColor:`${block.color}28` }:{}}>
+                        <BlockIcon id={block.id} size={14} color={block.color??'#0A0A0A'}/>
+                      </div>
+                      {/* text */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-[13px] font-semibold text-[#0A0A0A] leading-tight">{block.title}</p>
+                          {block.id==='hours' && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#F5F5F5] text-[#9B9B9B]'}`}>
+                              {liveStatus==='open'?'● open':'● closed'}
+                            </span>
+                          )}
+                          {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#F5F5F5] text-[#9B9B9B] flex-shrink-0">½</span>}
+                        </div>
+                        <p className="text-[12px] text-[#9B9B9B] leading-tight mt-0.5 truncate">
+                          {block.id==='hours'?todayLabel:block.sub}
+                        </p>
+                      </div>
+                      <LucideChevronRight size={13} color="#D0D0D0"/>
+                      {/* remove button */}
+                      {block.id!=='hours' && (
+                        <button
+                          onClick={e=>{ e.stopPropagation(); updateBlock(block.id,{on:false}); }}
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[#C0C0C0] hover:text-[#0A0A0A] hover:bg-[#F0F0F0] transition-all flex-shrink-0"
+                          title="Remove block"
+                        >
+                          <LucideX size={11} color="currentColor"/>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add block button */}
+                <button
+                  data-tut="tut-add"
+                  onClick={()=>setShowPicker(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#9B9B9B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-all group"
+                >
+                  <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
+                    <span className="text-[14px] leading-none">+</span>
+                  </div>
+                  <span className="text-[13px] font-medium">Add block</span>
+                </button>
+
+                {/* Features & vibe */}
+                <div className="mt-10">
+                  <div className="mb-4">
+                    <p className="text-[11px] font-semibold text-[#C0C0C0] uppercase tracking-widest mb-1">FEATURES & VIBE</p>
+                    <p className="text-[13px] text-[#9B9B9B]">Select tags so people can find you.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {FEATURE_TAGS.map(tag=>{
+                      const active=(config.tags??[]).includes(tag);
+                      return (
+                        <button key={tag}
+                          onClick={()=>setConfig(c=>({...c,tags:active?(c.tags??[]).filter(t=>t!==tag):[...(c.tags??[]),tag]}))}
+                          className={`px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-all ${active?'bg-[#0A0A0A] text-white border-[#0A0A0A]':'border-[#EBEBEB] text-[#9B9B9B] bg-white hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STYLE */}
+            {!showEditPanel && tab==='style' && (
+              <div className="space-y-10">
+                <div>
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Style</h2>
+                  <p className="text-[#9B9B9B] text-[13px] mt-1">Logo, colors, and social links.</p>
+                </div>
+
+                {/* Logo */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Logo</p>
+                  {business?.avatar_url ? (
+                    <div className="flex items-center gap-4">
+                      <img src={business.avatar_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url} className="w-16 h-16 rounded-full object-cover border border-[#EBEBEB]" alt="Logo"/>
+                      <div>
+                        {igHandle && <p className="text-[11px] text-[#9B9B9B] mb-2">Pulled from your Meta account</p>}
+                        <a href="/setup?step=3" className="text-[12px] font-semibold text-[#0A0A0A] underline underline-offset-2">Change logo →</a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-[#D4D4D4] p-4 text-center">
+                      <p className="text-[13px] text-[#9B9B9B] mb-2">No logo yet</p>
+                      <a href="/setup?step=3" className="text-[12px] font-semibold text-[#0A0A0A] underline underline-offset-2">Upload logo →</a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Background photo */}
+                <PhotoField
+                  label="Background photo"
+                  value={config.bgImage??''}
+                  onChange={v=>setConfig(c=>({...c,bgImage:v||undefined}))}
+                  hint="Covers the entire page behind your blocks."
+                />
+
+                {/* Background color */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Page color</p>
+                  <div className="grid grid-cols-5 gap-3 mb-3">
+                    {BG_PRESETS.map(c=>(
+                      <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
+                        className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
+                        style={{ background:c, borderColor:config.bg===c?'#0A0A0A':'#EBEBEB' }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3 mt-5">Gradients</p>
+                  <div className="grid grid-cols-5 gap-3 mb-4">
+                    {[
+                      'linear-gradient(135deg,#f8f5f0,#e8d5b7)',
+                      'linear-gradient(135deg,#f0f4ff,#dce5ff)',
+                      'linear-gradient(135deg,#f0fdf4,#dcfce7)',
+                      'linear-gradient(135deg,#fff0f5,#fce7f3)',
+                      'linear-gradient(135deg,#fefce8,#fde68a)',
+                      'linear-gradient(135deg,#0a0a0a,#1c1c2e)',
+                      'linear-gradient(135deg,#111827,#1e3a5f)',
+                      'linear-gradient(135deg,#1a0a2e,#2d1b69)',
+                      'linear-gradient(135deg,#0a1628,#0f4c75)',
+                      'linear-gradient(135deg,#1c1c1c,#2d4739)',
+                    ].map(g=>(
+                      <button key={g} onClick={()=>setConfig(p=>({...p,bg:g}))}
+                        className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
+                        style={{ background:g, borderColor:config.bg===g?'#0A0A0A':'#EBEBEB' }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg border border-[#EBEBEB]" style={{ background:config.bg }}/>
+                    <input
+                      value={config.bg}
+                      onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
+                      placeholder="#ffffff or gradient"
+                      className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] text-[#0A0A0A] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Socials */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Social profiles</p>
+                  <div className="space-y-2.5">
+                    {SOCIAL_PLATFORMS.map(({key,label})=>(
+                      <div key={key} className="flex items-center gap-3">
+                        <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
+                        <Input value={config.socials[key]??''} onChange={v=>setConfig(c=>({...c,socials:{...c.socials,[key]:v}}))} placeholder={`${label} URL…`}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TEMPLATES */}
+            {!showEditPanel && tab==='templates' && (
+              <TemplatesPanel config={config} setConfig={setConfig} />
+            )}
+              </>
+            )}
+          </div>
+        </div>
+
+      </div>{/* end workspace */}
+
+      {/* ════════════════════════════════════════════════
+           MOBILE: fixed bottom icon bar
+      ════════════════════════════════════════════════ */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 h-16 bg-white/95 backdrop-blur-md border-t border-[#EBEBEB] flex items-center justify-around px-4">
+        {([
+          { id:'blocks',    label:'Blocks',    icon:(active:boolean)=>(
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={"currentColor"} strokeWidth={active?2.5:2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/>
+              <rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>
+            </svg>
+          )},
+          { id:'style',     label:'Style',     icon:(active:boolean)=>(
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={"currentColor"} strokeWidth={active?2.5:2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/>
+              <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>
+            </svg>
+          )},
+          { id:'templates', label:'Templates', icon:(active:boolean)=>(
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={"currentColor"} strokeWidth={active?2.5:2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+            </svg>
+          )},
+        ] as const).map(item=>{
+          const active = mobilePanel === item.id;
+          return (
+            <button key={item.id}
+              onClick={()=>{ const next = mobilePanel===item.id?null:item.id as 'blocks'|'style'|'templates'; setMobilePanel(next); if(next) setTab(next); }}
+              className={`flex flex-col items-center gap-0.5 py-1 px-4 rounded-xl transition-colors ${active?'text-[#0A0A0A]':'text-[#ADADAD]'}`}
+            >
+              {item.icon(active)}
+              <span className={`text-[9px] font-semibold uppercase tracking-wide`}>{item.label}</span>
+            </button>
+          );
+        })}
+        {/* Save */}
+        <button onClick={save} disabled={saving}
+          className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#F5F5F5] text-[#9B9B9B]':'bg-[#0A0A0A] text-white'}`}>
+          {saving?'…':saved?'✓':'Save'}
+        </button>
       </div>
 
-      {/* Tutorial overlay */}
+            {/* Tutorial overlay */}
       {showTutorial && !showPicker && (
         <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{}}}/>
       )}
