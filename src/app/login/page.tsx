@@ -55,7 +55,7 @@ export default function LoginPage() {
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: { redirectTo: `${window.location.origin}/auth/callback`, queryParams: provider === 'facebook' ? { config_id: '2027876811186222' } : undefined },
       });
       if (oauthError) throw oauthError;
     } catch (caught) {
