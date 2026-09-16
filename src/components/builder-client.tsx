@@ -15,7 +15,8 @@ interface OpenStatusBlock {
   menuType?: 'url' | 'pdf' | 'photos'; menuFile?: string;
   appleMapsUrl?: string; reviewStars?: number; reviewCount?: number;
   provider?: string;
-  yelpUrl?: string; googleUrl?: string;
+  yelpUrl?: string; googleUrl?: string; tripAdvisorUrl?: string;
+  blockStyle?: string;
 }
 interface OpenStatusPageConfig {
   blocks: OpenStatusBlock[]; bg: string; bgImage?: string;
@@ -58,6 +59,16 @@ const SOCIAL_PLATFORMS = [
   { key:'twitter',   label:'Twitter / X'},
   { key:'youtube',   label:'YouTube'   },
 ];
+const BLOCK_STYLES: Record<string, { key:string; label:string; icon:string }[]> = {
+  hours:    [{ key:'row',    label:'Status row', icon:'≡' }, { key:'clock',  label:'Clock',   icon:'◷' }, { key:'banner', label:'Banner', icon:'▬' }],
+  location: [{ key:'photo',  label:'Photo',      icon:'⬜' }, { key:'pin',    label:'Pin card', icon:'◉' }, { key:'compact',label:'Compact',icon:'≡' }],
+  menu:     [{ key:'photo',  label:'Photo',      icon:'⬜' }, { key:'card',   label:'Card',    icon:'▭' }, { key:'dark',   label:'Dark',   icon:'◼' }],
+  order:    [{ key:'brand',  label:'Brand',      icon:'🅱' }, { key:'hero',   label:'Hero',    icon:'⬛' }, { key:'cta',    label:'CTA',    icon:'▷' }],
+  book:     [{ key:'brand',  label:'Brand',      icon:'🅱' }, { key:'cal',    label:'Calendar',icon:'▦' }, { key:'cta',    label:'CTA',    icon:'▷' }],
+  socials:  [{ key:'icons',  label:'Icon row',   icon:'◉◉' }, { key:'list',  label:'List',    icon:'≡' }],
+  website:  [{ key:'photo',  label:'Photo',      icon:'⬜' }, { key:'link',   label:'Link row',icon:'≡' }],
+};
+
 const FEATURE_TAGS = [
   'Delivery','Takeout','Dine-in','Curbside pickup','Catering',
   'Dog friendly','Kid friendly','Wheelchair accessible','Free WiFi',
@@ -465,6 +476,56 @@ function BrandProviderPicker({ providers, selectedKey, onSelect }: {
   );
 }
 
+// Analog clock face for hours block
+function ClockFace({ size=52, color='#059669' }: { size?: number; color?: string }) {
+  const now = new Date();
+  const h = now.getHours() % 12;
+  const m = now.getMinutes();
+  const hAngle = (h / 12) * 360 + (m / 60) * 30 - 90;
+  const mAngle = (m / 60) * 360 - 90;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 2;
+  const pt = (angle: number, len: number) => ({
+    x: cx + len * Math.cos((angle * Math.PI) / 180),
+    y: cy + len * Math.sin((angle * Math.PI) / 180),
+  });
+  const hh = pt(hAngle, r * 0.52); const mh = pt(mAngle, r * 0.72);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill={`${color}18`} stroke={color} strokeWidth="1.5"/>
+      {[0,1,2,3,4,5,6,7,8,9,10,11].map(i => {
+        const a = (i/12)*360-90;
+        const inn = pt(a, r*0.8), out = pt(a, r*0.92);
+        return <line key={i} x1={inn.x} y1={inn.y} x2={out.x} y2={out.y} stroke={color} strokeWidth={i%3===0?1.8:0.8} strokeLinecap="round"/>;
+      })}
+      <line x1={cx} y1={cy} x2={hh.x} y2={hh.y} stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1={cx} y1={cy} x2={mh.x} y2={mh.y} stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+      <circle cx={cx} cy={cy} r="2.2" fill={color}/>
+    </svg>
+  );
+}
+
+// Block visual style picker
+function BlockStylePicker({ blockId, selected, onSelect }: {
+  blockId: string; selected: string; onSelect: (key: string) => void;
+}) {
+  const styles = BLOCK_STYLES[blockId];
+  if (!styles) return null;
+  return (
+    <div>
+      <FieldLabel>Block style</FieldLabel>
+      <div className="flex gap-2 flex-wrap">
+        {styles.map(s => (
+          <button key={s.key} onClick={() => onSelect(s.key)}
+            className={`flex flex-col items-center gap-1.5 px-5 py-3 rounded-2xl border transition-all ${selected===s.key?'border-[#0A0A0A] bg-[#F5F5F5] shadow-sm':'border-[#EBEBEB] hover:border-[#C0C0C0] bg-white'}`}>
+            <span className="text-base leading-none">{s.icon}</span>
+            <span className={`text-[10px] font-semibold ${selected===s.key?'text-[#0A0A0A]':'text-[#6B6B6B]'}`}>{s.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Accent color picker with hex input
 function AccentColorPicker({ value, onChange }: { value?: string; onChange:(v:string)=>void }) {
   const colorRef = useRef<HTMLInputElement>(null);
@@ -609,7 +670,7 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
   const isDark = ['#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c'].includes(config.bg);
   const tx = isDark?'text-white':'text-[#0A0A0A]';
   const sx = isDark?'text-white/50':'text-[#6B6B6B]';
-  const { status } = getLiveStatus(config.weeklyHours);
+  const { status, todayLabel } = getLiveStatus(config.weeklyHours);
   const locBlock = config.blocks.find(b=>b.id==='location');
   const reviewPct = locBlock?.reviewStars&&locBlock.reviewStars>0 ? starsToPercent(locBlock.reviewStars) : null;
 
@@ -619,65 +680,92 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
         className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/8"
         style={{ background:config.bg, minHeight:560 }}
       >
-        {/* Background image hero */}
-        {config.bgImage && (
-          <div className="relative h-36 overflow-hidden">
-            <img src={config.bgImage} className="w-full h-full object-cover" alt=""/>
-            <div className="absolute inset-0 bg-black/20"/>
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
+        {/* Hero — full bleed when photo set, compact header otherwise */}
+        {config.bgImage ? (
+          /* ── Full-bleed photo hero ── */
+          <div className="relative overflow-hidden" style={{ minHeight: 200 }}>
+            <img src={config.bgImage} className="w-full object-cover" style={{ height: 220 }} alt=""/>
+            {/* gradient overlay — dark at bottom for legibility */}
+            <div className="absolute inset-0" style={{ background:'linear-gradient(to bottom,rgba(0,0,0,0.08) 0%,rgba(0,0,0,0.62) 100%)' }}/>
+            {/* Content overlaid */}
+            <div className="absolute inset-0 flex flex-col items-center justify-end pb-4 px-4 text-center">
               {business?.avatar_url
-                ?<img src={business.avatar_url} className="w-12 h-12 rounded-full border-2 border-white object-cover shadow" alt=""/>
-                :<div className={`w-12 h-12 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black ${isDark?'bg-[#1A1A1A] text-white':'bg-white text-[#0A0A0A]'}`}>
+                ?<img src={business.avatar_url} className="w-11 h-11 rounded-full border-2 border-white object-cover shadow-md mb-2" alt=""/>
+                :<div className="w-11 h-11 rounded-full border-2 border-white/80 bg-white/20 backdrop-blur-sm flex items-center justify-center text-[11px] font-black text-white mb-2">
                   {(business?.name??'B').slice(0,1).toUpperCase()}
                 </div>
               }
+              <p className="font-bold text-[14px] text-white drop-shadow-sm">{business?.name??'Your Business'}</p>
+              {config.location && <p className="text-[9px] text-white/65 truncate px-2 mt-0.5">{config.location}</p>}
+              {/* Review + like/dislike */}
+              <div className="flex items-center justify-center gap-2 mt-2">
+                {reviewPct && (
+                  <div className="flex items-center gap-1 bg-black/30 rounded-full px-2 py-0.5">
+                    <LucideStar size={8} color="#fbbf24" filled/>
+                    <span className="text-[8px] font-semibold text-white">{reviewPct}%</span>
+                    {locBlock?.reviewCount&&<span className="text-[7px] text-white/60"> · {locBlock.reviewCount.toLocaleString()}</span>}
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <button className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/15 backdrop-blur-sm">
+                    <LucideThumbsUp size={8} color="rgba(255,255,255,0.7)"/>
+                    <span className="text-[8px] font-medium text-white/80">{(config.likeCount??0)+24}</span>
+                  </button>
+                  <button className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/15 backdrop-blur-sm">
+                    <LucideThumbsDown size={8} color="rgba(255,255,255,0.7)"/>
+                    <span className="text-[8px] font-medium text-white/80">{(config.dislikeCount??0)+2}</span>
+                  </button>
+                </div>
+              </div>
+              {(config.tags??[]).length>0 && (
+                <div className="flex flex-wrap gap-1 justify-center mt-1.5">
+                  {(config.tags??[]).slice(0,3).map(t=>(
+                    <span key={t} className="text-[7px] px-1.5 py-0.5 rounded-full bg-white/15 text-white/70">{t}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        )}
-
-        {/* Business header */}
-        <div className={`px-4 pb-3 text-center ${config.bgImage?'pt-9':'pt-8'}`}>
-          {!config.bgImage && (
-            business?.avatar_url
+        ) : (
+          /* ── No photo: compact header ── */
+          <div className="px-4 pb-3 text-center pt-8">
+            {business?.avatar_url
               ?<img src={business.avatar_url} className="w-12 h-12 rounded-full mx-auto mb-2 object-cover" alt=""/>
               :<div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-[10px] font-black tracking-tight ${isDark?'bg-white/10 text-white':'bg-black/8 text-black'}`}>
                 {(business?.name??'B').slice(0,1).toUpperCase()}
               </div>
-          )}
-          <p className={`font-bold text-[13px] ${tx}`}>{business?.name??'Your Business'}</p>
-          {config.location && <p className={`text-[9px] ${sx} truncate px-2 mt-0.5`}>{config.location}</p>}
-
-          {/* Review score + like/dislike row */}
-          <div className="flex items-center justify-center gap-3 mt-2">
-            {reviewPct && (
-              <div className="flex items-center gap-1">
-                <LucideStar size={9} color="#f59e0b" filled/>
-                <span className="text-[9px] font-semibold" style={{ color:'#f59e0b' }}>{reviewPct}%</span>
-                {locBlock?.reviewCount&&<span className={`text-[8px] ${sx}`}> · {locBlock.reviewCount.toLocaleString()}</span>}
+            }
+            <p className={`font-bold text-[13px] ${tx}`}>{business?.name??'Your Business'}</p>
+            {config.location && <p className={`text-[9px] ${sx} truncate px-2 mt-0.5`}>{config.location}</p>}
+            <div className="flex items-center justify-center gap-3 mt-2">
+              {reviewPct && (
+                <div className="flex items-center gap-1">
+                  <LucideStar size={9} color="#f59e0b" filled/>
+                  <span className="text-[9px] font-semibold" style={{ color:'#f59e0b' }}>{reviewPct}%</span>
+                  {locBlock?.reviewCount&&<span className={`text-[8px] ${sx}`}> · {locBlock.reviewCount.toLocaleString()}</span>}
+                </div>
+              )}
+              {reviewPct && <span className={`text-[8px] ${sx}`}>·</span>}
+              <div className="flex items-center gap-2">
+                <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
+                  <LucideThumbsUp size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
+                  <span className="text-[8px] font-medium">{(config.likeCount??0)+24}</span>
+                </button>
+                <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
+                  <LucideThumbsDown size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
+                  <span className="text-[8px] font-medium">{(config.dislikeCount??0)+2}</span>
+                </button>
+              </div>
+            </div>
+            {(config.tags??[]).length>0 && (
+              <div className="flex flex-wrap gap-1 justify-center mt-2">
+                {(config.tags??[]).slice(0,3).map(t=>(
+                  <span key={t} className={`text-[8px] px-2 py-0.5 rounded-full ${isDark?'bg-white/10 text-white/60':'bg-black/6 text-black/50'}`}>{t}</span>
+                ))}
               </div>
             )}
-            {reviewPct && <span className={`text-[8px] ${sx}`}>·</span>}
-            {/* Like/Dislike */}
-            <div className="flex items-center gap-2">
-              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
-                <LucideThumbsUp size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
-                <span className="text-[8px] font-medium">{(config.likeCount??0)+24}</span>
-              </button>
-              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
-                <LucideThumbsDown size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
-                <span className="text-[8px] font-medium">{(config.dislikeCount??0)+2}</span>
-              </button>
-            </div>
           </div>
-
-          {(config.tags??[]).length>0 && (
-            <div className="flex flex-wrap gap-1 justify-center mt-2">
-              {(config.tags??[]).slice(0,3).map(t=>(
-                <span key={t} className={`text-[8px] px-2 py-0.5 rounded-full ${isDark?'bg-white/10 text-white/60':'bg-black/6 text-black/50'}`}>{t}</span>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Blocks — support half/full layout */}
         <div className="px-3 pb-5">
@@ -689,34 +777,153 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
                 const cardBg = b.color?`${b.color}15`:(isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.04)');
                 const bdr    = b.color?`${b.color}35`:(isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.08)');
 
+                const bStyle = b.blockStyle ?? (b.id==='hours'?'row':b.id==='location'?'photo':'brand');
                 const inner = (() => {
-                  if(b.id==='location') return (
-                    <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
-                      {b.coverPhoto
-                        ?<img src={b.coverPhoto} className="w-full h-[52px] object-cover" alt=""/>
-                        :<div className="h-[52px] flex items-center justify-center" style={{ background:'linear-gradient(135deg,#1e3a5f,#111827)' }}>
-                          <LucidePin size={16} color="white"/>
-                        </div>
-                      }
-                      <div className="px-2.5 py-2" style={{ background:cardBg }}>
-                        <p className={`text-[10px] font-semibold ${tx} leading-tight truncate`}>{b.title}</p>
-                        <div className="flex gap-1 mt-1">
-                          {b.url&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Google</span>}
-                          {b.appleMapsUrl&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Apple</span>}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                  if(b.id==='hours') return (
-                    <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
-                      <BlockIcon id={b.id} size={12} color={b.color}/>
-                      <div className="min-w-0 flex-1">
+
+                  // ── HOURS ──
+                  if(b.id==='hours') {
+                    if(bStyle==='clock') return (
+                      <div className="rounded-2xl px-3 py-2.5 border text-center" style={{ background:cardBg, borderColor:bdr }}>
+                        <div className="flex justify-center mb-1.5"><ClockFace size={46} color={b.color??'#059669'}/></div>
                         <p className={`text-[10px] font-bold ${tx}`}>{status==='open'?'Open now':'Closed'}</p>
-                        <p className={`text-[8px] ${sx}`}>Tap for hours</p>
+                        <p className={`text-[8px] ${sx}`}>{todayLabel}</p>
                       </div>
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-400':'bg-red-400'}`}/>
-                    </div>
-                  );
+                    );
+                    if(bStyle==='banner') return (
+                      <div className="rounded-2xl px-4 py-4 text-center" style={{ background: status==='open'?`linear-gradient(135deg,${b.color??'#059669'},#10b981)`:`linear-gradient(135deg,#374151,#6b7280)` }}>
+                        <p className="text-white font-black text-[20px] tracking-tight">{status==='open'?'OPEN':'CLOSED'}</p>
+                        <p className="text-white/65 text-[8px] mt-0.5">{todayLabel}</p>
+                      </div>
+                    );
+                    // default row
+                    return (
+                      <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
+                        <BlockIcon id={b.id} size={12} color={b.color}/>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-[10px] font-bold ${tx}`}>{status==='open'?'Open now':'Closed'}</p>
+                          <p className={`text-[8px] ${sx}`}>Tap for hours</p>
+                        </div>
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-400':'bg-red-400'}`}/>
+                      </div>
+                    );
+                  }
+
+                  // ── LOCATION ──
+                  if(b.id==='location') {
+                    if(bStyle==='pin') return (
+                      <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
+                        <div className="flex flex-col items-center justify-center py-3" style={{ background:'linear-gradient(135deg,#1e3a5f,#0f172a)',minHeight:60 }}>
+                          <LucidePin size={18} color="white"/>
+                          <p className="text-white text-[9px] font-semibold mt-1">{b.title}</p>
+                        </div>
+                        <div className="flex gap-1 px-2 py-1.5" style={{ background:cardBg }}>
+                          {b.url&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Google Maps</span>}
+                          {b.appleMapsUrl&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Apple Maps</span>}
+                        </div>
+                      </div>
+                    );
+                    if(bStyle==='compact') return (
+                      <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
+                        <LucidePin size={10} color={b.color}/>
+                        <div className="min-w-0 flex-1"><p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p></div>
+                        <span className={`text-xs ${isDark?'text-white/20':'text-black/20'}`}>›</span>
+                      </div>
+                    );
+                    // default photo
+                    return (
+                      <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
+                        {b.coverPhoto
+                          ?<img src={b.coverPhoto} className="w-full h-[54px] object-cover" alt=""/>
+                          :<div className="h-[54px] flex items-center justify-center" style={{ background:'linear-gradient(135deg,#1e3a5f,#111827)' }}>
+                            <LucidePin size={16} color="white"/>
+                          </div>
+                        }
+                        <div className="px-2.5 py-2" style={{ background:cardBg }}>
+                          <p className={`text-[10px] font-semibold ${tx} leading-tight truncate`}>{b.title}</p>
+                          <div className="flex gap-1 mt-1">
+                            {b.url&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Google</span>}
+                            {b.appleMapsUrl&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Apple</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // ── ORDER / BOOK ──
+                  if(b.id==='order'||b.id==='book') {
+                    const hasProvider = b.provider && b.provider!=='other';
+                    if(bStyle==='hero' && hasProvider) return (
+                      <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
+                        <div className="flex flex-col items-center justify-center py-3" style={{ background:cardBg, minHeight:64 }}>
+                          <ProviderIcon providerKey={b.provider!} size={36}/>
+                          <p className={`text-[9px] font-semibold ${tx} mt-1.5`}>{b.title}</p>
+                        </div>
+                      </div>
+                    );
+                    if(bStyle==='cta') return (
+                      <div className="rounded-2xl px-3 py-3 border" style={{ background:b.color?`${b.color}15`:cardBg, borderColor:b.color?`${b.color}40`:bdr }}>
+                        <div className="flex items-center gap-2">
+                          {hasProvider&&<ProviderIcon providerKey={b.provider!} size={20}/>}
+                          <p className={`text-[11px] font-bold flex-1 ${tx}`}>{b.title}</p>
+                          <span style={{ color:b.color??'#0A0A0A' }} className="text-[14px] font-bold">→</span>
+                        </div>
+                      </div>
+                    );
+                    // default brand
+                    return (
+                      <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2 border" style={{ background:cardBg, borderColor:bdr }}>
+                        {hasProvider
+                          ?<div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0"><ProviderIcon providerKey={b.provider!} size={28}/></div>
+                          :<BlockIcon id={b.id} size={10} color={b.color}/>
+                        }
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
+                          {!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>}
+                        </div>
+                        <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
+                      </div>
+                    );
+                  }
+
+                  // ── MENU ──
+                  if(b.id==='menu') {
+                    if(bStyle==='dark') return (
+                      <div className="rounded-2xl px-3 py-3 border" style={{ background:'#0A0A0A', borderColor:'#1A1A1A' }}>
+                        <div className="flex items-center gap-2">
+                          <BlockIcon id="menu" size={12} color="white"/>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-semibold text-white truncate">{b.title}</p>
+                            {!isHalf&&<p className="text-[8px] text-white/40 truncate">{b.sub}</p>}
+                          </div>
+                          <span className="text-white/20 text-xs">›</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // ── SOCIALS list style ──
+                  if(b.id==='socials' && bStyle==='list') {
+                    const activeSocials = SOCIAL_PLATFORMS.filter(s=>config.socials[s.key]);
+                    return (
+                      <div className="rounded-2xl border overflow-hidden" style={{ borderColor:bdr }}>
+                        {activeSocials.length===0
+                          ?<div className="flex items-center gap-2 px-2.5 py-2.5" style={{ background:cardBg }}>
+                            <BlockIcon id="socials" size={10} color={b.color}/>
+                            <p className={`text-[10px] font-semibold ${tx}`}>{b.title}</p>
+                          </div>
+                          :activeSocials.slice(0,3).map((s,i)=>(
+                            <div key={s.key} className={`flex items-center gap-2 px-2.5 py-1.5 ${i>0?'border-t':''}` } style={{ background:cardBg, borderColor:bdr }}>
+                              <SocialIcon platform={s.key} size={14}/>
+                              <p className={`text-[9px] font-medium ${tx}`}>{s.label}</p>
+                              <span className={`ml-auto text-xs ${isDark?'text-white/20':'text-black/20'}`}>›</span>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    );
+                  }
+
+                  // ── Generic fallback (cover photo or simple row) ──
                   if(b.coverPhoto) return (
                     <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
                       <img src={b.coverPhoto} className={`w-full object-cover ${isHalf?'h-[52px]':'h-[48px]'}`} alt=""/>
@@ -726,21 +933,6 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
                           <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
                           <p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>
                         </div>
-                      </div>
-                    </div>
-                  );
-                  // ordering / booking: show provider logo if set
-                  if((b.id==='order'||b.id==='book') && b.provider && b.provider!=='other') return (
-                    <div className="rounded-2xl border overflow-hidden" style={{ borderColor:bdr }}>
-                      <div className="flex items-center gap-1.5 px-2 py-1.5" style={{ background:cardBg }}>
-                        <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
-                          <ProviderIcon providerKey={b.provider} size={24}/>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
-                          {!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>}
-                        </div>
-                        <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
                       </div>
                     </div>
                   );
@@ -819,6 +1011,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── LOCATION ── */}
           {block.id==='location' && (
             <div className="space-y-5">
+              <BlockStylePicker blockId="location" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <PhotoField
                 label="Place photo"
                 value={block.coverPhoto??''}
@@ -848,7 +1041,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0"><IconTripAdvisor size={28}/></div>
-                    <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste your TripAdvisor listing URL…"/>
+                    <Input value={block.tripAdvisorUrl??''} onChange={v=>onUpdateBlock({tripAdvisorUrl:v})} placeholder="Paste your TripAdvisor listing URL…"/>
                   </div>
                 </div>
               </div>
@@ -877,6 +1070,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── HOURS ── */}
           {block.id==='hours' && (
             <div className="space-y-6">
+              <BlockStylePicker blockId="hours" selected={block.blockStyle??'row'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#FAFAFA] border-[#EBEBEB]'}`}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                 <div>
@@ -921,6 +1115,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── MENU ── */}
           {block.id==='menu' && (
             <div className="space-y-5">
+              <BlockStylePicker blockId="menu" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional banner photo shown at the top of the menu block."/>
               <div className="grid grid-cols-3 gap-3">
                 <button
@@ -961,6 +1156,8 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── ORDER ── */}
           {block.id==='order' && (
             <div className="space-y-5">
+              <BlockStylePicker blockId="order" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo shown behind the block."/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -976,6 +1173,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── BOOK ── */}
           {block.id==='book' && (
             <div className="space-y-5">
+              <BlockStylePicker blockId="book" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
@@ -991,7 +1189,10 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
 
           {/* ── SOCIALS ── */}
           {block.id==='socials' && (
-            <div className="space-y-3">
+            <div className="space-y-5">
+              <BlockStylePicker blockId="socials" selected={block.blockStyle??'icons'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo behind the social links block."/>
+              <div className="space-y-3">
               <FieldLabel>Your social links</FieldLabel>
               {SOCIAL_PLATFORMS.map(({key,label})=>(
                 <div key={key} className="flex items-center gap-3">
@@ -999,6 +1200,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                   <Input value={config.socials[key]??''} onChange={v=>onUpdateConfig({socials:{...config.socials,[key]:v}})} placeholder={`${label} URL…`}/>
                 </div>
               ))}
+              </div>
             </div>
           )}
 
@@ -1007,6 +1209,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             <div className="space-y-5">
               {block.id==='website'&&(
                 <>
+                  <BlockStylePicker blockId="website" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
                   <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
                   <div><FieldLabel>Website URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
                 </>
@@ -1067,6 +1270,8 @@ export default function BuilderClient({ business,initialConfig }: {
   const [openId,setOpenId]=useState<string|null>(null);
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
+  const [dragId,setDragId]=useState<string|null>(null);
+  const [dragOverId,setDragOverId]=useState<string|null>(null);
 
   // Hours always first in the block list
   const allBlocks = config.blocks;
@@ -1084,6 +1289,18 @@ export default function BuilderClient({ business,initialConfig }: {
   function toggleBlock(id:string) {
     updateBlock(id,{on:!allBlocks.find(b=>b.id===id)?.on});
   }
+  function handleDrop(targetId: string) {
+    if (!dragId || dragId===targetId || dragId==='hours' || targetId==='hours') { setDragId(null); setDragOverId(null); return; }
+    setConfig(c => {
+      const bs = [...c.blocks];
+      const fi = bs.findIndex(b=>b.id===dragId), ti = bs.findIndex(b=>b.id===targetId);
+      if(fi<0||ti<0) return c;
+      const [moved] = bs.splice(fi,1); bs.splice(ti,0,moved);
+      return { ...c, blocks: bs };
+    });
+    setDragId(null); setDragOverId(null);
+  }
+
   async function save() {
     setSaving(true);
     try { await supabase.auth.updateUser({data:{openstatus_page:config}}); setSaved(true); setTimeout(()=>setSaved(false),2500); }
@@ -1141,12 +1358,23 @@ export default function BuilderClient({ business,initialConfig }: {
                 <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden">
                   {blocks.map((block,i)=>(
                     <div key={block.id}
-                      className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#FAFAFA] ${i<blocks.length-1?'border-b border-[#F5F5F5]':''} ${block.id==='hours'?'bg-[#FAFFFE]':''}`}
+                      className={`flex items-center gap-3 px-4 cursor-pointer transition-all hover:bg-[#FAFAFA]
+                        ${i<blocks.length-1?'border-b border-[#F5F5F5]':''}
+                        ${block.id==='hours'?'bg-[#FAFFFE]':''}
+                        ${dragOverId===block.id&&dragId!==block.id?'border-l-2 border-l-[#0A0A0A] bg-[#F5F5F5]':''}
+                        ${dragId===block.id?'opacity-40':''}
+                      `}
                       style={{ height:64 }}
+                      draggable={block.id!=='hours'}
+                      onDragStart={()=>{ if(block.id!=='hours') setDragId(block.id); }}
+                      onDragOver={e=>{ e.preventDefault(); setDragOverId(block.id); }}
+                      onDragLeave={()=>setDragOverId(null)}
+                      onDrop={()=>handleDrop(block.id)}
+                      onDragEnd={()=>{ setDragId(null); setDragOverId(null); }}
                       onClick={()=>setOpenId(block.id)}
                     >
                       {block.id!=='hours'
-                        ?<div className="flex-shrink-0 cursor-grab opacity-25 hover:opacity-50"><LucideGrip size={14} color="#6B6B6B"/></div>
+                        ?<div className="flex-shrink-0 cursor-grab opacity-30 hover:opacity-70 transition-opacity"><LucideGrip size={14} color="#6B6B6B"/></div>
                         :<div className="w-[14px] flex-shrink-0"/>
                       }
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border ${block.on?'bg-[#F5F5F5] border-[#EBEBEB]':'bg-[#FAFAFA] border-[#F0F0F0]'}`}
