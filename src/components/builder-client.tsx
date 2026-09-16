@@ -1529,8 +1529,33 @@ export default function BuilderClient({ business,initialConfig }: {
 
   async function save() {
     setSaving(true);
-    try { await supabase.auth.updateUser({data:{openstatus_page:config}}); setSaved(true); setTimeout(()=>setSaved(false),2500); }
-    finally { setSaving(false); }
+    try {
+      // Save page config to user metadata
+      await supabase.auth.updateUser({ data: { openstatus_page: config } });
+
+      // Also sync weeklyHours back to business_hours table so the public page stays current
+      if (business?.id && config.weeklyHours) {
+        const KEYS = ['sun','mon','tue','wed','thu','fri','sat'] as const;
+        const rows = KEYS.map((key, i) => {
+          const day = config.weeklyHours![key] ?? { open:'09:00', close:'17:00', closed:true };
+          return {
+            business_id: business.id,
+            day_of_week: i,
+            opens_at: day.closed ? null : day.open,
+            closes_at: day.closed ? null : day.close,
+            is_closed: day.closed,
+          };
+        });
+        await supabase.from('business_hours').upsert(rows, { onConflict: 'business_id,day_of_week' });
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      // save failed silently — could add error toast here
+    } finally {
+      setSaving(false);
+    }
   }
 
   // When a block is open, show the edit panel instead of the block list
