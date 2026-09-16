@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 // ── types ──────────────────────────────────────────────────────────────────────
@@ -837,26 +837,31 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
 
                   // ── LOCATION ──
                   if(b.id==='location') {
+                    // All location styles share the same map-button pattern
+                    const mapsHref = b.sub ? `https://maps.google.com/?q=${encodeURIComponent(b.sub)}` : '#';
+                    if(bStyle==='minimal') return (
+                      <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
+                        <LucidePin size={10} color={b.color}/>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
+                          {b.sub&&<p className={`text-[8px] truncate ${isDark?'text-white/40':'text-black/40'}`}>{b.sub}</p>}
+                        </div>
+                        <span className={`text-[8px] font-bold ${isDark?'text-white/40':'text-black/35'}`}>Directions ›</span>
+                      </a>
+                    );
                     if(bStyle==='place') return (
                       <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
                         <div className="flex flex-col items-center justify-center py-3" style={{ background:'linear-gradient(135deg,#1e3a5f,#0f172a)',minHeight:60 }}>
                           <LucidePin size={18} color="white"/>
-                          <p className="text-white text-[9px] font-semibold mt-1">{b.title}</p>
+                          <p className="text-white text-[9px] font-semibold mt-1 px-2 text-center truncate">{b.sub||b.title}</p>
                         </div>
-                        <div className="flex gap-1 px-2 py-1.5" style={{ background:cardBg }}>
-                          {b.url&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Google Maps</span>}
-                          {b.appleMapsUrl&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Apple Maps</span>}
-                        </div>
+                        <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-2 py-2" style={{ background:cardBg }}>
+                          <LucidePin size={8} color={b.color}/>
+                          <span className={`text-[8px] font-bold ${isDark?'text-white/60':'text-black/55'}`}>Get Directions</span>
+                        </a>
                       </div>
                     );
-                    if(bStyle==='minimal') return (
-                      <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
-                        <LucidePin size={10} color={b.color}/>
-                        <div className="min-w-0 flex-1"><p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p></div>
-                        <span className={`text-xs ${isDark?'text-white/20':'text-black/20'}`}>›</span>
-                      </div>
-                    );
-                    // default photo
+                    // default photo style
                     return (
                       <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
                         {b.coverPhoto
@@ -866,11 +871,10 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                           </div>
                         }
                         <div className="px-2.5 py-2" style={{ background:cardBg }}>
-                          <p className={`text-[10px] font-semibold ${tx} leading-tight truncate`}>{b.title}</p>
-                          <div className="flex gap-1 mt-1">
-                            {b.url&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Google</span>}
-                            {b.appleMapsUrl&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Apple</span>}
-                          </div>
+                          {b.sub&&<p className={`text-[9px] truncate mb-1 ${isDark?'text-white/50':'text-black/45'}`}>{b.sub}</p>}
+                          <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[8px] font-bold" style={{ background:b.color,color:'white' }}>
+                            <LucidePin size={7} color="white"/> Get Directions
+                          </a>
                         </div>
                       </div>
                     );
@@ -1041,14 +1045,15 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             <div className="space-y-5">
               <BlockStylePicker blockId="location" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <PhotoField
-                label="Place photo"
+                label="Place photo (optional)"
                 value={block.coverPhoto??''}
                 onChange={v=>onUpdateBlock({coverPhoto:v})}
-                hint="Shown instead of a map. Use a photo from your Google Business profile."
+                hint="A photo of your storefront or location."
               />
               <div>
-                <FieldLabel>Google Maps URL</FieldLabel>
-                <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste from Google Maps → Share → Copy link"/>
+                <FieldLabel>Address</FieldLabel>
+                <Input value={block.sub??''} onChange={v=>onUpdateBlock({sub:v})} placeholder="123 Main St, Nashville, TN"/>
+                <p className="mt-1 text-[10px] text-black/35">Visitors tap the button and it opens Maps on their phone.</p>
               </div>
               <div>
                 <FieldLabel>Apple Maps URL</FieldLabel>
@@ -1358,6 +1363,79 @@ function BlockPicker({ blocks, onAdd, onClose }: {
   );
 }
 
+// ── tutorial overlay ───────────────────────────────────────────────────────────
+const TUT_STEPS = [
+  { id: null,         title: 'Welcome to your builder! 👋',   body: "We'll walk you through the basics in 30 seconds. Hit Next to start, or Skip to explore on your own.", align: 'center' as const },
+  { id: 'tut-hours',  title: 'Start with your hours',         body: 'Click the Hours block to set your open/closed times. This powers your live status that customers see instantly.', align: 'right' as const },
+  { id: 'tut-preview',title: 'This is your live page',        body: "The phone preview shows exactly what customers see. Click any block on the preview to jump straight into editing it.", align: 'left' as const },
+  { id: 'tut-add',    title: 'Add more features',             body: 'Hit "+ Add block" to turn on menus, online ordering, reservations, socials, and your website link.', align: 'right' as const },
+  { id: 'tut-save',   title: 'You\'re already live! 🎉',      body: 'Your page is live at your link the moment you save. Hit Save any time to publish your latest changes.', align: 'center' as const },
+];
+
+function TutorialOverlay({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState(0);
+  const [spotRect, setSpotRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const current = TUT_STEPS[step];
+
+  const updateSpot = useCallback(() => {
+    if (!current.id) { setSpotRect(null); return; }
+    const el = document.querySelector(`[data-tut="${current.id}"]`);
+    if (!el) { setSpotRect(null); return; }
+    const r = el.getBoundingClientRect();
+    setSpotRect({ top: r.top - 8, left: r.left - 8, width: r.width + 16, height: r.height + 16 });
+  }, [current.id]);
+
+  useEffect(() => {
+    updateSpot();
+    window.addEventListener('resize', updateSpot);
+    return () => window.removeEventListener('resize', updateSpot);
+  }, [updateSpot]);
+
+  const next = () => { if (step < TUT_STEPS.length - 1) setStep(s => s + 1); else onDone(); };
+  const isLast = step === TUT_STEPS.length - 1;
+
+  // Tooltip position logic
+  let tooltipStyle: React.CSSProperties = {};
+  if (!spotRect || current.align === 'center') {
+    tooltipStyle = { bottom: 32, left: '50%', transform: 'translateX(-50%)' };
+  } else if (current.align === 'right') {
+    tooltipStyle = { top: spotRect.top + spotRect.height / 2 - 80, left: spotRect.left + spotRect.width + 16 };
+  } else {
+    tooltipStyle = { top: spotRect.top + spotRect.height / 2 - 80, right: window.innerWidth - spotRect.left + 16 };
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] pointer-events-none">
+      {/* Dark overlay with spotlight cutout */}
+      <div className="absolute inset-0 pointer-events-auto" style={{ background: 'rgba(0,0,0,0.55)' }} onClick={onDone}/>
+      {spotRect && (
+        <div className="absolute rounded-[12px] pointer-events-none" style={{
+          top: spotRect.top, left: spotRect.left, width: spotRect.width, height: spotRect.height,
+          boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
+          outline: '2px solid rgba(255,255,255,0.7)',
+          background: 'transparent', zIndex: 1,
+        }}/>
+      )}
+      {/* Tooltip card */}
+      <div className="absolute pointer-events-auto z-10 w-[300px] rounded-[20px] bg-white p-5 shadow-2xl" style={tooltipStyle}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex gap-1">
+            {TUT_STEPS.map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all ${i === step ? 'w-4 bg-[#0A0A0A]' : 'w-1.5 bg-[#E0E0E0]'}`}/>
+            ))}
+          </div>
+          <button onClick={onDone} className="text-[11px] text-[#9B9B9B] hover:text-[#0A0A0A]">Skip</button>
+        </div>
+        <h3 className="text-[15px] font-bold text-[#0A0A0A] leading-snug">{current.title}</h3>
+        <p className="mt-2 text-[13px] text-[#6B6B6B] leading-relaxed">{current.body}</p>
+        <button onClick={next} className="mt-4 w-full rounded-full bg-[#0A0A0A] py-2.5 text-[13px] font-semibold text-white">
+          {isLast ? 'Get started →' : 'Next →'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── main export ────────────────────────────────────────────────────────────────
 export default function BuilderClient({ business,initialConfig }: {
   business:Business|null; initialConfig:OpenStatusPageConfig;
@@ -1366,6 +1444,7 @@ export default function BuilderClient({ business,initialConfig }: {
   const [tab,setTab]=useState<'blocks'|'style'|'preview'>('blocks');
   const [openId,setOpenId]=useState<string|null>(null);
   const [showPicker,setShowPicker]=useState(false);
+  const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
@@ -1424,7 +1503,7 @@ export default function BuilderClient({ business,initialConfig }: {
             <LucideChevronRight size={14} color="#C0C0C0"/>
             <span className="text-sm text-[#9B9B9B] hidden sm:block">Builder</span>
           </div>
-          <button onClick={save} disabled={saving}
+          <button onClick={save} disabled={saving} data-tut="tut-save"
             className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#F5F5F5] text-[#9B9B9B]':'bg-[#0A0A0A] text-white hover:bg-[#333]'}`}>
             {saving?'Saving…':saved?'✓ Saved':'Save'}
           </button>
@@ -1477,6 +1556,7 @@ export default function BuilderClient({ business,initialConfig }: {
                   )}
                   {activeBlocks.map((block,i)=>(
                     <div key={block.id}
+                      data-tut={i===0&&block.id==='hours'?'tut-hours':undefined}
                       className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#FAFAFA]
                         ${i<activeBlocks.length-1?'border-b border-[#F5F5F5]':''}
                         ${openId===block.id?'bg-[#F8F8F8]':''}
@@ -1536,6 +1616,7 @@ export default function BuilderClient({ business,initialConfig }: {
 
                 {/* Add block button */}
                 <button
+                  data-tut="tut-add"
                   onClick={()=>setShowPicker(true)}
                   className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#9B9B9B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-all group"
                 >
@@ -1630,7 +1711,7 @@ export default function BuilderClient({ business,initialConfig }: {
           </div>
 
           {/* RIGHT: sticky preview — always visible on desktop */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:block" data-tut="tut-preview">
             <div className="sticky top-24">
               <p className="text-[10px] font-semibold text-[#C0C0C0] uppercase tracking-widest mb-5 text-center">Live preview</p>
               <LivePhonePreview
@@ -1643,6 +1724,11 @@ export default function BuilderClient({ business,initialConfig }: {
 
         </div>
       </div>
+
+      {/* Tutorial overlay */}
+      {showTutorial && !showPicker && (
+        <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{}}}/>
+      )}
 
       {/* Block picker overlay */}
       {showPicker && (
