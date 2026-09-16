@@ -716,6 +716,25 @@ function TimeSelect({ value,onChange }: { value:string; onChange:(v:string)=>voi
   );
 }
 
+// ── Tags row with expand ──────────────────────────────────────────────────────
+function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? tags : tags.slice(0, 3);
+  const hasMore = tags.length > 3;
+  return (
+    <div className="flex flex-wrap gap-1 justify-center mt-2">
+      {shown.map(t=>(
+        <span key={t} className={`text-[8px] px-2 py-0.5 rounded-full ${isDark?'bg-white/15 text-white/75':'bg-black/6 text-black/50'}`}>{t}</span>
+      ))}
+      {hasMore && (
+        <button onClick={()=>setExpanded(e=>!e)} className={`text-[8px] px-2 py-0.5 rounded-full font-semibold ${isDark?'bg-white/20 text-white/80':'bg-black/10 text-black/60'}`}>
+          {expanded?'Less':'+'+(tags.length-3)+' more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Screen preview (no phone frame) ───────────────────────────────────────────
 function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { business:Business|null; config:OpenStatusPageConfig; selectedId?:string|null; onSelectBlock?:(id:string)=>void }) {
   const activeBlocks = config.blocks.filter(b=>b.on);
@@ -782,11 +801,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
             </div>
           </div>
           {(config.tags??[]).length>0 && (
-            <div className="flex flex-wrap gap-1 justify-center mt-2">
-              {(config.tags??[]).slice(0,3).map(t=>(
-                <span key={t} className={`text-[8px] px-2 py-0.5 rounded-full ${config.bgImage?'bg-white/15 text-white/75':isDark?'bg-white/10 text-white/60':'bg-black/6 text-black/50'}`}>{t}</span>
-              ))}
-            </div>
+            <TagsRow tags={config.tags??[]} isDark={isDark||!!config.bgImage}/>
           )}
         </div>
 
@@ -1441,7 +1456,7 @@ export default function BuilderClient({ business,initialConfig }: {
   business:Business|null; initialConfig:OpenStatusPageConfig;
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
-  const [tab,setTab]=useState<'blocks'|'style'|'preview'>('blocks');
+  const [tab,setTab]=useState<'blocks'|'style'|'templates'>('blocks');
   const [openId,setOpenId]=useState<string|null>(null);
   const [showPicker,setShowPicker]=useState(false);
   const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
@@ -1488,6 +1503,7 @@ export default function BuilderClient({ business,initialConfig }: {
 
   // When a block is open, show the edit panel instead of the block list
   const showEditPanel = !!openBlock && tab === 'blocks';
+  const igHandle = (business as (Business & { instagram_handle?: string }) | null)?.instagram_handle ?? null;
 
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A]" style={{ fontFamily:"'Poppins', system-ui, sans-serif" }}>
@@ -1514,10 +1530,10 @@ export default function BuilderClient({ business,initialConfig }: {
       {!showEditPanel && (
         <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
           <div className="max-w-[1380px] mx-auto px-6 flex gap-0">
-            {(['blocks','style','preview'] as const).map(t=>(
+            {(['blocks','style','templates'] as const).map(t=>(
               <button key={t} onClick={()=>setTab(t)}
                 className={`py-3 px-1 mr-6 text-[13px] font-semibold capitalize transition-colors border-b-2 -mb-px ${tab===t?'text-[#0A0A0A] border-[#0A0A0A]':'text-[#9B9B9B] border-transparent hover:text-[#6B6B6B]'}`}>
-                {t==='blocks'?'Blocks':t==='style'?'Style':'Preview'}
+                {t==='blocks'?'Blocks':t==='style'?'Style':'Templates'}
               </button>
             ))}
           </div>
@@ -1630,7 +1646,7 @@ export default function BuilderClient({ business,initialConfig }: {
                 <div className="mt-10">
                   <div className="mb-4">
                     <p className="text-[11px] font-semibold text-[#C0C0C0] uppercase tracking-widest mb-1">FEATURES & VIBE</p>
-                    <p className="text-[13px] text-[#9B9B9B]">Select all that apply — shown as tags on your page.</p>
+                    <p className="text-[13px] text-[#9B9B9B]">Select tags so people can find you.</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {FEATURE_TAGS.map(tag=>{
@@ -1653,7 +1669,26 @@ export default function BuilderClient({ business,initialConfig }: {
               <div className="space-y-10">
                 <div>
                   <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Style</h2>
-                  <p className="text-[#9B9B9B] text-[13px] mt-1">Background, photos, and social links.</p>
+                  <p className="text-[#9B9B9B] text-[13px] mt-1">Logo, colors, and social links.</p>
+                </div>
+
+                {/* Logo */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Logo</p>
+                  {business?.avatar_url ? (
+                    <div className="flex items-center gap-4">
+                      <img src={business.avatar_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url} className="w-16 h-16 rounded-full object-cover border border-[#EBEBEB]" alt="Logo"/>
+                      <div>
+                        {igHandle && <p className="text-[11px] text-[#9B9B9B] mb-2">Pulled from your Meta account</p>}
+                        <a href="/setup?step=3" className="text-[12px] font-semibold text-[#0A0A0A] underline underline-offset-2">Change logo →</a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-[#D4D4D4] p-4 text-center">
+                      <p className="text-[13px] text-[#9B9B9B] mb-2">No logo yet</p>
+                      <a href="/setup?step=3" className="text-[12px] font-semibold text-[#0A0A0A] underline underline-offset-2">Upload logo →</a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Background photo */}
@@ -1667,7 +1702,7 @@ export default function BuilderClient({ business,initialConfig }: {
                 {/* Background color */}
                 <div>
                   <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Page color</p>
-                  <div className="grid grid-cols-5 gap-3 mb-4">
+                  <div className="grid grid-cols-5 gap-3 mb-3">
                     {BG_PRESETS.map(c=>(
                       <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
                         className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
@@ -1675,13 +1710,33 @@ export default function BuilderClient({ business,initialConfig }: {
                       />
                     ))}
                   </div>
+                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3 mt-5">Gradients</p>
+                  <div className="grid grid-cols-5 gap-3 mb-4">
+                    {[
+                      'linear-gradient(135deg,#f8f5f0,#e8d5b7)',
+                      'linear-gradient(135deg,#f0f4ff,#dce5ff)',
+                      'linear-gradient(135deg,#f0fdf4,#dcfce7)',
+                      'linear-gradient(135deg,#fff0f5,#fce7f3)',
+                      'linear-gradient(135deg,#fefce8,#fde68a)',
+                      'linear-gradient(135deg,#0a0a0a,#1c1c2e)',
+                      'linear-gradient(135deg,#111827,#1e3a5f)',
+                      'linear-gradient(135deg,#1a0a2e,#2d1b69)',
+                      'linear-gradient(135deg,#0a1628,#0f4c75)',
+                      'linear-gradient(135deg,#1c1c1c,#2d4739)',
+                    ].map(g=>(
+                      <button key={g} onClick={()=>setConfig(p=>({...p,bg:g}))}
+                        className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
+                        style={{ background:g, borderColor:config.bg===g?'#0A0A0A':'#EBEBEB' }}
+                      />
+                    ))}
+                  </div>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg border border-[#EBEBEB]" style={{ background:config.bg }}/>
                     <input
                       value={config.bg}
-                      onChange={e=>{ if(/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setConfig(c=>({...c,bg:e.target.value})); }}
-                      placeholder="#ffffff"
-                      className="w-28 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] text-[#0A0A0A] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+                      onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
+                      placeholder="#ffffff or gradient"
+                      className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] text-[#0A0A0A] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
                     />
                   </div>
                 </div>
@@ -1701,11 +1756,42 @@ export default function BuilderClient({ business,initialConfig }: {
               </div>
             )}
 
-            {/* PREVIEW (mobile only) */}
-            {!showEditPanel && tab==='preview' && (
-              <div className="lg:hidden flex flex-col items-center py-8">
-                <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-8">What customers see</p>
-                <LivePhonePreview business={business} config={config} selectedId={openId} onSelectBlock={id=>{setOpenId(id);setTab('blocks');}}/>
+            {/* TEMPLATES */}
+            {!showEditPanel && tab==='templates' && (
+              <div>
+                <div className="mb-8">
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Templates</h2>
+                  <p className="text-[#9B9B9B] text-[13px] mt-1">Example layouts to inspire your page.</p>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {[
+                    { label:'Coffee Shop', sub:'Espresso bar · Austin, TX', color:'#C8A97E', bg:'#1a0f0a', tags:['Dine-in','Free WiFi','Dog friendly'] },
+                    { label:'Boutique', sub:'Curated fashion · Nashville, TN', color:'#E879A0', bg:'#0f0a14', tags:['Outdoor seating','Kid friendly'] },
+                    { label:'Etsy Storefront', sub:'Handmade goods · Portland, OR', color:'#F97316', bg:'#f8f5f0', tags:['Delivery','Curbside pickup'] },
+                    { label:'Food Truck', sub:'Street tacos · Miami, FL', color:'#22C55E', bg:'#0a1a0f', tags:['Takeout','Catering','Vegan options'] },
+                    { label:'Yoga Studio', sub:'Mind & body · Denver, CO', color:'#A78BFA', bg:'#0d0a1a', tags:['Wheelchair accessible','Kid friendly'] },
+                    { label:'Barbershop', sub:'Cuts & fades · Chicago, IL', color:'#38BDF8', bg:'#0a0f1a', tags:['Dine-in','Free WiFi'] },
+                  ].map(t=>(
+                    <div key={t.label} className="rounded-2xl overflow-hidden border border-[#EBEBEB] cursor-default">
+                      <div className="px-4 py-5" style={{ background:t.bg }}>
+                        <div className="w-9 h-9 rounded-full mb-3" style={{ background:t.color+'40', border:`2px solid ${t.color}60` }}/>
+                        <p className="font-bold text-white text-[15px] leading-tight">{t.label}</p>
+                        <p className="text-[11px] mt-0.5" style={{ color:t.color+'99' }}>{t.sub}</p>
+                        <div className="mt-3 flex gap-1 flex-wrap">
+                          {t.tags.map(tg=><span key={tg} className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-white/60">{tg}</span>)}
+                        </div>
+                        <div className="mt-3 rounded-xl p-2.5" style={{ background:t.color+'18' }}>
+                          <div className="h-1.5 rounded-full bg-white/20 w-3/4 mb-1.5"/>
+                          <div className="h-1.5 rounded-full bg-white/10 w-1/2"/>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 bg-white flex items-center justify-between">
+                        <span className="text-[12px] font-semibold text-[#9B9B9B]">Coming soon</span>
+                        <span className="text-[11px] text-[#C0C0C0]">Apply →</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
