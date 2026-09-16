@@ -59,14 +59,14 @@ const SOCIAL_PLATFORMS = [
   { key:'twitter',   label:'Twitter / X'},
   { key:'youtube',   label:'YouTube'   },
 ];
-const BLOCK_STYLES: Record<string, { key:string; label:string; icon:string }[]> = {
-  hours:    [{ key:'row',    label:'Status row', icon:'≡' }, { key:'clock',  label:'Clock',   icon:'◷' }, { key:'banner', label:'Banner', icon:'▬' }],
-  location: [{ key:'photo',  label:'Photo',      icon:'⬜' }, { key:'pin',    label:'Pin card', icon:'◉' }, { key:'compact',label:'Compact',icon:'≡' }],
-  menu:     [{ key:'photo',  label:'Photo',      icon:'⬜' }, { key:'card',   label:'Card',    icon:'▭' }, { key:'dark',   label:'Dark',   icon:'◼' }],
-  order:    [{ key:'brand',  label:'Brand',      icon:'🅱' }, { key:'hero',   label:'Hero',    icon:'⬛' }, { key:'cta',    label:'CTA',    icon:'▷' }],
-  book:     [{ key:'brand',  label:'Brand',      icon:'🅱' }, { key:'cal',    label:'Calendar',icon:'▦' }, { key:'cta',    label:'CTA',    icon:'▷' }],
-  socials:  [{ key:'icons',  label:'Icon row',   icon:'◉◉' }, { key:'list',  label:'List',    icon:'≡' }],
-  website:  [{ key:'photo',  label:'Photo',      icon:'⬜' }, { key:'link',   label:'Link row',icon:'≡' }],
+const BLOCK_STYLES: Record<string, { key:string; label:string }[]> = {
+  hours:    [{ key:'minimal', label:'Minimal' }, { key:'clock',  label:'Clock'   }, { key:'hero',    label:'Hero'    }],
+  location: [{ key:'photo',   label:'Photo'   }, { key:'place',  label:'Place'   }, { key:'minimal', label:'Minimal' }],
+  menu:     [{ key:'photo',   label:'Photo'   }, { key:'card',   label:'Card'    }, { key:'dark',    label:'Dark'    }],
+  order:    [{ key:'brand',   label:'Brand'   }, { key:'hero',   label:'Hero'    }, { key:'cta',     label:'CTA'     }],
+  book:     [{ key:'brand',   label:'Brand'   }, { key:'cal',    label:'Calendar'}, { key:'cta',     label:'CTA'     }],
+  socials:  [{ key:'icons',   label:'Icons'   }, { key:'list',   label:'List'    }],
+  website:  [{ key:'photo',   label:'Photo'   }, { key:'link',   label:'Link'    }],
 };
 
 const FEATURE_TAGS = [
@@ -505,6 +505,63 @@ function ClockFace({ size=52, color='#059669' }: { size?: number; color?: string
 }
 
 // Block visual style picker
+function StyleThumb({ blockId, styleKey }: { blockId: string; styleKey: string }) {
+  // Hours
+  if (blockId === 'hours') {
+    if (styleKey === 'minimal') return (
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-white flex items-center px-2 gap-1.5">
+        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"/>
+        <div className="flex-1 space-y-1"><div className="h-1.5 bg-[#E0E0E0] rounded-full w-full"/><div className="h-1 bg-[#F0F0F0] rounded-full w-3/4"/></div>
+        <div className="w-1.5 h-1.5 rounded-full bg-[#E0E0E0]"/>
+      </div>
+    );
+    if (styleKey === 'clock') return (
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-white flex flex-col items-center justify-center gap-0.5">
+        <div className="w-[14px] h-[14px] rounded-full border-[1.5px] border-[#C0C0C0] relative">
+          <div className="absolute left-1/2 top-1/2 w-[1px] h-[5px] bg-[#888] rounded origin-bottom" style={{ transform:'translate(-50%,-100%) rotate(-35deg)' }}/>
+          <div className="absolute left-1/2 top-1/2 w-[1px] h-[4px] bg-[#666] rounded origin-bottom" style={{ transform:'translate(-50%,-100%) rotate(60deg)' }}/>
+        </div>
+        <div className="h-[5px] bg-[#F0F0F0] rounded-full w-10"/>
+      </div>
+    );
+    if (styleKey === 'hero') return (
+      <div className="w-[68px] h-[42px] rounded-lg border border-emerald-200 bg-gradient-to-br from-emerald-500 to-emerald-600 flex flex-col items-center justify-center gap-0.5">
+        <span className="text-[9px] font-black text-white tracking-tight leading-none">OPEN</span>
+        <div className="h-[4px] bg-white/30 rounded-full w-10"/>
+      </div>
+    );
+  }
+  // Location
+  if (blockId === 'location') {
+    if (styleKey === 'photo') return (
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] overflow-hidden">
+        <div className="h-[22px] bg-gradient-to-br from-[#1e3a5f] to-[#0f172a] flex items-center justify-center">
+          <LucidePin size={7} color="rgba(255,255,255,0.6)"/>
+        </div>
+        <div className="h-[20px] bg-white px-1.5 flex items-center gap-1">
+          <div className="h-1.5 bg-[#E8E8E8] rounded-full flex-1"/>
+          <div className="h-1.5 w-1.5 bg-[#F0F0F0] rounded"/>
+        </div>
+      </div>
+    );
+    if (styleKey === 'place') return (
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-gradient-to-br from-[#1e3a5f] to-[#0f172a] flex flex-col items-center justify-center gap-0.5">
+        <LucidePin size={10} color="white"/>
+        <div className="h-[4px] bg-white/30 rounded-full w-8"/>
+      </div>
+    );
+    if (styleKey === 'minimal') return (
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-white flex items-center px-2 gap-1.5">
+        <LucidePin size={8} color="#C0C0C0"/>
+        <div className="flex-1 h-1.5 bg-[#E8E8E8] rounded-full"/>
+        <span className="text-[7px] text-[#C0C0C0]">›</span>
+      </div>
+    );
+  }
+  // Generics
+  return <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-[#F5F5F5]"/>;
+}
+
 function BlockStylePicker({ blockId, selected, onSelect }: {
   blockId: string; selected: string; onSelect: (key: string) => void;
 }) {
@@ -512,13 +569,13 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
   if (!styles) return null;
   return (
     <div>
-      <FieldLabel>Block style</FieldLabel>
-      <div className="flex gap-2 flex-wrap">
+      <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-2">Layout</p>
+      <div className="flex gap-2">
         {styles.map(s => (
           <button key={s.key} onClick={() => onSelect(s.key)}
-            className={`flex flex-col items-center gap-1.5 px-5 py-3 rounded-2xl border transition-all ${selected===s.key?'border-[#0A0A0A] bg-[#F5F5F5] shadow-sm':'border-[#EBEBEB] hover:border-[#C0C0C0] bg-white'}`}>
-            <span className="text-base leading-none">{s.icon}</span>
-            <span className={`text-[10px] font-semibold ${selected===s.key?'text-[#0A0A0A]':'text-[#6B6B6B]'}`}>{s.label}</span>
+            className={`flex flex-col items-center gap-1.5 rounded-xl p-1.5 border transition-all ${selected===s.key?'border-[#0A0A0A]':'border-[#E8E8E8] hover:border-[#C0C0C0]'}`}>
+            <StyleThumb blockId={blockId} styleKey={s.key}/>
+            <span className={`text-[10px] font-semibold ${selected===s.key?'text-[#0A0A0A]':'text-[#9B9B9B]'}`}>{s.label}</span>
           </button>
         ))}
       </div>
@@ -660,7 +717,7 @@ function TimeSelect({ value,onChange }: { value:string; onChange:(v:string)=>voi
 }
 
 // ── Screen preview (no phone frame) ───────────────────────────────────────────
-function LivePhonePreview({ business,config }: { business:Business|null; config:OpenStatusPageConfig }) {
+function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { business:Business|null; config:OpenStatusPageConfig; selectedId?:string|null; onSelectBlock?:(id:string)=>void }) {
   const activeBlocks = config.blocks.filter(b=>b.on);
   // Hours always first in preview
   const sortedBlocks = [
@@ -676,7 +733,7 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
   const reviewPct = locBlock?.reviewStars&&locBlock.reviewStars>0 ? starsToPercent(locBlock.reviewStars) : null;
 
   return (
-    <div className="mx-auto" style={{ width:290 }}>
+    <div className="mx-auto" style={{ width:310 }}>
       <div
         className="relative rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/8"
         style={{
@@ -747,7 +804,7 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
                   ? (b.color?`${b.color}50`:'rgba(255,255,255,0.22)')
                   : (b.color?`${b.color}35`:(isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.08)'));
 
-                const bStyle = b.blockStyle ?? (b.id==='hours'?'row':b.id==='location'?'photo':'brand');
+                const bStyle = b.blockStyle ?? (b.id==='hours'?'minimal':b.id==='location'?'photo':'brand');
                 const inner = (() => {
 
                   // ── HOURS ──
@@ -759,13 +816,13 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
                         <p className={`text-[8px] ${sx}`}>{todayLabel}</p>
                       </div>
                     );
-                    if(bStyle==='banner') return (
+                    if(bStyle==='hero') return (
                       <div className="rounded-2xl px-4 py-4 text-center" style={{ background: status==='open'?`linear-gradient(135deg,${b.color??'#059669'},#10b981)`:`linear-gradient(135deg,#374151,#6b7280)` }}>
                         <p className="text-white font-black text-[20px] tracking-tight">{status==='open'?'OPEN':'CLOSED'}</p>
                         <p className="text-white/65 text-[8px] mt-0.5">{todayLabel}</p>
                       </div>
                     );
-                    // default row
+                    // default minimal
                     return (
                       <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
                         <BlockIcon id={b.id} size={12} color={b.color}/>
@@ -780,7 +837,7 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
 
                   // ── LOCATION ──
                   if(b.id==='location') {
-                    if(bStyle==='pin') return (
+                    if(bStyle==='place') return (
                       <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
                         <div className="flex flex-col items-center justify-center py-3" style={{ background:'linear-gradient(135deg,#1e3a5f,#0f172a)',minHeight:60 }}>
                           <LucidePin size={18} color="white"/>
@@ -792,7 +849,7 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
                         </div>
                       </div>
                     );
-                    if(bStyle==='compact') return (
+                    if(bStyle==='minimal') return (
                       <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
                         <LucidePin size={10} color={b.color}/>
                         <div className="min-w-0 flex-1"><p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p></div>
@@ -918,8 +975,12 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
                   );
                 })();
 
+                const isSelected = selectedId === b.id;
                 return (
-                  <div key={b.id} className={isHalf?'col-span-1':'col-span-2'}>
+                  <div key={b.id} className={`${isHalf?'col-span-1':'col-span-2'} ${onSelectBlock?'cursor-pointer':''}`}
+                    onClick={()=>onSelectBlock?.(b.id)}
+                    style={isSelected?{ outline:'2px solid #0A0A0A', borderRadius:16, outlineOffset:2 }:{}}
+                  >
                     {inner}
                   </div>
                 );
@@ -933,8 +994,8 @@ function LivePhonePreview({ business,config }: { business:Business|null; config:
   );
 }
 
-// ── Block modal ────────────────────────────────────────────────────────────────
-function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
+// ── Block edit panel (inline right of blocks, no modal) ───────────────────────
+function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
   onUpdateConfig:(u:Partial<OpenStatusPageConfig>)=>void;
@@ -946,37 +1007,34 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
     const mon=hours.mon;
     onUpdateConfig({ weeklyHours:{ ...hours, tue:{...mon},wed:{...mon},thu:{...mon},fri:{...mon} } });
   }
-  useEffect(()=>{ document.body.style.overflow='hidden'; return()=>{ document.body.style.overflow=''; }; },[]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"/>
-      <div
-        className="relative bg-white rounded-[20px] w-full max-w-[720px] max-h-[88vh] flex flex-col shadow-[0_24px_80px_rgba(0,0,0,0.15)] border border-[#EBEBEB]"
-        onClick={e=>e.stopPropagation()}
-      >
-        {/* header */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-[#EBEBEB] flex-shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-[#F5F5F5] border border-[#EBEBEB] flex items-center justify-center flex-shrink-0">
-            <BlockIcon id={block.id} size={16} color="#0A0A0A"/>
+    <div className="flex flex-col h-full">
+      {/* header */}
+      <div className="flex items-center gap-3 pb-5 mb-6 border-b border-[#EBEBEB] flex-shrink-0">
+        <button onClick={onClose} className="flex items-center gap-1.5 text-[12px] text-[#9B9B9B] hover:text-[#0A0A0A] transition-colors font-medium -ml-0.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Blocks
+        </button>
+        <div className="h-4 w-px bg-[#EBEBEB]"/>
+        <div className="w-7 h-7 rounded-lg bg-[#F5F5F5] border border-[#EBEBEB] flex items-center justify-center flex-shrink-0">
+          <BlockIcon id={block.id} size={13} color="#0A0A0A"/>
+        </div>
+        <p className="font-semibold text-[14px] text-[#0A0A0A] leading-tight flex-1 min-w-0 truncate">{block.title}</p>
+      </div>
+
+      {/* body */}
+      <div className="overflow-y-auto flex-1 space-y-1">
+        {/* Title + subtitle — always shown */}
+        <div className="pb-5 mb-5 border-b border-[#F0F0F0]">
+          <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Content</p>
+          <div className="space-y-3">
+            <div><FieldLabel>Title</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
+            <div><FieldLabel>Subtitle</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-[15px] text-[#0A0A0A] leading-tight">{block.title}</p>
-            <p className="text-xs text-[#9B9B9B] leading-tight mt-0.5">{block.sub}</p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center hover:bg-[#EBEBEB] transition-colors flex-shrink-0">
-            <LucideX size={14} color="#6B6B6B"/>
-          </button>
         </div>
 
-        {/* body */}
-        <div className="overflow-y-auto flex-1 px-6 py-5">
-
-          {/* Always show title + subtitle for all blocks */}
-          <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-[#F5F5F5]">
-            <div><FieldLabel>Widget title</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
-            <div><FieldLabel>Subtitle / tagline</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
-          </div>
+        <div className="space-y-5">
 
           {/* ── LOCATION ── */}
           {block.id==='location' && (
@@ -1040,7 +1098,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── HOURS ── */}
           {block.id==='hours' && (
             <div className="space-y-6">
-              <BlockStylePicker blockId="hours" selected={block.blockStyle??'row'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
+              <BlockStylePicker blockId="hours" selected={block.blockStyle??'minimal'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#FAFAFA] border-[#EBEBEB]'}`}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                 <div>
@@ -1209,22 +1267,91 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             </div>
           )}
 
+          {/* Widget width */}
+          {block.id!=='hours' && (
+            <div className="pt-5 border-t border-[#F0F0F0]">
+              <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Width</p>
+              <div className="flex gap-2">
+                <button onClick={()=>onUpdateBlock({size:'full'})}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${(!block.size||block.size==='full')?'border-[#0A0A0A] bg-[#F5F5F5] text-[#0A0A0A]':'border-[#EBEBEB] text-[#9B9B9B] hover:border-[#0A0A0A]'}`}>
+                  <LucideLayoutList size={13} color="currentColor"/> Full
+                </button>
+                <button onClick={()=>onUpdateBlock({size:'half'})}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${block.size==='half'?'border-[#0A0A0A] bg-[#F5F5F5] text-[#0A0A0A]':'border-[#EBEBEB] text-[#9B9B9B] hover:border-[#0A0A0A]'}`}>
+                  <LucideLayoutGrid size={13} color="currentColor"/> Half
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Accent color */}
-          <div className="mt-6 pt-6 border-t border-[#F5F5F5]">
-            <FieldLabel>Accent color</FieldLabel>
+          <div className="pt-5 border-t border-[#F0F0F0]">
+            <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Color</p>
             <AccentColorPicker value={block.color} onChange={v=>onUpdateBlock({color:v})}/>
           </div>
 
         </div>
+      </div>
+    </div>
+  );
+}
 
-        {/* footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#EBEBEB] flex-shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">
-            Cancel
-          </button>
-          <button onClick={onClose} className="px-5 py-2 bg-[#0A0A0A] text-white rounded-xl text-sm font-semibold hover:bg-[#333] transition-colors">
-            Done
-          </button>
+// ── Block picker (command palette style) ──────────────────────────────────────
+const PICKER_CATEGORIES = [
+  { label:'ESSENTIALS', ids:['hours','location','menu','website'] },
+  { label:'CONVERT',    ids:['order','book'] },
+  { label:'CONNECT',    ids:['socials'] },
+];
+
+function BlockPicker({ blocks, onAdd, onClose }: {
+  blocks: OpenStatusBlock[];
+  onAdd: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/15"/>
+      <div className="relative bg-white rounded-2xl w-full max-w-[380px] shadow-[0_12px_48px_rgba(0,0,0,0.12)] border border-[#EBEBEB] overflow-hidden" onClick={e=>e.stopPropagation()}>
+        {/* search */}
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#F0F0F0]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C0C0C0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            type="text" placeholder="Search blocks…" value={search}
+            onChange={e=>setSearch(e.target.value)}
+            className="flex-1 text-[14px] text-[#0A0A0A] placeholder-[#C0C0C0] border-none outline-none bg-transparent"
+            autoFocus
+          />
+        </div>
+        <div className="max-h-[380px] overflow-y-auto py-2">
+          {PICKER_CATEGORIES.map(cat => {
+            const items = cat.ids
+              .map(id => DEFAULT_BLOCKS.find(b=>b.id===id))
+              .filter((b): b is OpenStatusBlock => !!b && (!search || b.title.toLowerCase().includes(search.toLowerCase())));
+            if (items.length === 0) return null;
+            return (
+              <div key={cat.label}>
+                <p className="text-[10px] font-semibold text-[#C0C0C0] tracking-widest uppercase px-4 pt-3 pb-1">{cat.label}</p>
+                {items.map(def => {
+                  const isOn = blocks.find(b=>b.id===def.id)?.on;
+                  return (
+                    <button key={def.id}
+                      onClick={()=>{ onAdd(def.id); onClose(); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#FAFAFA] transition-colors text-left">
+                      <div className="w-8 h-8 rounded-xl bg-[#F5F5F5] border border-[#EBEBEB] flex items-center justify-center flex-shrink-0">
+                        <BlockIcon id={def.id} size={14} color="#0A0A0A"/>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-[#0A0A0A] leading-tight">{def.title}</p>
+                        <p className="text-[11px] text-[#9B9B9B] leading-tight">{def.sub}</p>
+                      </div>
+                      {isOn && <span className="text-[10px] text-[#C0C0C0] font-medium flex-shrink-0">Added</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -1238,6 +1365,7 @@ export default function BuilderClient({ business,initialConfig }: {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [tab,setTab]=useState<'blocks'|'style'|'preview'>('blocks');
   const [openId,setOpenId]=useState<string|null>(null);
+  const [showPicker,setShowPicker]=useState(false);
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
@@ -1245,10 +1373,12 @@ export default function BuilderClient({ business,initialConfig }: {
 
   // Hours always first in the block list
   const allBlocks = config.blocks;
-  const blocks = [
+  const orderedBlocks = [
     ...allBlocks.filter(b=>b.id==='hours'),
     ...allBlocks.filter(b=>b.id!=='hours'),
   ];
+  // Only show enabled blocks in the list
+  const activeBlocks = orderedBlocks.filter(b=>b.on);
 
   const openBlock=allBlocks.find(b=>b.id===openId)??null;
   const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours);
@@ -1256,8 +1386,8 @@ export default function BuilderClient({ business,initialConfig }: {
   function updateBlock(id:string, u:Partial<OpenStatusBlock>) {
     setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));
   }
-  function toggleBlock(id:string) {
-    updateBlock(id,{on:!allBlocks.find(b=>b.id===id)?.on});
+  function enableBlock(id:string) {
+    updateBlock(id,{on:true});
   }
   function handleDrop(targetId: string) {
     if (!dragId || dragId===targetId || dragId==='hours' || targetId==='hours') { setDragId(null); setDragOverId(null); return; }
@@ -1277,12 +1407,15 @@ export default function BuilderClient({ business,initialConfig }: {
     finally { setSaving(false); }
   }
 
+  // When a block is open, show the edit panel instead of the block list
+  const showEditPanel = !!openBlock && tab === 'blocks';
+
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A]" style={{ fontFamily:"'Poppins', system-ui, sans-serif" }}>
 
       {/* header */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
-        <div className="max-w-[1280px] mx-auto px-6 h-14 flex items-center justify-between gap-4">
+        <div className="max-w-[1380px] mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-full bg-[#0A0A0A] flex items-center justify-center flex-shrink-0">
               <span className="text-white text-[11px] font-black">O</span>
@@ -1298,43 +1431,59 @@ export default function BuilderClient({ business,initialConfig }: {
         </div>
       </header>
 
-      {/* tab bar */}
-      <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
-        <div className="max-w-[1280px] mx-auto px-6 flex gap-0">
-          {(['blocks','style','preview'] as const).map(t=>(
-            <button key={t} onClick={()=>setTab(t)}
-              className={`py-3 px-1 mr-6 text-[13px] font-semibold capitalize transition-colors border-b-2 -mb-px ${tab===t?'text-[#0A0A0A] border-[#0A0A0A]':'text-[#9B9B9B] border-transparent hover:text-[#6B6B6B]'}`}>
-              {t==='blocks'?'Blocks':t==='style'?'Style':'Preview'}
-            </button>
-          ))}
+      {/* tab bar — hidden when edit panel is open */}
+      {!showEditPanel && (
+        <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
+          <div className="max-w-[1380px] mx-auto px-6 flex gap-0">
+            {(['blocks','style','preview'] as const).map(t=>(
+              <button key={t} onClick={()=>setTab(t)}
+                className={`py-3 px-1 mr-6 text-[13px] font-semibold capitalize transition-colors border-b-2 -mb-px ${tab===t?'text-[#0A0A0A] border-[#0A0A0A]':'text-[#9B9B9B] border-transparent hover:text-[#6B6B6B]'}`}>
+                {t==='blocks'?'Blocks':t==='style'?'Style':'Preview'}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* workspace */}
-      <div className="max-w-[1280px] mx-auto px-6 py-10">
-        <div className="lg:grid lg:grid-cols-[1fr_310px] lg:gap-20">
+      <div className="max-w-[1380px] mx-auto px-6 py-10">
+        <div className="lg:grid lg:grid-cols-[1fr_350px] lg:gap-16">
 
           {/* LEFT */}
           <div className="min-w-0">
 
-            {/* BLOCKS */}
-            {tab==='blocks' && (
+            {/* ── BLOCK EDIT PANEL ── (replaces block list when a block is open) */}
+            {showEditPanel && openBlock && (
+              <BlockEditPanel
+                block={openBlock} config={config}
+                onUpdateBlock={u=>updateBlock(openBlock.id,u)}
+                onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
+                onClose={()=>setOpenId(null)}
+              />
+            )}
+
+            {/* ── BLOCKS LIST ── */}
+            {!showEditPanel && tab==='blocks' && (
               <div>
                 <div className="mb-8">
-                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-1">YOUR PAGE</p>
-                  <h2 className="text-2xl font-bold text-[#0A0A0A] leading-tight">Build your page</h2>
-                  <p className="text-[#6B6B6B] text-sm mt-1">Hours are always shown first. Tap any block to customize it.</p>
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Your page</h2>
+                  <p className="text-[#9B9B9B] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
                 </div>
-                <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden">
-                  {blocks.map((block,i)=>(
+
+                {/* Active blocks list */}
+                <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden mb-1">
+                  {activeBlocks.length === 0 && (
+                    <div className="px-4 py-8 text-center text-[13px] text-[#9B9B9B]">No blocks added yet. Hit + Add block below.</div>
+                  )}
+                  {activeBlocks.map((block,i)=>(
                     <div key={block.id}
-                      className={`flex items-center gap-3 px-4 cursor-pointer transition-all hover:bg-[#FAFAFA]
-                        ${i<blocks.length-1?'border-b border-[#F5F5F5]':''}
-                        ${block.id==='hours'?'bg-[#FAFFFE]':''}
-                        ${dragOverId===block.id&&dragId!==block.id?'border-l-2 border-l-[#0A0A0A] bg-[#F5F5F5]':''}
+                      className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#FAFAFA]
+                        ${i<activeBlocks.length-1?'border-b border-[#F5F5F5]':''}
+                        ${openId===block.id?'bg-[#F8F8F8]':''}
+                        ${dragOverId===block.id&&dragId!==block.id?'border-l-[3px] border-l-[#0A0A0A]':''}
                         ${dragId===block.id?'opacity-40':''}
                       `}
-                      style={{ height:64 }}
+                      style={{ height:68 }}
                       draggable={block.id!=='hours'}
                       onDragStart={()=>{ if(block.id!=='hours') setDragId(block.id); }}
                       onDragOver={e=>{ e.preventDefault(); setDragOverId(block.id); }}
@@ -1343,39 +1492,64 @@ export default function BuilderClient({ business,initialConfig }: {
                       onDragEnd={()=>{ setDragId(null); setDragOverId(null); }}
                       onClick={()=>setOpenId(block.id)}
                     >
+                      {/* drag handle */}
                       {block.id!=='hours'
-                        ?<div className="flex-shrink-0 cursor-grab opacity-30 hover:opacity-70 transition-opacity"><LucideGrip size={14} color="#6B6B6B"/></div>
+                        ?<div className="flex-shrink-0 cursor-grab opacity-25 hover:opacity-60 transition-opacity" onClick={e=>e.stopPropagation()}>
+                          <LucideGrip size={14} color="#6B6B6B"/>
+                        </div>
                         :<div className="w-[14px] flex-shrink-0"/>
                       }
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border ${block.on?'bg-[#F5F5F5] border-[#EBEBEB]':'bg-[#FAFAFA] border-[#F0F0F0]'}`}
-                        style={block.on&&block.color?{ backgroundColor:`${block.color}12`, borderColor:`${block.color}30` }:{}}>
-                        <BlockIcon id={block.id} size={15} color={block.on?(block.color??'#0A0A0A'):'#C0C0C0'}/>
+                      {/* icon */}
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#EBEBEB] bg-[#F5F5F5]"
+                        style={block.color?{ backgroundColor:`${block.color}12`, borderColor:`${block.color}28` }:{}}>
+                        <BlockIcon id={block.id} size={14} color={block.color??'#0A0A0A'}/>
                       </div>
+                      {/* text */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className={`text-[13px] font-semibold leading-tight ${block.on?'text-[#0A0A0A]':'text-[#9B9B9B]'}`}>{block.title}</p>
+                          <p className="text-[13px] font-semibold text-[#0A0A0A] leading-tight">{block.title}</p>
                           {block.id==='hours' && (
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#F5F5F5] text-[#9B9B9B]'}`}>
-                              {liveStatus==='open'?'● Open':'● Closed'}
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#F5F5F5] text-[#9B9B9B]'}`}>
+                              {liveStatus==='open'?'● open':'● closed'}
                             </span>
                           )}
-                          {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#F5F5F5] text-[#9B9B9B] flex-shrink-0">½</span>}
+                          {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#F5F5F5] text-[#9B9B9B] flex-shrink-0">½</span>}
                         </div>
-                        <p className="text-xs text-[#9B9B9B] leading-tight mt-0.5 truncate">
+                        <p className="text-[12px] text-[#9B9B9B] leading-tight mt-0.5 truncate">
                           {block.id==='hours'?todayLabel:block.sub}
                         </p>
                       </div>
-                      <LucideChevronRight size={14} color="#C0C0C0"/>
-                      <Toggle on={block.on} onChange={()=>toggleBlock(block.id)}/>
+                      <LucideChevronRight size={13} color="#D0D0D0"/>
+                      {/* remove button */}
+                      {block.id!=='hours' && (
+                        <button
+                          onClick={e=>{ e.stopPropagation(); updateBlock(block.id,{on:false}); }}
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[#C0C0C0] hover:text-[#0A0A0A] hover:bg-[#F0F0F0] transition-all flex-shrink-0"
+                          title="Remove block"
+                        >
+                          <LucideX size={11} color="currentColor"/>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
 
-                {/* Features */}
+                {/* Add block button */}
+                <button
+                  onClick={()=>setShowPicker(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#9B9B9B] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-all group"
+                >
+                  <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
+                    <span className="text-[14px] leading-none">+</span>
+                  </div>
+                  <span className="text-[13px] font-medium">Add block</span>
+                </button>
+
+                {/* Features & vibe */}
                 <div className="mt-10">
                   <div className="mb-4">
-                    <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-1">FEATURES & VIBE</p>
-                    <p className="text-sm text-[#6B6B6B]">Select all that apply — shown as tags on your page.</p>
+                    <p className="text-[11px] font-semibold text-[#C0C0C0] uppercase tracking-widest mb-1">FEATURES & VIBE</p>
+                    <p className="text-[13px] text-[#9B9B9B]">Select all that apply — shown as tags on your page.</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {FEATURE_TAGS.map(tag=>{
@@ -1383,7 +1557,7 @@ export default function BuilderClient({ business,initialConfig }: {
                       return (
                         <button key={tag}
                           onClick={()=>setConfig(c=>({...c,tags:active?(c.tags??[]).filter(t=>t!==tag):[...(c.tags??[]),tag]}))}
-                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${active?'bg-[#0A0A0A] text-white border-[#0A0A0A]':'border-[#EBEBEB] text-[#6B6B6B] bg-white hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
+                          className={`px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-all ${active?'bg-[#0A0A0A] text-white border-[#0A0A0A]':'border-[#EBEBEB] text-[#9B9B9B] bg-white hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
                           {tag}
                         </button>
                       );
@@ -1394,63 +1568,47 @@ export default function BuilderClient({ business,initialConfig }: {
             )}
 
             {/* STYLE */}
-            {tab==='style' && (
+            {!showEditPanel && tab==='style' && (
               <div className="space-y-10">
                 <div>
-                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-1">PAGE STYLE</p>
-                  <h2 className="text-2xl font-bold text-[#0A0A0A] leading-tight">Customize the look</h2>
-                  <p className="text-[#6B6B6B] text-sm mt-1">Your background, photos, and social profiles.</p>
-                </div>
-
-                {/* Meta Business note */}
-                <div className="rounded-2xl border border-[#EBEBEB] bg-[#FAFAFA] px-4 py-3.5 flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-[#1877F2] flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M16 8h-2a1 1 0 0 0-1 1v2h3l-.5 3H13v7h-3v-7H8v-3h2V9a4 4 0 0 1 4-4h2v3z"/></svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-[#0A0A0A]">Connected to Meta Business?</p>
-                    <p className="text-[11px] text-[#6B6B6B] mt-0.5 leading-snug">Your Facebook cover photo and logo will auto-fill when you connect your account.</p>
-                  </div>
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Style</h2>
+                  <p className="text-[#9B9B9B] text-[13px] mt-1">Background, photos, and social links.</p>
                 </div>
 
                 {/* Background photo */}
                 <PhotoField
-                  label="Background / cover photo"
+                  label="Background photo"
                   value={config.bgImage??''}
                   onChange={v=>setConfig(c=>({...c,bgImage:v||undefined}))}
-                  hint="Full-width hero image at the top of your page. Leave blank to use background color only."
+                  hint="Covers the entire page behind your blocks."
                 />
 
                 {/* Background color */}
                 <div>
-                  <FieldLabel>Page background color</FieldLabel>
-                  <p className="text-xs text-[#9B9B9B] mb-4">Used behind and below your cover photo</p>
+                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Page color</p>
                   <div className="grid grid-cols-5 gap-3 mb-4">
                     {BG_PRESETS.map(c=>(
                       <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
-                        className="aspect-square rounded-2xl border-2 transition-all hover:scale-105"
+                        className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
                         style={{ background:c, borderColor:config.bg===c?'#0A0A0A':'#EBEBEB' }}
                       />
                     ))}
                   </div>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <div className="w-9 h-9 rounded-xl border border-[#EBEBEB]" style={{ background:config.bg }}/>
-                    <span className="text-xs text-[#9B9B9B]">{config.bg} · or enter any hex</span>
-                    <input type="color" value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))} className="opacity-0 absolute w-0 h-0"/>
-                  </label>
-                  <input
-                    value={config.bg}
-                    onChange={e=>{ if(/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setConfig(c=>({...c,bg:e.target.value})); }}
-                    placeholder="#f8f5f0"
-                    className="mt-2 w-36 bg-white border border-[#EBEBEB] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
-                  />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg border border-[#EBEBEB]" style={{ background:config.bg }}/>
+                    <input
+                      value={config.bg}
+                      onChange={e=>{ if(/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setConfig(c=>({...c,bg:e.target.value})); }}
+                      placeholder="#ffffff"
+                      className="w-28 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] text-[#0A0A0A] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+                    />
+                  </div>
                 </div>
 
                 {/* Socials */}
                 <div>
-                  <FieldLabel>Social profiles</FieldLabel>
-                  <p className="text-xs text-[#9B9B9B] mb-4">Add links — they'll appear on your page</p>
-                  <div className="space-y-3">
+                  <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Social profiles</p>
+                  <div className="space-y-2.5">
                     {SOCIAL_PLATFORMS.map(({key,label})=>(
                       <div key={key} className="flex items-center gap-3">
                         <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
@@ -1463,32 +1621,35 @@ export default function BuilderClient({ business,initialConfig }: {
             )}
 
             {/* PREVIEW (mobile only) */}
-            {tab==='preview' && (
+            {!showEditPanel && tab==='preview' && (
               <div className="lg:hidden flex flex-col items-center py-8">
                 <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-8">What customers see</p>
-                <LivePhonePreview business={business} config={config}/>
+                <LivePhonePreview business={business} config={config} selectedId={openId} onSelectBlock={id=>{setOpenId(id);setTab('blocks');}}/>
               </div>
             )}
           </div>
 
-          {/* RIGHT: sticky preview */}
+          {/* RIGHT: sticky preview — always visible on desktop */}
           <div className="hidden lg:block">
-            <div className="sticky top-28">
-              <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-6 text-center">Live preview</p>
-              <LivePhonePreview business={business} config={config}/>
+            <div className="sticky top-24">
+              <p className="text-[10px] font-semibold text-[#C0C0C0] uppercase tracking-widest mb-5 text-center">Live preview</p>
+              <LivePhonePreview
+                business={business} config={config}
+                selectedId={openId}
+                onSelectBlock={id=>{ setOpenId(id); setTab('blocks'); }}
+              />
             </div>
           </div>
 
         </div>
       </div>
 
-      {/* modal */}
-      {openBlock && (
-        <BlockModal
-          block={openBlock} config={config}
-          onUpdateBlock={u=>updateBlock(openBlock.id,u)}
-          onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
-          onClose={()=>setOpenId(null)}
+      {/* Block picker overlay */}
+      {showPicker && (
+        <BlockPicker
+          blocks={allBlocks}
+          onAdd={id=>enableBlock(id)}
+          onClose={()=>setShowPicker(false)}
         />
       )}
 
