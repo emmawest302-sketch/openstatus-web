@@ -43,20 +43,28 @@ function dbHoursToWeekly(rows: DbHoursRow[]): Record<WeeklyKey, { open:string; c
 export default function BuilderPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [business, setBusiness] = useState<BusinessData | null>(null);
   const [initialConfig, setInitialConfig] = useState<OpenStatusPageConfig | null>(null);
 
   useEffect(() => {
     void (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/login'); return; }
+      // Use getSession() in client components — reads the local cookie without a
+      // server round-trip, so it never fails due to a network blip like getUser() can.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { router.replace('/login'); return; }
+      const user = session.user;
 
-      const { data: biz } = await supabase
+      const { data: biz, error: bizError } = await supabase
         .from('businesses')
         .select('id, name, slug, avatar_url, description, category, instagram_handle')
         .eq('user_id', user.id)
         .maybeSingle();
 
+      if (bizError) {
+        setLoadError('Could not load your business: ' + bizError.message);
+        return;
+      }
       if (!biz) { router.replace('/setup'); return; }
 
       const raw = user.user_metadata?.openstatus_page ?? null;
@@ -78,6 +86,17 @@ export default function BuilderPage() {
       setReady(true);
     })();
   }, [router]);
+
+  if (loadError) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-white" style={{ fontFamily: 'var(--font-poppins)' }}>
+        <div className="text-center space-y-3">
+          <p className="text-sm font-semibold text-red-600">{loadError}</p>
+          <button onClick={() => window.location.reload()} className="text-xs underline text-black/50">Try again</button>
+        </div>
+      </main>
+    );
+  }
 
   if (!ready) {
     return (
