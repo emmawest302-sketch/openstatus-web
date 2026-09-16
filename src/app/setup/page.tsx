@@ -54,13 +54,13 @@ export default function SetupPage(){
  const header=headerUrl.startsWith('storage:')&&businessId?`/api/assets?businessId=${businessId}&kind=header`:headerUrl;
  const stepNames=['Business','Hours','Design','Connect'];
  const stepPct=Math.round((step/4)*100);
- const input='w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-3.5 text-sm outline-none focus:ring-4 focus:ring-[#E5FFB8]/50';
+ const input='w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-3.5 text-sm outline-none focus:ring-4 focus:ring-[#232323]/10';
 
- if(loading)return <main className="grid min-h-screen place-items-center bg-[#F5F3ED]"><p className="text-xs font-semibold">Preparing your OpenStatus...</p></main>;
+ if(loading)return <main className="grid min-h-screen place-items-center bg-white"><p className="text-xs font-semibold">Preparing your OpenStatus...</p></main>;
 
- return <main className="relative min-h-screen overflow-hidden bg-[#F5F3ED] text-[#111]" style={{fontFamily:'var(--font-poppins)'}}>
-  <div className="pointer-events-none absolute -left-40 top-20 h-[420px] w-[420px] rounded-full bg-[#DCE5FF] blur-[110px]"/>
-  <div className="pointer-events-none absolute -right-32 top-0 h-[380px] w-[380px] rounded-full bg-[#E5FFB8] blur-[100px]"/>
+ return <main className="relative min-h-screen overflow-hidden bg-white text-[#232323]" style={{fontFamily:'var(--font-poppins)'}}>
+  <div className="pointer-events-none absolute -left-40 top-20 h-[420px] w-[420px] rounded-full bg-[#B4C1EF]/30 blur-[110px]"/>
+  <div className="pointer-events-none absolute -right-32 top-0 h-[380px] w-[380px] rounded-full bg-[#FFF2C1] blur-[100px]"/>
   <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
     <Link href="/" className="flex items-center gap-2.5 font-bold"><Mark/>OpenStatus</Link>
     <Link href="/dashboard" className="rounded-full border border-black/10 bg-white/60 px-4 py-2 text-xs font-semibold backdrop-blur-xl">Save & exit</Link>
@@ -73,7 +73,7 @@ export default function SetupPage(){
         <span className="text-[10px] font-bold text-black/35">{stepPct}%</span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/8">
-        <div className="h-full rounded-full bg-[#C8FF62] transition-all duration-500" style={{width:`${stepPct}%`}}/>
+        <div className="h-full rounded-full bg-[#232323] transition-all duration-500" style={{width:`${stepPct}%`}}/>
       </div>
     </div>
 
@@ -123,8 +123,8 @@ export default function SetupPage(){
       <p className="text-[10px] font-bold uppercase tracking-[.16em] text-black/35">Step 4 · Connect</p>
       <h1 className="mt-3 text-5xl font-semibold tracking-[-.06em]">Connect what you use.</h1>
       <p className="mt-3 max-w-xl text-sm leading-6 text-black/50">Meta lets us pull in your Instagram presence. Other socials can be added as simple links in your builder.</p>
-      <div className="mt-7 rounded-[24px] bg-white/80 p-5"><div className="flex items-center justify-between gap-4"><div><strong className="text-sm">Meta</strong><p className="mt-1 text-xs text-black/40">Connect your eligible Instagram/Facebook business presence.</p></div>{igHandle?<span className="rounded-full bg-[#E5FFB8] px-3 py-2 text-[9px] font-bold">@{igHandle} CONNECTED</span>:<button onClick={connectMeta} disabled={saving} className="rounded-full bg-black px-4 py-2.5 text-xs font-bold text-white">{saving?'Opening Meta...':'Connect Meta'}</button>}</div></div>
-      <div className="mt-3 rounded-[24px] bg-[#DCE5FF] p-5"><strong className="text-sm">Other socials</strong><p className="mt-1 text-xs leading-5 text-black/50">Add the links you want displayed as icons. You can toggle and reorder them in the builder.</p></div>
+      <div className="mt-7 rounded-[24px] bg-white/80 p-5"><div className="flex items-center justify-between gap-4"><div><strong className="text-sm">Meta</strong><p className="mt-1 text-xs text-black/40">Connect your eligible Instagram/Facebook business presence.</p></div>{igHandle?<span className="rounded-full bg-[#FFF2C1] px-3 py-2 text-[9px] font-bold">@{igHandle} CONNECTED</span>:<button onClick={connectMeta} disabled={saving} className="rounded-full bg-black px-4 py-2.5 text-xs font-bold text-white">{saving?'Opening Meta...':'Connect Meta'}</button>}</div></div>
+      <div className="mt-3 rounded-[24px] bg-[#B4C1EF]/30 p-5"><strong className="text-sm">Other socials</strong><p className="mt-1 text-xs leading-5 text-black/50">Add the links you want displayed as icons. You can toggle and reorder them in the builder.</p></div>
       <button onClick={()=>router.push('/builder')} className="mt-7 flex w-full justify-between rounded-full bg-black px-6 py-4 text-sm font-bold text-white">Open my page builder <span>→</span></button>
     </div>}
 

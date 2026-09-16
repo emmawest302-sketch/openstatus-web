@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -36,6 +36,13 @@ export default function LoginPage() {
   const [oauthLoading, setOauthLoading] = useState<'google'|'meta'|null>(null);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const e = new URLSearchParams(window.location.search).get('error');
+      if (e === 'oauth') setError('Sign-in failed. Please try again or use email/password.');
+    }
+  }, []);
+
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault(); setLoading(true); setError('');
     try {
@@ -43,7 +50,7 @@ export default function LoginPage() {
       if (loginError) throw loginError;
       if (data.user) {
         const { data: business } = await supabase.from('businesses').select('slug').eq('user_id', data.user.id).maybeSingle();
-        router.push(business?.slug ? '/dashboard' : '/setup');
+        router.push(business ? '/builder' : '/setup');
       }
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Login failed'); }
     finally { setLoading(false); }
