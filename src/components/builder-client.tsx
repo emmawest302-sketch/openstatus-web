@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-// ── types (unchanged) ──────────────────────────────────────────────────────
+// ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
 type BlockSize = 'half' | 'full';
 type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
@@ -13,28 +13,20 @@ interface OpenStatusBlock {
   id: string; title: string; sub: string; icon: string; on: boolean; tone: Tone;
   url?: string; size?: BlockSize; color?: string; coverPhoto?: string;
   menuType?: 'url' | 'pdf' | 'photos'; menuFile?: string;
+  appleMapsUrl?: string; reviewStars?: number; reviewCount?: number;
 }
 interface OpenStatusPageConfig {
-  blocks: OpenStatusBlock[]; bg: string; socials: Record<string, string>;
+  blocks: OpenStatusBlock[]; bg: string; bgImage?: string;
+  socials: Record<string, string>;
   location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
+  likeCount?: number; dislikeCount?: number;
 }
 interface Business {
   id: string; name: string; slug: string;
   avatar_url?: string; description?: string; category?: string;
 }
 
-// ── design tokens ──────────────────────────────────────────────────────────
-// White + cool gray system (matches homepage)
-// #FFFFFF  background / surfaces
-// #0A0A0A  primary text, CTAs
-// #6B6B6B  secondary text
-// #9B9B9B  muted / placeholder
-// #EBEBEB  borders
-// #F5F5F5  subtle hover
-// #DCFCE7 / #166534  open status
-// #FEE2E2 / #991B1B  closed status
-
-// ── constants ──────────────────────────────────────────────────────────────
+// ── constants ──────────────────────────────────────────────────────────────────
 const BG_PRESETS = [
   '#f8f5f0','#fafafa','#f0f4ff','#fff0f5','#f0fdf4',
   '#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c',
@@ -70,16 +62,16 @@ const DEFAULT_WEEK_HOURS: WeeklyHours = {
   sun:{ open:'10:00',close:'16:00',closed:false },
 };
 const DEFAULT_BLOCKS: OpenStatusBlock[] = [
-  { id:'location',title:'Location & directions',sub:'Map + one-tap directions',icon:'pin',on:true, tone:'default',color:'#2563eb' },
-  { id:'hours',   title:'Hours & status',       sub:'Live open / closed status', icon:'clock', on:true, tone:'default',color:'#059669' },
-  { id:'menu',    title:'Menu',                 sub:'Link, PDF, or photos',      icon:'menu',  on:false,tone:'default',color:'#d97706',menuType:'url' },
-  { id:'order',   title:'Online ordering',      sub:'DoorDash, Uber Eats & more',icon:'bag',   on:false,tone:'default',color:'#dc2626' },
-  { id:'book',    title:'Reservations & booking',sub:'OpenTable, Resy & more',  icon:'cal',   on:false,tone:'default',color:'#7c3aed' },
-  { id:'socials', title:'Follow us',            sub:'Social media links',        icon:'share', on:false,tone:'default',color:'#db2777' },
-  { id:'website', title:'Website',              sub:'Link to your site',         icon:'globe', on:false,tone:'default',color:'#0891b2' },
+  { id:'hours',   title:'Hours & status',        sub:'Live open / closed status',  icon:'clock',on:true, tone:'default',color:'#059669',size:'full' },
+  { id:'location',title:'Location & directions', sub:'Tap for directions',          icon:'pin',  on:true, tone:'default',color:'#2563eb',size:'full' },
+  { id:'menu',    title:'Menu',                  sub:'Tap to view',                icon:'menu', on:false,tone:'default',color:'#d97706',menuType:'url',size:'full' },
+  { id:'order',   title:'Online ordering',       sub:'DoorDash, Uber Eats & more', icon:'bag',  on:false,tone:'default',color:'#dc2626',size:'half' },
+  { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'half' },
+  { id:'socials', title:'Follow us',             sub:'Social media links',         icon:'share',on:false,tone:'default',color:'#db2777',size:'full' },
+  { id:'website', title:'Website',               sub:'Link to your site',          icon:'globe',on:false,tone:'default',color:'#0891b2',size:'full' },
 ];
 
-// ── helpers ────────────────────────────────────────────────────────────────
+// ── helpers ────────────────────────────────────────────────────────────────────
 function fmt12(t: string) {
   const [h,m] = t.split(':').map(Number);
   const ap = h>=12?'PM':'AM', hr=h%12||12;
@@ -94,25 +86,25 @@ function getLiveStatus(hours?: WeeklyHours): { status:'open'|'closed'; todayLabe
   const now=new Date().getHours()*60+new Date().getMinutes();
   return { status: now>=oh*60+om&&now<ch*60+cm?'open':'closed', todayLabel:`Today ${fmt12(today.open)} – ${fmt12(today.close)}` };
 }
+function starsToPercent(stars: number) { return Math.round((stars/5)*100); }
 
 export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfig {
   const r = (raw ?? {}) as Record<string,unknown>;
   const saved = Array.isArray(r.blocks) ? r.blocks as OpenStatusBlock[] : [];
   return {
-    blocks: DEFAULT_BLOCKS.map(def => { const f=saved.find(b=>b.id===def.id); return f?{...def,...f}:{...def}; }),
-    bg:          typeof r.bg==='string'?r.bg:'#f8f5f0',
-    socials:     (r.socials&&typeof r.socials==='object')?r.socials as Record<string,string>:{},
-    location:    typeof r.location==='string'?r.location:undefined,
-    tags:        Array.isArray(r.tags)?r.tags as string[]:[],
-    weeklyHours: (r.weeklyHours&&typeof r.weeklyHours==='object')?r.weeklyHours as WeeklyHours:{...DEFAULT_WEEK_HOURS},
+    blocks:       DEFAULT_BLOCKS.map(def => { const f=saved.find(b=>b.id===def.id); return f?{...def,...f}:{...def}; }),
+    bg:           typeof r.bg==='string'?r.bg:'#f8f5f0',
+    bgImage:      typeof r.bgImage==='string'?r.bgImage:undefined,
+    socials:      (r.socials&&typeof r.socials==='object')?r.socials as Record<string,string>:{},
+    location:     typeof r.location==='string'?r.location:undefined,
+    tags:         Array.isArray(r.tags)?r.tags as string[]:[],
+    weeklyHours:  (r.weeklyHours&&typeof r.weeklyHours==='object')?r.weeklyHours as WeeklyHours:{...DEFAULT_WEEK_HOURS},
+    likeCount:    typeof r.likeCount==='number'?r.likeCount:0,
+    dislikeCount: typeof r.dislikeCount==='number'?r.dislikeCount:0,
   };
 }
 
-// ── Lucide-style SVG icons ─────────────────────────────────────────────────
-const I = ({ d, size=16, color='currentColor', fill='none', ...rest }: { d: string|React.ReactNode; size?: number; color?: string; fill?: string; [k: string]: unknown }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" {...rest}>{d}</svg>
-);
-
+// ── icons ──────────────────────────────────────────────────────────────────────
 function LucidePin({ size=16,color='currentColor' }: { size?: number; color?: string }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>;
 }
@@ -143,6 +135,27 @@ function LucideX({ size=16,color='currentColor' }: { size?: number; color?: stri
 function LucideChevronRight({ size=16,color='currentColor' }: { size?: number; color?: string }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>;
 }
+function LucideStar({ size=12,color='currentColor',filled=false }: { size?: number; color?: string; filled?: boolean }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={filled?color:'none'} stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+}
+function LucideImage({ size=16,color='currentColor' }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
+}
+function LucideThumbsUp({ size=12,color='currentColor' }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>;
+}
+function LucideThumbsDown({ size=12,color='currentColor' }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>;
+}
+function LucideFileText({ size=16,color='currentColor' }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+}
+function LucideLayoutGrid({ size=14,color='currentColor' }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
+}
+function LucideLayoutList({ size=14,color='currentColor' }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="5"/><rect x="3" y="11" width="18" height="5"/><rect x="3" y="19" width="18" height="2"/></svg>;
+}
 
 function BlockIcon({ id, size=16, color='currentColor' }: { id:string; size?:number; color?:string }) {
   switch(id) {
@@ -156,7 +169,7 @@ function BlockIcon({ id, size=16, color='currentColor' }: { id:string; size?:num
   }
 }
 
-// Brand platform icons
+// Brand icons
 function IconInstagram({ size=22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -211,7 +224,7 @@ function SocialIcon({ platform, size=22 }: { platform:string; size?:number }) {
   }
 }
 
-// ── UI primitives ──────────────────────────────────────────────────────────
+// ── UI primitives ──────────────────────────────────────────────────────────────
 function Toggle({ on, onChange }: { on:boolean; onChange:(v:boolean)=>void }) {
   return (
     <button onClick={e=>{ e.stopPropagation(); onChange(!on); }}
@@ -224,9 +237,9 @@ function Toggle({ on, onChange }: { on:boolean; onChange:(v:boolean)=>void }) {
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-2">{children}</p>;
 }
-function Input({ value,onChange,placeholder }: { value:string; onChange:(v:string)=>void; placeholder?:string }) {
+function Input({ value,onChange,placeholder,type='text' }: { value:string; onChange:(v:string)=>void; placeholder?:string; type?:string }) {
   return (
-    <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+    <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
       className="w-full bg-white border border-[#EBEBEB] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
     />
   );
@@ -244,22 +257,128 @@ function PillSelect({ options,selected,onSelect }: { options:string[]; selected:
   );
 }
 
-// ── places autocomplete ────────────────────────────────────────────────────
-function usePlaces(q:string): [{ description:string; place_id:string }[], ()=>void] {
-  const [r,setR]=useState<{description:string;place_id:string}[]>([]);
-  useEffect(()=>{
-    if(q.length<2){setR([]);return;}
-    const t=setTimeout(async()=>{
-      try{ const res=await fetch(`/api/places/autocomplete?input=${encodeURIComponent(q)}`);
-           const d=await res.json() as {predictions?:{description:string;place_id:string}[]};
-           setR(d.predictions??[]); }catch{ setR([]); }
-    },350);
-    return ()=>clearTimeout(t);
-  },[q]);
-  return [r,()=>setR([])];
+// Accent color picker with hex input
+function AccentColorPicker({ value, onChange }: { value?: string; onChange:(v:string)=>void }) {
+  const colorRef = useRef<HTMLInputElement>(null);
+  const [hex, setHex] = useState(value??'#2563eb');
+  function commit(v: string) { setHex(v); if(/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v); }
+  return (
+    <div>
+      <div className="flex gap-2 flex-wrap mb-3">
+        {BLOCK_COLORS.map((c,i)=>(
+          <button key={i} onClick={()=>{ commit(c); }}
+            className="w-7 h-7 rounded-full transition-all"
+            style={{ background:c, outline:(value??'')=== c?`2px solid ${c}`:'none', outlineOffset:2 }}
+          />
+        ))}
+        {/* custom swatch */}
+        <button
+          onClick={()=>colorRef.current?.click()}
+          className="w-7 h-7 rounded-full border-2 border-dashed border-[#D4D4D4] flex items-center justify-center hover:border-[#0A0A0A] transition-colors"
+          title="Custom color">
+          <span className="text-[10px] text-[#9B9B9B]">+</span>
+        </button>
+        <input ref={colorRef} type="color" value={value??'#2563eb'} onChange={e=>{commit(e.target.value);}} className="opacity-0 absolute w-0 h-0"/>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-lg border border-[#EBEBEB] flex-shrink-0" style={{ background:value??'#2563eb' }}/>
+        <input value={hex} onChange={e=>commit(e.target.value)} placeholder="#000000"
+          className="flex-1 bg-white border border-[#EBEBEB] rounded-lg px-3 py-1.5 text-xs text-[#0A0A0A] font-mono focus:outline-none focus:border-[#0A0A0A] transition-colors"
+        />
+      </div>
+    </div>
+  );
 }
 
-// ── Time select (custom styled) ────────────────────────────────────────────
+// Photo upload field
+function PhotoField({ label, value, onChange, placeholder, hint }: {
+  label: string; value: string; onChange: (v:string)=>void;
+  placeholder?: string; hint?: string;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); };
+    reader.readAsDataURL(file);
+  }
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      {hint && <p className="text-xs text-[#9B9B9B] mb-3 leading-snug">{hint}</p>}
+      {value
+        ? (
+          <div className="relative group rounded-xl overflow-hidden border border-[#EBEBEB]">
+            <img src={value} className="w-full h-32 object-cover" alt=""/>
+            <button onClick={()=>onChange('')}
+              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <LucideX size={12} color="white"/>
+            </button>
+          </div>
+        )
+        : (
+          <div>
+            <div
+              onClick={()=>fileRef.current?.click()}
+              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#FAFAFA] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#F5F5F5] transition-all">
+              <LucideImage size={18} color="#9B9B9B"/>
+              <p className="text-[12px] text-[#9B9B9B]">Click to upload</p>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile}/>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex-1 h-px bg-[#EBEBEB]"/>
+              <span className="text-[10px] text-[#C0C0C0]">or paste URL</span>
+              <div className="flex-1 h-px bg-[#EBEBEB]"/>
+            </div>
+            <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder??'https://…'}
+              className="mt-2 w-full bg-white border border-[#EBEBEB] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+            />
+          </div>
+        )
+      }
+    </div>
+  );
+}
+
+// PDF upload field
+function PdfField({ label, value, onChange }: { label:string; value:string; onChange:(v:string)=>void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); };
+    reader.readAsDataURL(file);
+  }
+  return (
+    <div>
+      <FieldLabel>{label}</FieldLabel>
+      {value
+        ? (
+          <div className="flex items-center gap-3 rounded-xl border border-[#EBEBEB] bg-[#FAFAFA] px-4 py-3">
+            <LucideFileText size={18} color="#0A0A0A"/>
+            <span className="text-sm text-[#0A0A0A] font-medium flex-1 truncate">PDF uploaded</span>
+            <button onClick={()=>onChange('')} className="text-[11px] text-[#9B9B9B] hover:text-[#0A0A0A] transition-colors font-medium">Remove</button>
+          </div>
+        )
+        : (
+          <div>
+            <div
+              onClick={()=>fileRef.current?.click()}
+              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#FAFAFA] h-20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#F5F5F5] transition-all">
+              <LucideFileText size={18} color="#9B9B9B"/>
+              <p className="text-[12px] text-[#9B9B9B]">Upload PDF</p>
+            </div>
+            <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handleFile}/>
+          </div>
+        )
+      }
+    </div>
+  );
+}
+
+// Time select
 function TimeSelect({ value,onChange }: { value:string; onChange:(v:string)=>void }) {
   const times:string[]=[];
   for(let h=0;h<24;h++) for(const m of [0,30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
@@ -271,131 +390,177 @@ function TimeSelect({ value,onChange }: { value:string; onChange:(v:string)=>voi
   );
 }
 
-// ── Phone preview (right column + preview tab) ─────────────────────────────
+// ── Screen preview (no phone frame) ───────────────────────────────────────────
 function LivePhonePreview({ business,config }: { business:Business|null; config:OpenStatusPageConfig }) {
   const activeBlocks = config.blocks.filter(b=>b.on);
+  // Hours always first in preview
+  const sortedBlocks = [
+    ...activeBlocks.filter(b=>b.id==='hours'),
+    ...activeBlocks.filter(b=>b.id!=='hours'),
+  ];
   const isDark = ['#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c'].includes(config.bg);
   const tx = isDark?'text-white':'text-[#0A0A0A]';
   const sx = isDark?'text-white/50':'text-[#6B6B6B]';
   const { status } = getLiveStatus(config.weeklyHours);
+  const locBlock = config.blocks.find(b=>b.id==='location');
+  const reviewPct = locBlock?.reviewStars&&locBlock.reviewStars>0 ? starsToPercent(locBlock.reviewStars) : null;
 
   return (
-    // Outer phone frame
-    <div className="relative mx-auto" style={{ width:260 }}>
-      {/* ambient glow */}
-      <div className="absolute inset-0 bg-black/5 blur-[40px] scale-110 pointer-events-none rounded-full"/>
-      {/* phone bezel */}
-      <div className="relative rounded-[44px] bg-[#1A1A1A] p-[10px] shadow-[0_32px_80px_rgba(0,0,0,0.25)]">
-        {/* dynamic island */}
-        <div className="absolute top-[10px] left-1/2 -translate-x-1/2 w-[90px] h-[26px] bg-[#1A1A1A] rounded-full z-10"/>
-        {/* screen */}
-        <div className="rounded-[36px] overflow-hidden" style={{ background: config.bg, minHeight:520 }}>
-          {/* status bar */}
-          <div className={`flex justify-between items-center px-5 pt-8 pb-0 text-[9px] ${isDark?'text-white/40':'text-black/30'}`}>
-            <span>9:41</span><span>●●●</span>
+    <div className="mx-auto" style={{ width:290 }}>
+      <div
+        className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/8"
+        style={{ background:config.bg, minHeight:560 }}
+      >
+        {/* Background image hero */}
+        {config.bgImage && (
+          <div className="relative h-36 overflow-hidden">
+            <img src={config.bgImage} className="w-full h-full object-cover" alt=""/>
+            <div className="absolute inset-0 bg-black/20"/>
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
+              {business?.avatar_url
+                ?<img src={business.avatar_url} className="w-12 h-12 rounded-full border-2 border-white object-cover shadow" alt=""/>
+                :<div className={`w-12 h-12 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black ${isDark?'bg-[#1A1A1A] text-white':'bg-white text-[#0A0A0A]'}`}>
+                  {(business?.name??'B').slice(0,1).toUpperCase()}
+                </div>
+              }
+            </div>
           </div>
-          {/* business header */}
-          <div className="px-4 pt-3 pb-3 text-center">
-            {business?.avatar_url
+        )}
+
+        {/* Business header */}
+        <div className={`px-4 pb-3 text-center ${config.bgImage?'pt-9':'pt-8'}`}>
+          {!config.bgImage && (
+            business?.avatar_url
               ?<img src={business.avatar_url} className="w-12 h-12 rounded-full mx-auto mb-2 object-cover" alt=""/>
               :<div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-[10px] font-black tracking-tight ${isDark?'bg-white/10 text-white':'bg-black/8 text-black'}`}>
                 {(business?.name??'B').slice(0,1).toUpperCase()}
               </div>
-            }
-            <p className={`font-bold text-[13px] ${tx}`}>{business?.name??'Your Business'}</p>
-            {config.location && <p className={`text-[9px] ${sx} truncate px-2 mt-0.5`}>{config.location}</p>}
-            {(config.tags??[]).length>0 && (
-              <div className="flex flex-wrap gap-1 justify-center mt-1.5">
-                {(config.tags??[]).slice(0,3).map(t=>(
-                  <span key={t} className={`text-[8px] px-2 py-0.5 rounded-full ${isDark?'bg-white/10 text-white/60':'bg-black/6 text-black/50'}`}>{t}</span>
-                ))}
+          )}
+          <p className={`font-bold text-[13px] ${tx}`}>{business?.name??'Your Business'}</p>
+          {config.location && <p className={`text-[9px] ${sx} truncate px-2 mt-0.5`}>{config.location}</p>}
+
+          {/* Review score + like/dislike row */}
+          <div className="flex items-center justify-center gap-3 mt-2">
+            {reviewPct && (
+              <div className="flex items-center gap-1">
+                <LucideStar size={9} color="#f59e0b" filled/>
+                <span className="text-[9px] font-semibold" style={{ color:'#f59e0b' }}>{reviewPct}%</span>
+                {locBlock?.reviewCount&&<span className={`text-[8px] ${sx}`}> · {locBlock.reviewCount.toLocaleString()}</span>}
               </div>
             )}
+            {reviewPct && <span className={`text-[8px] ${sx}`}>·</span>}
+            {/* Like/Dislike */}
+            <div className="flex items-center gap-2">
+              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
+                <LucideThumbsUp size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
+                <span className="text-[8px] font-medium">{(config.likeCount??0)+24}</span>
+              </button>
+              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
+                <LucideThumbsDown size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
+                <span className="text-[8px] font-medium">{(config.dislikeCount??0)+2}</span>
+              </button>
+            </div>
           </div>
-          {/* blocks */}
-          <div className="px-3 pb-5 space-y-1.5">
-            {activeBlocks.length===0
-              ?<p className={`text-center text-[10px] py-8 ${sx}`}>Toggle blocks to see them here</p>
-              :activeBlocks.map(b=>{
+
+          {(config.tags??[]).length>0 && (
+            <div className="flex flex-wrap gap-1 justify-center mt-2">
+              {(config.tags??[]).slice(0,3).map(t=>(
+                <span key={t} className={`text-[8px] px-2 py-0.5 rounded-full ${isDark?'bg-white/10 text-white/60':'bg-black/6 text-black/50'}`}>{t}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Blocks — support half/full layout */}
+        <div className="px-3 pb-5">
+          {sortedBlocks.length===0
+            ?<p className={`text-center text-[10px] py-8 ${sx}`}>Toggle blocks to see them here</p>
+            :<div className="grid grid-cols-2 gap-1.5">
+              {sortedBlocks.map(b=>{
+                const isHalf = b.size==='half' && b.id!=='hours';
                 const cardBg = b.color?`${b.color}15`:(isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.04)');
                 const bdr    = b.color?`${b.color}35`:(isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.08)');
-                if(b.id==='location') return (
-                  <div key={b.id} className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
-                    <div className="h-[52px] relative flex items-center justify-center overflow-hidden" style={{ background:'linear-gradient(135deg,#1e3a5f,#111827)' }}>
-                      <div className="absolute inset-0 opacity-15" style={{ backgroundImage:'repeating-linear-gradient(0deg,transparent,transparent 9px,rgba(255,255,255,.2) 9px,rgba(255,255,255,.2) 10px),repeating-linear-gradient(90deg,transparent,transparent 9px,rgba(255,255,255,.2) 9px,rgba(255,255,255,.2) 10px)' }}/>
-                      <LucidePin size={15} color="white"/>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-2" style={{ background:cardBg }}>
-                      <BlockIcon id={b.id} size={11} color={b.color}/>
-                      <div className="min-w-0 flex-1">
+
+                const inner = (() => {
+                  if(b.id==='location') return (
+                    <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
+                      {b.coverPhoto
+                        ?<img src={b.coverPhoto} className="w-full h-[52px] object-cover" alt=""/>
+                        :<div className="h-[52px] flex items-center justify-center" style={{ background:'linear-gradient(135deg,#1e3a5f,#111827)' }}>
+                          <LucidePin size={16} color="white"/>
+                        </div>
+                      }
+                      <div className="px-2.5 py-2" style={{ background:cardBg }}>
                         <p className={`text-[10px] font-semibold ${tx} leading-tight truncate`}>{b.title}</p>
-                        {config.location&&<p className={`text-[8px] ${sx} truncate`}>{config.location}</p>}
+                        <div className="flex gap-1 mt-1">
+                          {b.url&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Google</span>}
+                          {b.appleMapsUrl&&<span className={`text-[7px] px-1.5 py-0.5 rounded ${isDark?'bg-white/10 text-white/40':'bg-black/8 text-black/40'}`}>Apple</span>}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-                if(b.id==='hours') return (
-                  <div key={b.id} className="flex items-center gap-2 rounded-2xl px-3 py-2 border" style={{ background:cardBg, borderColor:bdr }}>
-                    <BlockIcon id={b.id} size={11} color={b.color}/>
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-[10px] font-semibold ${tx}`}>{status==='open'?'Open now':'Closed'}</p>
-                      <p className={`text-[8px] ${sx}`}>Tap for hours</p>
+                  );
+                  if(b.id==='hours') return (
+                    <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
+                      <BlockIcon id={b.id} size={12} color={b.color}/>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-[10px] font-bold ${tx}`}>{status==='open'?'Open now':'Closed'}</p>
+                        <p className={`text-[8px] ${sx}`}>Tap for hours</p>
+                      </div>
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-400':'bg-red-400'}`}/>
                     </div>
-                    <span className={`w-1.5 h-1.5 rounded-full ${status==='open'?'bg-emerald-400':'bg-red-400'}`}/>
-                  </div>
-                );
-                if(b.coverPhoto) return (
-                  <div key={b.id} className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
-                    <img src={b.coverPhoto} className="w-full h-12 object-cover" alt=""/>
-                    <div className="flex items-center gap-2 px-3 py-2" style={{ background:cardBg }}>
-                      <BlockIcon id={b.id} size={11} color={b.color}/>
+                  );
+                  if(b.coverPhoto) return (
+                    <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
+                      <img src={b.coverPhoto} className={`w-full object-cover ${isHalf?'h-[52px]':'h-[48px]'}`} alt=""/>
+                      <div className="flex items-center gap-2 px-2.5 py-2" style={{ background:cardBg }}>
+                        <BlockIcon id={b.id} size={10} color={b.color}/>
+                        <div className="min-w-0">
+                          <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
+                          <p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                  return (
+                    <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
+                      <BlockIcon id={b.id} size={10} color={b.color}/>
                       <div className="min-w-0 flex-1">
                         <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
-                        <p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>
+                        {!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>}
                       </div>
+                      <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
                     </div>
-                  </div>
-                );
+                  );
+                })();
+
                 return (
-                  <div key={b.id} className="flex items-center gap-2 rounded-2xl px-3 py-2 border" style={{ background:cardBg, borderColor:bdr }}>
-                    <BlockIcon id={b.id} size={11} color={b.color}/>
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
-                      <p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>
-                    </div>
-                    <span className={`text-xs ${isDark?'text-white/20':'text-black/20'}`}>›</span>
+                  <div key={b.id} className={isHalf?'col-span-1':'col-span-2'}>
+                    {inner}
                   </div>
                 );
-              })
-            }
-          </div>
+              })}
+            </div>
+          }
         </div>
       </div>
-      {/* link below phone */}
       <p className="text-center text-[11px] text-[#9B9B9B] mt-4 font-medium">openstatus.co/…</p>
     </div>
   );
 }
 
-// ── Block modal (replaces bottom sheet) ───────────────────────────────────
+// ── Block modal ────────────────────────────────────────────────────────────────
 function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
   onUpdateConfig:(u:Partial<OpenStatusPageConfig>)=>void;
   onClose:()=>void;
 }) {
-  const [locQuery,setLocQuery]=useState(config.location??'');
-  const [places,clearPlaces]=usePlaces(locQuery);
-
-  // hours-specific state
   const hours=config.weeklyHours??DEFAULT_WEEK_HOURS;
   const {status,todayLabel}=getLiveStatus(hours);
-
   function copyMonToWeekdays() {
     const mon=hours.mon;
     onUpdateConfig({ weeklyHours:{ ...hours, tue:{...mon},wed:{...mon},thu:{...mon},fri:{...mon} } });
   }
-
   useEffect(()=>{ document.body.style.overflow='hidden'; return()=>{ document.body.style.overflow=''; }; },[]);
 
   return (
@@ -405,7 +570,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
         className="relative bg-white rounded-[20px] w-full max-w-[720px] max-h-[88vh] flex flex-col shadow-[0_24px_80px_rgba(0,0,0,0.15)] border border-[#EBEBEB]"
         onClick={e=>e.stopPropagation()}
       >
-        {/* modal header */}
+        {/* header */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-[#EBEBEB] flex-shrink-0">
           <div className="w-9 h-9 rounded-xl bg-[#F5F5F5] border border-[#EBEBEB] flex items-center justify-center flex-shrink-0">
             <BlockIcon id={block.id} size={16} color="#0A0A0A"/>
@@ -419,46 +584,57 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           </button>
         </div>
 
-        {/* scrollable body */}
+        {/* body */}
         <div className="overflow-y-auto flex-1 px-6 py-5">
+
+          {/* Always show title + subtitle for all blocks */}
+          <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-[#F5F5F5]">
+            <div><FieldLabel>Widget title</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
+            <div><FieldLabel>Subtitle / tagline</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
+          </div>
 
           {/* ── LOCATION ── */}
           {block.id==='location' && (
             <div className="space-y-5">
+              <PhotoField
+                label="Place photo"
+                value={block.coverPhoto??''}
+                onChange={v=>onUpdateBlock({coverPhoto:v})}
+                hint="Shown instead of a map. Use a photo from your Google Business profile."
+              />
               <div>
-                <FieldLabel>Business address</FieldLabel>
-                <Input value={locQuery} onChange={setLocQuery} placeholder="Search your address…"/>
-                {places.length>0 && (
-                  <div className="mt-1.5 bg-white border border-[#EBEBEB] rounded-xl overflow-hidden shadow-sm">
-                    {places.map(p=>(
-                      <button key={p.place_id} onClick={()=>{ setLocQuery(p.description); onUpdateConfig({location:p.description}); clearPlaces(); }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-[#0A0A0A] hover:bg-[#F5F5F5] border-b border-[#F5F5F5] last:border-0 flex items-center gap-2">
-                        <LucidePin size={12} color="#9B9B9B"/>
-                        <span className="truncate">{p.description}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <FieldLabel>Google Maps URL</FieldLabel>
+                <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste from Google Maps → Share → Copy link"/>
               </div>
-              {config.location
-                ?<div>
-                  <FieldLabel>Map preview</FieldLabel>
-                  <div className="rounded-xl overflow-hidden border border-[#EBEBEB]" style={{ height:180 }}>
-                    <iframe src={`https://maps.google.com/maps?q=${encodeURIComponent(config.location)}&t=&z=15&output=embed&iwloc=`} className="w-full h-full" style={{ border:0 }} loading="lazy" title="Location map"/>
-                  </div>
+              <div>
+                <FieldLabel>Apple Maps URL</FieldLabel>
+                <Input value={block.appleMapsUrl??''} onChange={v=>onUpdateBlock({appleMapsUrl:v})} placeholder="Paste from Apple Maps → Share → Copy link"/>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <FieldLabel>Star rating (0–5)</FieldLabel>
+                  <Input type="number" value={block.reviewStars?.toString()??''} onChange={v=>onUpdateBlock({reviewStars:parseFloat(v)||undefined})} placeholder="e.g. 4.7"/>
+                  {block.reviewStars&&block.reviewStars>0&&(
+                    <p className="text-[11px] text-[#6B6B6B] mt-1.5 flex items-center gap-1">
+                      <LucideStar size={10} color="#f59e0b" filled/>
+                      {block.reviewStars} → <strong>{starsToPercent(block.reviewStars)}% positive</strong>
+                    </p>
+                  )}
                 </div>
-                :<div className="rounded-xl border border-dashed border-[#D4D4D4] bg-[#FAFAFA] h-28 flex items-center justify-center">
-                  <p className="text-[12px] text-[#9B9B9B]">Map preview will appear here</p>
+                <div>
+                  <FieldLabel>Review count</FieldLabel>
+                  <Input type="number" value={block.reviewCount?.toString()??''} onChange={v=>onUpdateBlock({reviewCount:parseInt(v)||undefined})} placeholder="e.g. 312"/>
                 </div>
-              }
-              <div><FieldLabel>Button label</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
+              </div>
+              <div className="rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3">
+                <p className="text-[11px] text-[#166534] font-medium">The star rating and like/dislike buttons appear in the header of your page, under your business name — alongside your OpenStatus community score.</p>
+              </div>
             </div>
           )}
 
           {/* ── HOURS ── */}
           {block.id==='hours' && (
             <div className="space-y-6">
-              {/* status card */}
               <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#FAFAFA] border-[#EBEBEB]'}`}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                 <div>
@@ -466,8 +642,6 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                   <p className="text-xs text-[#6B6B6B] mt-0.5">{todayLabel}</p>
                 </div>
               </div>
-
-              {/* days */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <FieldLabel>Weekly hours</FieldLabel>
@@ -499,38 +673,46 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                   })}
                 </div>
               </div>
-
-              {/* status color */}
-              <div>
-                <FieldLabel>Status color</FieldLabel>
-                <p className="text-xs text-[#9B9B9B] mb-3">Used for your live open/closed indicator</p>
-                <div className="flex gap-2 flex-wrap">
-                  {BLOCK_COLORS.map((c,i)=>(
-                    <button key={i} onClick={()=>onUpdateBlock({color:c})}
-                      className="w-7 h-7 rounded-full transition-all"
-                      style={{ background:c, outline: (block.color??'')=== c?`2px solid ${c}`:'none', outlineOffset:2 }}
-                    />
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
           {/* ── MENU ── */}
           {block.id==='menu' && (
             <div className="space-y-5">
-              <div>
-                <FieldLabel>Cover photo</FieldLabel>
-                <Input value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} placeholder="Paste image URL…"/>
-                {block.coverPhoto&&<img src={block.coverPhoto} className="mt-2 w-full h-28 object-cover rounded-xl" alt=""/>}
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional banner photo shown at the top of the menu block."/>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={()=>onUpdateBlock({menuType:'pdf'})}
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='pdf'?'border-[#0A0A0A] bg-[#F5F5F5]':'border-[#EBEBEB] hover:border-[#0A0A0A]'}`}>
+                  <LucideFileText size={20} color={block.menuType==='pdf'?'#0A0A0A':'#9B9B9B'}/>
+                  <span className="text-[11px] font-semibold text-[#0A0A0A]">Upload PDF</span>
+                </button>
+                <button
+                  onClick={()=>onUpdateBlock({menuType:'photos'})}
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='photos'?'border-[#0A0A0A] bg-[#F5F5F5]':'border-[#EBEBEB] hover:border-[#0A0A0A]'}`}>
+                  <LucideImage size={20} color={block.menuType==='photos'?'#0A0A0A':'#9B9B9B'}/>
+                  <span className="text-[11px] font-semibold text-[#0A0A0A]">Photos</span>
+                </button>
+                <button
+                  onClick={()=>onUpdateBlock({menuType:'url'})}
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='url'?'border-[#0A0A0A] bg-[#F5F5F5]':'border-[#EBEBEB] hover:border-[#0A0A0A]'}`}>
+                  <LucideGlobe size={20} color={block.menuType==='url'?'#0A0A0A':'#9B9B9B'}/>
+                  <span className="text-[11px] font-semibold text-[#0A0A0A]">Link</span>
+                </button>
               </div>
-              <div>
-                <FieldLabel>Menu type</FieldLabel>
-                <PillSelect options={['Link','PDF','Photos']} selected={block.menuType==='url'?'Link':block.menuType==='pdf'?'PDF':'Photos'} onSelect={v=>onUpdateBlock({menuType:v==='Link'?'url':v==='PDF'?'pdf':'photos'})}/>
-              </div>
-              {block.menuType==='url'&&<div><FieldLabel>Menu URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>}
-              <div><FieldLabel>Button label</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
-              <div><FieldLabel>Subtitle</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
+              {block.menuType==='pdf'&&<PdfField label="PDF file" value={block.menuFile??''} onChange={v=>onUpdateBlock({menuFile:v})}/>}
+              {block.menuType==='photos'&&(
+                <div>
+                  <FieldLabel>Photo gallery URL</FieldLabel>
+                  <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Link to your photo gallery or album…"/>
+                </div>
+              )}
+              {block.menuType==='url'&&(
+                <div>
+                  <FieldLabel>Menu link</FieldLabel>
+                  <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/>
+                </div>
+              )}
             </div>
           )}
 
@@ -545,11 +727,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── BOOK ── */}
           {block.id==='book' && (
             <div className="space-y-5">
-              <div>
-                <FieldLabel>Cover photo</FieldLabel>
-                <Input value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} placeholder="Paste image URL…"/>
-                {block.coverPhoto&&<img src={block.coverPhoto} className="mt-2 w-full h-28 object-cover rounded-xl" alt=""/>}
-              </div>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
               <div><FieldLabel>Platform</FieldLabel><PillSelect options={BOOK_PROVIDERS} selected={block.sub} onSelect={v=>onUpdateBlock({sub:v})}/></div>
               <div><FieldLabel>Booking URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
             </div>
@@ -568,40 +746,49 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             </div>
           )}
 
-          {/* ── WEBSITE (+ generic fallback) ── */}
+          {/* ── WEBSITE / generic ── */}
           {(block.id==='website'||!['location','hours','menu','order','book','socials'].includes(block.id)) && (
             <div className="space-y-5">
               {block.id==='website'&&(
-                <div>
-                  <FieldLabel>Cover photo</FieldLabel>
-                  <Input value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} placeholder="Paste image URL…"/>
-                  {block.coverPhoto&&<img src={block.coverPhoto} className="mt-2 w-full h-28 object-cover rounded-xl" alt=""/>}
-                </div>
+                <>
+                  <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
+                  <div><FieldLabel>Website URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
+                </>
               )}
-              <div><FieldLabel>Button label</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
-              <div><FieldLabel>Subtitle</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
-              {block.id==='website'&&<div><FieldLabel>Website URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>}
             </div>
           )}
 
-          {/* accent color (all except hours which has its own) */}
+          {/* Widget layout (all except hours) */}
           {block.id!=='hours' && (
             <div className="mt-6 pt-6 border-t border-[#F5F5F5]">
-              <FieldLabel>Accent color</FieldLabel>
-              <div className="flex gap-2 flex-wrap">
-                {BLOCK_COLORS.map((c,i)=>(
-                  <button key={i} onClick={()=>onUpdateBlock({color:c})}
-                    className="w-7 h-7 rounded-full transition-all"
-                    style={{ background:c, outline:(block.color??'')=== c?`2px solid ${c}`:'none', outlineOffset:2 }}
-                  />
-                ))}
+              <FieldLabel>Widget width</FieldLabel>
+              <p className="text-xs text-[#9B9B9B] mb-3">Half-width blocks sit side by side</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={()=>onUpdateBlock({size:'full'})}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${(!block.size||block.size==='full')?'border-[#0A0A0A] bg-[#F5F5F5] text-[#0A0A0A]':'border-[#EBEBEB] text-[#6B6B6B] hover:border-[#0A0A0A]'}`}>
+                  <LucideLayoutList size={14} color="currentColor"/>
+                  Full width
+                </button>
+                <button
+                  onClick={()=>onUpdateBlock({size:'half'})}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${block.size==='half'?'border-[#0A0A0A] bg-[#F5F5F5] text-[#0A0A0A]':'border-[#EBEBEB] text-[#6B6B6B] hover:border-[#0A0A0A]'}`}>
+                  <LucideLayoutGrid size={14} color="currentColor"/>
+                  Half width
+                </button>
               </div>
             </div>
           )}
 
+          {/* Accent color */}
+          <div className="mt-6 pt-6 border-t border-[#F5F5F5]">
+            <FieldLabel>Accent color</FieldLabel>
+            <AccentColorPicker value={block.color} onChange={v=>onUpdateBlock({color:v})}/>
+          </div>
+
         </div>
 
-        {/* sticky footer */}
+        {/* footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#EBEBEB] flex-shrink-0">
           <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-medium text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">
             Cancel
@@ -615,7 +802,7 @@ function BlockModal({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
   );
 }
 
-// ── main export ────────────────────────────────────────────────────────────
+// ── main export ────────────────────────────────────────────────────────────────
 export default function BuilderClient({ business,initialConfig }: {
   business:Business|null; initialConfig:OpenStatusPageConfig;
 }) {
@@ -625,15 +812,21 @@ export default function BuilderClient({ business,initialConfig }: {
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
 
-  const blocks=config.blocks;
-  const openBlock=blocks.find(b=>b.id===openId)??null;
+  // Hours always first in the block list
+  const allBlocks = config.blocks;
+  const blocks = [
+    ...allBlocks.filter(b=>b.id==='hours'),
+    ...allBlocks.filter(b=>b.id!=='hours'),
+  ];
+
+  const openBlock=allBlocks.find(b=>b.id===openId)??null;
   const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours);
 
   function updateBlock(id:string, u:Partial<OpenStatusBlock>) {
     setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));
   }
   function toggleBlock(id:string) {
-    updateBlock(id,{on:!blocks.find(b=>b.id===id)?.on});
+    updateBlock(id,{on:!allBlocks.find(b=>b.id===id)?.on});
   }
   async function save() {
     setSaving(true);
@@ -644,7 +837,7 @@ export default function BuilderClient({ business,initialConfig }: {
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#0A0A0A]" style={{ fontFamily:"'Poppins', system-ui, sans-serif" }}>
 
-      {/* ── header ── */}
+      {/* header */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
         <div className="max-w-[1280px] mx-auto px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -662,7 +855,7 @@ export default function BuilderClient({ business,initialConfig }: {
         </div>
       </header>
 
-      {/* ── tab bar ── */}
+      {/* tab bar */}
       <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-md border-b border-[#EBEBEB]">
         <div className="max-w-[1280px] mx-auto px-6 flex gap-0">
           {(['blocks','style','preview'] as const).map(t=>(
@@ -674,39 +867,36 @@ export default function BuilderClient({ business,initialConfig }: {
         </div>
       </div>
 
-      {/* ── two-column workspace ── */}
+      {/* workspace */}
       <div className="max-w-[1280px] mx-auto px-6 py-10">
-        <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-20">
+        <div className="lg:grid lg:grid-cols-[1fr_310px] lg:gap-20">
 
-          {/* ── LEFT: editing controls ── */}
+          {/* LEFT */}
           <div className="min-w-0">
 
-            {/* BLOCKS TAB */}
+            {/* BLOCKS */}
             {tab==='blocks' && (
               <div>
                 <div className="mb-8">
                   <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-1">YOUR PAGE</p>
                   <h2 className="text-2xl font-bold text-[#0A0A0A] leading-tight">Build your page</h2>
-                  <p className="text-[#6B6B6B] text-sm mt-1">Choose what customers see when they open your link.</p>
+                  <p className="text-[#6B6B6B] text-sm mt-1">Hours are always shown first. Tap any block to customize it.</p>
                 </div>
-
-                {/* block rows */}
                 <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden">
                   {blocks.map((block,i)=>(
                     <div key={block.id}
-                      className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#FAFAFA] ${i<blocks.length-1?'border-b border-[#F5F5F5]':''} ${block.on?'bg-white':'bg-white'}`}
+                      className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#FAFAFA] ${i<blocks.length-1?'border-b border-[#F5F5F5]':''} ${block.id==='hours'?'bg-[#FAFFFE]':''}`}
                       style={{ height:64 }}
                       onClick={()=>setOpenId(block.id)}
                     >
-                      {/* drag handle */}
-                      <div className="flex-shrink-0 cursor-grab opacity-25 hover:opacity-50">
-                        <LucideGrip size={14} color="#6B6B6B"/>
+                      {block.id!=='hours'
+                        ?<div className="flex-shrink-0 cursor-grab opacity-25 hover:opacity-50"><LucideGrip size={14} color="#6B6B6B"/></div>
+                        :<div className="w-[14px] flex-shrink-0"/>
+                      }
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border ${block.on?'bg-[#F5F5F5] border-[#EBEBEB]':'bg-[#FAFAFA] border-[#F0F0F0]'}`}
+                        style={block.on&&block.color?{ backgroundColor:`${block.color}12`, borderColor:`${block.color}30` }:{}}>
+                        <BlockIcon id={block.id} size={15} color={block.on?(block.color??'#0A0A0A'):'#C0C0C0'}/>
                       </div>
-                      {/* icon */}
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border ${block.on?'bg-[#F5F5F5] border-[#EBEBEB]':'bg-[#FAFAFA] border-[#F0F0F0]'}`}>
-                        <BlockIcon id={block.id} size={15} color={block.on?'#0A0A0A':'#C0C0C0'}/>
-                      </div>
-                      {/* text */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className={`text-[13px] font-semibold leading-tight ${block.on?'text-[#0A0A0A]':'text-[#9B9B9B]'}`}>{block.title}</p>
@@ -715,20 +905,19 @@ export default function BuilderClient({ business,initialConfig }: {
                               {liveStatus==='open'?'● Open':'● Closed'}
                             </span>
                           )}
+                          {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded-md bg-[#F5F5F5] text-[#9B9B9B] flex-shrink-0">½</span>}
                         </div>
                         <p className="text-xs text-[#9B9B9B] leading-tight mt-0.5 truncate">
                           {block.id==='hours'?todayLabel:block.sub}
                         </p>
                       </div>
-                      {/* edit arrow */}
                       <LucideChevronRight size={14} color="#C0C0C0"/>
-                      {/* toggle */}
                       <Toggle on={block.on} onChange={()=>toggleBlock(block.id)}/>
                     </div>
                   ))}
                 </div>
 
-                {/* features & vibe */}
+                {/* Features */}
                 <div className="mt-10">
                   <div className="mb-4">
                     <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-1">FEATURES & VIBE</p>
@@ -750,18 +939,38 @@ export default function BuilderClient({ business,initialConfig }: {
               </div>
             )}
 
-            {/* STYLE TAB */}
+            {/* STYLE */}
             {tab==='style' && (
               <div className="space-y-10">
                 <div>
                   <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-1">PAGE STYLE</p>
                   <h2 className="text-2xl font-bold text-[#0A0A0A] leading-tight">Customize the look</h2>
-                  <p className="text-[#6B6B6B] text-sm mt-1">Set the background and connect your social profiles.</p>
+                  <p className="text-[#6B6B6B] text-sm mt-1">Your background, photos, and social profiles.</p>
                 </div>
 
+                {/* Meta Business note */}
+                <div className="rounded-2xl border border-[#EBEBEB] bg-[#FAFAFA] px-4 py-3.5 flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-[#1877F2] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M16 8h-2a1 1 0 0 0-1 1v2h3l-.5 3H13v7h-3v-7H8v-3h2V9a4 4 0 0 1 4-4h2v3z"/></svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-[#0A0A0A]">Connected to Meta Business?</p>
+                    <p className="text-[11px] text-[#6B6B6B] mt-0.5 leading-snug">Your Facebook cover photo and logo will auto-fill when you connect your account.</p>
+                  </div>
+                </div>
+
+                {/* Background photo */}
+                <PhotoField
+                  label="Background / cover photo"
+                  value={config.bgImage??''}
+                  onChange={v=>setConfig(c=>({...c,bgImage:v||undefined}))}
+                  hint="Full-width hero image at the top of your page. Leave blank to use background color only."
+                />
+
+                {/* Background color */}
                 <div>
-                  <FieldLabel>Page background</FieldLabel>
-                  <p className="text-xs text-[#9B9B9B] mb-4">Background color of your public page</p>
+                  <FieldLabel>Page background color</FieldLabel>
+                  <p className="text-xs text-[#9B9B9B] mb-4">Used behind and below your cover photo</p>
                   <div className="grid grid-cols-5 gap-3 mb-4">
                     {BG_PRESETS.map(c=>(
                       <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
@@ -772,11 +981,18 @@ export default function BuilderClient({ business,initialConfig }: {
                   </div>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <div className="w-9 h-9 rounded-xl border border-[#EBEBEB]" style={{ background:config.bg }}/>
-                    <span className="text-xs text-[#9B9B9B]">{config.bg} · click to customize</span>
+                    <span className="text-xs text-[#9B9B9B]">{config.bg} · or enter any hex</span>
                     <input type="color" value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))} className="opacity-0 absolute w-0 h-0"/>
                   </label>
+                  <input
+                    value={config.bg}
+                    onChange={e=>{ if(/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setConfig(c=>({...c,bg:e.target.value})); }}
+                    placeholder="#f8f5f0"
+                    className="mt-2 w-36 bg-white border border-[#EBEBEB] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+                  />
                 </div>
 
+                {/* Socials */}
                 <div>
                   <FieldLabel>Social profiles</FieldLabel>
                   <p className="text-xs text-[#9B9B9B] mb-4">Add links — they'll appear on your page</p>
@@ -792,7 +1008,7 @@ export default function BuilderClient({ business,initialConfig }: {
               </div>
             )}
 
-            {/* PREVIEW TAB (mobile only — desktop always shows right column) */}
+            {/* PREVIEW (mobile only) */}
             {tab==='preview' && (
               <div className="lg:hidden flex flex-col items-center py-8">
                 <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-8">What customers see</p>
@@ -801,7 +1017,7 @@ export default function BuilderClient({ business,initialConfig }: {
             )}
           </div>
 
-          {/* ── RIGHT: sticky phone preview (desktop only) ── */}
+          {/* RIGHT: sticky preview */}
           <div className="hidden lg:block">
             <div className="sticky top-28">
               <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-6 text-center">Live preview</p>
@@ -812,7 +1028,7 @@ export default function BuilderClient({ business,initialConfig }: {
         </div>
       </div>
 
-      {/* ── block modal ── */}
+      {/* modal */}
       {openBlock && (
         <BlockModal
           block={openBlock} config={config}
