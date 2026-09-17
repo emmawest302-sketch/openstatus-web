@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BuilderClient from '@/components/builder-client';
@@ -40,7 +40,22 @@ function dbHoursToWeekly(rows: DbHoursRow[]): Record<WeeklyKey, { open:string; c
   return result;
 }
 
-export default function BuilderPage() {
+const LoadingScreen = () => (
+  <main className="grid min-h-screen place-items-center" style={{ background: '#F7F7F5', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+      <svg viewBox="0 0 100 100" width="28" height="28">
+        <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
+        <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
+        <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
+        <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
+      </svg>
+      <p style={{ fontSize: 13, color: '#858585' }}>Loading your builder…</p>
+    </div>
+  </main>
+);
+
+// Inner component that reads search params — must be inside Suspense
+function BuilderPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isNew = searchParams.get('new') === '1';
@@ -98,21 +113,15 @@ export default function BuilderPage() {
     );
   }
 
-  if (!ready) {
-    return (
-      <main className="grid min-h-screen place-items-center" style={{ background: '#F7F7F5', fontFamily: "'Inter', system-ui, sans-serif" }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <svg viewBox="0 0 100 100" width="28" height="28">
-            <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
-            <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
-            <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
-            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
-          </svg>
-          <p style={{ fontSize: 13, color: '#858585' }}>Loading your builder…</p>
-        </div>
-      </main>
-    );
-  }
+  if (!ready) return <LoadingScreen />;
 
   return <BuilderClient business={business} initialConfig={initialConfig!} isFirstRun={isNew} />;
+}
+
+export default function BuilderPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <BuilderPageInner />
+    </Suspense>
+  );
 }
