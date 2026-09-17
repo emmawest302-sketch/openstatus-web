@@ -37,10 +37,10 @@ interface Business {
 
 // ── constants ──────────────────────────────────────────────────────────────────
 const BG_PRESETS = [
-  '#f8f5f0','#fafafa','#f0f4ff','#fff0f5','#f0fdf4',
-  '#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c',
+  '#ffffff','#1B5E20','#388E3C','#A5D6A7','#FFAB40',
+  '#0a0a0a','#FF7043','#f8f5f0','#fafafa','#1c1c1c',
 ];
-const BLOCK_COLORS = ['#2563eb','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0891b2','#0a0a0a'];
+const BLOCK_COLORS = ['#1B5E20','#388E3C','#FF7043','#FFAB40','#A5D6A7','#0a0a0a','#2563eb','#dc2626'];
 const ORDER_PROVIDERS = [
   { key:'doordash',  label:'DoorDash'  },
   { key:'ubereats',  label:'Uber Eats' },
