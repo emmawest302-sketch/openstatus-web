@@ -6,18 +6,29 @@ type DayKey = 'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat';
 const DAY_KEYS: DayKey[] = ['sun','mon','tue','wed','thu','fri','sat'];
 
 function fmtTime(t: string): string {
-  // Google returns "0900" → "09:00"
   return t.length === 4 ? `${t.slice(0,2)}:${t.slice(2)}` : t;
 }
 
-function extractSearchQuery(url: string): string | null {
+function parseGoogleMapsUrl(rawUrl: string): { query: string | null; lat?: number; lng?: number } {
   try {
-    if (url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps')) return null;
-    const decoded = decodeURIComponent(url);
-    const match = decoded.match(/\/maps\/place\/([^/@?]+)/);
-    if (match) return match[1].replace(/\+/g, ' ');
-    return null;
-  } catch { return null; }
+    if (rawUrl.includes('maps.app.goo.gl') || rawUrl.includes('goo.gl/maps')) {
+      return { query: null };
+    }
+    const decoded = decodeURIComponent(rawUrl);
+
+    // Extract business name from /maps/place/NAME/ pattern
+    const placeMatch = decoded.match(/\/maps\/place\/([^/@?]+)/);
+    const rawName = placeMatch ? placeMatch[1].replace(/\+/g, ' ').trim() : null;
+
+    // Extract coordinates from @lat,lng,zoom
+    const coordMatch = decoded.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const lat = coordMatch ? parseFloat(coordMatch[1]) : undefined;
+    const lng = coordMatch ? parseFloat(coordMatch[2]) : undefined;
+
+    return { query: rawName, lat, lng };
+  } catch {
+    return { query: null };
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -27,7 +38,8 @@ export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
   if (!url) return NextResponse.json({ error: 'Missing url param' }, { status: 400 });
 
-  const query = extractSearchQuery(url);
+  const { query, lat, lng } = parseGoogleMapsUrl(url);
+
   if (!query) {
     return NextResponse.json(
       { error: 'Use the full Google Maps URL — not a short link. Open Google Maps, find your business, and copy the URL from the address bar.' },
@@ -35,8 +47,12 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Step 1: Find place_id
-  const findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id,name&key=${key}`;
+  // Step 1: Find place_id — add location bias if we have coordinates
+  let findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id,name&key=${key}`;
+  if (lat !== undefined && lng !== undefined) {
+    findUrl += `&locationbias=circle:5000@${lat},${lng}`;
+  }
+
   const findRes = await fetch(findUrl);
   const findData = await findRes.json() as {
     status: string;
@@ -44,12 +60,27 @@ export async function GET(req: NextRequest) {
   };
 
   if (findData.status !== 'OK' || !findData.candidates?.length) {
-    return NextResponse.json({ error: `Business not found (${findData.status}). Try copying the URL directly from Google Maps.` }, { status: 404 });
+    // Fallback: try again without location bias but with ZERO_RESULTS being explicit
+    if (lat !== undefined && lng !== undefined) {
+      // Try broader bias
+      const fallbackUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id,name&locationbias=circle:50000@${lat},${lng}&key=${key}`;
+      const fallbackRes = await fetch(fallbackUrl);
+      const fallbackData = await fallbackRes.json() as { status: string; candidates: Array<{ place_id: string; name: string }> };
+      if (fallbackData.status === 'OK' && fallbackData.candidates?.length) {
+        // Use fallback result
+        return handlePlaceDetails(fallbackData.candidates[0].place_id, key);
+      }
+    }
+    return NextResponse.json(
+      { error: `Business not found. Make sure you copied the full URL from Google Maps (not a short link). Status: ${findData.status}` },
+      { status: 404 }
+    );
   }
 
-  const placeId = findData.candidates[0].place_id;
+  return handlePlaceDetails(findData.candidates[0].place_id, key);
+}
 
-  // Step 2: Fetch full details
+async function handlePlaceDetails(placeId: string, key: string): Promise<NextResponse> {
   const fields = 'name,rating,user_ratings_total,formatted_address,formatted_phone_number,international_phone_number,website,opening_hours,photos,reviews';
   const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${key}`;
   const detailRes = await fetch(detailUrl);
@@ -88,11 +119,13 @@ export async function GET(req: NextRequest) {
   // Build weekly hours: day 0=Sun … 6=Sat
   let weeklyHours: Record<DayKey, { open: string; close: string; closed: boolean }> | undefined;
   if (r.opening_hours?.periods) {
-    const base = Object.fromEntries(DAY_KEYS.map(k => [k, { open: '09:00', close: '17:00', closed: true }])) as Record<DayKey, { open: string; close: string; closed: boolean }>;
+    const base = Object.fromEntries(
+      DAY_KEYS.map(k => [k, { open: '09:00', close: '17:00', closed: true }])
+    ) as Record<DayKey, { open: string; close: string; closed: boolean }>;
     for (const period of r.opening_hours.periods) {
-      const key = DAY_KEYS[period.open.day];
-      if (key) {
-        base[key] = {
+      const dayKey = DAY_KEYS[period.open.day];
+      if (dayKey) {
+        base[dayKey] = {
           open: fmtTime(period.open.time),
           close: period.close ? fmtTime(period.close.time) : '23:59',
           closed: false,
@@ -102,7 +135,7 @@ export async function GET(req: NextRequest) {
     weeklyHours = base;
   }
 
-  // Resolve first photo to a usable URL (follow the redirect server-side)
+  // Resolve first photo server-side so the API key never reaches the client
   let photoUrl: string | undefined;
   if (r.photos?.[0]?.photo_reference) {
     try {

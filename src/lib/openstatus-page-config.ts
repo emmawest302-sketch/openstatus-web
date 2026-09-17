@@ -19,10 +19,16 @@ export type OpenStatusBlock = {
   blockStyle?: string;
   coverPhoto?: string;
   provider?: string;
+  address?: string;
+  reviews?: Array<{author:string;rating:number;text:string;time:string}>;
 };
 
+export type WeekDay = 'mon'|'tue'|'wed'|'thu'|'fri'|'sat'|'sun';
+export interface DayHours { open: string; close: string; closed: boolean; }
+export type WeeklyHours = Record<WeekDay, DayHours>;
+
 export type OpenStatusSocial = { id: string; label: string; url: string; on: boolean };
-export type OpenStatusPageConfig = { blocks: OpenStatusBlock[]; bg: string; socials: OpenStatusSocial[]; location?: string; tags?: string[] };
+export type OpenStatusPageConfig = { blocks: OpenStatusBlock[]; bg: string; socials: OpenStatusSocial[]; location?: string; tags?: string[]; weeklyHours?: WeeklyHours; };
 
 export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
   { id: 'order', title: 'Order', sub: 'Order online', icon: '', on: true, tone: 'glass', url: '', size: 'full' },

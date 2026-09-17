@@ -18,6 +18,8 @@ interface OpenStatusBlock {
   provider?: string;
   yelpUrl?: string; googleUrl?: string; tripAdvisorUrl?: string;
   blockStyle?: string;
+  address?: string;
+  reviews?: Array<{author:string;rating:number;text:string;time:string}>;
   _googleFetching?: boolean; _googleError?: string;
 }
 export interface OpenStatusPageConfig {
@@ -1838,9 +1840,12 @@ export default function BuilderClient({ business,initialConfig }: {
                             setGoogleFetching(true);setGoogleFetchError('');setGoogleFetchDone(false);
                             try{
                               const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
-                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
+                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string;address?:string;phone?:string;website?:string;weeklyHours?:WeeklyHours;photoUrl?:string;reviews?:Array<{author:string;rating:number;text:string;time:string}>};
                               if(!r.ok||d.error)throw new Error(d.error??'Failed');
-                              updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.name??allBlocks.find(b=>b.id==='location')?.sub??''});
+                              updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??d.name??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
+                              if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours as WeeklyHours}));
+                              if(d.phone&&allBlocks.find(b=>b.id==='call')) updateBlock('call',{url:'tel:'+d.phone,on:true});
+                              if(d.website&&allBlocks.find(b=>b.id==='website')) updateBlock('website',{url:d.website,on:true});
                               setGoogleFetchDone(true);
                             }catch(e){setGoogleFetchError(e instanceof Error?e.message:'Could not fetch');}
                             finally{setGoogleFetching(false);}
