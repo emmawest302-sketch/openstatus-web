@@ -30,7 +30,7 @@ export interface DayHours { open: string; close: string; closed: boolean; }
 export type WeeklyHours = Record<WeekDay, DayHours>;
 
 export type OpenStatusSocial = { id: string; label: string; url: string; on: boolean };
-export type OpenStatusPageConfig = { blocks: OpenStatusBlock[]; bg: string; socials: OpenStatusSocial[]; location?: string; tags?: string[]; weeklyHours?: WeeklyHours; };
+export type OpenStatusPageConfig = { blocks: OpenStatusBlock[]; bg: string; bgImage?: string; socials: OpenStatusSocial[]; location?: string; tags?: string[]; weeklyHours?: WeeklyHours; };
 
 export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
   { id: 'order', title: 'Order', sub: 'Order online', icon: '', on: true, tone: 'glass', url: '', size: 'full' },
@@ -41,7 +41,7 @@ export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
 ];
 
 export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageConfig {
-  const raw = value && typeof value === 'object' ? value as { blocks?: unknown; bg?: unknown; socials?: unknown; location?: unknown; tags?: unknown } : {};
+  const raw = value && typeof value === 'object' ? value as { blocks?: unknown; bg?: unknown; bgImage?: unknown; socials?: unknown; location?: unknown; tags?: unknown } : {};
   const blocks = Array.isArray(raw.blocks)
     ? raw.blocks.map((block) => {
         const b = block as OpenStatusBlock;
@@ -66,6 +66,7 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
   return {
     blocks,
     bg: typeof raw.bg === 'string' ? raw.bg : 'warm',
+    bgImage: typeof raw.bgImage === 'string' ? raw.bgImage : undefined,
     socials,
     location: typeof raw.location === 'string' ? raw.location : '',
     tags: Array.isArray(raw.tags) ? raw.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 8) : [],

@@ -29,7 +29,8 @@ export default async function LiveStatus({params}:{params:Promise<{slug:string}>
  const hours:Hours[]=hoursRows??[];
  const updates:Update[]=updateRows??[];
  const avatar=typeof business.avatar_url==='string'&&business.avatar_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url;
- const background=typeof business.header_url==='string'&&business.header_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=header`:business.header_url;
+ const headerFromDb=typeof business.header_url==='string'&&business.header_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=header`:business.header_url;
+ const background=pageConfig.bgImage||headerFromDb;
  const timezone=business.timezone||'America/Chicago';
  const parts=new Intl.DateTimeFormat('en-US',{timeZone:timezone,weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
  const weekday=parts.find(p=>p.type==='weekday')?.value??'Sun';
@@ -48,7 +49,7 @@ export default async function LiveStatus({params}:{params:Promise<{slug:string}>
  if(closedAllDay){big='Closed today';sub=lead?.detail??'Back tomorrow'}
  else if(isOpen){big='Open now';sub='Closes at ';accent=pretty(effectiveClose)}
  else if(openMins!==null&&nowMins<openMins){big='Opens later';sub='Opens at ';accent=pretty(todayRow?.opens_at??null)}
- const bg=pageConfig.bg==='blue'?'#E9EEF5':pageConfig.bg==='lime'?'#E7F7C8':pageConfig.bg==='dark'?'#181817':'#EDE9E2';
+ const bg=typeof pageConfig.bg==='string'&&pageConfig.bg.startsWith('#')?pageConfig.bg:pageConfig.bg==='blue'?'#E9EEF5':pageConfig.bg==='lime'?'#E7F7C8':pageConfig.bg==='dark'?'#181817':'#EDE9E2';
  const glass='rounded-[26px] bg-white/75 backdrop-blur-xl border border-white/70';
  const initials=business.name.split(/\s+/).filter(Boolean).slice(0,2).map((part:string)=>part[0]).join('').toUpperCase();
  const tags=pageConfig.tags??[];
