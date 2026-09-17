@@ -44,8 +44,8 @@ export default function PublicActionBlock({ block, businessId }: Props) {
   const [hovered, setHovered] = useState(false);
 
   // Icon: very subtle tint if block has a color, neutral otherwise
-  const iconColor = block.color ?? '#292929';
-  const iconBg = block.color ? `${block.color}14` : 'rgba(0,0,0,0.05)';
+  const iconColor = '#111111';
+  const iconBg = 'rgba(0,0,0,0.05)';
 
   const card = (
     <div

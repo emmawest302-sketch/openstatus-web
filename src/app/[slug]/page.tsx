@@ -32,6 +32,13 @@ function rowLabel(r: Hours | undefined) {
   return !r ? '-' : r.is_closed ? 'Closed' : `${pretty(r.opens_at)} – ${pretty(r.closes_at)}`;
 }
 
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
+    : { r: 247, g: 247, b: 245 };
+}
+
 export default async function LiveStatus({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const admin = getAdminClient();
@@ -65,6 +72,8 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const bg = typeof pageConfig.bg === 'string' && pageConfig.bg.startsWith('#')
     ? pageConfig.bg
     : '#F7F7F5';
+  const { r: bgR, g: bgG, b: bgB } = hexToRgb(bg);
+  const fadeGradient = `linear-gradient(to bottom, rgba(${bgR},${bgG},${bgB},0) 0%, rgba(${bgR},${bgG},${bgB},0.08) 22%, rgba(${bgR},${bgG},${bgB},0.35) 48%, rgba(${bgR},${bgG},${bgB},0.72) 72%, ${bg} 100%)`;
 
   // Hours / open status
   const timezone = business.timezone || 'America/Chicago';
@@ -126,11 +135,11 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             {/* Editorial gradient fade into page bg */}
             <div style={{
               position: 'absolute', inset: 0,
-              background: `linear-gradient(to bottom, transparent 50%, rgba(247,247,245,0.60) 78%, ${bg} 100%)`,
+              background: fadeGradient,
             }}/>
           </div>
         ) : (
-          <div style={{ height: 80, background: `${themeColor}18` }}/>
+          <div style={{ height: 80, background: 'rgba(0,0,0,0.04)' }}/>
         )}
 
         {/* ── Logo ── */}

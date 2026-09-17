@@ -20,8 +20,8 @@ export default function PublicGalleryBlock({ block, businessId, placeId }: Props
       .catch(() => {});
   }, [businessId, placeId]);
 
-  const iconColor = block.color ?? '#292929';
-  const iconBg = block.color ? `${block.color}14` : 'rgba(0,0,0,0.05)';
+  const iconColor = '#292929';
+  const iconBg = 'rgba(0,0,0,0.05)';
   const href = block.url?.trim() ? block.url : undefined;
 
   const glassCard: React.CSSProperties = {

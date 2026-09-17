@@ -13,7 +13,7 @@ function extractMapQuery(googleUrl: string, fallback: string): string {
   return fallback;
 }
 
-type Props = { block: OpenStatusBlock; businessId: string; themeColor: string };
+type Props = { block: OpenStatusBlock; businessId: string; themeColor?: string };
 
 export default function PublicLocationBlock({ block, businessId, themeColor }: Props) {
   const [hovered, setHovered] = useState(false);
@@ -59,7 +59,7 @@ export default function PublicLocationBlock({ block, businessId, themeColor }: P
       }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill={themeColor} aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#111111" aria-hidden="true">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
             </svg>
             <p style={{
@@ -80,7 +80,7 @@ export default function PublicLocationBlock({ block, businessId, themeColor }: P
           onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
           style={{
             flexShrink: 0, borderRadius: 999,
-            background: themeColor, color: '#FFFFFF',
+            background: '#0A0A0A', color: '#FFFFFF',
             padding: '9px 18px', fontSize: 13, fontWeight: 700,
             textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5,
             transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
