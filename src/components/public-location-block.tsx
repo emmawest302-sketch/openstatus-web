@@ -20,7 +20,10 @@ export default function PublicLocationBlock({ block, businessId }: Props) {
     : block.sub || block.title;
 
   const mapsHref = block.appleMapsUrl || (block.googleUrl ?? `https://maps.google.com/?q=${encodeURIComponent(query)}`);
-  const embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=en`;
+  // Use coordinates when available — avoids the ugly info-window card
+  const embedSrc = (block.lat && block.lng)
+    ? `https://maps.google.com/maps?q=${block.lat},${block.lng}&output=embed&hl=en&z=16`
+    : `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=en`;
 
   return (
     <div className="col-span-2 overflow-hidden rounded-[24px] border border-white/55 bg-white/72 shadow-[0_14px_36px_rgba(0,0,0,.10)] backdrop-blur-2xl">

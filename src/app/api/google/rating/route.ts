@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       const fallbackRes = await fetch(fallbackUrl);
       const fallbackData = await fallbackRes.json() as { status: string; candidates: Array<{ place_id: string; name: string }> };
       if (fallbackData.status === 'OK' && fallbackData.candidates?.length) {
-        return handlePlaceDetails(fallbackData.candidates[0].place_id, key);
+        return handlePlaceDetails(fallbackData.candidates[0].place_id, key, lat, lng);
       }
     }
     return NextResponse.json(
@@ -94,10 +94,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  return handlePlaceDetails(findData.candidates[0].place_id, key);
+  return handlePlaceDetails(findData.candidates[0].place_id, key, lat, lng);
 }
 
-async function handlePlaceDetails(placeId: string, key: string): Promise<NextResponse> {
+async function handlePlaceDetails(placeId: string, key: string, lat?: number, lng?: number): Promise<NextResponse> {
   const fields = 'name,rating,user_ratings_total,formatted_address,formatted_phone_number,international_phone_number,website,opening_hours,photos,reviews';
   const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${key}`;
   const detailRes = await fetch(detailUrl);
@@ -164,6 +164,8 @@ async function handlePlaceDetails(placeId: string, key: string): Promise<NextRes
 
   return NextResponse.json({
     name: r.name,
+    lat,
+    lng,
     rating: r.rating,
     reviewCount: r.user_ratings_total,
     address: r.formatted_address,

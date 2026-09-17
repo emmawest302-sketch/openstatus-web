@@ -20,6 +20,8 @@ export type OpenStatusBlock = {
   coverPhoto?: string;
   provider?: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   reviews?: Array<{author:string;rating:number;text:string;time:string}>;
 };
 

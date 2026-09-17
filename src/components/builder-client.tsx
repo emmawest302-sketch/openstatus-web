@@ -19,6 +19,8 @@ interface OpenStatusBlock {
   yelpUrl?: string; googleUrl?: string; tripAdvisorUrl?: string;
   blockStyle?: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   reviews?: Array<{author:string;rating:number;text:string;time:string}>;
   _googleFetching?: boolean; _googleError?: string;
 }
@@ -866,7 +868,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                       return (
                         <div className="col-span-2 rounded-2xl overflow-hidden border" style={{borderColor:bdr}}>
                           <div className="relative w-full overflow-hidden" style={{height:80}}>
-                            <iframe src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed&hl=en`} className="absolute inset-0 w-full h-full border-0" loading="lazy" title="map"/>
+                            <iframe src={(b.lat&&b.lng)?`https://maps.google.com/maps?q=${b.lat},${b.lng}&output=embed&hl=en&z=16`:`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed&hl=en`} className="absolute inset-0 w-full h-full border-0" loading="lazy" title="map"/>
                           </div>
                           <div className="flex items-center justify-between gap-2 px-2.5 py-2" style={{background:cardBg}}>
                             <p className={`text-[9px] font-semibold truncate ${tx}`}>{b.sub||mapQuery}</p>
@@ -1840,9 +1842,9 @@ export default function BuilderClient({ business,initialConfig }: {
                             setGoogleFetching(true);setGoogleFetchError('');setGoogleFetchDone(false);
                             try{
                               const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
-                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string;address?:string;phone?:string;website?:string;weeklyHours?:WeeklyHours;photoUrl?:string;reviews?:Array<{author:string;rating:number;text:string;time:string}>};
+                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string;address?:string;phone?:string;website?:string;weeklyHours?:WeeklyHours;photoUrl?:string;lat?:number;lng?:number;reviews?:Array<{author:string;rating:number;text:string;time:string}>};
                               if(!r.ok||d.error)throw new Error(d.error??'Failed');
-                              updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??d.name??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
+                              updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??d.name??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.lat!==undefined?{lat:d.lat,lng:d.lng}:{}),...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
                               if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours as WeeklyHours}));
                               if(d.photoUrl) setConfig(c=>({...c,bgImage:d.photoUrl}));
                               if(d.phone&&allBlocks.find(b=>b.id==='call')) updateBlock('call',{url:'tel:'+d.phone,on:true});
