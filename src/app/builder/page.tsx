@@ -20,7 +20,7 @@ interface BusinessData {
   name: string;
   slug: string;
   avatar_url?: string;
-  description?: string;
+  tagline?: string;
   category?: string;
   instagram_handle?: string;
   _businessId: string;
@@ -57,7 +57,7 @@ export default function BuilderPage() {
 
       const { data: biz, error: bizError } = await supabase
         .from('businesses')
-        .select('id, name, slug, avatar_url, description, category, instagram_handle')
+        .select('id, name, slug, avatar_url, tagline, category, instagram_handle')
         .eq('user_id', user.id)
         .maybeSingle();
 

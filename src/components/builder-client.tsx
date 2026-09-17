@@ -27,7 +27,7 @@ export interface OpenStatusPageConfig {
 }
 interface Business {
   id: string; name: string; slug: string;
-  avatar_url?: string; description?: string; category?: string;
+  avatar_url?: string; tagline?: string; category?: string;
 }
 
 // ── constants ──────────────────────────────────────────────────────────────────
@@ -1452,3 +1452,645 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
   }
 
   return (
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      {spotRect&&(
+        <div className="absolute pointer-events-none" style={{top:spotRect.top,left:spotRect.left,width:spotRect.width,height:spotRect.height,boxShadow:'0 0 0 9999px rgba(0,0,0,0.45)',borderRadius:12,zIndex:51}}/>
+      )}
+      {!spotRect&&<div className="absolute inset-0 bg-black/45" style={{zIndex:51}}/>}
+      <div className="absolute pointer-events-auto bg-white rounded-2xl shadow-2xl p-6 w-72" style={{...tooltipStyle,zIndex:52}}>
+        <p className="text-[11px] font-bold tracking-[0.12em] text-[#9B9B9B] uppercase mb-1">Step {step+1} of {TUT_STEPS.length}</p>
+        <h3 className="text-[16px] font-bold text-[#0A0A0A] mb-2 leading-snug">{current.title}</h3>
+        <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-5">{current.body}</p>
+        <div className="flex items-center justify-between">
+          <button onClick={onDone} className="text-[12px] text-[#9B9B9B] hover:text-[#111] font-medium transition-colors">Skip</button>
+          <div className="flex items-center gap-2">
+            {step>0&&<button onClick={()=>setStep(s=>s-1)} className="px-4 py-1.5 text-[12px] font-semibold rounded-full border border-[#E0E0E0] text-[#6B6B6B] hover:border-[#111] transition-colors">Back</button>}
+            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#AADF1E] text-[#111] hover:bg-[#99CF0E] transition-colors">{isLast?'Done':'Next →'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ── sidebar nav icons ──────────────────────────────────────────────────────────
+function IconPalette({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill={color}/><circle cx="17.5" cy="10.5" r=".5" fill={color}/><circle cx="8.5" cy="7.5" r=".5" fill={color}/><circle cx="6.5" cy="12.5" r=".5" fill={color}/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>;
+}
+function IconLink({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>;
+}
+function IconBuilding({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+}
+function IconPuzzle({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-3.407 0l-1.569-1.568c-.23-.23-.556-.338-.877-.29-.333.054-.611.302-.642.635a2.5 2.5 0 1 1-3.5-3.501c.332-.03.58-.309.635-.642.049-.321-.059-.647-.29-.877L4.009 12.19c-.47-.47-.706-1.087-.706-1.704s.236-1.233.706-1.704l1.61-1.61a.979.979 0 0 1 .837-.276c.47.07.802.48.968.925a2.501 2.501 0 1 0 3.214-3.214c-.446-.166-.855-.497-.925-.968a.979.979 0 0 1 .276-.837l1.61-1.61a2.404 2.404 0 0 1 3.408 0l1.568 1.568c.23.23.556.338.877.29.333-.054.611-.302.642-.635a2.5 2.5 0 0 1 5 0c-.031.333-.309.58-.642.635z"/></svg>;
+}
+function IconBarChart({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>;
+}
+function IconSettings({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+}
+function IconEye({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+}
+function IconSmartphone({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>;
+}
+function IconMonitor({ size=16,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>;
+}
+function IconChevronDown({ size=14,color='currentColor' }: { size?:number;color?:string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
+}
+
+// ── time select for hours ──────────────────────────────────────────────────────
+// (TimeSelect is defined above in BlockEditPanel scope — re-declare here for main builder use)
+function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const times: string[] = [];
+  for (let h = 0; h < 24; h++) for (const m of [0, 30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)}
+      className="bg-[#F5F5F5] border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
+      {times.map(t => <option key={t} value={t}>{fmt12(t)}</option>)}
+    </select>
+  );
+}
+
+type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings';
+type HoursSubTab = 'regular'|'special'|'status'|'auto';
+
+// ── main export ────────────────────────────────────────────────────────────────
+export default function BuilderClient({ business,initialConfig }: {
+  business:Business|null; initialConfig:OpenStatusPageConfig;
+}) {
+  const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
+  const [sidebarTab,setSidebarTab]=useState<SidebarTab>('hours');
+  const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('regular');
+  const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>('mobile');
+  const [quickAction,setQuickAction]=useState<string|null>(null);
+  const [closeEarlyTime,setCloseEarlyTime]=useState('15:00');
+  const [quickMsg,setQuickMsg]=useState('');
+  const [openId,setOpenId]=useState<string|null>(null);
+  const [showPicker,setShowPicker]=useState(false);
+  const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [dragId,setDragId]=useState<string|null>(null);
+  const [dragOverId,setDragOverId]=useState<string|null>(null);
+
+  const allBlocks = config.blocks;
+  const orderedBlocks = [...allBlocks.filter(b=>b.id==='hours'),...allBlocks.filter(b=>b.id!=='hours')];
+  const activeBlocks = orderedBlocks.filter(b=>b.on);
+  const openBlock = allBlocks.find(b=>b.id===openId)??null;
+  const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours);
+  const hours = config.weeklyHours??{...DEFAULT_WEEK_HOURS};
+  const showEditPanel = !!openBlock && sidebarTab==='design';
+  const igHandle = (business as (Business & { instagram_handle?: string })|null)?.instagram_handle??null;
+
+  function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
+    setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));
+  }
+  function enableBlock(id:string) { updateBlock(id,{on:true}); }
+  function handleDrop(targetId:string) {
+    if(!dragId||dragId===targetId||dragId==='hours'||targetId==='hours'){setDragId(null);setDragOverId(null);return;}
+    setConfig(c=>{
+      const bs=[...c.blocks];
+      const fi=bs.findIndex(b=>b.id===dragId),ti=bs.findIndex(b=>b.id===targetId);
+      if(fi<0||ti<0)return c;
+      const [moved]=bs.splice(fi,1);bs.splice(ti,0,moved);
+      return{...c,blocks:bs};
+    });
+    setDragId(null);setDragOverId(null);
+  }
+  function copyMonToWeekdays() {
+    const mon=hours.mon;
+    setConfig(c=>({...c,weeklyHours:{...hours,tue:mon,wed:mon,thu:mon,fri:mon}}));
+  }
+  async function save() {
+    setSaving(true);
+    try{await supabase.auth.updateUser({data:{openstatus_page:config}});setSaved(true);setTimeout(()=>setSaved(false),2500);}
+    finally{setSaving(false);}
+  }
+
+  // Hours table row
+  function HoursRow({dayKey,label,idx}:{dayKey:WeekDay;label:string;idx:number}) {
+    const day=hours[dayKey];
+    return (
+      <div className={`flex items-center gap-4 px-5 ${idx<DAYS.length-1?'border-b border-[#F5F5F5]':''}`} style={{height:64}}>
+        <span className="text-[13px] font-semibold text-[#0A0A0A] w-28 flex-shrink-0">{label}</span>
+        <button
+          onClick={()=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,closed:!day.closed}}}))}
+          className={`text-[11px] px-3 py-1.5 rounded-full border font-bold flex-shrink-0 transition-all ${day.closed?'border-[#EBEBEB] text-[#9B9B9B] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
+        >
+          {day.closed?'Closed':'● Open'}
+        </button>
+        {!day.closed&&(
+          <div className="flex items-center gap-2 flex-1">
+            <TimeSelectInline value={day.open} onChange={v=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,open:v}}}))}/>
+            <span className="text-[#C0C0C0] text-sm font-light">–</span>
+            <TimeSelectInline value={day.close} onChange={v=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,close:v}}}))}/>
+          </div>
+        )}
+        {day.closed&&<span className="text-[12px] text-[#C0C0C0] italic">Closed all day</span>}
+      </div>
+    );
+  }
+
+  const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode }[] = [
+    { key:'design',       label:'Design',        icon:<IconPalette size={15}/> },
+    { key:'links',        label:'Links',         icon:<IconLink size={15}/> },
+    { key:'business',     label:'Business Info', icon:<IconBuilding size={15}/> },
+    { key:'hours',        label:'Hours & Status',icon:<LucideClock size={15}/> },
+    { key:'integrations', label:'Integrations',  icon:<IconPuzzle size={15}/> },
+    { key:'analytics',    label:'Analytics',     icon:<IconBarChart size={15}/> },
+    { key:'settings',     label:'Settings',      icon:<IconSettings size={15}/> },
+  ];
+
+  const sidebarLabel = SIDEBAR_NAV.find(n=>n.key===sidebarTab)?.label ?? '';
+
+  // Close early times
+  const closeEarlyTimes: string[] = [];
+  for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-white text-[#0A0A0A]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>
+
+      {/* ── LEFT SIDEBAR ── */}
+      <aside className="w-[210px] flex-shrink-0 flex flex-col border-r border-[#EBEBEB] bg-white">
+        {/* Wordmark */}
+        <div className="px-5 h-14 flex items-center border-b border-[#F0F0F0] flex-shrink-0">
+          <span className="font-bold text-[17px] tracking-tight text-[#111]">OpenStatus</span>
+        </div>
+        {/* Nav */}
+        <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
+          {SIDEBAR_NAV.map(({key,label,icon})=>(
+            <button key={key} onClick={()=>setSidebarTab(key)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
+                sidebarTab===key
+                  ?'bg-[#AADF1E] text-[#111]'
+                  :'text-[#6B6B6B] hover:bg-[#F5F5F5] hover:text-[#111]'
+              }`}>
+              <span className={sidebarTab===key?'text-[#111]':'text-[#9B9B9B]'}>{icon}</span>
+              {label}
+            </button>
+          ))}
+        </nav>
+        {/* Bottom CTAs */}
+        <div className="px-4 py-4 border-t border-[#F0F0F0] space-y-2.5 flex-shrink-0">
+          <button className="w-full text-left text-[11px] font-bold text-[#AADF1E] hover:underline leading-snug">
+            Upgrade to unlock<br/>more features →
+          </button>
+          <button className="w-full text-left text-[11px] text-[#9B9B9B] hover:text-[#111] transition-colors font-medium">
+            Need help?
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MAIN AREA ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* ── TOP NAV BAR ── */}
+        <header className="h-14 border-b border-[#EBEBEB] flex items-center justify-between px-6 flex-shrink-0 bg-white">
+          <span className="text-[11px] font-bold tracking-[0.14em] text-[#9B9B9B] uppercase">{sidebarLabel}</span>
+          <div className="flex items-center gap-3">
+            {business?.slug&&(
+              <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#6B6B6B] hover:text-[#111] transition-colors">
+                View your link <span className="text-[#9B9B9B]">↗</span>
+              </a>
+            )}
+            <button className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors gap-2">
+              <IconEye size={13} color="currentColor"/> Preview
+            </button>
+            <button onClick={save} disabled={saving} data-tut="tut-save"
+              className={`px-5 py-1.5 rounded-full text-[13px] font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#F5F5F5] text-[#9B9B9B]':'bg-[#AADF1E] text-[#111] hover:bg-[#99CF0E]'}`}>
+              {saving?'Saving…':saved?'✓ Saved':'Publish Changes'}
+            </button>
+            <div className="w-8 h-8 rounded-full bg-[#AADF1E] flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 cursor-pointer select-none">
+              {(business?.name??'E').charAt(0).toUpperCase()}
+            </div>
+          </div>
+        </header>
+
+        {/* ── CONTENT + RIGHT PREVIEW ── */}
+        <div className="flex-1 flex overflow-hidden">
+
+          {/* ── MAIN CONTENT ── */}
+          <div className="flex-1 overflow-y-auto min-w-0">
+
+            {/* ══ HOURS & STATUS ══ */}
+            {sidebarTab==='hours'&&(
+              <div className="px-8 py-8 max-w-[700px]">
+                {/* Header */}
+                <div className="mb-7">
+                  <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-bold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#F5F5F5] text-[#9B9B9B]'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
+                    {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
+                  </div>
+                  <h1 className="text-[26px] font-bold text-[#0A0A0A] leading-tight tracking-[-0.02em]">
+                    Stay up to date, in real time.
+                  </h1>
+                  <p className="text-[#9B9B9B] text-[14px] mt-2 leading-relaxed">
+                    Set your hours once — customers always see the right status.
+                  </p>
+                </div>
+
+                {/* Sub-tabs */}
+                <div className="flex items-center gap-1 mb-8 bg-[#F5F5F5] rounded-full p-1 w-fit">
+                  {([
+                    {key:'regular',label:'Regular Hours'},
+                    {key:'special',label:'Special Hours'},
+                    {key:'status', label:'Status Controls'},
+                    {key:'auto',   label:'Auto-Updates'},
+                  ] as const).map(({key,label})=>(
+                    <button key={key} onClick={()=>setHoursSubTab(key)}
+                      className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap ${hoursSubTab===key?'bg-white text-[#111] shadow-sm':'text-[#9B9B9B] hover:text-[#111]'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── REGULAR HOURS ── */}
+                {hoursSubTab==='regular'&&(
+                  <div className="space-y-8">
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[14px] font-bold text-[#0A0A0A]">Weekly hours</p>
+                        <button onClick={copyMonToWeekdays} className="text-[12px] text-[#9B9B9B] hover:text-[#111] font-medium transition-colors">
+                          Copy Mon → weekdays
+                        </button>
+                      </div>
+                      <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden bg-white">
+                        {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div>
+                      <p className="text-[14px] font-bold text-[#0A0A0A] mb-4">Quick Actions</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          {key:'close-early',  emoji:'⏰', label:'Close Early',       desc:'Close before your regular time today'},
+                          {key:'close-today',  emoji:'🔒', label:'Close Today',       desc:'Mark as fully closed for the day'},
+                          {key:'special-hours',emoji:'📅', label:'Add Special Hours', desc:'Holiday, event, or seasonal hours'},
+                          {key:'out-of-office',emoji:'✈️', label:'Out of Office',     desc:'Set away dates and a message'},
+                        ].map(({key,emoji,label,desc})=>(
+                          <button key={key} onClick={()=>{setQuickAction(key);setQuickMsg('');setCloseEarlyTime('15:00');}}
+                            className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#EBEBEB] bg-white hover:border-[#AADF1E] hover:bg-[#FAFFF0] transition-all text-left group">
+                            <span className="text-[22px] leading-none">{emoji}</span>
+                            <div>
+                              <p className="text-[13px] font-bold text-[#111]">{label}</p>
+                              <p className="text-[11px] text-[#9B9B9B] mt-0.5 leading-snug">{desc}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── SPECIAL HOURS / STATUS / AUTO — placeholders ── */}
+                {hoursSubTab!=='regular'&&(
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-[#F5F5F5] flex items-center justify-center mb-4">
+                      <LucideClock size={20} color="#C0C0C0"/>
+                    </div>
+                    <p className="text-[15px] font-bold text-[#0A0A0A] mb-1">
+                      {hoursSubTab==='special'?'Special Hours':hoursSubTab==='status'?'Status Controls':'Auto-Updates'}
+                    </p>
+                    <p className="text-[13px] text-[#9B9B9B]">Coming soon — stay tuned!</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ══ DESIGN (blocks + style) ══ */}
+            {sidebarTab==='design'&&(
+              <div className="px-8 py-8 max-w-[700px]">
+                {/* Block edit panel — slides in when a block is open */}
+                {showEditPanel&&openBlock?(
+                  <BlockEditPanel
+                    block={openBlock} config={config}
+                    onUpdateBlock={u=>updateBlock(openBlock.id,u)}
+                    onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
+                    onClose={()=>setOpenId(null)}
+                  />
+                ):(
+                  <>
+                    <div className="mb-7">
+                      <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Design</h2>
+                      <p className="text-[#9B9B9B] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
+                    </div>
+
+                    {/* Active blocks */}
+                    <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden mb-1">
+                      {activeBlocks.length===0&&(
+                        <div className="px-4 py-8 text-center text-[13px] text-[#9B9B9B]">No blocks yet — hit + Add block below.</div>
+                      )}
+                      {activeBlocks.map((block,i)=>(
+                        <div key={block.id}
+                          data-tut={i===0&&block.id==='hours'?'tut-hours':undefined}
+                          className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#FAFAFA]
+                            ${i<activeBlocks.length-1?'border-b border-[#F5F5F5]':''}
+                            ${openId===block.id?'bg-[#F8F8F8]':''}
+                            ${dragOverId===block.id&&dragId!==block.id?'border-l-[3px] border-l-[#AADF1E]':''}
+                            ${dragId===block.id?'opacity-40':''}
+                          `}
+                          style={{height:68}}
+                          draggable={block.id!=='hours'}
+                          onDragStart={()=>{if(block.id!=='hours')setDragId(block.id);}}
+                          onDragOver={e=>{e.preventDefault();setDragOverId(block.id);}}
+                          onDragLeave={()=>setDragOverId(null)}
+                          onDrop={()=>handleDrop(block.id)}
+                          onDragEnd={()=>{setDragId(null);setDragOverId(null);}}
+                          onClick={()=>setOpenId(block.id)}
+                        >
+                          {block.id!=='hours'
+                            ?<div className="flex-shrink-0 cursor-grab opacity-25 hover:opacity-60 transition-opacity" onClick={e=>e.stopPropagation()}>
+                              <LucideGrip size={14} color="#6B6B6B"/>
+                            </div>
+                            :<div className="w-[14px] flex-shrink-0"/>
+                          }
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#EBEBEB] bg-[#F5F5F5]"
+                            style={block.color?{backgroundColor:`${block.color}12`,borderColor:`${block.color}28`}:{}}>
+                            <BlockIcon id={block.id} size={14} color={block.color??'#0A0A0A'}/>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-[13px] font-semibold text-[#0A0A0A] leading-tight">{block.title}</p>
+                              {block.id==='hours'&&(
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#F5F5F5] text-[#9B9B9B]'}`}>
+                                  {liveStatus==='open'?'● open':'● closed'}
+                                </span>
+                              )}
+                              {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#F5F5F5] text-[#9B9B9B] flex-shrink-0">½</span>}
+                            </div>
+                            <p className="text-[12px] text-[#9B9B9B] leading-tight mt-0.5 truncate">
+                              {block.id==='hours'?todayLabel:block.sub}
+                            </p>
+                          </div>
+                          <LucideChevronRight size={13} color="#D0D0D0"/>
+                          {block.id!=='hours'&&(
+                            <button
+                              onClick={e=>{e.stopPropagation();updateBlock(block.id,{on:false});}}
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-[#C0C0C0] hover:text-[#0A0A0A] hover:bg-[#F0F0F0] transition-all flex-shrink-0"
+                              title="Remove block">
+                              <LucideX size={11} color="currentColor"/>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <button data-tut="tut-add" onClick={()=>setShowPicker(true)}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#9B9B9B] hover:border-[#AADF1E] hover:text-[#111] transition-all group mb-10">
+                      <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
+                        <span className="text-[14px] leading-none">+</span>
+                      </div>
+                      <span className="text-[13px] font-medium">Add block</span>
+                    </button>
+
+                    {/* Style: background + socials */}
+                    <div className="space-y-8 border-t border-[#F0F0F0] pt-8">
+                      <div>
+                        <p className="text-[14px] font-bold text-[#0A0A0A] mb-1">Style</p>
+                        <p className="text-[#9B9B9B] text-[13px] mb-5">Page color and social links.</p>
+                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Page color</p>
+                        <div className="grid grid-cols-5 gap-3 mb-4">
+                          {BG_PRESETS.map(c=>(
+                            <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
+                              className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
+                              style={{background:c,borderColor:config.bg===c?'#0A0A0A':'#EBEBEB'}}/>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg border border-[#EBEBEB]" style={{background:config.bg}}/>
+                          <input value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
+                            placeholder="#ffffff or gradient"
+                            className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Social profiles</p>
+                        <div className="space-y-2.5">
+                          {SOCIAL_PLATFORMS.map(({key,label})=>(
+                            <div key={key} className="flex items-center gap-3">
+                              <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
+                              <input value={config.socials[key]??''} onChange={e=>setConfig(c=>({...c,socials:{...c.socials,[key]:e.target.value}}))}
+                                placeholder={`${label} URL…`}
+                                className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ BUSINESS INFO ══ */}
+            {sidebarTab==='business'&&(
+              <div className="px-8 py-8 max-w-[600px]">
+                <div className="mb-7">
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Business Info</h2>
+                  <p className="text-[#9B9B9B] text-[13px] mt-1">Your name, location, and category.</p>
+                </div>
+                <div className="rounded-2xl border border-[#EBEBEB] p-5 space-y-4 bg-white">
+                  <div>
+                    <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Business name</p>
+                    <p className="text-[15px] font-semibold text-[#111]">{business?.name??'—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Category</p>
+                    <p className="text-[15px] font-semibold text-[#111]">{business?.category??'Not set'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Description</p>
+                    <p className="text-[13px] text-[#6B6B6B] leading-relaxed">{business?.tagline??'No description yet.'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Location</p>
+                    <div className="flex items-center gap-3">
+                      <input value={config.location??''} onChange={e=>setConfig(c=>({...c,location:e.target.value}))}
+                        placeholder="e.g. 123 Main St, Austin TX"
+                        className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[12px] text-[#9B9B9B] mt-4">
+                  To edit your name, category, or logo, <a href="/setup?step=1" className="font-semibold text-[#111] underline underline-offset-2">go to Settings →</a>
+                </p>
+              </div>
+            )}
+
+            {/* ══ LINKS ══ */}
+            {sidebarTab==='links'&&(
+              <div className="px-8 py-8 max-w-[600px]">
+                <div className="mb-7">
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Links</h2>
+                  <p className="text-[#9B9B9B] text-[13px] mt-1">Your public OpenStatus link.</p>
+                </div>
+                <div className="rounded-2xl border border-[#EBEBEB] p-5 bg-white">
+                  <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Your link</p>
+                  {business?.slug?(
+                    <div className="flex items-center gap-3">
+                      <code className="text-[14px] font-semibold text-[#111] bg-[#F5F5F5] px-3 py-2 rounded-xl flex-1">
+                        openstatus.co/{business.slug}
+                      </code>
+                      <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-full bg-[#AADF1E] text-[#111] text-[12px] font-bold hover:bg-[#99CF0E] transition-colors whitespace-nowrap">
+                        Open ↗
+                      </a>
+                    </div>
+                  ):(
+                    <p className="text-[13px] text-[#9B9B9B]">No link set yet.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ══ OTHER TABS — placeholder ══ */}
+            {(sidebarTab==='integrations'||sidebarTab==='analytics'||sidebarTab==='settings')&&(
+              <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
+                <div className="w-14 h-14 rounded-2xl bg-[#F5F5F5] flex items-center justify-center mb-5">
+                  {sidebarTab==='integrations'?<IconPuzzle size={22} color="#C0C0C0"/>
+                  :sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
+                  :<IconSettings size={22} color="#C0C0C0"/>}
+                </div>
+                <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">{sidebarLabel}</p>
+                <p className="text-[13px] text-[#9B9B9B] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
+              </div>
+            )}
+          </div>
+
+          {/* ── RIGHT PREVIEW PANEL ── */}
+          <div className="w-[360px] flex-shrink-0 border-l border-[#EBEBEB] flex flex-col bg-[#FAFAFA]">
+            {/* Toggle bar */}
+            <div className="h-14 border-b border-[#EBEBEB] flex items-center justify-between px-4 flex-shrink-0 bg-white">
+              <div className="flex items-center gap-0.5 bg-[#F5F5F5] rounded-full p-0.5">
+                <button onClick={()=>setPreviewMode('mobile')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='mobile'?'bg-white text-[#111] shadow-sm':'text-[#9B9B9B] hover:text-[#111]'}`}>
+                  <IconSmartphone size={11}/> Mobile
+                </button>
+                <button onClick={()=>setPreviewMode('desktop')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='desktop'?'bg-white text-[#111] shadow-sm':'text-[#9B9B9B] hover:text-[#111]'}`}>
+                  <IconMonitor size={11}/> Desktop
+                </button>
+              </div>
+              {business?.slug&&(
+                <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                  className="text-[11px] text-[#9B9B9B] hover:text-[#111] transition-colors font-medium whitespace-nowrap">
+                  Open ↗
+                </a>
+              )}
+            </div>
+            {/* Phone preview */}
+            <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-6 overflow-y-auto">
+              <LivePhonePreview
+                business={business} config={config}
+                selectedId={openId}
+                onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── QUICK ACTION FLYOUT ── */}
+      {quickAction&&(
+        <div className="fixed inset-0 z-50 flex" onClick={()=>setQuickAction(null)}>
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"/>
+          <div className="relative ml-auto w-[320px] h-full bg-white shadow-2xl flex flex-col border-l border-[#EBEBEB]" onClick={e=>e.stopPropagation()}>
+            {/* Flyout header */}
+            <div className="px-5 py-4 border-b border-[#F0F0F0] flex items-center justify-between flex-shrink-0">
+              <p className="text-[15px] font-bold text-[#111]">
+                {quickAction==='close-early'?'Close Early'
+                :quickAction==='close-today'?'Close Today'
+                :quickAction==='special-hours'?'Special Hours'
+                :'Out of Office'}
+              </p>
+              <button onClick={()=>setQuickAction(null)} className="w-7 h-7 rounded-full bg-[#F5F5F5] flex items-center justify-center hover:bg-[#EBEBEB] transition-colors">
+                <LucideX size={13} color="#6B6B6B"/>
+              </button>
+            </div>
+            {/* Flyout body */}
+            <div className="flex-1 px-5 py-5 space-y-5 overflow-y-auto">
+              {quickAction==='close-early'&&(
+                <>
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#6B6B6B] mb-2">Close at</p>
+                    <div className="relative">
+                      <select value={closeEarlyTime} onChange={e=>setCloseEarlyTime(e.target.value)}
+                        className="w-full bg-[#F5F5F5] border border-[#EBEBEB] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#111] focus:outline-none focus:border-[#0A0A0A] appearance-none cursor-pointer">
+                        {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={14} color="#9B9B9B"/></div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold text-[#6B6B6B] mb-2">Optional message <span className="font-normal text-[#C0C0C0]">(shows on your page)</span></p>
+                    <textarea value={quickMsg} onChange={e=>setQuickMsg(e.target.value.slice(0,100))}
+                      placeholder="e.g. Closing early for a private event…"
+                      rows={3}
+                      className="w-full bg-white border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"/>
+                    <p className="text-right text-[10px] text-[#C0C0C0] mt-1">{quickMsg.length}/100</p>
+                  </div>
+                </>
+              )}
+              {quickAction==='close-today'&&(
+                <div className="rounded-xl bg-[#FFF7ED] border border-[#FED7AA] px-4 py-3">
+                  <p className="text-[13px] font-semibold text-[#92400E]">This will mark you as closed for the entire day, overriding your regular hours.</p>
+                </div>
+              )}
+              {(quickAction==='special-hours'||quickAction==='out-of-office')&&(
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <p className="text-[13px] text-[#9B9B9B]">Coming soon!</p>
+                </div>
+              )}
+            </div>
+            {/* Flyout footer */}
+            <div className="px-5 py-4 border-t border-[#F0F0F0] flex gap-3 flex-shrink-0">
+              <button onClick={()=>setQuickAction(null)}
+                className="flex-1 py-2.5 rounded-full border border-[#EBEBEB] text-[13px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={()=>{
+                  if(quickAction==='close-early'){
+                    const todayKey=(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()];
+                    setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],close:closeEarlyTime}}}));
+                  } else if(quickAction==='close-today'){
+                    const todayKey=(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()];
+                    setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],closed:true}}}));
+                  }
+                  setQuickAction(null);
+                }}
+                className="flex-1 py-2.5 rounded-full bg-[#AADF1E] text-[#111] text-[13px] font-bold hover:bg-[#99CF0E] transition-colors">
+                Update Hours
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tutorial overlay */}
+      {showTutorial&&!showPicker&&(
+        <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{}}}/>
+      )}
+
+      {/* Block picker overlay */}
+      {showPicker&&(
+        <BlockPicker
+          blocks={allBlocks}
+          onAdd={id=>enableBlock(id)}
+          onClose={()=>setShowPicker(false)}
+        />
+      )}
+
+    </div>
+  );
+}
