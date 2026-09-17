@@ -5,11 +5,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-function Keyhole({ size = 28 }: { size?: number }) {
-  return <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden="true"><circle cx="50" cy="50" r="48" fill="#050505"/><circle cx="50" cy="50" r="21" fill="#F7F7F3"/><circle cx="50" cy="44" r="7.4" fill="#050505"/><path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#050505"/></svg>;
-}
+// ── Inline brand SVGs (white) ──────────────────────────────────────────────
 
-function GoogleLogo() {
+function GoogleLogo({ color = 'currentColor' }: { color?: string }) {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -22,18 +20,66 @@ function GoogleLogo() {
 
 function MetaLogo() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/>
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z" fill="#1877F2"/>
     </svg>
   );
 }
+
+// White partner logos for the bottom bar
+const PARTNERS = [
+  {
+    name: 'Instagram',
+    svg: <svg viewBox="0 0 24 24" height="20" fill="white" aria-label="Instagram"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>,
+  },
+  {
+    name: 'Facebook',
+    svg: <svg viewBox="0 0 24 24" height="20" fill="white" aria-label="Facebook"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>,
+  },
+  {
+    name: 'Google',
+    svg: <svg viewBox="0 0 24 24" height="18" fill="white" aria-label="Google"><text x="0" y="18" fontSize="15" fontFamily="Arial, sans-serif" fontWeight="bold" fill="white">Google</text></svg>,
+  },
+  {
+    name: 'Apple Maps',
+    svg: (
+      <svg viewBox="0 0 24 24" height="20" fill="none" aria-label="Apple Maps">
+        <path d="M12 2C8.686 2 6 4.686 6 8c0 4.418 6 14 6 14s6-9.582 6-14c0-3.314-2.686-6-6-6zm0 8a2 2 0 110-4 2 2 0 010 4z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'DoorDash',
+    svg: <svg viewBox="0 0 120 30" height="18" aria-label="DoorDash"><text x="0" y="22" fontSize="18" fontFamily="Arial, sans-serif" fontWeight="800" fill="white">DOORDASH</text></svg>,
+  },
+  {
+    name: 'OpenTable',
+    svg: <svg viewBox="0 0 120 30" height="18" aria-label="OpenTable"><text x="0" y="22" fontSize="18" fontFamily="Arial, sans-serif" fontWeight="600" fill="white">OpenTable</text></svg>,
+  },
+  {
+    name: 'Resy',
+    svg: <svg viewBox="0 0 60 30" height="18" aria-label="Resy"><text x="0" y="22" fontSize="18" fontFamily="Arial, sans-serif" fontWeight="800" fill="white">RESY</text></svg>,
+  },
+  {
+    name: 'TikTok',
+    svg: (
+      <svg viewBox="0 0 24 24" height="20" fill="white" aria-label="TikTok">
+        <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.3 6.3 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.5a8.27 8.27 0 004.84 1.55V6.6a4.85 4.85 0 01-1.07.09z"/>
+      </svg>
+    ),
+  },
+  {
+    name: 'Toast',
+    svg: <svg viewBox="0 0 60 30" height="18" aria-label="Toast"><text x="0" y="22" fontSize="18" fontFamily="Arial, sans-serif" fontWeight="700" fill="white">toast</text></svg>,
+  },
+];
 
 export default function HomePage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<'google'|'meta'|null>(null);
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'meta' | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -44,7 +90,9 @@ export default function HomePage() {
   }, []);
 
   const handleLogin = async (event: React.FormEvent) => {
-    event.preventDefault(); setLoading(true); setError('');
+    event.preventDefault();
+    setLoading(true);
+    setError('');
     try {
       const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
       if (loginError) throw loginError;
@@ -52,8 +100,11 @@ export default function HomePage() {
         const { data: business } = await supabase.from('businesses').select('slug').eq('user_id', data.user.id).maybeSingle();
         router.push(business ? '/builder' : '/setup');
       }
-    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Login failed'); }
-    finally { setLoading(false); }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOAuth = async (provider: 'google' | 'facebook') => {
@@ -62,7 +113,10 @@ export default function HomePage() {
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback`, queryParams: provider === 'facebook' ? { config_id: '2027876811186222' } : undefined },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: provider === 'facebook' ? { config_id: '2027876811186222' } : undefined,
+        },
       });
       if (oauthError) throw oauthError;
     } catch (caught) {
@@ -73,54 +127,295 @@ export default function HomePage() {
 
   const busy = loading || oauthLoading !== null;
 
-  return <main className="relative min-h-screen overflow-hidden bg-white text-[#232323]" style={{fontFamily:'var(--font-poppins)'}}>
-    <div className="absolute -right-28 top-16 h-80 w-80 rounded-full bg-[#CBD9FF]/75 blur-3xl" />
-    <div className="absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-[#FFF2C1]/45 blur-3xl" />
-    <div className="absolute right-[18%] bottom-[10%] h-56 w-56 rounded-full bg-[#F8AE9D]/30 blur-3xl" />
+  return (
+    <main
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        position: 'relative',
+        overflow: 'hidden',
+        background: '#0A0A0A',
+      }}
+    >
+      {/* ── Full-screen hero photo ── */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/hero-team.jpg"
+        alt="Restaurant team"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: 'center top',
+        }}
+      />
+      {/* Dark overlay */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)' }} />
 
-    <header className="relative z-10 mx-auto flex w-[min(94%,1180px)] items-center justify-between pt-5">
-      <Link href="/" className="flex items-center gap-2.5 font-bold tracking-[-0.04em]"><Keyhole/><span>OpenStatus</span></Link>
-      <Link href="/signup" className="rounded-full border border-black/10 bg-white/60 px-5 py-3 text-sm font-semibold backdrop-blur-xl">Create account</Link>
-    </header>
+      {/* ── Nav ── */}
+      <header style={{
+        position: 'relative',
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '22px 40px',
+        maxWidth: 1280,
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}>
+        <span style={{
+          color: '#FFFFFF',
+          fontSize: 20,
+          fontWeight: 700,
+          letterSpacing: '-0.03em',
+        }}>
+          OpenStatus
+        </span>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
+          <a href="#" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Product</a>
+          <a href="#" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Customers</a>
+          <a href="#" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Pricing</a>
+          <Link href="/signup" style={{
+            color: '#FFFFFF',
+            fontSize: 14,
+            fontWeight: 600,
+            textDecoration: 'none',
+            border: '1.5px solid rgba(255,255,255,0.65)',
+            borderRadius: 999,
+            padding: '9px 22px',
+            backdropFilter: 'blur(8px)',
+            transition: 'background 0.15s',
+          }}>
+            Create account
+          </Link>
+        </nav>
+      </header>
 
-    <section className="relative z-10 mx-auto grid min-h-[calc(100vh-80px)] w-[min(94%,1180px)] items-center gap-10 py-10 lg:grid-cols-[1.05fr_.95fr]">
-      <div className="hidden lg:block">
-        <span className="inline-flex rounded-full border border-black/10 bg-white/55 px-3 py-2 text-[10px] font-bold tracking-[0.16em] backdrop-blur-xl">WELCOME BACK</span>
-        <h1 className="mt-7 max-w-[650px] text-[clamp(64px,7vw,112px)] font-semibold leading-[0.86] tracking-[-0.075em]">Your business.<br/>Still live.</h1>
-        <p className="mt-7 max-w-lg text-lg leading-8 text-black/55">Update your status, edit your page, move blocks around, and see what customers are actually clicking.</p>
-        <div className="mt-10 flex gap-2 text-[11px] font-semibold"><span className="rounded-full bg-white/60 px-3 py-2">Live status</span><span className="rounded-full bg-white/60 px-3 py-2">Page builder</span><span className="rounded-full bg-white/60 px-3 py-2">Analytics</span></div>
-      </div>
-
-      <div className="mx-auto w-full max-w-[500px] rounded-[34px] border border-white/70 bg-white/72 p-5 shadow-[0_28px_90px_rgba(0,0,0,.10)] backdrop-blur-2xl sm:p-8">
-        <span className="text-[10px] font-bold tracking-[0.15em] text-black/40">SIGN IN</span>
-        <h2 className="mt-3 text-4xl font-semibold tracking-[-0.055em]">Open your dashboard.</h2>
-        <p className="mt-3 text-sm leading-6 text-black/50">Manage the live front door to your business.</p>
-
-        <div className="mt-7 grid grid-cols-2 gap-2">
-          <button onClick={()=>handleOAuth('google')} disabled={busy}
-            className="flex items-center justify-center gap-2 rounded-full border border-black/12 bg-white px-4 py-3 text-sm font-semibold transition hover:bg-gray-50 disabled:opacity-40">
-            <GoogleLogo />{oauthLoading==='google'?'Opening…':'Google'}
-          </button>
-          <button onClick={()=>handleOAuth('facebook')} disabled={busy}
-            className="flex items-center justify-center gap-2 rounded-full border border-[#1877F2]/25 bg-[#1877F2]/8 px-4 py-3 text-sm font-semibold text-[#1877F2] transition hover:bg-[#1877F2]/14 disabled:opacity-40">
-            <MetaLogo />{oauthLoading==='meta'?'Opening…':'Meta'}
-          </button>
+      {/* ── Hero content ── */}
+      <div style={{
+        position: 'relative',
+        zIndex: 10,
+        flex: 1,
+        display: 'grid',
+        gridTemplateColumns: '1fr 460px',
+        gap: 40,
+        alignItems: 'center',
+        maxWidth: 1280,
+        margin: '0 auto',
+        width: '100%',
+        padding: '20px 40px 40px',
+        boxSizing: 'border-box',
+      }}>
+        {/* Left: headline */}
+        <div>
+          <p style={{
+            color: 'rgba(255,255,255,0.75)',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+            marginBottom: 20,
+          }}>
+            Stay in sync
+          </p>
+          <h1 style={{
+            fontFamily: '"Inter Tight", "Inter", system-ui, sans-serif',
+            fontWeight: 800,
+            fontSize: 'clamp(64px, 6.5vw, 108px)',
+            lineHeight: 0.9,
+            letterSpacing: '-0.05em',
+            color: '#FFFFFF',
+            margin: '0 0 28px',
+          }}>
+            Your<br />business.<br />Right now.
+          </h1>
+          <p style={{
+            color: 'rgba(255,255,255,0.78)',
+            fontSize: 17,
+            lineHeight: 1.55,
+            maxWidth: 420,
+            marginBottom: 32,
+          }}>
+            Keep your hours, status, links, and updates current everywhere customers find you.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.65)', fontSize: 13, fontWeight: 500 }}>
+            <span>Live status</span>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span>Page builder</span>
+            <span style={{ opacity: 0.5 }}>·</span>
+            <span>Analytics</span>
+          </div>
         </div>
 
-        <div className="my-6 flex items-center gap-3">
-          <div className="h-px flex-1 bg-black/10" />
-          <span className="text-[10px] font-bold tracking-[.12em] text-black/30">OR</span>
-          <div className="h-px flex-1 bg-black/10" />
-        </div>
+        {/* Right: sign-in card */}
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: 32,
+          padding: '36px 36px 32px',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.22)',
+        }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(0,0,0,0.38)', textTransform: 'uppercase', marginBottom: 10 }}>
+            Sign in
+          </p>
+          <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.04em', color: '#0A0A0A', marginBottom: 6 }}>
+            Open your dashboard.
+          </h2>
+          <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.48)', lineHeight: 1.5, marginBottom: 24 }}>
+            Manage the live front door to your business.
+          </p>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <label className="block"><span className="mb-2 block text-xs font-semibold">Email</span><input type="email" autoComplete="email" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="you@business.com" className="w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#232323]/10" required/></label>
-          <label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input type="password" autoComplete="current-password" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Your password" className="w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-4 text-sm outline-none transition focus:border-black/30 focus:ring-4 focus:ring-[#232323]/10" required/></label>
-          {error ? <p className="rounded-[16px] bg-[#F8AE9D]/65 p-4 text-sm" role="alert">{error}</p> : null}
-          <button type="submit" disabled={busy} className="flex min-h-14 w-full items-center justify-between rounded-full bg-black px-5 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-40"><span>{loading?'Signing in...':'Sign in'}</span><span>↗</span></button>
-        </form>
-        <p className="mt-6 text-sm text-black/50">New to OpenStatus? <Link href="/signup" className="font-semibold text-black">Build your page →</Link></p>
+          {/* OAuth buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+            <button
+              onClick={() => handleOAuth('google')}
+              disabled={busy}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '12px 16px', borderRadius: 999, cursor: 'pointer',
+                border: '1.5px solid #DEDEDC', background: '#FFFFFF',
+                fontSize: 14, fontWeight: 600, color: '#0A0A0A',
+                transition: 'background 0.15s', opacity: busy ? 0.5 : 1,
+              }}
+            >
+              <GoogleLogo />
+              {oauthLoading === 'google' ? 'Opening…' : 'Google'}
+            </button>
+            <button
+              onClick={() => handleOAuth('facebook')}
+              disabled={busy}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '12px 16px', borderRadius: 999, cursor: 'pointer',
+                border: '1.5px solid rgba(24,119,242,0.3)', background: 'rgba(24,119,242,0.06)',
+                fontSize: 14, fontWeight: 600, color: '#1877F2',
+                transition: 'background 0.15s', opacity: busy ? 0.5 : 1,
+              }}
+            >
+              <MetaLogo />
+              {oauthLoading === 'meta' ? 'Opening…' : 'Meta'}
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, height: 1, background: '#EEEEEC' }} />
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(0,0,0,0.3)' }}>OR</span>
+            <div style={{ flex: 1, height: 1, background: '#EEEEEC' }} />
+          </div>
+
+          {/* Email/password form */}
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <label style={{ display: 'block' }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0A0A0A', marginBottom: 6 }}>Email</span>
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@business.com"
+                required
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '13px 16px', borderRadius: 16,
+                  border: '1.5px solid #DEDEDC', background: '#FFFFFF',
+                  fontSize: 14, color: '#0A0A0A', outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </label>
+            <label style={{ display: 'block' }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0A0A0A', marginBottom: 6 }}>Password</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
+                required
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '13px 16px', borderRadius: 16,
+                  border: '1.5px solid #DEDEDC', background: '#FFFFFF',
+                  fontSize: 14, color: '#0A0A0A', outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </label>
+
+            {error && (
+              <p style={{ background: '#FEE2E2', borderRadius: 12, padding: '10px 14px', fontSize: 13, color: '#B91C1C' }}>
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={busy}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '15px 20px', borderRadius: 999,
+                background: '#0A0A0A', color: '#FFFFFF',
+                fontSize: 15, fontWeight: 700, border: 'none', cursor: 'pointer',
+                opacity: busy ? 0.5 : 1, transition: 'opacity 0.15s',
+              }}
+            >
+              <span>{loading ? 'Signing in...' : 'Sign in'}</span>
+              <span style={{ fontSize: 18 }}>→</span>
+            </button>
+          </form>
+
+          <p style={{ marginTop: 18, fontSize: 13, color: 'rgba(0,0,0,0.45)', textAlign: 'center' }}>
+            New to OpenStatus?{' '}
+            <Link href="/signup" style={{ color: '#0A0A0A', fontWeight: 700, textDecoration: 'none' }}>
+              Build your page →
+            </Link>
+          </p>
+        </div>
       </div>
-    </section>
-  </main>;
+
+      {/* ── Partner logos ── */}
+      <div style={{
+        position: 'relative',
+        zIndex: 10,
+        borderTop: '1px solid rgba(255,255,255,0.12)',
+        padding: '22px 40px',
+        maxWidth: 1280,
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}>
+        <p style={{
+          textAlign: 'center',
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '0.18em',
+          color: 'rgba(255,255,255,0.45)',
+          textTransform: 'uppercase',
+          marginBottom: 18,
+        }}>
+          Trusted by businesses on
+        </p>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 36,
+          flexWrap: 'wrap',
+          opacity: 0.85,
+        }}>
+          {PARTNERS.map((p) => (
+            <div key={p.name} title={p.name} style={{ display: 'flex', alignItems: 'center' }}>
+              {p.svg}
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
 }
