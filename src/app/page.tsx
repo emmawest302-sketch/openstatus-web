@@ -154,7 +154,7 @@ export default function HomePage() {
         }}
       />
       {/* Dark overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)' }} />
 
       {/* ── Nav ── */}
       <header style={{
@@ -255,18 +255,21 @@ export default function HomePage() {
 
         {/* Right: sign-in card */}
         <div style={{
-          background: '#FFFFFF',
-          borderRadius: 32,
+          background: 'rgba(255,255,255,0.18)',
+          backdropFilter: 'blur(24px) saturate(120%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(120%)',
+          borderRadius: 30,
           padding: '36px 36px 32px',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.22)',
+          border: '1px solid rgba(255,255,255,0.35)',
+          boxShadow: '0 24px 70px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.25)',
         }}>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(0,0,0,0.38)', textTransform: 'uppercase', marginBottom: 10 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.70)', textTransform: 'uppercase', marginBottom: 10 }}>
             Sign in
           </p>
-          <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.04em', color: '#0A0A0A', marginBottom: 6 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.04em', color: '#FFFFFF', marginBottom: 6 }}>
             Open your dashboard.
           </h2>
-          <p style={{ fontSize: 14, color: 'rgba(0,0,0,0.48)', lineHeight: 1.5, marginBottom: 24 }}>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 1.5, marginBottom: 24 }}>
             Manage the live front door to your business.
           </p>
 
@@ -278,8 +281,9 @@ export default function HomePage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: '12px 16px', borderRadius: 999, cursor: 'pointer',
-                border: '1.5px solid #DEDEDC', background: '#FFFFFF',
-                fontSize: 14, fontWeight: 600, color: '#0A0A0A',
+                border: '1px solid rgba(255,255,255,0.38)', background: 'rgba(255,255,255,0.10)',
+                backdropFilter: 'blur(12px)',
+                fontSize: 14, fontWeight: 600, color: '#FFFFFF',
                 transition: 'background 0.15s', opacity: busy ? 0.5 : 1,
               }}
             >
@@ -292,8 +296,9 @@ export default function HomePage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: '12px 16px', borderRadius: 999, cursor: 'pointer',
-                border: '1.5px solid rgba(24,119,242,0.3)', background: 'rgba(24,119,242,0.06)',
-                fontSize: 14, fontWeight: 600, color: '#1877F2',
+                border: '1px solid rgba(255,255,255,0.38)', background: 'rgba(255,255,255,0.10)',
+                backdropFilter: 'blur(12px)',
+                fontSize: 14, fontWeight: 600, color: '#FFFFFF',
                 transition: 'background 0.15s', opacity: busy ? 0.5 : 1,
               }}
             >
@@ -304,15 +309,15 @@ export default function HomePage() {
 
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-            <div style={{ flex: 1, height: 1, background: '#EEEEEC' }} />
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(0,0,0,0.3)' }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: '#EEEEEC' }} />
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.25)' }} />
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.65)' }}>OR</span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.25)' }} />
           </div>
 
           {/* Email/password form */}
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <label style={{ display: 'block' }}>
-              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0A0A0A', marginBottom: 6 }}>Email</span>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.88)', marginBottom: 6 }}>Email</span>
               <input
                 type="email"
                 autoComplete="email"
@@ -323,14 +328,14 @@ export default function HomePage() {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: '13px 16px', borderRadius: 16,
-                  border: '1.5px solid #DEDEDC', background: '#FFFFFF',
-                  fontSize: 14, color: '#0A0A0A', outline: 'none',
+                  border: '1px solid rgba(255,255,255,0.42)', background: 'rgba(255,255,255,0.10)',
+                  fontSize: 14, color: '#FFFFFF', outline: 'none',
                   fontFamily: 'inherit',
                 }}
               />
             </label>
             <label style={{ display: 'block' }}>
-              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#0A0A0A', marginBottom: 6 }}>Password</span>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.88)', marginBottom: 6 }}>Password</span>
               <input
                 type="password"
                 autoComplete="current-password"
@@ -341,8 +346,8 @@ export default function HomePage() {
                 style={{
                   width: '100%', boxSizing: 'border-box',
                   padding: '13px 16px', borderRadius: 16,
-                  border: '1.5px solid #DEDEDC', background: '#FFFFFF',
-                  fontSize: 14, color: '#0A0A0A', outline: 'none',
+                  border: '1px solid rgba(255,255,255,0.42)', background: 'rgba(255,255,255,0.10)',
+                  fontSize: 14, color: '#FFFFFF', outline: 'none',
                   fontFamily: 'inherit',
                 }}
               />
@@ -370,10 +375,19 @@ export default function HomePage() {
             </button>
           </form>
 
-          <p style={{ marginTop: 18, fontSize: 13, color: 'rgba(0,0,0,0.45)', textAlign: 'center' }}>
+          <div style={{ marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
+              <input type="checkbox" style={{ accentColor: '#FFFFFF', width: 14, height: 14 }}/>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.70)', fontWeight: 500 }}>Keep me signed in</span>
+            </label>
+            <a href="/forgot-password" style={{ fontSize: 12, color: 'rgba(255,255,255,0.70)', textDecoration: 'none', fontWeight: 500 }}>
+              Forgot password?
+            </a>
+          </div>
+          <p style={{ marginTop: 16, fontSize: 13, color: 'rgba(255,255,255,0.60)', textAlign: 'center' }}>
             New to OpenStatus?{' '}
-            <Link href="/signup" style={{ color: '#0A0A0A', fontWeight: 700, textDecoration: 'none' }}>
-              Build your page →
+            <Link href="/signup" style={{ color: '#FFFFFF', fontWeight: 700, textDecoration: 'none' }}>
+              Create an account →
             </Link>
           </p>
         </div>
