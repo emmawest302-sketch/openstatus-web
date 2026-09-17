@@ -1536,7 +1536,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings';
+type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings'|'preview';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 // ── main export ────────────────────────────────────────────────────────────────
@@ -1722,10 +1722,10 @@ export default function BuilderClient({ business,initialConfig }: {
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white text-[#0A0A0A]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>
+    <div className="flex h-[100dvh] overflow-hidden bg-white text-[#0A0A0A]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>
 
-      {/* ── LEFT SIDEBAR ── */}
-      <aside className="w-[210px] flex-shrink-0 flex flex-col border-r border-[#EBEBEB] bg-white">
+      {/* ── LEFT SIDEBAR (desktop) ── */}
+      <aside className="hidden md:flex w-[210px] flex-shrink-0 flex-col border-r border-[#EBEBEB] bg-white">
         {/* Wordmark */}
         <div className="px-5 h-14 flex items-center border-b border-[#F0F0F0] flex-shrink-0">
           <span className="font-bold text-[17px] tracking-tight text-[#111]">OpenStatus</span>
@@ -1759,7 +1759,7 @@ export default function BuilderClient({ business,initialConfig }: {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* ── TOP NAV BAR ── */}
-        <header className="h-14 border-b border-[#EBEBEB] flex items-center justify-between px-6 flex-shrink-0 bg-white">
+        <header className="h-14 border-b border-[#EBEBEB] flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white">
           <span className="text-[11px] font-bold tracking-[0.14em] text-[#9B9B9B] uppercase">{sidebarLabel}</span>
           <div className="flex items-center gap-3">
             {business?.slug&&(
@@ -1768,13 +1768,13 @@ export default function BuilderClient({ business,initialConfig }: {
                 View your link <span className="text-[#9B9B9B]">↗</span>
               </a>
             )}
-            <button className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors gap-2">
+            <button className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
               <IconEye size={13} color="currentColor"/> Preview
             </button>
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-5 py-1.5 rounded-full text-[13px] font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#F5F5F5] text-[#9B9B9B]':saveError?'bg-red-100 text-red-600':'bg-[#AADF1E] text-[#111] hover:bg-[#99CF0E]'}`}>
-                {saving?'Saving…':saved?'✓ Saved':saveError?'⚠ Save failed':'Publish Changes'}
+                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#F5F5F5] text-[#9B9B9B]':saveError?'bg-red-100 text-red-600':'bg-[#AADF1E] text-[#111] hover:bg-[#99CF0E]'}`}>
+                {saving?'Saving…':saved?'✓ Saved':saveError?'Error':'Publish'}
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
             </div>
@@ -1788,11 +1788,11 @@ export default function BuilderClient({ business,initialConfig }: {
         <div className="flex-1 flex overflow-hidden">
 
           {/* ── MAIN CONTENT ── */}
-          <div className="flex-1 overflow-y-auto min-w-0">
+          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0">
 
             {/* ══ HOURS & STATUS ══ */}
             {sidebarTab==='hours'&&(
-              <div className="px-8 py-8 max-w-[700px]">
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 {/* Header */}
                 <div className="mb-7">
                   <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-bold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#F5F5F5] text-[#9B9B9B]'}`}>
@@ -1986,7 +1986,7 @@ export default function BuilderClient({ business,initialConfig }: {
 
             {/* ══ DESIGN (blocks + style) ══ */}
             {sidebarTab==='design'&&(
-              <div className="px-8 py-8 max-w-[700px]">
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 {/* Block edit panel — slides in when a block is open */}
                 {showEditPanel&&openBlock?(
                   <BlockEditPanel
@@ -2416,18 +2416,18 @@ export default function BuilderClient({ business,initialConfig }: {
             )}
           </div>
 
-          {/* ── RIGHT PREVIEW PANEL ── */}
+          {/* ── RIGHT PREVIEW PANEL (desktop only) ── */}
           {/* Drag-to-resize handle */}
           <div
             onMouseDown={onResizeStart}
-            className="w-1.5 flex-shrink-0 cursor-col-resize hover:bg-[#AADF1E]/60 active:bg-[#AADF1E] transition-colors border-l border-[#EBEBEB] group"
+            className="hidden md:flex w-1.5 flex-shrink-0 cursor-col-resize hover:bg-[#AADF1E]/60 active:bg-[#AADF1E] transition-colors border-l border-[#EBEBEB] group"
             title="Drag to resize preview"
           >
             <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <div className="w-0.5 h-10 rounded-full bg-[#AADF1E]" />
             </div>
           </div>
-          <div className="flex-shrink-0 flex flex-col bg-[#FAFAFA]" style={{width:previewWidth}}>
+          <div className="hidden md:flex flex-shrink-0 flex-col bg-[#FAFAFA]" style={{width:previewWidth}}>
             {/* Toggle bar */}
             <div className="h-14 border-b border-[#EBEBEB] flex items-center justify-between px-4 flex-shrink-0 bg-white">
               <div className="flex items-center gap-0.5 bg-[#F5F5F5] rounded-full p-0.5">
@@ -2481,6 +2481,63 @@ export default function BuilderClient({ business,initialConfig }: {
           </div>
         </div>
       </div>
+
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#EBEBEB] flex items-stretch"
+        style={{ paddingBottom:'env(safe-area-inset-bottom)' }}>
+        {SIDEBAR_NAV.slice(0,4).map(({key,label,icon})=>(
+          <button key={key} onClick={()=>setSidebarTab(key)}
+            className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
+              sidebarTab===key ? 'text-[#0A0A0A]' : 'text-[#B0B0B0]'
+            }`}>
+            <span className={`transition-all ${sidebarTab===key?'scale-110':''}`}
+              style={{color:sidebarTab===key?'#0A0A0A':'#C0C0C0'}}>
+              {icon}
+            </span>
+            <span className={`text-[9px] font-semibold leading-none ${sidebarTab===key?'text-[#0A0A0A]':'text-[#C0C0C0]'}`}>
+              {label.split(' ')[0]}
+            </span>
+            {sidebarTab===key&&(
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#AADF1E]"/>
+            )}
+          </button>
+        ))}
+        {/* Preview tab */}
+        <button onClick={()=>setSidebarTab('preview')}
+          className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
+            sidebarTab===('preview') ? 'text-[#0A0A0A]' : 'text-[#B0B0B0]'
+          }`}>
+          <span style={{color:sidebarTab===('preview')?'#0A0A0A':'#C0C0C0'}}>
+            <IconSmartphone size={15}/>
+          </span>
+          <span className={`text-[9px] font-semibold leading-none ${sidebarTab===('preview')?'text-[#0A0A0A]':'text-[#C0C0C0]'}`}>
+            Preview
+          </span>
+          {sidebarTab===('preview')&&(
+            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#AADF1E]"/>
+          )}
+        </button>
+      </nav>
+
+      {/* ── MOBILE PREVIEW SHEET ── */}
+      {sidebarTab===('preview')&&(
+        <div className="md:hidden fixed inset-0 z-30 bg-[#F5F5F5] overflow-y-auto flex flex-col"
+          style={{ paddingBottom:'calc(56px + env(safe-area-inset-bottom))', paddingTop:'env(safe-area-inset-top)' }}>
+          <div className="flex items-center justify-between px-4 h-14 bg-white border-b border-[#EBEBEB] flex-shrink-0">
+            <span className="text-[13px] font-bold text-[#111]">Preview</span>
+            {business?.slug&&(
+              <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                className="text-[12px] font-semibold text-[#6B6B6B] hover:text-[#111]">
+                Open link ↗
+              </a>
+            )}
+          </div>
+          <div className="flex-1 flex items-start justify-center py-6 px-4">
+            <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
+              onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
+          </div>
+        </div>
+      )}
 
       {/* ── QUICK ACTION FLYOUT ── */}
       {quickAction&&(

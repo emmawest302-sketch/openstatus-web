@@ -13,9 +13,19 @@ export const metadata: Metadata = {
   title: 'OpenStatus — the link in bio for small businesses',
   other: {
     'facebook-domain-verification': 'ylhwtdpq7osfq3efgjf4fmvdsfkord',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'mobile-web-app-capable': 'yes',
   },
   description:
     'A beautiful mobile link for small businesses with live status, hours, actions, branding, and analytics.',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

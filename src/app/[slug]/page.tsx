@@ -146,7 +146,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   } as React.CSSProperties;
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100dvh', background: bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
       <AnalyticsTracker businessId={business.id}/>
 
       {/* ── Outer page centering wrapper ── */}
@@ -337,7 +337,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           style={{
             display: 'block', textAlign: 'center',
             fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase',
-            color: 'rgba(0,0,0,0.22)', paddingBottom: 32, textDecoration: 'none',
+            color: 'rgba(0,0,0,0.22)', paddingBottom: 'calc(32px + env(safe-area-inset-bottom))', textDecoration: 'none',
           }}
         >
           Powered by OpenStatus
