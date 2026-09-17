@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
 
@@ -28,7 +29,6 @@ const ICONS: Record<string, string> = {
 function BlockIcon({ id, color }: { id: string; color: string }) {
   const base = id.split('-')[0];
   const d = ICONS[base] ?? 'M5 12h14M14 7l5 5-5 5';
-  // Multi-path icons use space-separated path data
   const paths = d.split(' M ').map((p, i) => i === 0 ? p : 'M ' + p);
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
@@ -41,18 +41,29 @@ function BlockIcon({ id, color }: { id: string; color: string }) {
 
 export default function PublicActionBlock({ block, businessId }: Props) {
   const href = safeUrl(block.url);
-  const iconColor = block.color ?? '#374151';
-  const iconBg = block.color ? `${block.color}18` : 'rgba(0,0,0,0.05)';
+  const [hovered, setHovered] = useState(false);
+
+  // Icon: very subtle tint if block has a color, neutral otherwise
+  const iconColor = block.color ?? '#292929';
+  const iconBg = block.color ? `${block.color}14` : 'rgba(0,0,0,0.05)';
 
   const card = (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 14,
-      background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)',
-      borderRadius: 18, padding: '14px 16px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-      cursor: href ? 'pointer' : 'default',
-      transition: 'transform 0.15s, box-shadow 0.15s',
-    }}>
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        background: 'rgba(255,255,255,0.72)',
+        backdropFilter: 'blur(24px) saturate(130%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(130%)',
+        border: '1px solid rgba(255,255,255,0.82)',
+        borderRadius: 20, padding: '15px 18px',
+        boxShadow: hovered
+          ? '0 12px 36px rgba(0,0,0,0.10)'
+          : '0 8px 30px rgba(0,0,0,0.06)',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        cursor: href ? 'pointer' : 'default',
+      }}
+    >
       {/* Icon circle */}
       <div style={{
         width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
@@ -63,11 +74,11 @@ export default function PublicActionBlock({ block, businessId }: Props) {
 
       {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A18', lineHeight: 1.3 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: '#151515', lineHeight: 1.3 }}>
           {block.title}
         </div>
         {block.sub && (
-          <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)', marginTop: 2, lineHeight: 1.3 }}>
+          <div style={{ fontSize: 12, color: '#8A8A86', marginTop: 2, lineHeight: 1.3 }}>
             {block.sub}
           </div>
         )}
@@ -75,7 +86,13 @@ export default function PublicActionBlock({ block, businessId }: Props) {
 
       {/* Chevron */}
       {href && (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="rgba(0,0,0,0.28)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{
+            flexShrink: 0,
+            transform: hovered ? 'translateX(2px)' : 'translateX(0)',
+            transition: 'transform 0.15s ease',
+          }}>
           <polyline points="9 18 15 12 9 6"/>
         </svg>
       )}
@@ -90,9 +107,9 @@ export default function PublicActionBlock({ block, businessId }: Props) {
       target="_blank"
       rel="noreferrer"
       style={{ display: 'block', textDecoration: 'none' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).querySelector('div')!.style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).querySelector('div')!.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).querySelector('div')!.style.transform = 'none'; (e.currentTarget as HTMLElement).querySelector('div')!.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}
     >
       {card}
     </a>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
 
@@ -15,6 +16,8 @@ function extractMapQuery(googleUrl: string, fallback: string): string {
 type Props = { block: OpenStatusBlock; businessId: string; themeColor: string };
 
 export default function PublicLocationBlock({ block, businessId, themeColor }: Props) {
+  const [hovered, setHovered] = useState(false);
+
   const query = block.googleUrl
     ? extractMapQuery(block.googleUrl, block.sub || block.title)
     : block.sub || block.address || block.title;
@@ -29,13 +32,15 @@ export default function PublicLocationBlock({ block, businessId, themeColor }: P
 
   return (
     <div style={{
-      overflow: 'hidden', borderRadius: 20,
-      border: '1px solid rgba(0,0,0,0.07)',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-      background: '#FFFFFF',
+      overflow: 'hidden', borderRadius: 22,
+      background: 'rgba(255,255,255,0.72)',
+      backdropFilter: 'blur(24px) saturate(130%)',
+      WebkitBackdropFilter: 'blur(24px) saturate(130%)',
+      border: '1px solid rgba(255,255,255,0.82)',
+      boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
     }}>
-      {/* Map iframe */}
-      <div style={{ position: 'relative', height: 180, width: '100%', overflow: 'hidden' }}>
+      {/* Map */}
+      <div style={{ position: 'relative', height: 190, width: '100%', overflow: 'hidden' }}>
         <iframe
           src={embedSrc}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
@@ -46,37 +51,53 @@ export default function PublicLocationBlock({ block, businessId, themeColor }: P
         />
       </div>
 
-      {/* Footer */}
+      {/* Address footer */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: 12, padding: '14px 16px',
+        gap: 12, padding: '14px 18px',
+        borderTop: '1px solid rgba(0,0,0,0.05)',
       }}>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: '#1A1A18', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
-            {block.address || block.sub || query}
-          </p>
-          <p style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)' }}>Tap for directions</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill={themeColor} aria-hidden="true">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
+            </svg>
+            <p style={{
+              fontSize: 14, fontWeight: 600, color: '#151515',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {block.address || block.sub || query}
+            </p>
+          </div>
+          <p style={{ fontSize: 12, color: '#8A8A86', paddingLeft: 19 }}>Tap for directions</p>
         </div>
         <a
           href={mapsHref}
           target="_blank"
           rel="noreferrer"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
           style={{
-            flexShrink: 0, borderRadius: 99,
+            flexShrink: 0, borderRadius: 999,
             background: themeColor, color: '#FFFFFF',
-            padding: '9px 18px', fontSize: 12, fontWeight: 700,
-            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
-            transition: 'transform 0.15s',
+            padding: '9px 18px', fontSize: 13, fontWeight: 700,
+            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5,
+            transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
+            transition: 'transform 0.15s ease, opacity 0.15s ease',
+            opacity: hovered ? 0.9 : 1,
             whiteSpace: 'nowrap',
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'none'; }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
-          </svg>
           Directions
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            style={{
+              transform: hovered ? 'translateX(2px)' : 'translateX(0)',
+              transition: 'transform 0.15s ease',
+            }}>
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
         </a>
       </div>
     </div>

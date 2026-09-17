@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 type Props = { businessId: string; placeId?: string | null };
 
@@ -13,128 +13,183 @@ function getFingerprint(): string {
     }
     return fp;
   } catch {
-    return Math.random().toString(36).slice(2);
+    return 'anon';
   }
 }
 
 export default function PublicRatingRow({ businessId, placeId }: Props) {
-  const [rating, setRating]       = useState<number | null>(null);
-  const [reviewCount, setReviewCount] = useState(0);
-  const [up, setUp]               = useState(0);
-  const [down, setDown]           = useState(0);
-  const [myVote, setMyVote]       = useState<'up' | 'down' | null>(null);
-  const [voting, setVoting]       = useState(false);
+  const [rating, setRating] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState<number | null>(null);
+  const [upVotes, setUpVotes] = useState(0);
+  const [downVotes, setDownVotes] = useState(0);
+  const [myVote, setMyVote] = useState<'up' | 'down' | null>(null);
+  const [thumbAnim, setThumbAnim] = useState<'up' | 'down' | null>(null);
 
   useEffect(() => {
-    // Fetch votes
+    // Load votes
     fetch(`/api/votes?businessId=${businessId}`)
       .then((r) => r.json())
-      .then((d) => { setUp(d.up ?? 0); setDown(d.down ?? 0); })
+      .then((d) => {
+        setUpVotes(d.up ?? 0);
+        setDownVotes(d.down ?? 0);
+        setMyVote(d.myVote ?? null);
+      })
       .catch(() => {});
 
-    // Fetch Google rating if place_id exists
+    // Load Google rating
     if (placeId) {
       fetch(`/api/places?businessId=${businessId}&type=info`)
         .then((r) => r.json())
-        .then((d) => { setRating(d.rating ?? null); setReviewCount(d.reviewCount ?? 0); })
+        .then((d) => {
+          if (d.rating) setRating(d.rating);
+          if (d.reviewCount) setReviewCount(d.reviewCount);
+        })
         .catch(() => {});
     }
-
-    // Restore local vote state
-    try {
-      const saved = localStorage.getItem(`_os_vote_${businessId}`);
-      if (saved === 'up' || saved === 'down') setMyVote(saved);
-    } catch {}
   }, [businessId, placeId]);
 
-  async function vote(direction: 'up' | 'down') {
-    if (voting) return;
-    setVoting(true);
+  const vote = useCallback(async (direction: 'up' | 'down') => {
     const fp = getFingerprint();
+    const prevVote = myVote;
 
     // Optimistic update
-    const prev = myVote;
-    const newVote = myVote === direction ? null : direction;
-    setMyVote(newVote);
-    if (prev === 'up') setUp((n) => n - 1);
-    if (prev === 'down') setDown((n) => n - 1);
-    if (newVote === 'up') setUp((n) => n + 1);
-    if (newVote === 'down') setDown((n) => n + 1);
+    setThumbAnim(direction);
+    setTimeout(() => setThumbAnim(null), 300);
+
+    if (myVote === direction) {
+      setMyVote(null);
+      setUpVotes((v) => direction === 'up' ? v - 1 : v);
+      setDownVotes((v) => direction === 'down' ? v - 1 : v);
+    } else {
+      if (myVote) {
+        setUpVotes((v) => myVote === 'up' ? v - 1 : v);
+        setDownVotes((v) => myVote === 'down' ? v - 1 : v);
+      }
+      setMyVote(direction);
+      setUpVotes((v) => direction === 'up' ? v + 1 : v);
+      setDownVotes((v) => direction === 'down' ? v + 1 : v);
+    }
 
     try {
-      localStorage.setItem(`_os_vote_${businessId}`, newVote ?? '');
-    } catch {}
-
-    try {
-      await fetch('/api/votes', {
+      const res = await fetch('/api/votes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessId, vote: direction, fingerprint: fp }),
       });
-    } catch {}
-    setVoting(false);
-  }
+      if (!res.ok) throw new Error('failed');
+    } catch {
+      // Rollback
+      setMyVote(prevVote);
+      setUpVotes((v) => direction === 'up' ? v - 1 : v);
+      setDownVotes((v) => direction === 'down' ? v - 1 : v);
+    }
+  }, [businessId, myVote]);
 
-  const hasRating = rating !== null && placeId;
+  const hasAnyData = rating !== null || upVotes > 0 || downVotes > 0;
+  if (!hasAnyData) return null;
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center' }}>
-      <div style={{
-        display: 'inline-flex', alignItems: 'center', gap: 0,
-        background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)',
-        borderRadius: 99, padding: '8px 18px',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-        fontSize: 13, fontWeight: 600, color: '#1A1A18',
-      }}>
-        {hasRating && (
-          <>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFBB00" stroke="#FFBB00" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-              <span>{rating.toFixed(1)}</span>
-              <span style={{ color: 'rgba(0,0,0,0.4)', fontWeight: 400 }}>({reviewCount.toLocaleString()})</span>
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      gap: 0,
+      background: 'rgba(255,255,255,0.74)',
+      backdropFilter: 'blur(24px) saturate(130%)',
+      WebkitBackdropFilter: 'blur(24px) saturate(130%)',
+      border: '1px solid rgba(255,255,255,0.80)',
+      boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
+      borderRadius: 24,
+      height: 58,
+      padding: '0 6px',
+      overflow: 'hidden',
+    }}>
+
+      {/* Google rating */}
+      {rating !== null && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '0 16px',
+          borderRight: '1px solid rgba(0,0,0,0.07)',
+          height: '100%',
+        }}>
+          <span style={{ fontSize: 17, lineHeight: 1 }}>★</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#151515', letterSpacing: '-0.02em' }}>
+            {rating.toFixed(1)}
+          </span>
+          {reviewCount !== null && (
+            <span style={{ fontSize: 12, color: '#8A8A86', fontWeight: 400 }}>
+              ({reviewCount.toLocaleString()})
             </span>
-            <span style={{ width: 1, height: 18, background: 'rgba(0,0,0,0.1)', margin: '0 14px', flexShrink: 0 }}/>
-          </>
-        )}
+          )}
+        </div>
+      )}
 
-        <button
-          onClick={() => vote('up')}
-          disabled={voting}
+      {/* Divider if no rating */}
+      {rating === null && (upVotes > 0 || downVotes > 0) && (
+        <div style={{ width: 1 }} />
+      )}
+
+      {/* Thumbs up */}
+      <button
+        onClick={() => vote('up')}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '0 16px', height: '100%',
+          background: myVote === 'up' ? 'rgba(34,197,94,0.08)' : 'transparent',
+          border: 'none', cursor: 'pointer',
+          borderRight: '1px solid rgba(0,0,0,0.07)',
+          transition: 'background 0.15s',
+        }}
+      >
+        <svg
+          width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke={myVote === 'up' ? '#22C55E' : '#292929'}
+          strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
           style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: myVote === 'up' ? 'rgba(34,197,94,0.12)' : 'none',
-            border: 'none', borderRadius: 99, padding: '3px 8px',
-            cursor: 'pointer', color: myVote === 'up' ? '#16a34a' : '#555',
-            fontWeight: 600, fontSize: 13, transition: 'all 0.15s',
+            transform: thumbAnim === 'up' ? 'scale(1.2)' : 'scale(1)',
+            transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
-          </svg>
-          {up}
-        </button>
+          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
+          <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+        </svg>
+        <span style={{
+          fontSize: 14, fontWeight: 600,
+          color: myVote === 'up' ? '#22C55E' : '#292929',
+        }}>
+          {upVotes}
+        </span>
+      </button>
 
-        <span style={{ width: 1, height: 18, background: 'rgba(0,0,0,0.1)', margin: '0 6px', flexShrink: 0 }}/>
-
-        <button
-          onClick={() => vote('down')}
-          disabled={voting}
+      {/* Thumbs down */}
+      <button
+        onClick={() => vote('down')}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '0 16px', height: '100%',
+          background: myVote === 'down' ? 'rgba(239,68,68,0.07)' : 'transparent',
+          border: 'none', cursor: 'pointer',
+          transition: 'background 0.15s',
+        }}
+      >
+        <svg
+          width="17" height="17" viewBox="0 0 24 24" fill="none"
+          stroke={myVote === 'down' ? '#EF4444' : '#292929'}
+          strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
           style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: myVote === 'down' ? 'rgba(239,68,68,0.1)' : 'none',
-            border: 'none', borderRadius: 99, padding: '3px 8px',
-            cursor: 'pointer', color: myVote === 'down' ? '#dc2626' : '#555',
-            fontWeight: 600, fontSize: 13, transition: 'all 0.15s',
+            transform: thumbAnim === 'down' ? 'scale(1.2)' : 'scale(1)',
+            transition: 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>
-          </svg>
-          {down}
-        </button>
-      </div>
+          <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/>
+          <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/>
+        </svg>
+        <span style={{
+          fontSize: 14, fontWeight: 600,
+          color: myVote === 'down' ? '#EF4444' : '#292929',
+        }}>
+          {downVotes}
+        </span>
+      </button>
     </div>
   );
 }

@@ -51,20 +51,20 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const hours: Hours[] = hoursRows ?? [];
   const updates: Update[] = updateRows ?? [];
 
-  // Resolve image URLs
+  // Image URLs
   const avatar = typeof business.avatar_url === 'string' && business.avatar_url.startsWith('storage:')
     ? `/api/assets?businessId=${business.id}&kind=avatar` : business.avatar_url;
   const headerFromDb = typeof business.header_url === 'string' && business.header_url.startsWith('storage:')
     ? `/api/assets?businessId=${business.id}&kind=header` : business.header_url;
   const coverPhoto = pageConfig.bgImage || headerFromDb;
 
-  // Theme color: pageConfig.themeColor, or pink default
+  // Theme color
   const themeColor = pageConfig.themeColor || '#DB6B8F';
 
-  // Background (behind white cards)
+  // Page background
   const bg = typeof pageConfig.bg === 'string' && pageConfig.bg.startsWith('#')
     ? pageConfig.bg
-    : pageConfig.bg === 'dark' ? '#181817' : '#F8F5F0';
+    : '#F7F7F5';
 
   // Hours / open status
   const timezone = business.timezone || 'America/Chicago';
@@ -82,176 +82,229 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const closeMins = mins(effectiveClose);
   const isOpen = !closedAllDay && openMins !== null && closeMins !== null && nowMins >= openMins && nowMins < closeMins;
 
-  // Status dot + text
-  const dot = closedAllDay ? '#C4453F' : isOpen ? '#16A34A' : '#E0921B';
+  // Status
+  const dot = closedAllDay ? '#8A8A86' : isOpen ? '#22C55E' : '#E0921B';
   let bigText = 'Closed now', subText = 'Back tomorrow', accentText = '';
   if (closedAllDay) { bigText = 'Closed today'; subText = lead?.detail ?? 'Not open today'; }
   else if (isOpen) { bigText = 'Open now'; subText = 'Closes at '; accentText = pretty(effectiveClose); }
   else if (openMins !== null && nowMins < openMins) { bigText = 'Opens later'; subText = 'Opens at '; accentText = pretty(todayRow?.opens_at ?? null); }
 
-  // Hours block enabled?
+  // Block visibility
   const hoursBlock = pageConfig.blocks.find((b) => b.id === 'hours');
   const hoursBlockOn = hoursBlock?.on !== false;
-
-  // Location block
   const locationBlock = pageConfig.blocks.find((b) => b.id === 'location');
   const locationBlockOn = locationBlock?.on !== false && locationBlock && (locationBlock.googleUrl || locationBlock.appleMapsUrl || locationBlock.sub || locationBlock.address);
 
   // Initials fallback
   const initials = business.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p: string) => p[0]).join('').toUpperCase();
 
+  // Glass card style
+  const glass = {
+    background: 'rgba(255,255,255,0.72)',
+    backdropFilter: 'blur(24px) saturate(130%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(130%)',
+    border: '1px solid rgba(255,255,255,0.82)',
+    boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
+  } as React.CSSProperties;
+
   return (
-    <div style={{ minHeight: '100vh', background: bg, fontFamily: 'var(--font-poppins)' }}>
+    <div style={{ minHeight: '100vh', background: bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
       <AnalyticsTracker businessId={business.id}/>
 
-      {/* ── Cover photo with gradient fade ── */}
-      {coverPhoto ? (
-        <div style={{ position: 'relative', height: 220, overflow: 'hidden' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={coverPhoto} alt={`${business.name} cover`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}/>
-          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to bottom, transparent 30%, ${bg} 100%)` }}/>
-        </div>
-      ) : (
-        <div style={{ height: 80 }}/>
-      )}
+      {/* ── Outer page centering wrapper ── */}
+      <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>
 
-      {/* ── Logo circle ── */}
-      <div style={{
-        display: 'flex', justifyContent: 'center',
-        marginTop: coverPhoto ? -52 : 0,
-        position: 'relative', zIndex: 10,
-      }}>
-        {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatar} alt={`${business.name} logo`}
-            style={{
-              width: 104, height: 104, borderRadius: '50%',
-              border: '4px solid white', background: 'white',
-              objectFit: 'cover', boxShadow: '0 8px 30px rgba(0,0,0,0.18)', display: 'block',
-            }}
-          />
-        ) : (
-          <div style={{
-            width: 104, height: 104, borderRadius: '50%',
-            border: '4px solid white', background: `${themeColor}22`,
-            display: 'grid', placeItems: 'center',
-            fontSize: 32, fontWeight: 800, color: themeColor,
-            boxShadow: '0 8px 30px rgba(0,0,0,0.18)',
-          }}>
-            {initials}
+        {/* ── Cover photo ── */}
+        {coverPhoto ? (
+          <div style={{ position: 'relative', height: 280, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={coverPhoto}
+              alt={`${business.name} cover`}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+            {/* Editorial gradient fade into page bg */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: `linear-gradient(to bottom, transparent 50%, rgba(247,247,245,0.60) 78%, ${bg} 100%)`,
+            }}/>
           </div>
+        ) : (
+          <div style={{ height: 80, background: `${themeColor}18` }}/>
         )}
-      </div>
 
-      {/* ── Business name + tagline ── */}
-      <div style={{ textAlign: 'center', padding: '12px 20px 4px' }}>
-        <h1 style={{
-          fontSize: 38, fontWeight: 800, letterSpacing: '-0.03em',
-          color: '#1A1A18', lineHeight: 1.1, margin: 0,
-          fontFamily: 'Georgia, "Times New Roman", serif',
+        {/* ── Logo ── */}
+        <div style={{
+          display: 'flex', justifyContent: 'center',
+          marginTop: coverPhoto ? -52 : 0,
+          position: 'relative', zIndex: 10,
         }}>
-          {business.name}
-        </h1>
-        {business.tagline && (
-          <p style={{
-            fontSize: 11, fontWeight: 600, letterSpacing: '0.2em',
-            textTransform: 'uppercase', color: 'rgba(0,0,0,0.45)', marginTop: 6,
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatar} alt={`${business.name} logo`}
+              style={{
+                width: 104, height: 104, borderRadius: '50%',
+                border: '3px solid rgba(255,255,255,0.90)',
+                background: 'rgba(255,255,255,0.80)',
+                objectFit: 'cover',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
+                display: 'block',
+                backdropFilter: 'blur(20px)',
+              }}
+            />
+          ) : (
+            <div style={{
+              width: 104, height: 104, borderRadius: '50%',
+              border: '3px solid rgba(255,255,255,0.90)',
+              background: 'rgba(255,255,255,0.80)',
+              backdropFilter: 'blur(20px)',
+              display: 'grid', placeItems: 'center',
+              fontSize: 32, fontWeight: 800, color: themeColor,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
+            }}>
+              {initials}
+            </div>
+          )}
+        </div>
+
+        {/* ── Business name ── */}
+        <div style={{ textAlign: 'center', padding: '10px 20px 4px' }}>
+          <h1 style={{
+            fontSize: 48, fontWeight: 800, letterSpacing: '-0.035em',
+            color: '#151515', lineHeight: 1, margin: 0,
+            fontFamily: 'Georgia, "Times New Roman", serif',
           }}>
-            {business.tagline}
-          </p>
-        )}
-      </div>
+            {business.name}
+          </h1>
+          {business.tagline && (
+            <p style={{
+              fontSize: 11, fontWeight: 500, letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: '#4B4B4B', marginTop: 8,
+            }}>
+              {business.tagline}
+            </p>
+          )}
+        </div>
 
-      {/* ── Rating + votes row ── */}
-      <div style={{ padding: '12px 20px' }}>
-        <PublicRatingRow businessId={business.id} placeId={business.place_id}/>
-      </div>
+        {/* ── Rating row ── */}
+        <div style={{ padding: '10px 16px 0' }}>
+          <PublicRatingRow businessId={business.id} placeId={business.place_id}/>
+        </div>
 
-      {/* ── Blocks section ── */}
-      <div style={{ padding: '0 14px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* ── Blocks ── */}
+        <div style={{ padding: '10px 14px 48px', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* Hours card */}
-        {hoursBlockOn && (
-          <details style={{
-            background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)',
-            borderRadius: 20, overflow: 'hidden',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-          }}>
-            <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                {/* Clock icon circle */}
-                <div style={{
-                  width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                  background: `${hoursBlock?.color ?? '#16a34a'}18`,
-                  display: 'grid', placeItems: 'center',
-                }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={hoursBlock?.color ?? '#16a34a'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          {/* Hours card */}
+          {hoursBlockOn && (
+            <details style={{
+              ...glass,
+              borderRadius: 22,
+              overflow: 'hidden',
+            }}>
+              <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '16px 18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  {/* Icon */}
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                    background: isOpen ? 'rgba(34,197,94,0.10)' : 'rgba(0,0,0,0.05)',
+                    display: 'grid', placeItems: 'center',
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                      stroke={isOpen ? '#22C55E' : '#8A8A86'}
+                      strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                  </div>
+                  {/* Text */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <span style={{
+                        width: 7, height: 7, borderRadius: '50%',
+                        background: dot, display: 'inline-block', flexShrink: 0,
+                      }}/>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: '#151515', letterSpacing: '-0.02em' }}>
+                        {bigText}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 12, color: '#8A8A86', marginTop: 2 }}>
+                      {subText}
+                      {accentText && <strong style={{ color: dot, fontWeight: 700 }}>{accentText}</strong>}
+                    </p>
+                  </div>
+                  {/* Chevron */}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="rgba(0,0,0,0.28)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ flexShrink: 0 }}>
+                    <polyline points="6 9 12 15 18 9"/>
                   </svg>
                 </div>
-                {/* Status text */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: dot, display: 'inline-block', flexShrink: 0 }}/>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: '#1A1A18', letterSpacing: '-0.02em' }}>{bigText}</span>
+                {/* Lead update pill */}
+                {lead && (
+                  <div style={{
+                    marginTop: 10, borderRadius: 12,
+                    background: 'rgba(0,0,0,0.04)',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    padding: '8px 12px', fontSize: 12, color: '#292929',
+                  }}>
+                    <strong>{lead.headline}</strong>
+                    {lead.detail && <p style={{ marginTop: 2, color: '#8A8A86' }}>{lead.detail}</p>}
                   </div>
-                  <p style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginTop: 2 }}>
-                    {subText}{accentText && <strong style={{ color: dot, fontWeight: 700 }}>{accentText}</strong>}
-                  </p>
-                </div>
-                {/* Chevron */}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </div>
-              {/* Lead update pill */}
-              {lead && (
-                <div style={{ marginTop: 10, borderRadius: 12, background: '#FBF0DC', padding: '8px 12px', fontSize: 12, color: '#805619' }}>
-                  <strong>{lead.headline}</strong>
-                  {lead.detail && <p style={{ marginTop: 2, opacity: 0.8 }}>{lead.detail}</p>}
-                </div>
-              )}
-            </summary>
+                )}
+              </summary>
 
-            {/* Weekly hours */}
-            <ul style={{ borderTop: '1px solid rgba(0,0,0,0.07)', margin: 0, padding: '12px 16px', listStyle: 'none' }}>
-              {DAY_NAMES.map((d, i) => (
-                <li key={d} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12, color: i === today ? '#1A1A18' : 'rgba(0,0,0,0.5)', fontWeight: i === today ? 700 : 400 }}>
-                  <span>{d}</span>
-                  <span>{rowLabel(hours.find((h) => h.day_of_week === i))}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
+              {/* Weekly hours table */}
+              <ul style={{
+                borderTop: '1px solid rgba(0,0,0,0.06)',
+                margin: 0, padding: '12px 18px',
+                listStyle: 'none',
+              }}>
+                {DAY_NAMES.map((d, i) => (
+                  <li key={d} style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    padding: '5px 0', fontSize: 13,
+                    color: i === today ? '#151515' : '#8A8A86',
+                    fontWeight: i === today ? 600 : 400,
+                  }}>
+                    <span>{d}</span>
+                    <span>{rowLabel(hours.find((h) => h.day_of_week === i))}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
 
-        {/* Location / map block */}
-        {locationBlockOn && locationBlock && (
-          <PublicLocationBlock block={locationBlock} businessId={business.id} themeColor={themeColor}/>
-        )}
+          {/* Location block */}
+          {locationBlockOn && locationBlock && (
+            <PublicLocationBlock block={locationBlock} businessId={business.id} themeColor={themeColor}/>
+          )}
 
-        {/* All other blocks */}
-        <PublishedBusinessBlocks
-          businessId={business.id}
-          businessName={business.name}
-          location={pageConfig.location || business.tagline || business.name}
-          config={pageConfig}
-          themeColor={themeColor}
-          placeId={business.place_id}
-        />
+          {/* All other blocks */}
+          <PublishedBusinessBlocks
+            businessId={business.id}
+            businessName={business.name}
+            location={pageConfig.location || business.tagline || business.name}
+            config={pageConfig}
+            themeColor={themeColor}
+            placeId={business.place_id}
+          />
 
-        {/* Socials */}
-        <PublicSocialLinks businessId={business.id} socials={pageConfig.socials}/>
+          {/* Socials */}
+          <PublicSocialLinks businessId={business.id} socials={pageConfig.socials}/>
+        </div>
+
+        {/* Footer */}
+        <Link
+          href="/"
+          style={{
+            display: 'block', textAlign: 'center',
+            fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase',
+            color: 'rgba(0,0,0,0.22)', paddingBottom: 32, textDecoration: 'none',
+          }}
+        >
+          Powered by OpenStatus
+        </Link>
       </div>
-
-      {/* Footer */}
-      <Link
-        href="/"
-        style={{ display: 'block', textAlign: 'center', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.28)', paddingBottom: 28, textDecoration: 'none' }}
-      >
-        Powered by OpenStatus
-      </Link>
 
       <OwnerQuickStatus businessId={business.id} businessName={business.name}/>
     </div>
