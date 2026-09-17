@@ -1550,6 +1550,10 @@ export default function BuilderClient({ business,initialConfig }: {
   const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
+  const [googleFetchUrl,setGoogleFetchUrl]=useState('');
+  const [googleFetching,setGoogleFetching]=useState(false);
+  const [googleFetchError,setGoogleFetchError]=useState('');
+  const [googleFetchDone,setGoogleFetchDone]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   const [previewWidth,setPreviewWidth]=useState(420);
@@ -1808,6 +1812,43 @@ export default function BuilderClient({ business,initialConfig }: {
                     <div className="mb-7">
                       <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Design</h2>
                       <p className="text-[#9B9B9B] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
+                    </div>
+
+                    {/* Google Business fetch */}
+                    <div className="mb-6 rounded-2xl border border-[#EBEBEB] bg-[#FAFAFA] p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                        <p className="text-[12px] font-bold text-[#0A0A0A]">Google Business</p>
+                        {googleFetchDone&&<span className="ml-auto text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">✓ Imported</span>}
+                      </div>
+                      <p className="text-[11px] text-[#9B9B9B] mb-3">Paste your Google Maps URL to auto-fill your rating, review count, and location block.</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||''}
+                          onChange={e=>{setGoogleFetchUrl(e.target.value);setGoogleFetchDone(false);setGoogleFetchError('');}}
+                          placeholder="https://maps.google.com/maps/place/..."
+                          className="flex-1 rounded-xl border border-[#EBEBEB] bg-white px-3 py-2 text-[12px] outline-none focus:border-[#AADF1E] transition-colors"
+                        />
+                        <button
+                          disabled={!googleFetchUrl&&!allBlocks.find(b=>b.id==='location')?.googleUrl||googleFetching}
+                          onClick={async()=>{
+                            const url=googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||'';
+                            if(!url)return;
+                            setGoogleFetching(true);setGoogleFetchError('');setGoogleFetchDone(false);
+                            try{
+                              const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
+                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
+                              if(!r.ok||d.error)throw new Error(d.error??'Failed');
+                              updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.name??allBlocks.find(b=>b.id==='location')?.sub??''});
+                              setGoogleFetchDone(true);
+                            }catch(e){setGoogleFetchError(e instanceof Error?e.message:'Could not fetch');}
+                            finally{setGoogleFetching(false);}
+                          }}
+                          className="flex-shrink-0 rounded-xl bg-[#AADF1E] text-[#111] text-[12px] font-bold px-4 py-2 hover:bg-[#99CF0E] transition-colors disabled:opacity-40"
+                        >{googleFetching?'Fetching…':'Fetch'}</button>
+                      </div>
+                      {googleFetchError&&<p className="text-[11px] text-red-500 mt-2">{googleFetchError}</p>}
                     </div>
 
                     {/* Active blocks */}
