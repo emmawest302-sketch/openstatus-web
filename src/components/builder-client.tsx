@@ -18,6 +18,7 @@ interface OpenStatusBlock {
   provider?: string;
   yelpUrl?: string; googleUrl?: string; tripAdvisorUrl?: string;
   blockStyle?: string;
+  _googleFetching?: boolean; _googleError?: string;
 }
 export interface OpenStatusPageConfig {
   blocks: OpenStatusBlock[]; bg: string; bgImage?: string;
@@ -1107,8 +1108,26 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0"><IconGoogle size={28}/></div>
-                    <Input value={block.googleUrl??''} onChange={v=>onUpdateBlock({googleUrl:v})} placeholder="Paste your Google Business profile URL…"/>
+                    <div className="flex-1 flex gap-2">
+                      <Input value={block.googleUrl??''} onChange={v=>onUpdateBlock({googleUrl:v})} placeholder="Paste your Google Business profile URL…"/>
+                      {block.googleUrl&&(
+                        <button
+                          onClick={async()=>{
+                            onUpdateBlock({_googleFetching:true,_googleError:''});
+                            try{
+                              const r=await fetch(\`/api/google/rating?url=\${encodeURIComponent(block.googleUrl??'')} \`);
+                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
+                              if(!r.ok||d.error)throw new Error(d.error??'Failed');
+                              onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
+                            }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
+                          }}
+                          className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#AADF1E] text-[#111] text-[11px] font-bold hover:bg-[#99CF0E] transition-colors whitespace-nowrap disabled:opacity-50"
+                          disabled={block._googleFetching}
+                        >{block._googleFetching?'…':'Fetch'}</button>
+                      )}
+                    </div>
                   </div>
+                  {block._googleError&&<p className="text-[11px] text-red-500 mt-1">{block._googleError}</p>}
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0"><IconTripAdvisor size={28}/></div>
                     <Input value={block.tripAdvisorUrl??''} onChange={v=>onUpdateBlock({tripAdvisorUrl:v})} placeholder="Paste your TripAdvisor listing URL…"/>
