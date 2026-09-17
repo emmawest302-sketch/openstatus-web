@@ -1,4 +1,5 @@
 import PublicActionBlock from '@/components/public-action-block';
+import PublicLocationBlock from '@/components/public-location-block';
 import PublicMapBlock from '@/components/public-map-block';
 import InstagramUpdatesBlock from '@/components/instagram-updates-block';
 import type { OpenStatusPageConfig } from '@/lib/openstatus-page-config';
@@ -19,6 +20,9 @@ export default function PublishedBusinessBlocks({ businessId, businessName, loca
               <InstagramUpdatesBlock businessId={businessId} />
             </div>
           );
+        }
+        if (block.id === 'location' && (block.googleUrl || block.appleMapsUrl || block.sub)) {
+          return <PublicLocationBlock key={block.id} block={block} businessId={businessId} />;
         }
         return <PublicActionBlock key={block.id} businessId={businessId} block={block} />;
       })}

@@ -858,6 +858,21 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                   if(b.id==='location') {
                     // All location styles share the same map-button pattern
                     const mapsHref = b.sub ? `https://maps.google.com/?q=${encodeURIComponent(b.sub)}` : '#';
+                    // Show embedded map preview when google URL or address is set
+                    if(b.googleUrl||b.appleMapsUrl||b.sub) {
+                      const mapQuery = b.googleUrl ? (()=>{ try{ const m=decodeURIComponent(b.googleUrl).match(/\/maps\/place\/([^/@?]+)/); return m?m[1].replace(/\+/g,' '):b.sub||b.title; }catch{return b.sub||b.title;} })() : (b.sub||b.title);
+                      return (
+                        <div className="col-span-2 rounded-2xl overflow-hidden border" style={{borderColor:bdr}}>
+                          <div className="relative w-full overflow-hidden" style={{height:80}}>
+                            <iframe src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed&hl=en`} className="absolute inset-0 w-full h-full border-0" loading="lazy" title="map"/>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 px-2.5 py-2" style={{background:cardBg}}>
+                            <p className={`text-[9px] font-semibold truncate ${tx}`}>{b.sub||mapQuery}</p>
+                            <span className="flex-shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold text-white" style={{background:b.color||'#1A1A18'}}>Directions →</span>
+                          </div>
+                        </div>
+                      );
+                    }
                     if(bStyle==='minimal') return (
                       <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
                         <LucidePin size={10} color={b.color}/>
@@ -1115,7 +1130,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                           onClick={async()=>{
                             onUpdateBlock({_googleFetching:true,_googleError:''});
                             try{
-                              const r=await fetch(\`/api/google/rating?url=\${encodeURIComponent(block.googleUrl??'')} \`);
+                              const r=await fetch(`/api/google/rating?url=${encodeURIComponent(block.googleUrl??'')}`); 
                               const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
                               if(!r.ok||d.error)throw new Error(d.error??'Failed');
                               onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
