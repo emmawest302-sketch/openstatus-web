@@ -1557,6 +1557,11 @@ export default function BuilderClient({ business,initialConfig }: {
   const [quickAction,setQuickAction]=useState<string|null>(null);
   const [closeEarlyTime,setCloseEarlyTime]=useState('15:00');
   const [quickMsg,setQuickMsg]=useState('');
+  const [statusUpdates,setStatusUpdates]=useState<{id:number;kind:string;headline:string;detail:string|null;closes_at:string|null;created_at:string;expires_at:string;status:string}[]>([]);
+  const [statusLoading,setStatusLoading]=useState(false);
+  const [statusPosting,setStatusPosting]=useState(false);
+  const [statusNote,setStatusNote]=useState('');
+  const [statusCloseTime,setStatusCloseTime]=useState('15:00');
   const [openId,setOpenId]=useState<string|null>(null);
   const [showPicker,setShowPicker]=useState(false);
   const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
@@ -1678,6 +1683,48 @@ export default function BuilderClient({ business,initialConfig }: {
   const sidebarLabel = SIDEBAR_NAV.find(n=>n.key===sidebarTab)?.label ?? '';
 
   // Close early times
+  const loadStatusUpdates=async()=>{
+    setStatusLoading(true);
+    try{
+      const {data:s}=await supabase.auth.getSession();
+      const token=s?.session?.access_token;
+      if(!token){setStatusLoading(false);return;}
+      const r=await fetch('/api/status',{headers:{Authorization:`Bearer ${token}`}});
+      const d=await r.json();
+      setStatusUpdates(d.updates??[]);
+    }catch{}
+    setStatusLoading(false);
+  };
+  const clearStatus=async()=>{
+    setStatusPosting(true);
+    try{
+      const {data:s}=await supabase.auth.getSession();
+      const token=s?.session?.access_token;
+      if(!token){setStatusPosting(false);return;}
+      await fetch('/api/status',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({action:'clear'})});
+      await loadStatusUpdates();
+    }catch{}
+    setStatusPosting(false);
+  };
+  const postStatus=async(preset:string)=>{
+    setStatusPosting(true);
+    try{
+      const {data:s}=await supabase.auth.getSession();
+      const token=s?.session?.access_token;
+      if(!token){setStatusPosting(false);return;}
+      const body:Record<string,string>={action:'publish',preset};
+      if(preset==='early_close') body.closesAt=statusCloseTime;
+      if(preset==='note_today') body.note=statusNote;
+      await fetch('/api/status',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+      await loadStatusUpdates();
+      setStatusNote('');
+    }catch{}
+    setStatusPosting(false);
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(()=>{ if(sidebarTab==='hours'&&hoursSubTab==='status') loadStatusUpdates(); },[sidebarTab,hoursSubTab]);
+
   const closeEarlyTimes: string[] = [];
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
@@ -1821,14 +1868,122 @@ export default function BuilderClient({ business,initialConfig }: {
                   </div>
                 )}
 
-                {/* ── SPECIAL HOURS / STATUS / AUTO — placeholders ── */}
-                {hoursSubTab!=='regular'&&(
+                {/* ── STATUS CONTROLS ── */}
+                {hoursSubTab==='status'&&(
+                  <div className="space-y-8">
+                    {/* Active status banner */}
+                    <div>
+                      <p className="text-[14px] font-bold text-[#0A0A0A] mb-3">Live status</p>
+                      {statusLoading?(
+                        <div className="rounded-2xl border border-[#EBEBEB] bg-white px-4 py-3">
+                          <p className="text-[13px] text-[#9B9B9B]">Loading…</p>
+                        </div>
+                      ):statusUpdates.filter(u=>u.status!=='needs_review').length>0?(
+                        <div>
+                          {statusUpdates.filter(u=>u.status!=='needs_review').map(u=>(
+                            <div key={u.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[#EBEBEB] bg-white px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"/>
+                                <div>
+                                  <p className="text-[14px] font-bold text-[#111]">{u.headline}</p>
+                                  {u.detail&&<p className="text-[12px] text-[#9B9B9B] mt-0.5">{u.detail}</p>}
+                                </div>
+                              </div>
+                              <button
+                                onClick={clearStatus}
+                                disabled={statusPosting}
+                                className="flex-shrink-0 text-[12px] font-semibold text-[#EF4444] hover:text-red-700 transition-colors disabled:opacity-40"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ):(
+                        <div className="rounded-2xl border border-dashed border-[#DEDEDC] bg-[#FAFAFA] px-4 py-3 text-center">
+                          <p className="text-[13px] text-[#9B9B9B]">No live status — your regular hours show on your page.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick post presets */}
+                    <div>
+                      <p className="text-[14px] font-bold text-[#0A0A0A] mb-4">Post a status update</p>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        {/* Closed today */}
+                        <button
+                          onClick={()=>postStatus('closed_today')}
+                          disabled={statusPosting}
+                          className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#EBEBEB] bg-white hover:border-[#EF4444] hover:bg-red-50/60 transition-all text-left group disabled:opacity-40"
+                        >
+                          <span className="text-[22px] leading-none">🔒</span>
+                          <div>
+                            <p className="text-[13px] font-bold text-[#111]">Closed today</p>
+                            <p className="text-[11px] text-[#9B9B9B] mt-0.5 leading-snug">Mark as fully closed all day</p>
+                          </div>
+                        </button>
+                        {/* Close early */}
+                        <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#EBEBEB] bg-white">
+                          <span className="text-[22px] leading-none">⏰</span>
+                          <p className="text-[13px] font-bold text-[#111]">Close early at</p>
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <select
+                                value={statusCloseTime}
+                                onChange={e=>setStatusCloseTime(e.target.value)}
+                                className="w-full bg-[#F5F5F5] border border-[#EBEBEB] rounded-xl px-3 py-2 text-[12px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer"
+                              >
+                                {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                              </select>
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={11} color="#9B9B9B"/></div>
+                            </div>
+                            <button
+                              onClick={()=>postStatus('early_close')}
+                              disabled={statusPosting}
+                              className="px-3 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors disabled:opacity-40"
+                            >
+                              Set
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Custom note */}
+                      <div className="p-4 rounded-2xl border border-[#EBEBEB] bg-white space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[20px] leading-none">💬</span>
+                          <p className="text-[13px] font-bold text-[#111]">Leave a note</p>
+                        </div>
+                        <textarea
+                          value={statusNote}
+                          onChange={e=>setStatusNote(e.target.value.slice(0,100))}
+                          placeholder="e.g. Running about 20 minutes behind today…"
+                          rows={2}
+                          className="w-full bg-[#F5F5F5] border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"
+                        />
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
+                          <button
+                            onClick={()=>postStatus('note_today')}
+                            disabled={statusPosting||!statusNote.trim()}
+                            className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors disabled:opacity-40"
+                          >
+                            Post
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── SPECIAL HOURS & AUTO — placeholders ── */}
+                {(hoursSubTab==='special'||hoursSubTab==='auto')&&(
                   <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-12 h-12 rounded-2xl bg-[#F5F5F5] flex items-center justify-center mb-4">
                       <LucideClock size={20} color="#C0C0C0"/>
                     </div>
                     <p className="text-[15px] font-bold text-[#0A0A0A] mb-1">
-                      {hoursSubTab==='special'?'Special Hours':hoursSubTab==='status'?'Status Controls':'Auto-Updates'}
+                      {hoursSubTab==='special'?'Special Hours':'Auto-Updates'}
                     </p>
                     <p className="text-[13px] text-[#9B9B9B]">Coming soon — stay tuned!</p>
                   </div>
