@@ -1518,6 +1518,19 @@ export default function BuilderClient({ business,initialConfig }: {
   const [saved,setSaved]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
+  const [previewWidth,setPreviewWidth]=useState(420);
+  const isResizing=useRef(false);
+  const resizeStartX=useRef(0);
+  const resizeStartW=useRef(0);
+  const onResizeStart=useCallback((e:React.MouseEvent)=>{
+    isResizing.current=true;
+    resizeStartX.current=e.clientX;
+    resizeStartW.current=previewWidth;
+    const onMove=(ev:MouseEvent)=>{ if(!isResizing.current)return; const delta=resizeStartX.current-ev.clientX; setPreviewWidth(Math.max(320,Math.min(900,resizeStartW.current+delta))); };
+    const onUp=()=>{ isResizing.current=false; window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
+    window.addEventListener('mousemove',onMove);
+    window.addEventListener('mouseup',onUp);
+  },[previewWidth]);
 
   const allBlocks = config.blocks;
   const orderedBlocks = [...allBlocks.filter(b=>b.id==='hours'),...allBlocks.filter(b=>b.id!=='hours')];
@@ -1946,7 +1959,17 @@ export default function BuilderClient({ business,initialConfig }: {
           </div>
 
           {/* ── RIGHT PREVIEW PANEL ── */}
-          <div className="w-[360px] flex-shrink-0 border-l border-[#EBEBEB] flex flex-col bg-[#FAFAFA]">
+          {/* Drag-to-resize handle */}
+          <div
+            onMouseDown={onResizeStart}
+            className="w-1.5 flex-shrink-0 cursor-col-resize hover:bg-[#AADF1E]/60 active:bg-[#AADF1E] transition-colors border-l border-[#EBEBEB] group"
+            title="Drag to resize preview"
+          >
+            <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-0.5 h-10 rounded-full bg-[#AADF1E]" />
+            </div>
+          </div>
+          <div className="flex-shrink-0 flex flex-col bg-[#FAFAFA]" style={{width:previewWidth}}>
             {/* Toggle bar */}
             <div className="h-14 border-b border-[#EBEBEB] flex items-center justify-between px-4 flex-shrink-0 bg-white">
               <div className="flex items-center gap-0.5 bg-[#F5F5F5] rounded-full p-0.5">
