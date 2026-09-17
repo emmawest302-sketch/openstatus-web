@@ -1297,28 +1297,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             </div>
           )}
 
-          {/* Widget layout (all except hours) */}
-          {block.id!=='hours' && (
-            <div className="mt-6 pt-6 border-t border-[#F5F5F5]">
-              <FieldLabel>Widget width</FieldLabel>
-              <p className="text-xs text-[#9B9B9B] mb-3">Half-width blocks sit side by side</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={()=>onUpdateBlock({size:'full'})}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${(!block.size||block.size==='full')?'border-[#0A0A0A] bg-[#F5F5F5] text-[#0A0A0A]':'border-[#EBEBEB] text-[#6B6B6B] hover:border-[#0A0A0A]'}`}>
-                  <LucideLayoutList size={14} color="currentColor"/>
-                  Full width
-                </button>
-                <button
-                  onClick={()=>onUpdateBlock({size:'half'})}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${block.size==='half'?'border-[#0A0A0A] bg-[#F5F5F5] text-[#0A0A0A]':'border-[#EBEBEB] text-[#6B6B6B] hover:border-[#0A0A0A]'}`}>
-                  <LucideLayoutGrid size={14} color="currentColor"/>
-                  Half width
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Widget width */}
           {block.id!=='hours' && (
             <div className="pt-5 border-t border-[#F0F0F0]">
