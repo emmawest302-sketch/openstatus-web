@@ -11,9 +11,6 @@ function fmtTime(t: string): string {
 
 function parseGoogleMapsUrl(rawUrl: string): { query: string | null; lat?: number; lng?: number } {
   try {
-    if (rawUrl.includes('maps.app.goo.gl') || rawUrl.includes('goo.gl/maps')) {
-      return { query: null };
-    }
     const decoded = decodeURIComponent(rawUrl);
 
     // Extract business name from /maps/place/NAME/ pattern
@@ -51,11 +48,20 @@ export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
   if (!url) return NextResponse.json({ error: 'Missing url param' }, { status: 400 });
 
-  const { query, lat, lng } = parseGoogleMapsUrl(url);
+  // Resolve short links (maps.app.goo.gl, goo.gl/maps) by following the redirect
+  let resolvedUrl = url;
+  if (url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps')) {
+    try {
+      const r = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+      resolvedUrl = r.url || url;
+    } catch { /* use original */ }
+  }
+
+  const { query, lat, lng } = parseGoogleMapsUrl(resolvedUrl);
 
   if (!query) {
     return NextResponse.json(
-      { error: 'Use the full Google Maps URL — not a short link. Open Google Maps, find your business, and copy the URL from the address bar.' },
+      { error: 'Could not read business name from that URL. Try opening the business on Google Maps and copying the URL from the address bar.' },
       { status: 422 }
     );
   }
