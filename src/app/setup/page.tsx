@@ -218,12 +218,17 @@ export default function SetupPage() {
       if (existing.slug) setSlugState('free');
     } else {
       // Create a placeholder business row immediately
-      const { data: created } = await supabase
+      const newId = crypto.randomUUID();
+      const { data: created, error: insertErr } = await supabase
         .from('businesses')
-        .insert({ user_id: user.id, name: 'My Business' })
+        .insert({ id: newId, user_id: user.id, name: 'My Business' })
         .select('id')
         .single();
-      if (created) setBusinessId(created.id);
+      if (created) {
+        setBusinessId(created.id);
+      } else if (insertErr) {
+        setError('Could not create your business profile: ' + insertErr.message);
+      }
     }
     setLoading(false);
   }, [router]);
