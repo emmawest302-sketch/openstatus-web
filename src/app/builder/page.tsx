@@ -18,10 +18,10 @@ interface DbHoursRow {
 interface BusinessData {
   id: string;
   name: string;
-  slug: string;
+  slug?: string;
   avatar_url?: string;
+  header_url?: string;
   tagline?: string;
-  category?: string;
   instagram_handle?: string;
   _businessId: string;
 }
@@ -57,7 +57,7 @@ export default function BuilderPage() {
 
       const { data: biz, error: bizError } = await supabase
         .from('businesses')
-        .select('id, name, slug, avatar_url, tagline, category, instagram_handle')
+        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle')
         .eq('user_id', user.id)
         .maybeSingle();
 
