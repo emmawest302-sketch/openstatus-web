@@ -159,7 +159,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             <img
               src={coverPhoto}
               alt={`${business.name} cover`}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 60%', display: 'block' }}
             />
             {/* Editorial gradient fade into page bg */}
             <div style={{
@@ -327,9 +327,10 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             placeId={business.place_id}
           />
 
-          {/* Socials */}
-          <PublicSocialLinks businessId={business.id} socials={enrichedConfig.socials}/>
         </div>
+
+        {/* ── Social icons ── */}
+        <PublicSocialLinks businessId={business.id} socials={enrichedConfig.socials}/>
 
         {/* Footer */}
         <Link

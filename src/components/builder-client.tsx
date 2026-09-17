@@ -778,7 +778,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
         {/* Photo header — constrained 148px, fades into page bg */}
         {config.bgImage && (
           <div style={{ position:'relative', height:148, overflow:'hidden' }}>
-            <img src={config.bgImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}/>
+            <img src={config.bgImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%', display:'block' }}/>
             <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${config.bg||'#F7F7F5'} 100%)` }}/>
           </div>
         )}
@@ -786,7 +786,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
         {/* Hero header */}
         <div className="relative px-4 pb-3 text-center" style={{ marginTop: config.bgImage ? -28 : 0, paddingTop: config.bgImage ? 0 : 32 }}>
           {business?.avatar_url
-            ?<img src={business.avatar_url} className={`w-12 h-12 rounded-full mx-auto mb-2 object-cover ${config.bgImage?'border-2 border-white/70 shadow-lg':''}`} alt=""/>
+            ?<img src={business.avatar_url?.startsWith('storage:')&&business.id?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url??''} className={`w-12 h-12 rounded-full mx-auto mb-2 object-cover ${config.bgImage?'border-2 border-white/70 shadow-lg':''}`} alt=""/>
             :<div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-[10px] font-black tracking-tight ${isDark?'bg-white/10 text-white':'bg-black/8 text-black'}`}>
               {(business?.name??'B').slice(0,1).toUpperCase()}
             </div>
@@ -1051,6 +1051,16 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
           }
         </div>
       </div>
+      {/* Social icon row */}
+      {SOCIAL_PLATFORMS.filter(p=>config.socials&&config.socials[p.key]).length>0&&(
+        <div className="flex items-center justify-center gap-3 mt-4 pb-1">
+          {SOCIAL_PLATFORMS.filter(p=>config.socials&&config.socials[p.key]).map(p=>(
+            <div key={p.key} className={`w-7 h-7 rounded-full flex items-center justify-center ${isDark?'bg-white/10':'bg-black/6'}`}>
+              <SocialIcon platform={p.key} size={15}/>
+            </div>
+          ))}
+        </div>
+      )}
       <p className="text-center text-[11px] text-[#858585] mt-4 font-medium">openstatus.co/…</p>
     </div>
   );
@@ -1592,16 +1602,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
     const {data:s}=await supabase.auth.getSession();
     const token=s.session?.access_token;
     if(!token)throw new Error('Session expired. Sign in again.');
-    const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
-    const prep=await fetch('/api/assets',{method:'POST',headers,body:JSON.stringify({action:'prepare',kind,contentType:file.type,size:file.size})});
-    const p=await prep.json();
-    if(!prep.ok)throw new Error(p.error??'Could not prepare upload');
-    const {error:ue}=await supabase.storage.from(p.bucket).uploadToSignedUrl(p.path,p.token,file,{contentType:file.type,cacheControl:'3600'});
-    if(ue)throw ue;
-    const complete=await fetch('/api/assets',{method:'POST',headers,body:JSON.stringify({action:'complete',kind,path:p.path})});
-    const c=await complete.json();
-    if(!complete.ok)throw new Error(c.error??'Could not save image');
-    return c.reference as string;
+    const form=new FormData();
+    form.append('kind',kind);
+    form.append('file',file);
+    const res=await fetch('/api/assets',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:form});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error??'Upload failed');
+    return data.reference as string;
   },[]);
 
   const allBlocks = config.blocks;
@@ -2199,44 +2206,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                             className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                         </div>
                       </div>
-                      {/* Theme / accent color */}
-                      <div>
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Accent color</p>
-                        <p className="text-[11px] text-[#858585] mb-3">Used for the Directions button and accent elements on your page.</p>
-                        <div className="grid grid-cols-7 gap-2 mb-3">
-                          {['#DB6B8F','#E07D5A','#F5A623','#4CAF50','#2563EB','#7C3AED','#0891B2'].map(c=>(
-                            <button key={c} onClick={()=>setConfig(p=>({...p,themeColor:c}))}
-                              className="aspect-square rounded-full border-2 transition-all hover:scale-110"
-                              style={{background:c,borderColor:config.themeColor===c?'#0A0A0A':'transparent'}}/>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-lg border border-[#DEDEDC] flex-shrink-0" style={{background:config.themeColor??'#DB6B8F'}}/>
-                          <input value={config.themeColor??''} onChange={e=>setConfig(c=>({...c,themeColor:e.target.value}))}
-                            placeholder="#DB6B8F"
-                            className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                        </div>
-                      </div>
-                      {/* Google Place ID */}
-                      <div>
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Google Place ID</p>
-                        <p className="text-[11px] text-[#858585] mb-3">Connect your Google listing to show your star rating and pull gallery photos automatically. Find yours at <span className="font-mono">maps.google.com</span> → share → place ID.</p>
-                        <input value={config.placeId??''} onChange={e=>setConfig(c=>({...c,placeId:e.target.value.trim()}))}
-                          placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4"
-                          className="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                        {config.placeId&&(
-                          <button onClick={async()=>{
-                            if(!localBusiness?.id)return;
-                            const {data:s}=await supabase.auth.getSession();
-                            const token=s.session?.access_token;
-                            if(!token)return;
-                            await fetch('/api/business/place-id',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({placeId:config.placeId})});
-                          }}
-                          className="mt-2 px-3 py-1.5 rounded-lg bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors">
-                            Save Place ID to listing
-                          </button>
-                        )}
-                      </div>
+
+
                       {/* Background photo */}
                       <div>
                         <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Background photo</p>
@@ -2461,7 +2432,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
             </div>
             {/* Phone / Desktop preview */}
             <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-6 overflow-y-auto">
-              {previewMode==='desktop'&&business?.slug?(
+              {previewMode==='desktop'?(
+                business?.slug?(
                 <div className="w-full h-full flex flex-col">
                   {/* Browser chrome */}
                   <div className="flex-shrink-0 bg-[#F0F0F0] border-b border-[#DEDEDE] px-3 py-2 flex items-center gap-2">
@@ -2479,9 +2451,18 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                     key={`desktop-preview-${business.slug}`}
                     src={`/${business.slug}`}
                     className="flex-1 w-full border-0"
+                    sandbox="allow-scripts allow-same-origin allow-forms"
                     title="Desktop preview"
                   />
                 </div>
+                ):(
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center space-y-2">
+                      <p className="text-[13px] font-semibold text-[#111]">Desktop preview</p>
+                      <p className="text-[11px] text-[#858585]">Save your page to see the live desktop view.</p>
+                    </div>
+                  </div>
+                )
               ):(
                 <LivePhonePreview
                   business={localBusiness} config={config}
