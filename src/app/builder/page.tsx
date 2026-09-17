@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BuilderClient from '@/components/builder-client';
 import { normalizeOpenStatusPageConfig, type OpenStatusPageConfig } from '@/components/builder-client';
@@ -42,6 +42,8 @@ function dbHoursToWeekly(rows: DbHoursRow[]): Record<WeeklyKey, { open:string; c
 
 export default function BuilderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isNew = searchParams.get('new') === '1';
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [business, setBusiness] = useState<BusinessData | null>(null);
@@ -49,8 +51,6 @@ export default function BuilderPage() {
 
   useEffect(() => {
     void (async () => {
-      // Use getSession() in client components — reads the local cookie without a
-      // server round-trip, so it never fails due to a network blip like getUser() can.
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) { router.replace('/login'); return; }
       const user = session.user;
@@ -89,7 +89,7 @@ export default function BuilderPage() {
 
   if (loadError) {
     return (
-      <main className="grid min-h-screen place-items-center bg-white" style={{ fontFamily: 'var(--font-poppins)' }}>
+      <main className="grid min-h-screen place-items-center bg-white" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
         <div className="text-center space-y-3">
           <p className="text-sm font-semibold text-red-600">{loadError}</p>
           <button onClick={() => window.location.reload()} className="text-xs underline text-black/50">Try again</button>
@@ -100,11 +100,19 @@ export default function BuilderPage() {
 
   if (!ready) {
     return (
-      <main className="grid min-h-screen place-items-center bg-white" style={{ fontFamily: 'var(--font-poppins)' }}>
-        <p className="text-sm font-semibold text-black/40">Loading your builder…</p>
+      <main className="grid min-h-screen place-items-center" style={{ background: '#F7F7F5', fontFamily: "'Inter', system-ui, sans-serif" }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <svg viewBox="0 0 100 100" width="28" height="28">
+            <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
+            <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
+            <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
+            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
+          </svg>
+          <p style={{ fontSize: 13, color: '#858585' }}>Loading your builder…</p>
+        </div>
       </main>
     );
   }
 
-  return <BuilderClient business={business} initialConfig={initialConfig!} />;
+  return <BuilderClient business={business} initialConfig={initialConfig!} isFirstRun={isNew} />;
 }

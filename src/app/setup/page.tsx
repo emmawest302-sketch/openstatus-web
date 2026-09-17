@@ -1,163 +1,796 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { normaliseHandle, suggestHandle } from '@/lib/handles';
+import type { OpenStatusBlock, OpenStatusPageConfig, OpenStatusSocial } from '@/lib/openstatus-page-config';
 
-const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-type Row={open:string;close:string;closed:boolean}; type HandleState='idle'|'checking'|'free'|'taken';
-const DEFAULT_ROWS:Row[]=DAYS.map((_,i)=>({open:'09:00',close:'17:00',closed:i===0}));
-function Mark(){return <svg width="28" height="28" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#050505"/><circle cx="50" cy="50" r="21" fill="#F7F7F3"/><circle cx="50" cy="44" r="7.4" fill="#050505"/><path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#050505"/></svg>}
-function pretty(v:string){const[h,m]=v.split(':');let n=Number(h);const mer=n>=12?'PM':'AM';n=n%12||12;return `${n}:${m} ${mer}`}
+// ─── SLUG UTILS ───────────────────────────────────────────────────────────────
 
-export default function SetupPage(){
- const router=useRouter();
- const [step,setStep]=useState(1);
- const [loading,setLoading]=useState(true);
- const [saving,setSaving]=useState(false);
- const [error,setError]=useState('');
- const [businessId,setBusinessId]=useState<string|null>(null);
- const [name,setName]=useState('');
- const [tagline,setTagline]=useState('');
- const [handle,setHandle]=useState('');
- const [initialHandle,setInitialHandle]=useState('');
- const [handleTouched,setHandleTouched]=useState(false);
- const [handleState,setHandleState]=useState<HandleState>('idle');
- const [handleReason,setHandleReason]=useState('');
- const [rows,setRows]=useState<Row[]>(DEFAULT_ROWS);
- const [avatarUrl,setAvatarUrl]=useState('');
- const [headerUrl,setHeaderUrl]=useState('');
- const [uploading,setUploading]=useState<'avatar'|'header'|null>(null);
- const [igHandle,setIgHandle]=useState<string|null>(null);
- const [isFromMeta,setIsFromMeta]=useState(false);
+function toSlug(str: string) {
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 48);
+}
 
- useEffect(()=>{const q=new URLSearchParams(window.location.search);const s=Number(q.get('step'));if(s>=1&&s<=4)setStep(s);if(q.get('connect')==='ok'){setStep(4);setIgHandle(q.get('handle'))}if(q.get('connect')==='error'||q.get('connect')==='no_instagram'){setStep(4);setError(q.get('reason')||'Meta could not be connected.')}},[]);
+// ─── CATEGORY CONFIG ──────────────────────────────────────────────────────────
 
- const load=useCallback(async()=>{const{data:u}=await supabase.auth.getUser();if(!u.user){router.replace('/login');return}const fromMeta=u.user.app_metadata?.provider==='facebook'||u.user.app_metadata?.providers?.includes?.('facebook');if(fromMeta)setIsFromMeta(true);const fields='id, name, tagline, slug, avatar_url, header_url, instagram_handle';const{data:existing,error:readError}=await supabase.from('businesses').select(fields).eq('user_id',u.user.id).maybeSingle();let business=existing;if(!business&&!readError){const metaName=u.user.user_metadata?.full_name||u.user.user_metadata?.name||'';const fallback=String(u.user.user_metadata?.business_name||metaName||'My business');const{data:created,error:createError}=await supabase.from('businesses').insert({user_id:u.user.id,name:fallback}).select(fields).single();if(createError){setError(createError.message);setLoading(false);return}business=created}if(readError){setError(readError.message);setLoading(false);return}if(business){setBusinessId(business.id);setName(business.name==='My business'?(u.user.user_metadata?.full_name||u.user.user_metadata?.name||''):business.name);setTagline(business.tagline??'');setAvatarUrl(business.avatar_url??'');setHeaderUrl(business.header_url??'');setIgHandle(business.instagram_handle??null);if(business.slug){setHandle(business.slug);setInitialHandle(business.slug);setHandleTouched(true);setHandleState('free')}const{data:hrs}=await supabase.from('business_hours').select('day_of_week, opens_at, closes_at, is_closed').eq('business_id',business.id);if(hrs?.length){const next=DEFAULT_ROWS.map(r=>({...r}));hrs.forEach(r=>next[r.day_of_week]={open:(r.opens_at??'09:00').slice(0,5),close:(r.closes_at??'17:00').slice(0,5),closed:r.is_closed});setRows(next)}}setLoading(false)},[router]);
+type Category = {
+  id: string;
+  label: string;
+  icon: string;
+  tags: string[];
+  blockIds: string[];
+};
 
- useEffect(()=>{void load()},[load]);
+const CATEGORIES: Category[] = [
+  {
+    id: 'restaurant',
+    label: 'Restaurant',
+    icon: '🍽️',
+    tags: ['Dine-in', 'Takeout', 'Delivery', 'Reservations', 'Happy hour', 'Brunch', 'Outdoor seating', 'Pet-friendly'],
+    blockIds: ['order', 'menu', 'book', 'reviews', 'gallery', 'website'],
+  },
+  {
+    id: 'cafe',
+    label: 'Café / Coffee',
+    icon: '☕',
+    tags: ['Coffee', 'Tea', 'Pastries', 'WiFi', 'Outdoor seating', 'Study-friendly', 'Vegan options', 'Breakfast'],
+    blockIds: ['menu', 'order', 'reviews', 'gallery', 'website'],
+  },
+  {
+    id: 'bar',
+    label: 'Bar / Nightlife',
+    icon: '🍸',
+    tags: ['Cocktails', 'Sports', 'Live music', 'Happy hour', 'Rooftop', 'Game night', 'DJ'],
+    blockIds: ['menu', 'reviews', 'gallery', 'website'],
+  },
+  {
+    id: 'retail',
+    label: 'Retail / Shop',
+    icon: '🛍️',
+    tags: ['In-store pickup', 'Local brand', 'Gift wrapping', 'Custom orders', 'Online store'],
+    blockIds: ['website', 'gallery', 'reviews', 'location'],
+  },
+  {
+    id: 'salon',
+    label: 'Salon / Barbershop',
+    icon: '✂️',
+    tags: ['Walk-ins welcome', 'By appointment', 'Color', 'Extensions', "Men's cuts", 'Braids'],
+    blockIds: ['book', 'reviews', 'gallery', 'website', 'call'],
+  },
+  {
+    id: 'spa',
+    label: 'Spa / Wellness',
+    icon: '🧖',
+    tags: ['Massage', 'Facials', 'Couples', 'By appointment', 'Memberships', 'Gift cards'],
+    blockIds: ['book', 'reviews', 'website', 'call'],
+  },
+  {
+    id: 'fitness',
+    label: 'Gym / Fitness',
+    icon: '💪',
+    tags: ['Classes', 'Personal training', '24/7 access', 'Drop-ins welcome', 'Memberships'],
+    blockIds: ['book', 'website', 'reviews', 'call'],
+  },
+  {
+    id: 'medical',
+    label: 'Medical / Health',
+    icon: '🏥',
+    tags: ['Insurance accepted', 'Walk-ins', 'Telehealth', 'New patients welcome'],
+    blockIds: ['book', 'website', 'call', 'location'],
+  },
+  {
+    id: 'service',
+    label: 'Home Services',
+    icon: '🔧',
+    tags: ['Free estimates', 'Licensed & insured', 'Same-day service', 'Emergency service'],
+    blockIds: ['book', 'website', 'call', 'email'],
+  },
+  {
+    id: 'beauty',
+    label: 'Beauty / Aesthetics',
+    icon: '💅',
+    tags: ['Nails', 'Lashes', 'Brows', 'By appointment', 'Walk-ins', 'Gift cards'],
+    blockIds: ['book', 'gallery', 'reviews', 'website', 'call'],
+  },
+  {
+    id: 'events',
+    label: 'Events / Venue',
+    icon: '🎉',
+    tags: ['Private events', 'Weddings', 'Corporate', 'Catering', 'Outdoor'],
+    blockIds: ['book', 'gallery', 'website', 'call', 'email'],
+  },
+  {
+    id: 'other',
+    label: 'Other',
+    icon: '📌',
+    tags: [],
+    blockIds: ['website', 'call', 'email', 'location'],
+  },
+];
 
- // Handle validation
- useEffect(()=>{const timer=setTimeout(async()=>{const normalized=normaliseHandle(handle);if(normalized.length<3){setHandleState('idle');return}if(normalized===initialHandle){setHandleState('free');return}setHandleState('checking');try{const res=await fetch(`/api/handle?handle=${encodeURIComponent(normalized)}`);const body=await res.json();if(normaliseHandle(handle)!==body.handle)return;setHandleState(body.available?'free':'taken');setHandleReason(body.reason??'')}catch{setHandleState('idle')}},350);return()=>clearTimeout(timer)},[handle,initialHandle]);
+const ALL_BLOCKS: Record<string, { title: string; sub: string; size: 'half' | 'full' | 'third' }> = {
+  order:    { title: 'Online ordering',  sub: 'Order for pickup or delivery', size: 'half' },
+  book:     { title: 'Book an appointment', sub: 'Schedule online',          size: 'half' },
+  menu:     { title: 'Menu',             sub: 'View our menu',               size: 'third' },
+  website:  { title: 'Website',          sub: 'Visit our site',              size: 'full' },
+  gallery:  { title: 'Gallery',          sub: 'See our photos',              size: 'third' },
+  reviews:  { title: 'Reviews',          sub: 'Read what customers say',     size: 'third' },
+  call:     { title: 'Call us',          sub: 'Tap to call',                 size: 'half' },
+  email:    { title: 'Email us',         sub: 'Send us a message',           size: 'half' },
+  location: { title: 'Find us',          sub: 'Get directions',              size: 'full' },
+};
 
+function buildBlocks(blockIds: string[]): OpenStatusBlock[] {
+  return blockIds
+    .filter(id => ALL_BLOCKS[id])
+    .map(id => ({
+      id,
+      title: ALL_BLOCKS[id].title,
+      sub: ALL_BLOCKS[id].sub,
+      icon: '',
+      on: true,
+      tone: 'glass',
+      url: '',
+      size: ALL_BLOCKS[id].size,
+    }));
+}
 
- const saveBasics=async()=>{if(!businessId)return;setSaving(true);setError('');const chosen=normaliseHandle(handle);const{error:e}=await supabase.from('businesses').update({name:name.trim(),tagline:tagline.trim()||null,slug:chosen}).eq('id',businessId);setSaving(false);if(e){setError(e.message.includes('duplicate')?'That address was just taken. Try another.':e.message);return}setInitialHandle(chosen);setStep(2)};
- const saveHours=async()=>{if(!businessId)return;setSaving(true);const payload=rows.map((r,i)=>({business_id:businessId,day_of_week:i,opens_at:r.closed?null:r.open,closes_at:r.closed?null:r.close,is_closed:r.closed}));const{error:e}=await supabase.from('business_hours').upsert(payload,{onConflict:'business_id,day_of_week'});setSaving(false);if(e){setError(e.message);return}setStep(3)};
- const uploadImage=async(file:File,kind:'avatar'|'header')=>{setUploading(kind);setError('');try{const{data:s}=await supabase.auth.getSession();const token=s.session?.access_token;if(!token)throw new Error('Session expired. Sign in again.');const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};const prep=await fetch('/api/assets',{method:'POST',headers,body:JSON.stringify({action:'prepare',kind,contentType:file.type,size:file.size})});const p=await prep.json();if(!prep.ok)throw new Error(p.error??'Could not prepare upload');const{error:ue}=await supabase.storage.from(p.bucket).uploadToSignedUrl(p.path,p.token,file,{contentType:file.type,cacheControl:'3600'});if(ue)throw ue;const complete=await fetch('/api/assets',{method:'POST',headers,body:JSON.stringify({action:'complete',kind,path:p.path})});const c=await complete.json();if(!complete.ok)throw new Error(c.error??'Could not save image');if(kind==='avatar')setAvatarUrl(c.reference);else setHeaderUrl(c.reference)}catch(x){setError(x instanceof Error?x.message:'Upload failed')}finally{setUploading(null)}};
- const saveAppearance=async()=>{if(!businessId)return;setSaving(true);const{error:e}=await supabase.from('businesses').update({avatar_url:avatarUrl.trim()||null,header_url:headerUrl.trim()||null}).eq('id',businessId);setSaving(false);if(e){setError(e.message);return}setStep(4)};
- const connectMeta=async()=>{setSaving(true);setError('');try{const{data:s}=await supabase.auth.getSession();const token=s.session?.access_token;if(!token)throw new Error('Session expired. Sign in again.');const res=await fetch('/api/auth/meta/start',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({returnTo:'setup'})});const body=await res.json();if(!res.ok)throw new Error(body.error??'Could not connect Meta');window.location.href=body.url}catch(x){setError(x instanceof Error?x.message:'Something went wrong');setSaving(false)}};
+// ─── STEP INDICATOR ──────────────────────────────────────────────────────────
 
- const clean=normaliseHandle(handle);const canContinue=Boolean(businessId&&name.trim()&&handleState==='free');
- const avatar=avatarUrl.startsWith('storage:')&&businessId?`/api/assets?businessId=${businessId}&kind=avatar`:avatarUrl;
- const header=headerUrl.startsWith('storage:')&&businessId?`/api/assets?businessId=${businessId}&kind=header`:headerUrl;
- const stepNames=['Business','Hours','Design','Connect'];
- const stepPct=Math.round((step/4)*100);
- const input='w-full rounded-[18px] border border-black/10 bg-white/85 px-4 py-3.5 text-sm outline-none focus:ring-4 focus:ring-[#232323]/10';
-
- if(loading)return <main className="grid min-h-screen place-items-center bg-white"><p className="text-xs font-semibold">Preparing your OpenStatus...</p></main>;
-
- return <main className="relative min-h-screen overflow-hidden bg-white text-[#232323]" style={{fontFamily:'var(--font-poppins)'}}>
-  <div className="pointer-events-none absolute -left-40 top-20 h-[420px] w-[420px] rounded-full bg-[#B4C1EF]/30 blur-[110px]"/>
-  <div className="pointer-events-none absolute -right-32 top-0 h-[380px] w-[380px] rounded-full bg-[#FFF2C1] blur-[100px]"/>
-  <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-    <Link href="/" className="flex items-center gap-2.5 font-bold"><Mark/>OpenStatus</Link>
-    <Link href="/dashboard" className="rounded-full border border-black/10 bg-white/60 px-4 py-2 text-xs font-semibold backdrop-blur-xl">Save & exit</Link>
-  </header>
-  <div className="relative z-10 mx-auto grid max-w-6xl gap-10 px-5 pb-12 pt-4 lg:grid-cols-[1fr_390px]">
-  <section className="rounded-[34px] border border-white/70 bg-white/58 p-5 shadow-[0_25px_80px_rgba(0,0,0,.08)] backdrop-blur-2xl sm:p-8">
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1.5">{stepNames.map((s,i)=><button key={s} onClick={()=>i+1<step&&setStep(i+1)} className={`rounded-full px-3 py-1.5 text-[10px] font-bold transition-all ${i+1===step?'bg-black text-white':i+1<step?'bg-black/80 text-white/70 cursor-pointer':'bg-white/60 text-black/30 cursor-default'}`}>{s}</button>)}</div>
-        <span className="text-[10px] font-bold text-black/35">{stepPct}%</span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/8">
-        <div className="h-full rounded-full bg-[#232323] transition-all duration-500" style={{width:`${stepPct}%`}}/>
-      </div>
+function StepBar({ step, total }: { step: number; total: number }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 40 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} style={{
+          height: 3,
+          flex: 1,
+          borderRadius: 99,
+          background: i < step ? '#0A0A0A' : '#DEDEDC',
+          transition: 'background 0.3s ease',
+        }}/>
+      ))}
     </div>
+  );
+}
 
-    {/* STEP 1: Business + Google import */}
-    {step===1&&<div className="mt-10">
-      <p className="text-[10px] font-bold uppercase tracking-[.16em] text-black/35">Step 1 · Business</p>
-      <h1 className="mt-3 text-5xl font-semibold tracking-[-.06em]">Claim your live link.</h1>
-      <p className="mt-3 text-sm leading-6 text-black/50">This is your business&apos;s mobile front door. Keep your real website — OpenStatus gives social visitors the fastest answer.</p>
+// ─── TYPES ───────────────────────────────────────────────────────────────────
 
-      <div className="mt-6 space-y-4">
-        <label className="block text-xs font-semibold">
-          <span className="flex items-center justify-between">Business name{isFromMeta&&name?<span className="text-[9px] font-bold text-[#1877F2]">Imported from Meta ✓</span>:null}</span>
-          <input value={name} onChange={e=>{setName(e.target.value);if(!handleTouched)setHandle(suggestHandle(e.target.value))}} placeholder="Breakfast Haus" className={`${input} mt-2`}/>
-        </label>
-        <label className="block text-xs font-semibold">Description or location<input value={tagline} onChange={e=>setTagline(e.target.value)} placeholder="Breakfast all day · Franklin, TN" className={`${input} mt-2`}/></label>
-        <label className="block text-xs font-semibold">Your OpenStatus link
-          <div className="mt-2 flex items-center rounded-[18px] border border-black/10 bg-white/85 px-4">
-            <span className="text-sm text-black/35">openstatus.co/</span>
-            <input value={handle} onChange={e=>{setHandleTouched(true);setHandle(e.target.value)}} className="min-w-0 flex-1 bg-transparent py-3.5 text-sm outline-none"/>
-            <span className={`text-[9px] font-bold uppercase ${handleState==='free'?'text-green-700':handleState==='taken'?'text-red-600':'text-black/30'}`}>{handleState==='checking'?'Checking':handleState==='free'?'Available':handleState==='taken'?handleReason||'Taken':''}</span>
-          </div>
-        </label>
-      </div>
-      <button onClick={saveBasics} disabled={saving||!canContinue} className="mt-7 flex w-full justify-between rounded-full bg-black px-6 py-4 text-sm font-bold text-white disabled:opacity-30">Continue to hours <span>→</span></button>
-    </div>}
+type PlaceSuggestion = { id: string; name: string; address: string };
 
-    {/* STEP 2: Hours */}
-    {step===2&&<div className="mt-10">
-      <p className="text-[10px] font-bold uppercase tracking-[.16em] text-black/35">Step 2 · Hours</p>
-      <h1 className="mt-3 text-5xl font-semibold tracking-[-.06em]">Set the normal week.</h1>
-      <p className="mt-3 text-sm text-black/50">These power your live open/closed status. You can override them anytime for holidays or specials.</p>
-      <div className="mt-7 space-y-2">{DAYS.map((d,i)=><div key={d} className="flex items-center gap-3 rounded-[18px] bg-white/80 p-3"><span className="w-10 text-[10px] font-bold">{d.slice(0,3)}</span>{rows[i].closed?<span className="flex-1 text-xs text-black/35">Closed</span>:<><input type="time" value={rows[i].open} onChange={e=>{const n=[...rows];n[i]={...n[i],open:e.target.value};setRows(n)}} className="min-w-0 flex-1 rounded-xl border border-black/10 p-2 text-xs"/><span>–</span><input type="time" value={rows[i].close} onChange={e=>{const n=[...rows];n[i]={...n[i],close:e.target.value};setRows(n)}} className="min-w-0 flex-1 rounded-xl border border-black/10 p-2 text-xs"/></>}<button onClick={()=>{const n=[...rows];n[i]={...n[i],closed:!n[i].closed};setRows(n)}} className="rounded-full border border-black/10 px-3 py-2 text-[9px] font-bold">{rows[i].closed?'Open':'Close'}</button></div>)}</div>
-      <button onClick={saveHours} disabled={saving} className="mt-7 flex w-full justify-between rounded-full bg-black px-6 py-4 text-sm font-bold text-white">Save hours <span>→</span></button>
-    </div>}
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
-    {/* STEP 3: Design */}
-    {step===3&&<div className="mt-10">
-      <p className="text-[10px] font-bold uppercase tracking-[.16em] text-black/35">Step 3 · Design</p>
-      <h1 className="mt-3 text-5xl font-semibold tracking-[-.06em]">Make it feel like you.</h1>
-      <p className="mt-3 text-sm text-black/50">Start with your logo and a strong cover photo. You&apos;ll customize blocks, colors and layout in the builder next.</p>
-      <div className="mt-7 grid gap-3 sm:grid-cols-2">{(['avatar','header'] as const).map(kind=><label key={kind} className="cursor-pointer rounded-[24px] border border-black/10 bg-white/80 p-4"><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={e=>{const f=e.target.files?.[0];if(f)void uploadImage(f,kind);e.target.value=''}}/><span className="text-xs font-bold">{kind==='avatar'?'Logo / profile':'Cover photo'}</span><div className={`mt-4 overflow-hidden bg-[#EEE9DF] ${kind==='avatar'?'h-20 w-20 rounded-full':'h-24 w-full rounded-[18px]'}`}>{(kind==='avatar'?avatar:header)?<img src={kind==='avatar'?avatar:header} className="h-full w-full object-cover" alt=""/>:<div className="grid h-full place-items-center text-[10px] text-black/35">Choose image</div>}</div><span className="mt-3 block text-[10px] text-black/40">{uploading===kind?'Uploading...':'JPG, PNG or WebP'}</span></label>)}</div>
-      <button onClick={saveAppearance} disabled={saving||Boolean(uploading)} className="mt-7 flex w-full justify-between rounded-full bg-black px-6 py-4 text-sm font-bold text-white">Continue <span>→</span></button>
-    </div>}
+export default function SetupPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-    {/* STEP 4: Connect */}
-    {step===4&&<div className="mt-10">
-      <p className="text-[10px] font-bold uppercase tracking-[.16em] text-black/35">Step 4 · Connect</p>
-      <h1 className="mt-3 text-5xl font-semibold tracking-[-.06em]">Connect what you use.</h1>
-      <p className="mt-3 max-w-xl text-sm leading-6 text-black/50">Meta lets us pull in your Instagram presence. Other socials can be added as simple links in your builder.</p>
-      <div className="mt-7 rounded-[24px] bg-white/80 p-5"><div className="flex items-center justify-between gap-4"><div><strong className="text-sm">Meta</strong><p className="mt-1 text-xs text-black/40">Connect your eligible Instagram/Facebook business presence.</p></div>{igHandle?<span className="rounded-full bg-[#FFF2C1] px-3 py-2 text-[9px] font-bold">@{igHandle} CONNECTED</span>:<button onClick={connectMeta} disabled={saving} className="rounded-full bg-black px-4 py-2.5 text-xs font-bold text-white">{saving?'Opening Meta...':'Connect Meta'}</button>}</div></div>
-      <div className="mt-3 rounded-[24px] bg-[#B4C1EF]/30 p-5"><strong className="text-sm">Other socials</strong><p className="mt-1 text-xs leading-5 text-black/50">Add the links you want displayed as icons. You can toggle and reorder them in the builder.</p></div>
-      <button onClick={()=>router.push('/builder')} className="mt-7 flex w-full justify-between rounded-full bg-black px-6 py-4 text-sm font-bold text-white">Open my page builder <span>→</span></button>
-    </div>}
+  // Step state
+  const [step, setStep] = useState(1);
+  const TOTAL_STEPS = 4;
 
-    {error&&<p className="mt-5 rounded-[18px] bg-[#F8AE9D]/60 p-4 text-sm">{error}</p>}
-  </section>
+  // Step 1: Business name + slug
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [slugState, setSlugState] = useState<'idle' | 'checking' | 'free' | 'taken'>('idle');
+  const [initialSlug, setInitialSlug] = useState('');
 
-  <aside className="hidden lg:block">
-    <div className="sticky top-6 rounded-[34px] bg-[#111] p-3 shadow-2xl">
-      <div className="overflow-hidden rounded-[28px] bg-[#F6F2E9]">
-        <div className="relative h-64 bg-gradient-to-br from-[#C89C6B] to-[#33402F]">
-          {header&&<img src={header} className="absolute inset-0 h-full w-full object-cover" alt=""/>}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/70"/>
-          <div className="absolute bottom-5 left-5 text-white">
-            {avatar?<img src={avatar} className="mb-3 h-12 w-12 rounded-full border border-white/50 object-cover" alt=""/>:<div className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-white text-black"><Mark/></div>}
-            <h2 className="text-3xl font-bold tracking-[-.05em]">{name||'Your business'}</h2>
-            <p className="mt-1 text-xs text-white/65">{tagline||'Your description or location'}</p>
-          </div>
+  // Step 2: Category
+  const [categoryId, setCategoryId] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+
+  // Step 3: Tags
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Step 4: Location
+  const [locationQuery, setLocationQuery] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceSuggestion | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const locationDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Load existing business on mount ──
+  const load = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.replace('/'); return; }
+    setUserId(user.id);
+
+    const { data: existing } = await supabase
+      .from('businesses')
+      .select('id, name, slug')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (existing) {
+      setBusinessId(existing.id);
+      setName(existing.name ?? '');
+      setSlug(existing.slug ?? '');
+      setInitialSlug(existing.slug ?? '');
+      if (existing.slug) setSlugState('free');
+    } else {
+      // Create a placeholder business row immediately
+      const { data: created } = await supabase
+        .from('businesses')
+        .insert({ user_id: user.id, name: 'My Business' })
+        .select('id')
+        .single();
+      if (created) setBusinessId(created.id);
+    }
+    setLoading(false);
+  }, [router]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  // ── Slug auto-generation from name ──
+  useEffect(() => {
+    if (!slugEdited && name) {
+      setSlug(toSlug(name));
+    }
+  }, [name, slugEdited]);
+
+  // ── Slug availability check ──
+  useEffect(() => {
+    const normalized = toSlug(slug);
+    if (normalized.length < 3) { setSlugState('idle'); return; }
+    if (normalized === initialSlug) { setSlugState('free'); return; }
+    setSlugState('checking');
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/handle?handle=${encodeURIComponent(normalized)}`);
+        const body = await res.json() as { available: boolean; reason?: string };
+        setSlugState(body.available ? 'free' : 'taken');
+      } catch {
+        setSlugState('idle');
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [slug, initialSlug]);
+
+  // ── Location autocomplete ──
+  const onLocationInput = (val: string) => {
+    setLocationQuery(val);
+    setSelectedPlace(null);
+    if (locationDebounce.current) clearTimeout(locationDebounce.current);
+    if (!val.trim() || val.length < 3) { setLocationSuggestions([]); return; }
+    locationDebounce.current = setTimeout(async () => {
+      setLocationLoading(true);
+      try {
+        const res = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(val)}`);
+        const data = await res.json() as { places?: PlaceSuggestion[] };
+        setLocationSuggestions(data.places ?? []);
+      } catch {
+        setLocationSuggestions([]);
+      } finally {
+        setLocationLoading(false);
+      }
+    }, 400);
+  };
+
+  const selectPlace = (place: PlaceSuggestion) => {
+    setSelectedPlace(place);
+    setLocationQuery(place.address);
+    setLocationSuggestions([]);
+  };
+
+  // ── Step 1 save ──
+  const saveStep1 = async () => {
+    if (!businessId || slugState !== 'free' || !name.trim()) return;
+    setSaving(true);
+    const { error: e } = await supabase
+      .from('businesses')
+      .update({ name: name.trim(), slug: toSlug(slug) })
+      .eq('id', businessId);
+    setSaving(false);
+    if (e) { setError(e.message); return; }
+    setInitialSlug(toSlug(slug));
+    setError('');
+    setStep(2);
+  };
+
+  // ── Step 2: select category ──
+  const saveStep2 = () => {
+    if (!categoryId) return;
+    setSelectedTags([]);
+    setStep(3);
+  };
+
+  // ── Step 3: select tags ──
+  const saveStep3 = () => {
+    setStep(4);
+  };
+
+  // ── Step 4: save everything and go to builder ──
+  const finish = async () => {
+    if (!businessId) return;
+    setSaving(true);
+    setError('');
+
+    const category = CATEGORIES.find(c => c.id === categoryId);
+    const blocks = buildBlocks(category?.blockIds ?? ['website', 'call', 'email']);
+
+    const pageConfig: OpenStatusPageConfig = {
+      blocks,
+      bg: '#F7F7F5',
+      socials: [] as OpenStatusSocial[],
+      location: selectedPlace?.address ?? locationQuery.trim(),
+      tags: selectedTags,
+    };
+
+    // Save page config to user metadata (where the builder reads/writes it)
+    const { error: metaErr } = await supabase.auth.updateUser({
+      data: { openstatus_page: pageConfig },
+    });
+    if (metaErr) { setError(metaErr.message); setSaving(false); return; }
+
+    // Save place_id to businesses table if we have one
+    if (selectedPlace?.id) {
+      await supabase
+        .from('businesses')
+        .update({ place_id: selectedPlace.id })
+        .eq('id', businessId);
+    }
+
+    setSaving(false);
+    router.push('/builder?new=1');
+  };
+
+  // ── Computed ──
+  const selectedCategory = CATEGORIES.find(c => c.id === categoryId);
+  const filteredCategories = categorySearch
+    ? CATEGORIES.filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()))
+    : CATEGORIES;
+  const canGoStep1 = name.trim().length > 0 && slugState === 'free';
+  const slugColor = slugState === 'free' ? '#22C55E' : slugState === 'taken' ? '#EF4444' : '#858585';
+
+  // ── STYLES ────────────────────────────────────────────────────────────────
+  const base: React.CSSProperties = {
+    fontFamily: "'Inter', system-ui, sans-serif",
+    background: '#F7F7F5',
+    minHeight: '100dvh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '40px 20px 60px',
+  };
+
+  const card: React.CSSProperties = {
+    width: '100%',
+    maxWidth: 480,
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    border: '1.5px solid #DEDEDC',
+    borderRadius: 16,
+    padding: '14px 16px',
+    fontSize: 15,
+    color: '#0A0A0A',
+    background: '#fff',
+    outline: 'none',
+    boxSizing: 'border-box',
+    fontFamily: "'Inter', system-ui, sans-serif",
+  };
+
+  const primaryBtn: React.CSSProperties = {
+    width: '100%',
+    background: '#0A0A0A',
+    color: '#F7F7F5',
+    border: 'none',
+    borderRadius: 99,
+    padding: '15px 24px',
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    transition: 'opacity 0.15s',
+    fontFamily: "'Inter', system-ui, sans-serif",
+  };
+
+  if (loading) {
+    return (
+      <main style={{ ...base, justifyContent: 'center', gap: 12 }}>
+        <svg viewBox="0 0 100 100" width="28" height="28">
+          <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
+          <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
+          <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
+          <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
+        </svg>
+        <p style={{ fontSize: 13, color: '#858585', fontFamily: "'Inter', system-ui, sans-serif" }}>
+          Setting up your account…
+        </p>
+      </main>
+    );
+  }
+
+  return (
+    <main style={base}>
+      <div style={card}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32 }}>
+          <svg viewBox="0 0 100 100" width="24" height="24" aria-hidden="true">
+            <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
+            <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
+            <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
+            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
+          </svg>
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', letterSpacing: '-0.02em' }}>OpenStatus</span>
         </div>
-        <div className="p-4">
-          <div className="rounded-[22px] bg-white p-4 shadow-sm">
-            <span className="text-[9px] font-bold text-green-700">● LIVE STATUS</span>
-            <strong className="mt-2 block text-2xl">{rows[new Date().getDay()]?.closed?'Closed today':'Open today'}</strong>
-            {!rows[new Date().getDay()]?.closed&&<span className="text-xs text-black/45">{pretty(rows[new Date().getDay()].open)} – {pretty(rows[new Date().getDay()].close)}</span>}
+
+        {/* Progress */}
+        <StepBar step={step} total={TOTAL_STEPS} />
+
+        {/* ── STEP 1: Business Name ─────────────────────────────────────── */}
+        {step === 1 && (
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Step 1 of {TOTAL_STEPS}
+            </p>
+            <h1 style={{
+              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontSize: 38,
+              fontWeight: 800,
+              color: '#0A0A0A',
+              letterSpacing: '-0.04em',
+              lineHeight: 1.1,
+              marginBottom: 8,
+            }}>
+              What&apos;s your<br />business called?
+            </h1>
+            <p style={{ fontSize: 14, color: '#858585', marginBottom: 32, lineHeight: 1.5 }}>
+              This is your public name. You can change it later.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Business name */}
+              <input
+                autoFocus
+                type="text"
+                placeholder="Sunrise Coffee Co."
+                value={name}
+                onChange={e => setName(e.target.value)}
+                style={{ ...inputStyle, fontSize: 18, fontWeight: 600 }}
+                onKeyDown={e => e.key === 'Enter' && canGoStep1 && void saveStep1()}
+              />
+
+              {/* URL preview */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                border: '1.5px solid #DEDEDC',
+                borderRadius: 16,
+                background: '#fff',
+                overflow: 'hidden',
+              }}>
+                <span style={{ padding: '14px 4px 14px 16px', fontSize: 14, color: '#858585', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  openstatus.co/
+                </span>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={e => { setSlugEdited(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 48)); }}
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: '#0A0A0A',
+                    padding: '14px 8px',
+                    background: 'transparent',
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    minWidth: 0,
+                  }}
+                />
+                <span style={{ padding: '0 14px', fontSize: 10, fontWeight: 700, color: slugColor, flexShrink: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  {slugState === 'checking' ? '...' : slugState === 'free' ? '✓' : slugState === 'taken' ? 'taken' : ''}
+                </span>
+              </div>
+            </div>
+
+            {error && <p style={{ marginTop: 12, fontSize: 13, color: '#EF4444' }}>{error}</p>}
+
+            <button
+              onClick={() => void saveStep1()}
+              disabled={saving || !canGoStep1}
+              style={{ ...primaryBtn, marginTop: 32, opacity: (!canGoStep1 || saving) ? 0.35 : 1 }}
+            >
+              <span>Continue</span>
+              <span>→</span>
+            </button>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <div className="rounded-[20px] bg-black p-4 text-white"><span className="text-xs font-bold">Order ↗</span></div>
-            <div className="rounded-[20px] bg-white p-4"><span className="text-xs font-bold">Menu ☰</span></div>
+        )}
+
+        {/* ── STEP 2: Category ──────────────────────────────────────────── */}
+        {step === 2 && (
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Step 2 of {TOTAL_STEPS}
+            </p>
+            <h1 style={{
+              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontSize: 38,
+              fontWeight: 800,
+              color: '#0A0A0A',
+              letterSpacing: '-0.04em',
+              lineHeight: 1.1,
+              marginBottom: 8,
+            }}>
+              What type of<br />business is it?
+            </h1>
+            <p style={{ fontSize: 14, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
+              This helps us set up the right links for you.
+            </p>
+
+            {/* Search */}
+            <input
+              type="text"
+              placeholder="Search…"
+              value={categorySearch}
+              onChange={e => setCategorySearch(e.target.value)}
+              style={{ ...inputStyle, marginBottom: 16 }}
+            />
+
+            {/* Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 32 }}>
+              {filteredCategories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setCategoryId(cat.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '12px 14px',
+                    borderRadius: 16,
+                    border: `1.5px solid ${categoryId === cat.id ? '#0A0A0A' : '#DEDEDC'}`,
+                    background: categoryId === cat.id ? '#0A0A0A' : '#fff',
+                    color: categoryId === cat.id ? '#F7F7F5' : '#0A0A0A',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textAlign: 'left',
+                    transition: 'all 0.12s ease',
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                  }}
+                >
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={saveStep2}
+              disabled={!categoryId}
+              style={{ ...primaryBtn, opacity: !categoryId ? 0.35 : 1 }}
+            >
+              <span>Continue</span>
+              <span>→</span>
+            </button>
           </div>
-        </div>
+        )}
+
+        {/* ── STEP 3: Tags ──────────────────────────────────────────────── */}
+        {step === 3 && (
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Step 3 of {TOTAL_STEPS}
+            </p>
+            <h1 style={{
+              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontSize: 38,
+              fontWeight: 800,
+              color: '#0A0A0A',
+              letterSpacing: '-0.04em',
+              lineHeight: 1.1,
+              marginBottom: 8,
+            }}>
+              Describe what<br />you offer
+            </h1>
+            <p style={{ fontSize: 14, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
+              Optional — customers see these as quick-scan tags.
+            </p>
+
+            {selectedCategory && selectedCategory.tags.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
+                {selectedCategory.tags.map(tag => {
+                  const active = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => setSelectedTags(prev =>
+                        active ? prev.filter(t => t !== tag) : [...prev, tag]
+                      )}
+                      style={{
+                        padding: '9px 16px',
+                        borderRadius: 99,
+                        border: `1.5px solid ${active ? '#0A0A0A' : '#DEDEDC'}`,
+                        background: active ? '#0A0A0A' : '#fff',
+                        color: active ? '#F7F7F5' : '#292929',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.12s ease',
+                        fontFamily: "'Inter', system-ui, sans-serif",
+                      }}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p style={{ fontSize: 14, color: '#858585', marginBottom: 32, padding: '20px 0' }}>
+                No tags needed for this category — just continue.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={saveStep3} style={primaryBtn}>
+                <span>{selectedTags.length > 0 ? 'Continue' : 'Skip for now'}</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 4: Location ──────────────────────────────────────────── */}
+        {step === 4 && (
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Step 4 of {TOTAL_STEPS}
+            </p>
+            <h1 style={{
+              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontSize: 38,
+              fontWeight: 800,
+              color: '#0A0A0A',
+              letterSpacing: '-0.04em',
+              lineHeight: 1.1,
+              marginBottom: 8,
+            }}>
+              Where are<br />you located?
+            </h1>
+            <p style={{ fontSize: 14, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
+              Optional — helps customers find you and powers your map block.
+            </p>
+
+            <div style={{ position: 'relative', marginBottom: 32 }}>
+              <input
+                autoFocus
+                type="text"
+                placeholder="123 Main St, Nashville, TN"
+                value={locationQuery}
+                onChange={e => onLocationInput(e.target.value)}
+                style={inputStyle}
+              />
+
+              {/* Suggestions dropdown */}
+              {locationSuggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: '#fff',
+                  border: '1.5px solid #DEDEDC',
+                  borderRadius: 16,
+                  marginTop: 6,
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                  zIndex: 10,
+                }}>
+                  {locationSuggestions.map(place => (
+                    <button
+                      key={place.id}
+                      onClick={() => selectPlace(place)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        borderBottom: '1px solid #EEEEEC',
+                        fontFamily: "'Inter', system-ui, sans-serif",
+                      }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#0A0A0A' }}>{place.name}</span>
+                      <span style={{ fontSize: 12, color: '#858585' }}>{place.address}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {locationLoading && (
+                <p style={{ fontSize: 12, color: '#858585', marginTop: 8 }}>Searching…</p>
+              )}
+
+              {selectedPlace && (
+                <div style={{
+                  marginTop: 10,
+                  padding: '10px 14px',
+                  background: '#EEEEEC',
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}>
+                  <span style={{ fontSize: 14 }}>📍</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#0A0A0A' }}>{selectedPlace.name}</div>
+                    <div style={{ fontSize: 12, color: '#858585' }}>{selectedPlace.address}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {error && <p style={{ marginBottom: 16, fontSize: 13, color: '#EF4444' }}>{error}</p>}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                onClick={() => void finish()}
+                disabled={saving}
+                style={{ ...primaryBtn, opacity: saving ? 0.5 : 1 }}
+              >
+                <span>{saving ? 'Setting up your page…' : 'Open my builder'}</span>
+                {!saving && <span>→</span>}
+              </button>
+              <button
+                onClick={() => void finish()}
+                disabled={saving}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 13,
+                  color: '#858585',
+                  cursor: 'pointer',
+                  padding: '8px 0',
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                }}
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Back button */}
+        {step > 1 && (
+          <button
+            onClick={() => setStep(s => s - 1)}
+            style={{
+              marginTop: 24,
+              background: 'none',
+              border: 'none',
+              fontSize: 13,
+              color: '#858585',
+              cursor: 'pointer',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              alignSelf: 'center',
+            }}
+          >
+            ← Back
+          </button>
+        )}
       </div>
-    </div>
-    <p className="mt-3 text-center text-[10px] text-black/35">openstatus.co/{clean||'yourbusiness'}</p>
-  </aside>
-  </div>
- </main>;
+    </main>
+  );
 }

@@ -11,6 +11,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // Legacy setup routes → new onboarding
+      { source: '/setup/new', destination: '/setup', permanent: false },
+      // Dashboard → builder
+      { source: '/dashboard', destination: '/builder', permanent: true },
+      // Pricing page → homepage pricing section
+      { source: '/pricing', destination: '/#pricing', permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

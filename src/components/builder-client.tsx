@@ -1540,8 +1540,8 @@ type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 // ── main export ────────────────────────────────────────────────────────────────
-export default function BuilderClient({ business,initialConfig }: {
-  business:Business|null; initialConfig:OpenStatusPageConfig;
+export default function BuilderClient({ business,initialConfig,isFirstRun=false }: {
+  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean;
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('design');
@@ -1558,6 +1558,7 @@ export default function BuilderClient({ business,initialConfig }: {
   const [openId,setOpenId]=useState<string|null>(null);
   const [showPicker,setShowPicker]=useState(false);
   const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
+  const [showFirstRun,setShowFirstRun]=useState(isFirstRun);
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
   const [saveError,setSaveError]=useState('');
@@ -1724,6 +1725,17 @@ export default function BuilderClient({ business,initialConfig }: {
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#F7F7F5] text-[#0A0A0A]" style={{fontFamily:"'Inter',system-ui,sans-serif"}}>
 
+      {/* ── FIRST-RUN BANNER ── */}
+      {showFirstRun&&(
+        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:'#0A0A0A',color:'#F7F7F5',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+          <div>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.45)'}}>YOUR PAGE IS READY TO BUILD</span>
+            <p style={{fontSize:13,marginTop:2,color:'rgba(255,255,255,0.75)'}}>Add your logo, cover photo, and links. You can change anything below.</p>
+          </div>
+          <button onClick={()=>setShowFirstRun(false)} style={{background:'rgba(255,255,255,0.12)',border:'none',color:'#fff',borderRadius:99,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',flexShrink:0}}>Got it</button>
+        </div>
+      )}
+
       {/* ── LEFT SIDEBAR (desktop) ── */}
       <aside className="hidden md:flex w-[210px] flex-shrink-0 flex-col bg-[#0A0A0A]">
         {/* Wordmark */}
@@ -1736,7 +1748,7 @@ export default function BuilderClient({ business,initialConfig }: {
             <button key={key} onClick={()=>setSidebarTab(key)}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
                 sidebarTab===key
-                  ?'bg-[#0A0A0A] text-white'
+                  ?'bg-white/12 text-white'
                   :'text-white/55 hover:bg-white/8 hover:text-white'
               }`}>
               <span className={sidebarTab===key?'text-white':'text-white/35'}>{icon}</span>
