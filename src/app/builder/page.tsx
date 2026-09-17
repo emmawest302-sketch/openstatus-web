@@ -81,7 +81,7 @@ export default function BuilderPage() {
         }
       }
 
-      setBusiness({ ...biz, _businessId: biz.id });
+      setBusiness({ ...biz, slug: biz.slug ?? '', _businessId: biz.id });
       setInitialConfig(config);
       setReady(true);
     })();
