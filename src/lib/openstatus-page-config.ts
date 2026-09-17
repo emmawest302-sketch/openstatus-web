@@ -10,6 +10,15 @@ export type OpenStatusBlock = {
   color?: string;
   menuType?: 'url' | 'photo' | 'pdf';
   menuFile?: string;
+  appleMapsUrl?: string;
+  googleUrl?: string;
+  tripAdvisorUrl?: string;
+  yelpUrl?: string;
+  reviewStars?: number;
+  reviewCount?: number;
+  blockStyle?: string;
+  coverPhoto?: string;
+  provider?: string;
 };
 
 export type OpenStatusSocial = { id: string; label: string; url: string; on: boolean };
