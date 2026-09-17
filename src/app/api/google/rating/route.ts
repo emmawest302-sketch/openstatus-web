@@ -20,10 +20,23 @@ function parseGoogleMapsUrl(rawUrl: string): { query: string | null; lat?: numbe
     const placeMatch = decoded.match(/\/maps\/place\/([^/@?]+)/);
     const rawName = placeMatch ? placeMatch[1].replace(/\+/g, ' ').trim() : null;
 
-    // Extract coordinates from @lat,lng,zoom
-    const coordMatch = decoded.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    const lat = coordMatch ? parseFloat(coordMatch[1]) : undefined;
-    const lng = coordMatch ? parseFloat(coordMatch[2]) : undefined;
+    // Prefer business coordinates from data params (!3d=lat, !4d=lng) — these are the
+    // actual pin location. The @lat,lng in the URL is just the map viewport center.
+    const dataLatMatch = decoded.match(/!3d(-?\d+\.\d+)/);
+    const dataLngMatch = decoded.match(/!4d(-?\d+\.\d+)/);
+    let lat: number | undefined;
+    let lng: number | undefined;
+    if (dataLatMatch && dataLngMatch) {
+      lat = parseFloat(dataLatMatch[1]);
+      lng = parseFloat(dataLngMatch[1]);
+    } else {
+      // Fall back to viewport coordinates
+      const coordMatch = decoded.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (coordMatch) {
+        lat = parseFloat(coordMatch[1]);
+        lng = parseFloat(coordMatch[2]);
+      }
+    }
 
     return { query: rawName, lat, lng };
   } catch {
@@ -47,10 +60,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Step 1: Find place_id — add location bias if we have coordinates
+  // Step 1: Find place_id — bias to actual business coordinates if available
   let findUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id,name&key=${key}`;
   if (lat !== undefined && lng !== undefined) {
-    findUrl += `&locationbias=circle:5000@${lat},${lng}`;
+    findUrl += `&locationbias=circle:2000@${lat},${lng}`;
   }
 
   const findRes = await fetch(findUrl);
@@ -60,14 +73,12 @@ export async function GET(req: NextRequest) {
   };
 
   if (findData.status !== 'OK' || !findData.candidates?.length) {
-    // Fallback: try again without location bias but with ZERO_RESULTS being explicit
+    // Try broader radius as fallback
     if (lat !== undefined && lng !== undefined) {
-      // Try broader bias
       const fallbackUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id,name&locationbias=circle:50000@${lat},${lng}&key=${key}`;
       const fallbackRes = await fetch(fallbackUrl);
       const fallbackData = await fallbackRes.json() as { status: string; candidates: Array<{ place_id: string; name: string }> };
       if (fallbackData.status === 'OK' && fallbackData.candidates?.length) {
-        // Use fallback result
         return handlePlaceDetails(fallbackData.candidates[0].place_id, key);
       }
     }
@@ -116,7 +127,7 @@ async function handlePlaceDetails(placeId: string, key: string): Promise<NextRes
 
   const r = detailData.result;
 
-  // Build weekly hours: day 0=Sun … 6=Sat
+  // Build weekly hours: Google day 0=Sun … 6=Sat
   let weeklyHours: Record<DayKey, { open: string; close: string; closed: boolean }> | undefined;
   if (r.opening_hours?.periods) {
     const base = Object.fromEntries(
