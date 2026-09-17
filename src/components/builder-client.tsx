@@ -760,9 +760,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
     ...activeBlocks.filter(b=>b.id!=='hours'),
   ];
   const isDark = ['#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c'].includes(config.bg);
-  const hasBgPhoto = !!config.bgImage;
-  const tx = (isDark||hasBgPhoto)?'text-white':'text-[#0A0A0A]';
-  const sx = (isDark||hasBgPhoto)?'text-white/55':'text-[#6B6B6B]';
+  const tx = isDark?'text-white':'text-[#0A0A0A]';
+  const sx = isDark?'text-white/55':'text-[#6B6B6B]';
   const { status, todayLabel } = getLiveStatus(config.weeklyHours);
   const locBlock = config.blocks.find(b=>b.id==='location');
   const reviewPct = locBlock?.reviewStars&&locBlock.reviewStars>0 ? starsToPercent(locBlock.reviewStars) : null;
@@ -772,52 +771,50 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
       <div
         className="relative rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/8"
         style={{
-          background: config.bg,
-          ...(config.bgImage ? {
-            backgroundImage: `url(${config.bgImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          } : {}),
+          background: config.bg || '#F7F7F5',
           minHeight: 560,
         }}
       >
-        {/* Full-page wallpaper overlay — dark gradient top-to-bottom when photo set */}
+        {/* Photo header — constrained 148px, fades into page bg */}
         {config.bgImage && (
-          <div className="absolute inset-0 pointer-events-none" style={{ borderRadius:28, background:'linear-gradient(to bottom,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0.55) 40%,rgba(0,0,0,0.72) 100%)' }}/>
+          <div style={{ position:'relative', height:148, overflow:'hidden' }}>
+            <img src={config.bgImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}/>
+            <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${config.bg||'#F7F7F5'} 100%)` }}/>
+          </div>
         )}
 
-        {/* Hero header — always shown, content is relative so it sits above overlay */}
-        <div className={`relative px-4 pb-3 text-center ${config.bgImage ? 'pt-10' : 'pt-8'}`}>
+        {/* Hero header */}
+        <div className="relative px-4 pb-3 text-center" style={{ marginTop: config.bgImage ? -28 : 0, paddingTop: config.bgImage ? 0 : 32 }}>
           {business?.avatar_url
             ?<img src={business.avatar_url} className={`w-12 h-12 rounded-full mx-auto mb-2 object-cover ${config.bgImage?'border-2 border-white/70 shadow-lg':''}`} alt=""/>
-            :<div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-[10px] font-black tracking-tight ${config.bgImage?'bg-white/20 backdrop-blur-sm text-white border-2 border-white/50':isDark?'bg-white/10 text-white':'bg-black/8 text-black'}`}>
+            :<div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-[10px] font-black tracking-tight ${isDark?'bg-white/10 text-white':'bg-black/8 text-black'}`}>
               {(business?.name??'B').slice(0,1).toUpperCase()}
             </div>
           }
-          <p className={`font-bold text-[13px] ${config.bgImage?'text-white drop-shadow-sm':tx}`}>{business?.name??'Your Business'}</p>
-          {config.location && <p className={`text-[9px] truncate px-2 mt-0.5 ${config.bgImage?'text-white/65':''+sx}`}>{config.location}</p>}
+          <p className={`font-bold text-[13px] ${tx}`}>{business?.name??'Your Business'}</p>
+          {config.location && <p className={`text-[9px] truncate px-2 mt-0.5 ${sx}`}>{config.location}</p>}
           <div className="flex items-center justify-center gap-3 mt-2">
             {reviewPct && (
-              <div className={`flex items-center gap-1 ${config.bgImage?'bg-black/30 rounded-full px-2 py-0.5':''}`}>
-                <LucideStar size={9} color={config.bgImage?'#fbbf24':'#f59e0b'} filled/>
-                <span className={`text-[9px] font-semibold ${config.bgImage?'text-white':'text-[#f59e0b]'}`}>{reviewPct}%</span>
-                {locBlock?.reviewCount&&<span className={`text-[8px] ${config.bgImage?'text-white/60':sx}`}> · {locBlock.reviewCount.toLocaleString()}</span>}
+              <div className="flex items-center gap-1">
+                <LucideStar size={9} color="#f59e0b" filled/>
+                <span className="text-[9px] font-semibold text-[#f59e0b]">{reviewPct}%</span>
+                {locBlock?.reviewCount&&<span className={`text-[8px] ${sx}`}> · {locBlock.reviewCount.toLocaleString()}</span>}
               </div>
             )}
-            {reviewPct && !config.bgImage && <span className={`text-[8px] ${sx}`}>·</span>}
+            {reviewPct && <span className={`text-[8px] ${sx}`}>·</span>}
             <div className="flex items-center gap-2">
-              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${config.bgImage?'bg-white/15 backdrop-blur-sm':isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
-                <LucideThumbsUp size={8} color={config.bgImage?'rgba(255,255,255,0.7)':isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
-                <span className={`text-[8px] font-medium ${config.bgImage?'text-white/80':''}`}>{(config.likeCount??0)+24}</span>
+              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
+                <LucideThumbsUp size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
+                <span className="text-[8px] font-medium">{(config.likeCount??0)+24}</span>
               </button>
-              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${config.bgImage?'bg-white/15 backdrop-blur-sm':isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
-                <LucideThumbsDown size={8} color={config.bgImage?'rgba(255,255,255,0.7)':isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
-                <span className={`text-[8px] font-medium ${config.bgImage?'text-white/80':''}`}>{(config.dislikeCount??0)+2}</span>
+              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
+                <LucideThumbsDown size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
+                <span className="text-[8px] font-medium">{(config.dislikeCount??0)+2}</span>
               </button>
             </div>
           </div>
           {(config.tags??[]).length>0 && (
-            <TagsRow tags={config.tags??[]} isDark={isDark||!!config.bgImage}/>
+            <TagsRow tags={config.tags??[]} isDark={isDark}/>
           )}
         </div>
 
@@ -828,12 +825,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
             :<div className="grid grid-cols-2 gap-1.5">
               {sortedBlocks.map(b=>{
                 const isHalf = b.size==='half' && b.id!=='hours';
-                const cardBg = config.bgImage
-                  ? (b.color?`${b.color}25`:'rgba(255,255,255,0.12)')
-                  : (b.color?`${b.color}15`:(isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.04)'));
-                const bdr = config.bgImage
-                  ? (b.color?`${b.color}50`:'rgba(255,255,255,0.22)')
-                  : (b.color?`${b.color}35`:(isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.08)'));
+                const cardBg = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.72)';
+                const bdr = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.82)';
 
                 const bStyle = b.blockStyle ?? (b.id==='hours'?'minimal':b.id==='location'?'photo':'brand');
                 const inner = (() => {
