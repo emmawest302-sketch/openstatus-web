@@ -3,7 +3,7 @@
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
 
-type PublicActionBlockProps = { block: OpenStatusBlock; businessId: string; hasBgImage?: boolean };
+type Props = { block: OpenStatusBlock; businessId: string };
 
 function safeUrl(value?: string) {
   const raw = value?.trim();
@@ -12,129 +12,89 @@ function safeUrl(value?: string) {
   return `https://${raw}`;
 }
 
-function detectProvider(url = ''): string | null {
-  const v = url.toLowerCase();
-  if (v.includes('doordash')) return 'DoorDash';
-  if (v.includes('ubereats')) return 'Uber Eats';
-  if (v.includes('grubhub')) return 'Grubhub';
-  if (v.includes('squareup') || v.includes('square.site')) return 'Square';
-  if (v.includes('toasttab')) return 'Toast';
-  if (v.includes('calendly')) return 'Calendly';
-  if (v.includes('opentable')) return 'OpenTable';
-  if (v.includes('resy.com')) return 'Resy';
-  return null;
-}
+const ICONS: Record<string, string> = {
+  order:   'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0',
+  menu:    'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  book:    'M3 4h18v18H3V4z M16 2v4 M8 2v4 M3 10h18',
+  website: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 0c2.5 3.5 3.5 7 3.5 10S14.5 18.5 12 22m0-20C9.5 5.5 8.5 9 8.5 12s1 6.5 3.5 10M2.5 12h19',
+  gallery: 'M3 3h18v18H3V3z M3 9h18 M9 21V9',
+  reviews: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  call:    'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8 9c1.72 3.11 4.47 5.68 7.5 7l.91-.81a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z',
+  email:   'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6',
+  location:'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  share:   'M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M8.59 13.51l6.83 3.98 M15.41 6.51l-6.82 3.98',
+};
 
-function BlockIcon({ id }: { id: string }) {
+function BlockIcon({ id, color }: { id: string; color: string }) {
   const base = id.split('-')[0];
-  const paths: Record<string, string> = {
-    order: 'M7 8h10l-1 11H8L7 8zm2-3h6l1 3H8l1-3z',
-    menu: 'M6 7h12M6 12h12M6 17h12',
-    book: 'M7 4v3M17 4v3M5 9h14M6 6h12a1 1 0 011 1v12H5V7a1 1 0 011-1z',
-    website: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 0c2.2 2.5 3.3 5.5 3.3 9S14.2 18.5 12 21m0-18C9.8 5.5 8.7 8.5 8.7 12s1.1 6.5 3.3 9M3.5 12h17',
-    call: 'M7 4l3 4-2 2c1.5 3 3 4.5 6 6l2-2 4 3-2 3c-1 1-3 .5-5-.5C8 17 5 14 3.5 9 3 7 3 5.5 4 5l3-1z',
-    email: 'M4 6h16v12H4V6zm0 1l8 6 8-6',
-    hours: 'M12 7v5l3 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    location: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z',
-    share: 'M18 8a3 3 0 100-6 3 3 0 000 6zM6 12a3 3 0 100-6 3 3 0 000 6zM18 20a3 3 0 100-6 3 3 0 000 6zM8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98',
-    updates: 'M17 2H7a2 2 0 00-2 2v18l7-3 7 3V4a2 2 0 00-2-2z',
-    socials: 'M21 2H3v16h5v4l4-4h5l4-4V2zM11 11V7M16 11V7',
-  };
+  const d = ICONS[base] ?? 'M5 12h14M14 7l5 5-5 5';
+  // Multi-path icons use space-separated path data
+  const paths = d.split(' M ').map((p, i) => i === 0 ? p : 'M ' + p);
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
-      <path
-        d={paths[base] ?? 'M5 12h14M14 7l5 5-5 5'}
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {paths.map((p, i) => (
+        <path key={i} d={p} stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+      ))}
     </svg>
   );
 }
 
-export default function PublicActionBlock({ block, businessId, hasBgImage }: PublicActionBlockProps) {
+export default function PublicActionBlock({ block, businessId }: Props) {
   const href = safeUrl(block.url);
-  const provider = detectProvider(block.url ?? '');
-  const blockColor = block.color;
+  const iconColor = block.color ?? '#374151';
+  const iconBg = block.color ? `${block.color}18` : 'rgba(0,0,0,0.05)';
 
-  // Mirror the builder's color logic exactly
-  const cardBg = hasBgImage
-    ? (blockColor ? `${blockColor}28` : 'rgba(255,255,255,0.14)')
-    : (blockColor ? `${blockColor}18` : 'rgba(0,0,0,0.05)');
-  const borderColor = hasBgImage
-    ? (blockColor ? `${blockColor}55` : 'rgba(255,255,255,0.25)')
-    : (blockColor ? `${blockColor}40` : 'rgba(0,0,0,0.09)');
-  const textColor = hasBgImage ? 'rgba(255,255,255,0.95)' : '#0A0A0A';
-  const subColor = hasBgImage ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)';
-
-  const iconBg = blockColor ? `${blockColor}22` : (hasBgImage ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.06)');
-  const iconColor = blockColor ?? (hasBgImage ? 'rgba(255,255,255,0.85)' : '#333');
-
-  const cardStyle: React.CSSProperties = {
-    background: cardBg,
-    borderColor,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderRadius: 20,
-    padding: '14px 16px',
-    minHeight: 100,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    gap: 10,
-    transition: 'transform 0.15s, opacity 0.15s',
-    backdropFilter: hasBgImage ? 'blur(12px)' : undefined,
-    WebkitBackdropFilter: hasBgImage ? 'blur(12px)' : undefined,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-    cursor: href ? 'pointer' : 'default',
-    textDecoration: 'none',
-    color: textColor,
-  };
-
-  const content = (
-    <>
-      {/* Top: label + icon */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: subColor }}>
-          {block.title}
-        </span>
-        <span style={{ width: 32, height: 32, borderRadius: '50%', background: iconBg, display: 'grid', placeItems: 'center', flexShrink: 0, color: iconColor }}>
-          <BlockIcon id={block.id} />
-        </span>
+  const card = (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 14,
+      background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)',
+      borderRadius: 18, padding: '14px 16px',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+      cursor: href ? 'pointer' : 'default',
+      transition: 'transform 0.15s, box-shadow 0.15s',
+    }}>
+      {/* Icon circle */}
+      <div style={{
+        width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+        background: iconBg, display: 'grid', placeItems: 'center',
+      }}>
+        <BlockIcon id={block.id} color={iconColor}/>
       </div>
-      {/* Bottom: title + sub + badge */}
-      <div>
-        <strong style={{ display: 'block', fontSize: 17, lineHeight: 1.2, letterSpacing: '-0.04em', color: textColor }}>
+
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A18', lineHeight: 1.3 }}>
           {block.title}
-        </strong>
+        </div>
         {block.sub && (
-          <span style={{ display: 'block', fontSize: 10, marginTop: 3, color: subColor }}>
+          <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)', marginTop: 2, lineHeight: 1.3 }}>
             {block.sub}
-          </span>
-        )}
-        {provider && (
-          <span style={{ display: 'inline-block', marginTop: 6, fontSize: 9, fontWeight: 700, background: blockColor ?? '#1A1A1A', color: 'white', borderRadius: 99, padding: '2px 8px' }}>
-            {provider}
-          </span>
+          </div>
         )}
       </div>
-    </>
+
+      {/* Chevron */}
+      {href && (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      )}
+    </div>
   );
 
-  return href ? (
+  if (!href) return card;
+
+  return (
     <a
       href={href}
       target="_blank"
       rel="noreferrer"
-      style={cardStyle}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+      style={{ display: 'block', textDecoration: 'none' }}
       onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).querySelector('div')!.style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).querySelector('div')!.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).querySelector('div')!.style.transform = 'none'; (e.currentTarget as HTMLElement).querySelector('div')!.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}
     >
-      {content}
+      {card}
     </a>
-  ) : (
-    <div style={cardStyle}>{content}</div>
   );
 }

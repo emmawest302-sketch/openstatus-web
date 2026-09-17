@@ -29,6 +29,7 @@ export interface OpenStatusPageConfig {
   socials: Record<string, string>;
   location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
   likeCount?: number; dislikeCount?: number;
+  themeColor?: string; placeId?: string;
 }
 interface Business {
   id: string; name: string; slug: string;
@@ -141,6 +142,8 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     weeklyHours:  (r.weeklyHours&&typeof r.weeklyHours==='object')?r.weeklyHours as WeeklyHours:{...DEFAULT_WEEK_HOURS},
     likeCount:    typeof r.likeCount==='number'?r.likeCount:0,
     dislikeCount: typeof r.dislikeCount==='number'?r.dislikeCount:0,
+    themeColor:   typeof r.themeColor==='string'?r.themeColor:undefined,
+    placeId:      typeof r.placeId==='string'?r.placeId:undefined,
   };
 }
 
@@ -2035,6 +2038,44 @@ export default function BuilderClient({ business,initialConfig }: {
                             placeholder="#ffffff or gradient"
                             className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                         </div>
+                      </div>
+                      {/* Theme / accent color */}
+                      <div>
+                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3 mt-6">Accent color</p>
+                        <p className="text-[11px] text-[#9B9B9B] mb-3">Used for the Directions button and accent elements on your page.</p>
+                        <div className="grid grid-cols-7 gap-2 mb-3">
+                          {['#DB6B8F','#E07D5A','#F5A623','#4CAF50','#2563EB','#7C3AED','#0891B2'].map(c=>(
+                            <button key={c} onClick={()=>setConfig(p=>({...p,themeColor:c}))}
+                              className="aspect-square rounded-full border-2 transition-all hover:scale-110"
+                              style={{background:c,borderColor:config.themeColor===c?'#0A0A0A':'transparent'}}/>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-lg border border-[#EBEBEB] flex-shrink-0" style={{background:config.themeColor??'#DB6B8F'}}/>
+                          <input value={config.themeColor??''} onChange={e=>setConfig(c=>({...c,themeColor:e.target.value}))}
+                            placeholder="#DB6B8F"
+                            className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                        </div>
+                      </div>
+                      {/* Google Place ID */}
+                      <div>
+                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3 mt-6">Google Place ID</p>
+                        <p className="text-[11px] text-[#9B9B9B] mb-3">Connect your Google listing to show your star rating and pull gallery photos automatically. Find yours at <span className="font-mono">maps.google.com</span> → share → place ID.</p>
+                        <input value={config.placeId??''} onChange={e=>setConfig(c=>({...c,placeId:e.target.value.trim()}))}
+                          placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4"
+                          className="w-full bg-white border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                        {config.placeId&&(
+                          <button onClick={async()=>{
+                            if(!localBusiness?.id)return;
+                            const {data:s}=await supabase.auth.getSession();
+                            const token=s.session?.access_token;
+                            if(!token)return;
+                            await fetch('/api/business/place-id',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({placeId:config.placeId})});
+                          }}
+                          className="mt-2 px-3 py-1.5 rounded-lg bg-[#F5F5F5] text-[12px] font-semibold text-[#111] hover:bg-[#EBEBEB] transition-colors">
+                            Save Place ID to listing
+                          </button>
+                        )}
                       </div>
                       {/* Background photo */}
                       <div>

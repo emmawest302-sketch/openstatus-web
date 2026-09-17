@@ -1,38 +1,56 @@
 import PublicActionBlock from '@/components/public-action-block';
 import PublicLocationBlock from '@/components/public-location-block';
 import InstagramUpdatesBlock from '@/components/instagram-updates-block';
+import PublicGalleryBlock from '@/components/public-gallery-block';
 import type { OpenStatusPageConfig } from '@/lib/openstatus-page-config';
 
-type Props = { businessId: string; businessName: string; location: string; config: OpenStatusPageConfig; hasBgImage?: boolean };
+type Props = {
+  businessId: string;
+  businessName: string;
+  location: string;
+  config: OpenStatusPageConfig;
+  themeColor: string;
+  placeId?: string | null;
+};
 
-export default function PublishedBusinessBlocks({ businessId, businessName, location, config, hasBgImage }: Props) {
-  const enabled = config.blocks.filter((block) => block.on !== false);
+export default function PublishedBusinessBlocks({
+  businessId, businessName, location, config, themeColor, placeId,
+}: Props) {
+  // Skip hours and location — those are handled inline in the page
+  const enabled = config.blocks.filter((block) => block.on !== false && block.id !== 'hours' && block.id !== 'location');
+
   return (
-    <section className="mt-3 grid grid-cols-2 gap-2.5">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
       {enabled.map((block) => {
-        // Full-width: size==='full' or hours/location/updates/socials block
-        const isFull = block.size === 'full' || block.id === 'hours' || block.id === 'location' || block.id === 'updates' || block.id === 'socials' || block.id === 'website';
+        // Determine column span
+        const span =
+          block.size === 'third' ? 2
+          : block.size === 'half' ? 3
+          : 6; // 'full' or default
 
+        // Special renderers
         if (block.id === 'updates') {
           return (
-            <div key={block.id} className="col-span-2">
+            <div key={block.id} style={{ gridColumn: 'span 6' }}>
               <InstagramUpdatesBlock businessId={businessId} />
             </div>
           );
         }
-        if (block.id === 'location' && (block.googleUrl || block.appleMapsUrl || block.sub)) {
+
+        if (block.id === 'gallery') {
           return (
-            <div key={block.id} className="col-span-2">
-              <PublicLocationBlock block={block} businessId={businessId} hasBgImage={hasBgImage} />
+            <div key={block.id} style={{ gridColumn: `span ${span}` }}>
+              <PublicGalleryBlock block={block} businessId={businessId} placeId={placeId}/>
             </div>
           );
         }
+
         return (
-          <div key={block.id} className={isFull ? 'col-span-2' : ''}>
-            <PublicActionBlock businessId={businessId} block={block} hasBgImage={hasBgImage} />
+          <div key={block.id} style={{ gridColumn: `span ${span}` }}>
+            <PublicActionBlock block={block} businessId={businessId}/>
           </div>
         );
       })}
-    </section>
+    </div>
   );
 }

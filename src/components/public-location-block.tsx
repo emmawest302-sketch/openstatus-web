@@ -12,32 +12,28 @@ function extractMapQuery(googleUrl: string, fallback: string): string {
   return fallback;
 }
 
-type Props = { block: OpenStatusBlock; businessId: string; hasBgImage?: boolean };
+type Props = { block: OpenStatusBlock; businessId: string; themeColor: string };
 
-export default function PublicLocationBlock({ block, businessId, hasBgImage }: Props) {
+export default function PublicLocationBlock({ block, businessId, themeColor }: Props) {
   const query = block.googleUrl
     ? extractMapQuery(block.googleUrl, block.sub || block.title)
-    : block.sub || block.title;
+    : block.sub || block.address || block.title;
 
-  const mapsHref = block.appleMapsUrl || (block.googleUrl ?? `https://maps.google.com/?q=${encodeURIComponent(query)}`);
+  const mapsHref = block.appleMapsUrl || block.googleUrl
+    ? (block.appleMapsUrl ?? `https://maps.google.com/?q=${encodeURIComponent(query)}`)
+    : `https://maps.google.com/?q=${encodeURIComponent(query)}`;
+
   const embedSrc = (block.lat && block.lng)
     ? `https://maps.google.com/maps?q=${block.lat},${block.lng}&output=embed&hl=en&z=16`
     : `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=en`;
 
-  const blockColor = block.color;
-  const cardBg = hasBgImage
-    ? (blockColor ? `${blockColor}28` : 'rgba(255,255,255,0.14)')
-    : (blockColor ? `${blockColor}18` : 'rgba(255,255,255,0.9)');
-  const borderColor = hasBgImage
-    ? (blockColor ? `${blockColor}55` : 'rgba(255,255,255,0.25)')
-    : (blockColor ? `${blockColor}40` : 'rgba(0,0,0,0.09)');
-  const textColor = hasBgImage ? 'rgba(255,255,255,0.95)' : '#1A1A18';
-  const subColor = hasBgImage ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)';
-  const btnBg = blockColor ?? (hasBgImage ? 'rgba(255,255,255,0.2)' : '#1A1A18');
-  const btnText = hasBgImage && !blockColor ? 'rgba(255,255,255,0.9)' : 'white';
-
   return (
-    <div style={{ overflow: 'hidden', borderRadius: 20, border: `1px solid ${borderColor}`, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', backdropFilter: hasBgImage ? 'blur(12px)' : undefined }}>
+    <div style={{
+      overflow: 'hidden', borderRadius: 20,
+      border: '1px solid rgba(0,0,0,0.07)',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+      background: '#FFFFFF',
+    }}>
       {/* Map iframe */}
       <div style={{ position: 'relative', height: 180, width: '100%', overflow: 'hidden' }}>
         <iframe
@@ -51,23 +47,36 @@ export default function PublicLocationBlock({ block, businessId, hasBgImage }: P
       </div>
 
       {/* Footer */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px', background: cardBg }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 12, padding: '14px 16px',
+      }}>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, color: textColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {block.sub || query}
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#1A1A18', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
+            {block.address || block.sub || query}
           </p>
-          <p style={{ fontSize: 11, color: subColor, marginTop: 1 }}>Tap for directions</p>
+          <p style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)' }}>Tap for directions</p>
         </div>
         <a
           href={mapsHref}
           target="_blank"
           rel="noreferrer"
           onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
-          style={{ flexShrink: 0, borderRadius: 99, background: btnBg, padding: '8px 16px', fontSize: 11, fontWeight: 700, color: btnText, textDecoration: 'none', transition: 'transform 0.15s' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+          style={{
+            flexShrink: 0, borderRadius: 99,
+            background: themeColor, color: '#FFFFFF',
+            padding: '9px 18px', fontSize: 12, fontWeight: 700,
+            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
+            transition: 'transform 0.15s',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'none'; }}
         >
-          Get directions →
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
+          </svg>
+          Directions
         </a>
       </div>
     </div>
