@@ -31,6 +31,7 @@ export default async function LiveStatus({params}:{params:Promise<{slug:string}>
  const avatar=typeof business.avatar_url==='string'&&business.avatar_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url;
  const headerFromDb=typeof business.header_url==='string'&&business.header_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=header`:business.header_url;
  const background=pageConfig.bgImage||headerFromDb;
+ const hasBgImage=!!background;
  const timezone=business.timezone||'America/Chicago';
  const parts=new Intl.DateTimeFormat('en-US',{timeZone:timezone,weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
  const weekday=parts.find(p=>p.type==='weekday')?.value??'Sun';
@@ -45,31 +46,94 @@ export default async function LiveStatus({params}:{params:Promise<{slug:string}>
  const isOpen=!closedAllDay&&openMins!==null&&closeMins!==null&&nowMins>=openMins&&nowMins<closeMins;
  const changed=Boolean(lead)&&!closedAllDay;
  const dot=closedAllDay?'#C4453F':changed?'#E0921B':'#2E7D5B';
+
+ // Use hours block color if set, else fallback to green
+ const hoursBlock=pageConfig.blocks.find(b=>b.id==='hours');
+ const hoursColor=hoursBlock?.color??'#2E7D5B';
+ // Does the hours block appear in the published blocks? If so skip standalone Hours expand
+ const hoursBlockOn=hoursBlock?.on!==false;
+
  let big='Closed now',sub='Back tomorrow',accent='';
  if(closedAllDay){big='Closed today';sub=lead?.detail??'Back tomorrow'}
  else if(isOpen){big='Open now';sub='Closes at ';accent=pretty(effectiveClose)}
  else if(openMins!==null&&nowMins<openMins){big='Opens later';sub='Opens at ';accent=pretty(todayRow?.opens_at??null)}
+
  const bg=typeof pageConfig.bg==='string'&&pageConfig.bg.startsWith('#')?pageConfig.bg:pageConfig.bg==='blue'?'#E9EEF5':pageConfig.bg==='lime'?'#E7F7C8':pageConfig.bg==='dark'?'#181817':'#EDE9E2';
- const glass='rounded-[26px] bg-white/75 backdrop-blur-xl border border-white/70';
+ const isDark=bg.startsWith('#0')||bg.startsWith('#1')||bg==='dark';
+
+ // Card bg styles depending on whether there's a bg image
+ const liveCardStyle=hasBgImage
+   ?{background:'rgba(255,255,255,0.13)',border:'1px solid rgba(255,255,255,0.22)',backdropFilter:'blur(18px)',WebkitBackdropFilter:'blur(18px)'}
+   :{background:isDark?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.8)',border:'1px solid rgba(0,0,0,0.07)'};
+ const liveTextColor=hasBgImage||isDark?'#FFFFFF':'#1A1A18';
+ const liveSubColor=hasBgImage||isDark?'rgba(255,255,255,0.65)':'#5C5952';
+
  const initials=business.name.split(/\s+/).filter(Boolean).slice(0,2).map((part:string)=>part[0]).join('').toUpperCase();
  const tags=pageConfig.tags??[];
+
  return <div className="min-h-screen flex justify-center" style={{background:bg,fontFamily:'var(--font-poppins)'}}>
   <AnalyticsTracker businessId={business.id}/>
   <div className="relative w-full max-w-[440px] min-h-screen overflow-hidden" style={background?{backgroundImage:`url(${background})`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'}:{background:bg}}>
-   <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/40"/>
+   {background&&<div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/45"/>}
    <div className="relative px-4 pb-10">
-    <div className="pt-20 text-center text-white">
-     {avatar?<img src={avatar} alt={`${business.name} logo`} className="mx-auto h-[96px] w-[96px] rounded-full border border-white/60 bg-white object-cover p-1.5 shadow-[0_14px_40px_rgba(0,0,0,.28)]"/>:<div className="mx-auto grid h-[96px] w-[96px] place-items-center rounded-full border border-white/60 bg-white text-xl font-bold text-black shadow-[0_14px_40px_rgba(0,0,0,.28)]">{initials}</div>}
-     <h1 className="mt-4 text-[32px] font-bold tracking-[-.05em] drop-shadow">{business.name}</h1>
-     {pageConfig.location&&<p className="mt-1 text-sm font-medium text-white/90">{pageConfig.location}</p>}
-     {business.tagline&&<p className="mx-auto mt-2 max-w-[320px] text-sm leading-5 text-white/75">{business.tagline}</p>}
+    <div className="pt-20 text-center">
+     {avatar
+       ?<img src={avatar} alt={`${business.name} logo`} className="mx-auto h-[96px] w-[96px] rounded-full border-2 border-white/70 bg-white object-cover p-1 shadow-[0_14px_40px_rgba(0,0,0,.30)]"/>
+       :<div className="mx-auto grid h-[96px] w-[96px] place-items-center rounded-full border-2 border-white/60 bg-white text-xl font-bold text-black shadow-[0_14px_40px_rgba(0,0,0,.28)]">{initials}</div>
+     }
+     <h1 className="mt-4 text-[32px] font-bold tracking-[-.05em] drop-shadow" style={{color:hasBgImage||isDark?'white':liveTextColor}}>{business.name}</h1>
+     {pageConfig.location&&<p className="mt-1 text-sm font-medium" style={{color:hasBgImage||isDark?'rgba(255,255,255,0.85)':liveSubColor}}>{pageConfig.location}</p>}
+     {business.tagline&&<p className="mx-auto mt-2 max-w-[320px] text-sm leading-5" style={{color:hasBgImage||isDark?'rgba(255,255,255,0.65)':liveSubColor}}>{business.tagline}</p>}
      {tags.length>0&&<div className="mt-3 flex flex-wrap justify-center gap-1.5">{tags.map(tag=><span key={tag} className="rounded-full border border-white/25 bg-black/20 px-2.5 py-1 text-[10px] font-semibold text-white/85 backdrop-blur-md">{tag}</span>)}</div>}
     </div>
-    <div className={`mt-6 p-4 ${glass}`}><div className="flex items-center gap-4"><span className="grid h-[64px] w-[64px] shrink-0 place-items-center rounded-full bg-[#2E7D5B] text-white"><Icon name="cup"/></span><div><div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{background:dot}}/><span className="text-[10px] font-bold uppercase tracking-[.16em]" style={{color:dot}}>Live status</span></div><p className="mt-1 text-[30px] font-bold leading-none tracking-[-.04em] text-[#1A1A18]">{big}</p><p className="mt-2 text-sm text-[#5C5952]">{sub}{accent&&<strong style={{color:dot}}>{accent}</strong>}</p></div></div>{lead&&<div className="mt-4 rounded-[18px] bg-[#FBF0DC] p-3 text-sm text-[#805619]"><strong>{lead.headline}</strong>{lead.detail&&<p className="mt-1 opacity-75">{lead.detail}</p>}</div>}</div>
-    <PublishedBusinessBlocks businessId={business.id} businessName={business.name} location={pageConfig.location||business.tagline||business.name} config={pageConfig}/>
-    <details className={`mt-3 overflow-hidden ${glass}`}><summary className="cursor-pointer list-none px-5 py-4 text-[#1A1A18]"><div className="flex items-center justify-between"><strong>Hours</strong><span className="text-xs text-black/40">Today & weekly</span></div><div className="mt-3 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-full bg-white"><Icon name="clock"/></span><div><strong>{todayRow&&!todayRow.is_closed?`${pretty(todayRow.opens_at)} - ${pretty(todayRow.closes_at)}`:'Closed today'}</strong><p className="text-xs text-black/40">{DAY_NAMES[today]}</p></div></div></summary><ul className="border-t border-white/60 px-5 py-4">{DAY_NAMES.map((d,i)=><li key={d} className="flex justify-between py-1 text-xs text-[#6C6A62]"><span>{d}</span><span>{rowLabel(hours.find(h=>h.day_of_week===i))}</span></li>)}</ul></details>
+
+    {/* Live Status card — uses hours block color */}
+    <div className="mt-6 p-4 rounded-[26px]" style={{...liveCardStyle}}>
+     <div className="flex items-center gap-4">
+      <span className="grid h-[64px] w-[64px] shrink-0 place-items-center rounded-full text-white" style={{background:hoursColor}}>
+       <Icon name="cup"/>
+      </span>
+      <div>
+       <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full" style={{background:dot}}/>
+        <span className="text-[10px] font-bold uppercase tracking-[.16em]" style={{color:dot}}>Live status</span>
+       </div>
+       <p className="mt-1 text-[30px] font-bold leading-none tracking-[-.04em]" style={{color:liveTextColor}}>{big}</p>
+       <p className="mt-2 text-sm" style={{color:liveSubColor}}>{sub}{accent&&<strong style={{color:dot}}>{accent}</strong>}</p>
+      </div>
+     </div>
+     {lead&&<div className="mt-4 rounded-[18px] bg-[#FBF0DC] p-3 text-sm text-[#805619]"><strong>{lead.headline}</strong>{lead.detail&&<p className="mt-1 opacity-75">{lead.detail}</p>}</div>}
+    </div>
+
+    <PublishedBusinessBlocks
+     businessId={business.id}
+     businessName={business.name}
+     location={pageConfig.location||business.tagline||business.name}
+     config={pageConfig}
+     hasBgImage={hasBgImage}
+    />
+
+    {/* Only show standalone Hours expandable if hours block isn't already in the blocks list */}
+    {!hoursBlockOn&&(
+     <details className="mt-3 overflow-hidden rounded-[26px]" style={{...liveCardStyle}}>
+      <summary className="cursor-pointer list-none px-5 py-4" style={{color:liveTextColor}}>
+       <div className="flex items-center justify-between"><strong>Hours</strong><span className="text-xs" style={{color:liveSubColor}}>Today &amp; weekly</span></div>
+       <div className="mt-3 flex items-center gap-3">
+        <span className="grid h-11 w-11 place-items-center rounded-full" style={{background:hasBgImage?'rgba(255,255,255,0.15)':'rgba(0,0,0,0.06)'}}><Icon name="clock"/></span>
+        <div>
+         <strong style={{color:liveTextColor}}>{todayRow&&!todayRow.is_closed?`${pretty(todayRow.opens_at)} - ${pretty(todayRow.closes_at)}`:'Closed today'}</strong>
+         <p className="text-xs" style={{color:liveSubColor}}>{DAY_NAMES[today]}</p>
+        </div>
+       </div>
+      </summary>
+      <ul className="border-t px-5 py-4" style={{borderColor:hasBgImage?'rgba(255,255,255,0.15)':'rgba(0,0,0,0.08)'}}>
+       {DAY_NAMES.map((d,i)=><li key={d} className="flex justify-between py-1 text-xs" style={{color:liveSubColor}}><span>{d}</span><span>{rowLabel(hours.find(h=>h.day_of_week===i))}</span></li>)}
+      </ul>
+     </details>
+    )}
+
     <PublicSocialLinks businessId={business.id} socials={pageConfig.socials}/>
-    <Link href="/" className="mt-7 block text-center text-[10px] uppercase tracking-[.16em] text-white/60">Powered by OpenStatus</Link>
+    <Link href="/" className="mt-7 block text-center text-[10px] uppercase tracking-[.16em]" style={{color:hasBgImage||isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.3)'}}>Powered by OpenStatus</Link>
    </div>
    <OwnerQuickStatus businessId={business.id} businessName={business.name}/>
   </div>
