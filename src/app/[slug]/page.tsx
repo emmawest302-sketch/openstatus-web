@@ -49,11 +49,40 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
     .maybeSingle();
   if (!business) notFound();
 
-  const [{ data: hoursRows }, { data: updateRows }, pageConfig] = await Promise.all([
+  // Fetch Google Places website for menu/reviews auto-linking
+  async function fetchPlaceWebsite(placeId: string): Promise<string | null> {
+    const key = process.env.GOOGLE_PLACES_API_KEY ?? '';
+    if (!key || !placeId) return null;
+    try {
+      const r = await fetch(
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=website&key=${key}`,
+        { next: { revalidate: 86400 } }
+      );
+      const d = await r.json() as { result?: { website?: string } };
+      return d.result?.website ?? null;
+    } catch { return null; }
+  }
+
+  const [{ data: hoursRows }, { data: updateRows }, pageConfig, placeWebsite] = await Promise.all([
     admin.from('business_hours').select('day_of_week,opens_at,closes_at,is_closed').eq('business_id', business.id),
     admin.from('status_updates').select('kind,headline,detail,reason,closes_at,created_at,source').eq('business_id', business.id).eq('status', 'active').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(4),
     loadPublishedPageConfig(business.user_id),
+    business.place_id ? fetchPlaceWebsite(business.place_id as string) : Promise.resolve(null),
   ]);
+
+  // Auto-fill block URLs from Google Places when owner hasn't set them
+  const googleMapsReviewUrl = business.place_id
+    ? `https://search.google.com/local/reviews?placeid=${business.place_id}`
+    : null;
+  const enrichedConfig = {
+    ...pageConfig,
+    blocks: pageConfig.blocks.map(b => {
+      if (b.id === 'menu' && !b.url && placeWebsite) return { ...b, url: placeWebsite };
+      if (b.id === 'reviews' && !b.url && googleMapsReviewUrl) return { ...b, url: googleMapsReviewUrl };
+      if (b.id === 'website' && !b.url && placeWebsite) return { ...b, url: placeWebsite };
+      return b;
+    }),
+  };
 
   const hours: Hours[] = hoursRows ?? [];
   const updates: Update[] = updateRows ?? [];
@@ -63,13 +92,13 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
     ? `/api/assets?businessId=${business.id}&kind=avatar` : business.avatar_url;
   const headerFromDb = typeof business.header_url === 'string' && business.header_url.startsWith('storage:')
     ? `/api/assets?businessId=${business.id}&kind=header` : business.header_url;
-  const coverPhoto = pageConfig.bgImage || headerFromDb;
+  const coverPhoto = enrichedConfig.bgImage || headerFromDb;
 
   // Theme color
-  const themeColor = pageConfig.themeColor || '#DB6B8F';
+  const themeColor = enrichedConfig.themeColor || '#DB6B8F';
 
   // Page background
-  const bg = typeof pageConfig.bg === 'string' && pageConfig.bg.startsWith('#')
+  const bg = typeof enrichedConfig.bg === 'string' && enrichedConfig.bg.startsWith('#')
     ? pageConfig.bg
     : '#F7F7F5';
   const { r: bgR, g: bgG, b: bgB } = hexToRgb(bg);
@@ -99,9 +128,9 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   else if (openMins !== null && nowMins < openMins) { bigText = 'Opens later'; subText = 'Opens at '; accentText = pretty(todayRow?.opens_at ?? null); }
 
   // Block visibility
-  const hoursBlock = pageConfig.blocks.find((b) => b.id === 'hours');
+  const hoursBlock = enrichedConfig.blocks.find((b) => b.id === 'hours');
   const hoursBlockOn = hoursBlock?.on !== false;
-  const locationBlock = pageConfig.blocks.find((b) => b.id === 'location');
+  const locationBlock = enrichedConfig.blocks.find((b) => b.id === 'location');
   const locationBlockOn = locationBlock?.on !== false && locationBlock && (locationBlock.googleUrl || locationBlock.appleMapsUrl || locationBlock.sub || locationBlock.address);
 
   // Initials fallback
@@ -292,14 +321,14 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           <PublishedBusinessBlocks
             businessId={business.id}
             businessName={business.name}
-            location={pageConfig.location || business.tagline || business.name}
-            config={pageConfig}
+            location={enrichedConfig.location || business.tagline || business.name}
+            config={enrichedConfig}
             themeColor={themeColor}
             placeId={business.place_id}
           />
 
           {/* Socials */}
-          <PublicSocialLinks businessId={business.id} socials={pageConfig.socials}/>
+          <PublicSocialLinks businessId={business.id} socials={enrichedConfig.socials}/>
         </div>
 
         {/* Footer */}
