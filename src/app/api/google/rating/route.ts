@@ -152,15 +152,18 @@ async function handlePlaceDetails(placeId: string, key: string, lat?: number, ln
     weeklyHours = base;
   }
 
-  // Resolve first photo server-side so the API key never reaches the client
-  let photoUrl: string | undefined;
-  if (r.photos?.[0]?.photo_reference) {
-    try {
-      const photoApiUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${r.photos[0].photo_reference}&key=${key}`;
-      const photoRes = await fetch(photoApiUrl, { redirect: 'follow' });
-      if (photoRes.ok) photoUrl = photoRes.url;
-    } catch { /* skip */ }
-  }
+  // Resolve up to 3 photos server-side so the API key never reaches the client
+  const photoRefs = (r.photos ?? []).slice(0, 3);
+  const photos = (await Promise.all(
+    photoRefs.map(async (p) => {
+      try {
+        const photoApiUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${p.photo_reference}&key=${key}`;
+        const photoRes = await fetch(photoApiUrl, { redirect: 'follow' });
+        return photoRes.ok ? photoRes.url : null;
+      } catch { return null; }
+    })
+  )).filter(Boolean) as string[];
+  const photoUrl = photos[0];
 
   return NextResponse.json({
     name: r.name,
@@ -173,6 +176,7 @@ async function handlePlaceDetails(placeId: string, key: string, lat?: number, ln
     website: r.website,
     weeklyHours,
     photoUrl,
+    photos,
     reviews: r.reviews?.slice(0, 5).map(rv => ({
       author: rv.author_name,
       rating: rv.rating,

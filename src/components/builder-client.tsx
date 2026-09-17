@@ -1561,6 +1561,12 @@ export default function BuilderClient({ business,initialConfig }: {
   const [dragId,setDragId]=useState<string|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   const [previewWidth,setPreviewWidth]=useState(420);
+  const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
+  const [logoUploading,setLogoUploading]=useState(false);
+  const [logoUploadError,setLogoUploadError]=useState('');
+  const [bgUploading,setBgUploading]=useState(false);
+  const [bgUploadError,setBgUploadError]=useState('');
+  const [googlePhotos,setGooglePhotos]=useState<string[]>([]);
   const isResizing=useRef(false);
   const resizeStartX=useRef(0);
   const resizeStartW=useRef(0);
@@ -1573,6 +1579,22 @@ export default function BuilderClient({ business,initialConfig }: {
     window.addEventListener('mousemove',onMove);
     window.addEventListener('mouseup',onUp);
   },[previewWidth]);
+
+  const uploadAsset=useCallback(async(file:File,kind:'avatar'|'header')=>{
+    const {data:s}=await supabase.auth.getSession();
+    const token=s.session?.access_token;
+    if(!token)throw new Error('Session expired. Sign in again.');
+    const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+    const prep=await fetch('/api/assets',{method:'POST',headers,body:JSON.stringify({action:'prepare',kind,contentType:file.type,size:file.size})});
+    const p=await prep.json();
+    if(!prep.ok)throw new Error(p.error??'Could not prepare upload');
+    const {error:ue}=await supabase.storage.from(p.bucket).uploadToSignedUrl(p.path,p.token,file,{contentType:file.type,cacheControl:'3600'});
+    if(ue)throw ue;
+    const complete=await fetch('/api/assets',{method:'POST',headers,body:JSON.stringify({action:'complete',kind,path:p.path})});
+    const c=await complete.json();
+    if(!complete.ok)throw new Error(c.error??'Could not save image');
+    return c.reference as string;
+  },[]);
 
   const allBlocks = config.blocks;
   const orderedBlocks = [...allBlocks.filter(b=>b.id==='hours'),...allBlocks.filter(b=>b.id!=='hours')];
@@ -1842,11 +1864,12 @@ export default function BuilderClient({ business,initialConfig }: {
                             setGoogleFetching(true);setGoogleFetchError('');setGoogleFetchDone(false);
                             try{
                               const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
-                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string;address?:string;phone?:string;website?:string;weeklyHours?:WeeklyHours;photoUrl?:string;lat?:number;lng?:number;reviews?:Array<{author:string;rating:number;text:string;time:string}>};
+                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string;address?:string;phone?:string;website?:string;weeklyHours?:WeeklyHours;photoUrl?:string;photos?:string[];lat?:number;lng?:number;reviews?:Array<{author:string;rating:number;text:string;time:string}>};
                               if(!r.ok||d.error)throw new Error(d.error??'Failed');
                               updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??d.name??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.lat!==undefined?{lat:d.lat,lng:d.lng}:{}),...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
                               if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours as WeeklyHours}));
                               if(d.photoUrl) setConfig(c=>({...c,bgImage:d.photoUrl}));
+                              if(d.photos?.length) setGooglePhotos(d.photos);
                               if(d.phone&&allBlocks.find(b=>b.id==='call')) updateBlock('call',{url:'tel:'+d.phone,on:true});
                               if(d.website&&allBlocks.find(b=>b.id==='website')) updateBlock('website',{url:d.website,on:true});
                               setGoogleFetchDone(true);
@@ -1947,6 +1970,47 @@ export default function BuilderClient({ business,initialConfig }: {
                             className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                         </div>
                       </div>
+                      {/* Background photo */}
+                      <div>
+                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Background photo</p>
+                        {config.bgImage&&(
+                          <div className="relative mb-3 rounded-xl overflow-hidden">
+                            <img src={config.bgImage} className="w-full h-20 object-cover" alt="Background"/>
+                            <button onClick={()=>setConfig(c=>({...c,bgImage:undefined}))}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
+                              <LucideX size={10} color="white"/>
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
+                            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                              const file=e.target.files?.[0];if(!file)return;
+                              setBgUploading(true);setBgUploadError('');
+                              try{
+                                const ref=await uploadAsset(file,'header');
+                                const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:ref;
+                                setConfig(c=>({...c,bgImage:bgUrl}));
+                                if(localBusiness?.id)await supabase.from('businesses').update({header_url:ref}).eq('id',localBusiness.id);
+                              }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+                              finally{setBgUploading(false);e.target.value='';}
+                            }}/>
+                            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F5F5F5] text-[12px] font-semibold text-[#111] hover:bg-[#EBEBEB] transition-colors">
+                              <LucideImage size={13} color="#6B6B6B"/>
+                              {bgUploading?'Uploading…':'Upload photo'}
+                            </span>
+                          </label>
+                          {googlePhotos.map((url,i)=>(
+                            <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+                              className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#AADF1E]':'border-[#EBEBEB] hover:border-[#AADF1E]'}`}
+                              title={`Google photo ${i+1}`}>
+                              <img src={url} className="w-full h-full object-cover" alt=""/>
+                            </button>
+                          ))}
+                        </div>
+                        {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
+                        {googlePhotos.length>0&&<p className="text-[10px] text-[#9B9B9B] mt-1.5">Tap a thumbnail to use your Google Business photo.</p>}
+                      </div>
                       <div>
                         <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Social profiles</p>
                         <div className="space-y-2.5">
@@ -1995,9 +2059,65 @@ export default function BuilderClient({ business,initialConfig }: {
                     </div>
                   </div>
                 </div>
-                <p className="text-[12px] text-[#9B9B9B] mt-4">
-                  To edit your name, category, or logo, <a href="/setup?step=1" className="font-semibold text-[#111] underline underline-offset-2">go to Settings →</a>
-                </p>
+                {/* Logo upload */}
+                <div className="mt-5">
+                  <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-3">Logo</p>
+                  <div className="flex items-center gap-4 mb-3">
+                    {localBusiness?.avatar_url
+                      ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                          className="w-14 h-14 rounded-full object-cover border border-[#EBEBEB] flex-shrink-0" alt="Logo"/>
+                      :<div className="w-14 h-14 rounded-full bg-[#F5F5F5] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
+                        <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                          const file=e.target.files?.[0];if(!file)return;
+                          setLogoUploading(true);setLogoUploadError('');
+                          try{
+                            const ref=await uploadAsset(file,'avatar');
+                            if(localBusiness?.id){
+                              await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                              setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                            }
+                          }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                          finally{setLogoUploading(false);e.target.value='';}
+                        }}/>
+                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F5F5F5] text-[12px] font-semibold text-[#111] hover:bg-[#EBEBEB] transition-colors ${logoUploading?'opacity-60':''}`}>
+                          {logoUploading?'Uploading…':'Upload logo'}
+                        </span>
+                      </label>
+                      {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
+                    </div>
+                  </div>
+                  {googlePhotos.length>0&&(
+                    <div className="mb-3">
+                      <p className="text-[10px] text-[#9B9B9B] mb-2">Or use a Google Business photo as your logo:</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {googlePhotos.map((url,i)=>(
+                          <button key={i} onClick={async()=>{
+                            if(!localBusiness?.id){setLogoUploadError('No business found');return;}
+                            setLogoUploading(true);setLogoUploadError('');
+                            try{
+                              const blob=await fetch(url).then(r=>r.blob());
+                              const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
+                              const ref=await uploadAsset(file,'avatar');
+                              await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                              setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                            }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
+                            finally{setLogoUploading(false);}
+                          }}
+                          className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#EBEBEB] hover:border-[#AADF1E]`}
+                          title={`Use Google photo ${i+1}`}>
+                            <img src={url} className="w-full h-full object-cover" alt=""/>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-[12px] text-[#9B9B9B]">
+                    To edit your name or category, <a href="/setup?step=1" className="font-semibold text-[#111] underline underline-offset-2">go to Settings →</a>
+                  </p>
+                </div>
               </div>
             )}
 
@@ -2075,7 +2195,7 @@ export default function BuilderClient({ business,initialConfig }: {
             {/* Phone preview */}
             <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-6 overflow-y-auto">
               <LivePhonePreview
-                business={business} config={config}
+                business={localBusiness} config={config}
                 selectedId={openId}
                 onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
               />
