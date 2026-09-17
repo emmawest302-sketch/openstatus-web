@@ -264,7 +264,7 @@ function SocialIcon({ platform, size=22 }: { platform:string; size?:number }) {
     case 'facebook':  return <IconFacebook size={size}/>;
     case 'twitter':   return <IconTwitterX size={size}/>;
     case 'youtube':   return <IconYouTube size={size}/>;
-    default:          return <LucideGlobe size={size} color="#9B9B9B"/>;
+    default:          return <LucideGlobe size={size} color="#858585"/>;
   }
 }
 
@@ -386,7 +386,7 @@ function IconYelp({ size=32 }: { size?: number }) {
 function IconGoogle({ size=32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="white" stroke="#EBEBEB" strokeWidth="1"/>
+      <rect width="32" height="32" rx="7" fill="white" stroke="#DEDEDC" strokeWidth="1"/>
       {/* Google G */}
       <path d="M24 16.3c0-.6-.1-1.2-.2-1.8H16v3.4h4.5c-.2 1-.8 1.9-1.7 2.4v2h2.7C23 20.6 24 18.6 24 16.3z" fill="#4285F4"/>
       <path d="M16 25c2.3 0 4.2-.7 5.5-2l-2.7-2c-.7.5-1.7.8-2.8.8-2.2 0-4-1.4-4.6-3.4H8.6v2.1C9.9 23.1 12.7 25 16 25z" fill="#34A853"/>
@@ -427,7 +427,7 @@ function ProviderIcon({ providerKey, size=32 }: { providerKey: string; size?: nu
     case 'calendly':   return <IconCalendly size={size}/>;
     case 'acuity':     return <IconAcuity size={size}/>;
     case 'mindbody':   return <IconMindbody size={size}/>;
-    default:           return <LucideGlobe size={size} color="#9B9B9B"/>;
+    default:           return <LucideGlobe size={size} color="#858585"/>;
   }
 }
 
@@ -442,12 +442,12 @@ function Toggle({ on, onChange }: { on:boolean; onChange:(v:boolean)=>void }) {
   );
 }
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-widest mb-2">{children}</p>;
+  return <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-widest mb-2">{children}</p>;
 }
 function Input({ value,onChange,placeholder,type='text' }: { value:string; onChange:(v:string)=>void; placeholder?:string; type?:string }) {
   return (
     <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-      className="w-full bg-white border border-[#EBEBEB] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+      className="w-full bg-white border border-[#DEDEDC] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
     />
   );
 }
@@ -456,7 +456,7 @@ function PillSelect({ options,selected,onSelect }: { options:string[]; selected:
     <div className="flex flex-wrap gap-1.5">
       {options.map(o=>(
         <button key={o} onClick={()=>onSelect(o)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#0A0A0A] text-white border-[#0A0A0A]':'border-[#EBEBEB] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#0A0A0A] text-white border-[#0A0A0A]':'border-[#DEDEDC] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
           {o}
         </button>
       ))}
@@ -478,10 +478,10 @@ function BrandProviderPicker({ providers, selectedKey, onSelect }: {
           <button
             key={key}
             onClick={() => onSelect(key, label)}
-            className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3 transition-all ${active ? 'border-[#0A0A0A] bg-[#F5F5F5] shadow-sm' : 'border-[#EBEBEB] hover:border-[#C0C0C0] bg-white'}`}
+            className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3 transition-all ${active ? 'border-[#0A0A0A] bg-[#EEEEEC] shadow-sm' : 'border-[#DEDEDC] hover:border-[#C0C0C0] bg-white'}`}
           >
             {key === 'other'
-              ? <div className="w-8 h-8 rounded-xl border-2 border-dashed border-[#D4D4D4] flex items-center justify-center"><LucideGlobe size={14} color="#9B9B9B"/></div>
+              ? <div className="w-8 h-8 rounded-xl border-2 border-dashed border-[#D4D4D4] flex items-center justify-center"><LucideGlobe size={14} color="#858585"/></div>
               : <ProviderIcon providerKey={key} size={32}/>
             }
             <span className={`text-[10px] font-semibold leading-tight text-center ${active ? 'text-[#0A0A0A]' : 'text-[#6B6B6B]'}`}>{label}</span>
@@ -575,7 +575,7 @@ function StyleThumb({ blockId, styleKey }: { blockId: string; styleKey: string }
     );
   }
   // Generics
-  return <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-[#F5F5F5]"/>;
+  return <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-[#EEEEEC]"/>;
 }
 
 function BlockStylePicker({ blockId, selected, onSelect }: {
@@ -585,13 +585,13 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
   if (!styles) return null;
   return (
     <div>
-      <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-2">Layout</p>
+      <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-2">Layout</p>
       <div className="flex gap-2">
         {styles.map(s => (
           <button key={s.key} onClick={() => onSelect(s.key)}
             className={`flex flex-col items-center gap-1.5 rounded-xl p-1.5 border transition-all ${selected===s.key?'border-[#0A0A0A]':'border-[#E8E8E8] hover:border-[#C0C0C0]'}`}>
             <StyleThumb blockId={blockId} styleKey={s.key}/>
-            <span className={`text-[10px] font-semibold ${selected===s.key?'text-[#0A0A0A]':'text-[#9B9B9B]'}`}>{s.label}</span>
+            <span className={`text-[10px] font-semibold ${selected===s.key?'text-[#0A0A0A]':'text-[#858585]'}`}>{s.label}</span>
           </button>
         ))}
       </div>
@@ -618,14 +618,14 @@ function AccentColorPicker({ value, onChange }: { value?: string; onChange:(v:st
           onClick={()=>colorRef.current?.click()}
           className="w-7 h-7 rounded-full border-2 border-dashed border-[#D4D4D4] flex items-center justify-center hover:border-[#0A0A0A] transition-colors"
           title="Custom color">
-          <span className="text-[10px] text-[#9B9B9B]">+</span>
+          <span className="text-[10px] text-[#858585]">+</span>
         </button>
         <input ref={colorRef} type="color" value={value??'#2563eb'} onChange={e=>{commit(e.target.value);}} className="opacity-0 absolute w-0 h-0"/>
       </div>
       <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg border border-[#EBEBEB] flex-shrink-0" style={{ background:value??'#2563eb' }}/>
+        <div className="w-7 h-7 rounded-lg border border-[#DEDEDC] flex-shrink-0" style={{ background:value??'#2563eb' }}/>
         <input value={hex} onChange={e=>commit(e.target.value)} placeholder="#000000"
-          className="flex-1 bg-white border border-[#EBEBEB] rounded-lg px-3 py-1.5 text-xs text-[#0A0A0A] font-mono focus:outline-none focus:border-[#0A0A0A] transition-colors"
+          className="flex-1 bg-white border border-[#DEDEDC] rounded-lg px-3 py-1.5 text-xs text-[#0A0A0A] font-mono focus:outline-none focus:border-[#0A0A0A] transition-colors"
         />
       </div>
     </div>
@@ -648,10 +648,10 @@ function PhotoField({ label, value, onChange, placeholder, hint }: {
   return (
     <div>
       <FieldLabel>{label}</FieldLabel>
-      {hint && <p className="text-xs text-[#9B9B9B] mb-3 leading-snug">{hint}</p>}
+      {hint && <p className="text-xs text-[#858585] mb-3 leading-snug">{hint}</p>}
       {value
         ? (
-          <div className="relative group rounded-xl overflow-hidden border border-[#EBEBEB]">
+          <div className="relative group rounded-xl overflow-hidden border border-[#DEDEDC]">
             <img src={value} className="w-full h-32 object-cover" alt=""/>
             <button onClick={()=>onChange('')}
               className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -663,18 +663,18 @@ function PhotoField({ label, value, onChange, placeholder, hint }: {
           <div>
             <div
               onClick={()=>fileRef.current?.click()}
-              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#FAFAFA] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#F5F5F5] transition-all">
-              <LucideImage size={18} color="#9B9B9B"/>
-              <p className="text-[12px] text-[#9B9B9B]">Click to upload</p>
+              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F7F7F5] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
+              <LucideImage size={18} color="#858585"/>
+              <p className="text-[12px] text-[#858585]">Click to upload</p>
             </div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile}/>
             <div className="flex items-center gap-2 mt-2">
-              <div className="flex-1 h-px bg-[#EBEBEB]"/>
+              <div className="flex-1 h-px bg-[#DEDEDC]"/>
               <span className="text-[10px] text-[#C0C0C0]">or paste URL</span>
-              <div className="flex-1 h-px bg-[#EBEBEB]"/>
+              <div className="flex-1 h-px bg-[#DEDEDC]"/>
             </div>
             <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder??'https://…'}
-              className="mt-2 w-full bg-white border border-[#EBEBEB] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+              className="mt-2 w-full bg-white border border-[#DEDEDC] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
             />
           </div>
         )
@@ -698,19 +698,19 @@ function PdfField({ label, value, onChange }: { label:string; value:string; onCh
       <FieldLabel>{label}</FieldLabel>
       {value
         ? (
-          <div className="flex items-center gap-3 rounded-xl border border-[#EBEBEB] bg-[#FAFAFA] px-4 py-3">
+          <div className="flex items-center gap-3 rounded-xl border border-[#DEDEDC] bg-[#F7F7F5] px-4 py-3">
             <LucideFileText size={18} color="#0A0A0A"/>
             <span className="text-sm text-[#0A0A0A] font-medium flex-1 truncate">PDF uploaded</span>
-            <button onClick={()=>onChange('')} className="text-[11px] text-[#9B9B9B] hover:text-[#0A0A0A] transition-colors font-medium">Remove</button>
+            <button onClick={()=>onChange('')} className="text-[11px] text-[#858585] hover:text-[#0A0A0A] transition-colors font-medium">Remove</button>
           </div>
         )
         : (
           <div>
             <div
               onClick={()=>fileRef.current?.click()}
-              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#FAFAFA] h-20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#F5F5F5] transition-all">
-              <LucideFileText size={18} color="#9B9B9B"/>
-              <p className="text-[12px] text-[#9B9B9B]">Upload PDF</p>
+              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F7F7F5] h-20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
+              <LucideFileText size={18} color="#858585"/>
+              <p className="text-[12px] text-[#858585]">Upload PDF</p>
             </div>
             <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handleFile}/>
           </div>
@@ -726,7 +726,7 @@ function TimeSelect({ value,onChange }: { value:string; onChange:(v:string)=>voi
   for(let h=0;h<24;h++) for(const m of [0,30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
   return (
     <select value={value} onChange={e=>onChange(e.target.value)}
-      className="bg-white border border-[#EBEBEB] rounded-lg px-2.5 py-1.5 text-xs text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] cursor-pointer appearance-none">
+      className="bg-white border border-[#DEDEDC] rounded-lg px-2.5 py-1.5 text-xs text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] cursor-pointer appearance-none">
       {times.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
     </select>
   );
@@ -1051,7 +1051,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
           }
         </div>
       </div>
-      <p className="text-center text-[11px] text-[#9B9B9B] mt-4 font-medium">openstatus.co/…</p>
+      <p className="text-center text-[11px] text-[#858585] mt-4 font-medium">openstatus.co/…</p>
     </div>
   );
 }
@@ -1073,13 +1073,13 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
   return (
     <div className="flex flex-col h-full">
       {/* header */}
-      <div className="flex items-center gap-3 pb-5 mb-6 border-b border-[#EBEBEB] flex-shrink-0">
-        <button onClick={onClose} className="flex items-center gap-1.5 text-[12px] text-[#9B9B9B] hover:text-[#0A0A0A] transition-colors font-medium -ml-0.5">
+      <div className="flex items-center gap-3 pb-5 mb-6 border-b border-[#DEDEDC] flex-shrink-0">
+        <button onClick={onClose} className="flex items-center gap-1.5 text-[12px] text-[#858585] hover:text-[#0A0A0A] transition-colors font-medium -ml-0.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           Blocks
         </button>
-        <div className="h-4 w-px bg-[#EBEBEB]"/>
-        <div className="w-7 h-7 rounded-lg bg-[#F5F5F5] border border-[#EBEBEB] flex items-center justify-center flex-shrink-0">
+        <div className="h-4 w-px bg-[#DEDEDC]"/>
+        <div className="w-7 h-7 rounded-lg bg-[#EEEEEC] border border-[#DEDEDC] flex items-center justify-center flex-shrink-0">
           <BlockIcon id={block.id} size={13} color="#0A0A0A"/>
         </div>
         <p className="font-semibold text-[14px] text-[#0A0A0A] leading-tight flex-1 min-w-0 truncate">{block.title}</p>
@@ -1089,7 +1089,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
       <div className="overflow-y-auto flex-1 space-y-1">
         {/* Title + subtitle — always shown */}
         <div className="pb-5 mb-5 border-b border-[#F0F0F0]">
-          <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Content</p>
+          <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Content</p>
           <div className="space-y-3">
             <div><FieldLabel>Title</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
             <div><FieldLabel>Subtitle</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
@@ -1120,7 +1120,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
               {/* Review platforms */}
               <div>
                 <FieldLabel>Review profiles</FieldLabel>
-                <p className="text-xs text-[#9B9B9B] mb-3">Paste your listings — we pull your rating automatically</p>
+                <p className="text-xs text-[#858585] mb-3">Paste your listings — we pull your rating automatically</p>
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0"><IconYelp size={28}/></div>
@@ -1141,7 +1141,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                               onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
                             }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
                           }}
-                          className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#AADF1E] text-[#111] text-[11px] font-bold hover:bg-[#99CF0E] transition-colors whitespace-nowrap disabled:opacity-50"
+                          className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#0A0A0A] text-white text-[11px] font-bold hover:bg-[#292929] transition-colors whitespace-nowrap disabled:opacity-50"
                           disabled={block._googleFetching}
                         >{block._googleFetching?'…':'Fetch'}</button>
                       )}
@@ -1180,7 +1180,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {block.id==='hours' && (
             <div className="space-y-6">
               <BlockStylePicker blockId="hours" selected={block.blockStyle??'minimal'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#FAFAFA] border-[#EBEBEB]'}`}>
+              <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#F7F7F5] border-[#DEDEDC]'}`}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                 <div>
                   <p className="text-sm font-bold text-[#0A0A0A]">{status==='open'?'Open now':'Closed right now'}</p>
@@ -1194,7 +1194,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                     Copy Mon → weekdays
                   </button>
                 </div>
-                <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden">
+                <div className="rounded-2xl border border-[#DEDEDC] overflow-hidden">
                   {DAYS.map(({key,label},i)=>{
                     const day=hours[key];
                     return (
@@ -1202,7 +1202,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                         <span className="text-[13px] font-medium text-[#0A0A0A] w-24 flex-shrink-0">{label}</span>
                         <button
                           onClick={()=>onUpdateConfig({weeklyHours:{...hours,[key]:{...day,closed:!day.closed}}})}
-                          className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all flex-shrink-0 font-semibold ${day.closed?'border-[#EBEBEB] text-[#9B9B9B] bg-white':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
+                          className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all flex-shrink-0 font-semibold ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
                         >
                           {day.closed?'Closed':'Open'}
                         </button>
@@ -1229,20 +1229,20 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={()=>onUpdateBlock({menuType:'pdf'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='pdf'?'border-[#0A0A0A] bg-[#F5F5F5]':'border-[#EBEBEB] hover:border-[#0A0A0A]'}`}>
-                  <LucideFileText size={20} color={block.menuType==='pdf'?'#0A0A0A':'#9B9B9B'}/>
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='pdf'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}>
+                  <LucideFileText size={20} color={block.menuType==='pdf'?'#0A0A0A':'#858585'}/>
                   <span className="text-[11px] font-semibold text-[#0A0A0A]">Upload PDF</span>
                 </button>
                 <button
                   onClick={()=>onUpdateBlock({menuType:'photos'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='photos'?'border-[#0A0A0A] bg-[#F5F5F5]':'border-[#EBEBEB] hover:border-[#0A0A0A]'}`}>
-                  <LucideImage size={20} color={block.menuType==='photos'?'#0A0A0A':'#9B9B9B'}/>
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='photos'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}>
+                  <LucideImage size={20} color={block.menuType==='photos'?'#0A0A0A':'#858585'}/>
                   <span className="text-[11px] font-semibold text-[#0A0A0A]">Photos</span>
                 </button>
                 <button
                   onClick={()=>onUpdateBlock({menuType:'url'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='url'?'border-[#0A0A0A] bg-[#F5F5F5]':'border-[#EBEBEB] hover:border-[#0A0A0A]'}`}>
-                  <LucideGlobe size={20} color={block.menuType==='url'?'#0A0A0A':'#9B9B9B'}/>
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='url'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}>
+                  <LucideGlobe size={20} color={block.menuType==='url'?'#0A0A0A':'#858585'}/>
                   <span className="text-[11px] font-semibold text-[#0A0A0A]">Link</span>
                 </button>
               </div>
@@ -1318,7 +1318,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             <div className="space-y-4">
               <div className="rounded-xl bg-[#FFF0F5] border border-[#F9A8D4] p-4">
                 <p className="text-[12px] font-semibold text-[#BE185D]">📸 Instagram updates</p>
-                <p className="text-[11px] text-[#9B9B9B] mt-1 leading-snug">Shows your 3 most recent Instagram posts as updates on your page. Make sure Meta is connected in your setup.</p>
+                <p className="text-[11px] text-[#858585] mt-1 leading-snug">Shows your 3 most recent Instagram posts as updates on your page. Make sure Meta is connected in your setup.</p>
               </div>
             </div>
           )}
@@ -1339,14 +1339,14 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* Widget width */}
           {block.id!=='hours' && (
             <div className="pt-5 border-t border-[#F0F0F0]">
-              <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Width</p>
+              <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Width</p>
               <div className="flex gap-2">
                 <button onClick={()=>onUpdateBlock({size:'full'})}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${(!block.size||block.size==='full')?'border-[#0A0A0A] bg-[#F5F5F5] text-[#0A0A0A]':'border-[#EBEBEB] text-[#9B9B9B] hover:border-[#0A0A0A]'}`}>
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${(!block.size||block.size==='full')?'border-[#0A0A0A] bg-[#EEEEEC] text-[#0A0A0A]':'border-[#DEDEDC] text-[#858585] hover:border-[#0A0A0A]'}`}>
                   <LucideLayoutList size={13} color="currentColor"/> Full
                 </button>
                 <button onClick={()=>onUpdateBlock({size:'half'})}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${block.size==='half'?'border-[#0A0A0A] bg-[#F5F5F5] text-[#0A0A0A]':'border-[#EBEBEB] text-[#9B9B9B] hover:border-[#0A0A0A]'}`}>
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${block.size==='half'?'border-[#0A0A0A] bg-[#EEEEEC] text-[#0A0A0A]':'border-[#DEDEDC] text-[#858585] hover:border-[#0A0A0A]'}`}>
                   <LucideLayoutGrid size={13} color="currentColor"/> Half
                 </button>
               </div>
@@ -1355,7 +1355,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
 
           {/* Accent color */}
           <div className="pt-5 border-t border-[#F0F0F0]">
-            <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Color</p>
+            <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Color</p>
             <AccentColorPicker value={block.color} onChange={v=>onUpdateBlock({color:v})}/>
           </div>
 
@@ -1381,7 +1381,7 @@ function BlockPicker({ blocks, onAdd, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/15"/>
-      <div className="relative bg-white rounded-2xl w-full max-w-[380px] shadow-[0_12px_48px_rgba(0,0,0,0.12)] border border-[#EBEBEB] overflow-hidden" onClick={e=>e.stopPropagation()}>
+      <div className="relative bg-white rounded-2xl w-full max-w-[380px] shadow-[0_12px_48px_rgba(0,0,0,0.12)] border border-[#DEDEDC] overflow-hidden" onClick={e=>e.stopPropagation()}>
         {/* search */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#F0F0F0]">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C0C0C0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1406,13 +1406,13 @@ function BlockPicker({ blocks, onAdd, onClose }: {
                   return (
                     <button key={def.id}
                       onClick={()=>{ onAdd(def.id); onClose(); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#FAFAFA] transition-colors text-left">
-                      <div className="w-8 h-8 rounded-xl bg-[#F5F5F5] border border-[#EBEBEB] flex items-center justify-center flex-shrink-0">
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#F7F7F5] transition-colors text-left">
+                      <div className="w-8 h-8 rounded-xl bg-[#EEEEEC] border border-[#DEDEDC] flex items-center justify-center flex-shrink-0">
                         <BlockIcon id={def.id} size={14} color="#0A0A0A"/>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium text-[#0A0A0A] leading-tight">{def.title}</p>
-                        <p className="text-[11px] text-[#9B9B9B] leading-tight">{def.sub}</p>
+                        <p className="text-[11px] text-[#858585] leading-tight">{def.sub}</p>
                       </div>
                       {isOn && <span className="text-[10px] text-[#C0C0C0] font-medium flex-shrink-0">Added</span>}
                     </button>
@@ -1475,14 +1475,14 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
       )}
       {!spotRect&&<div className="absolute inset-0 bg-black/45" style={{zIndex:51}}/>}
       <div className="absolute pointer-events-auto bg-white rounded-2xl shadow-2xl p-6 w-72" style={{...tooltipStyle,zIndex:52}}>
-        <p className="text-[11px] font-bold tracking-[0.12em] text-[#9B9B9B] uppercase mb-1">Step {step+1} of {TUT_STEPS.length}</p>
+        <p className="text-[11px] font-bold tracking-[0.12em] text-[#858585] uppercase mb-1">Step {step+1} of {TUT_STEPS.length}</p>
         <h3 className="text-[16px] font-bold text-[#0A0A0A] mb-2 leading-snug">{current.title}</h3>
         <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-5">{current.body}</p>
         <div className="flex items-center justify-between">
-          <button onClick={onDone} className="text-[12px] text-[#9B9B9B] hover:text-[#111] font-medium transition-colors">Skip</button>
+          <button onClick={onDone} className="text-[12px] text-[#858585] hover:text-[#111] font-medium transition-colors">Skip</button>
           <div className="flex items-center gap-2">
             {step>0&&<button onClick={()=>setStep(s=>s-1)} className="px-4 py-1.5 text-[12px] font-semibold rounded-full border border-[#E0E0E0] text-[#6B6B6B] hover:border-[#111] transition-colors">Back</button>}
-            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#AADF1E] text-[#111] hover:bg-[#99CF0E] transition-colors">{isLast?'Done':'Next →'}</button>
+            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#0A0A0A] text-white hover:bg-[#292929] transition-colors">{isLast?'Done':'Next →'}</button>
           </div>
         </div>
       </div>
@@ -1530,7 +1530,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   for (let h = 0; h < 24; h++) for (const m of [0, 30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
   return (
     <select value={value} onChange={e => onChange(e.target.value)}
-      className="bg-[#F5F5F5] border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
+      className="bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
       {times.map(t => <option key={t} value={t}>{fmt12(t)}</option>)}
     </select>
   );
@@ -1647,7 +1647,7 @@ export default function BuilderClient({ business,initialConfig }: {
         <span className="text-[13px] font-semibold text-[#0A0A0A] w-28 flex-shrink-0">{label}</span>
         <button
           onClick={()=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,closed:!day.closed}}}))}
-          className={`text-[11px] px-3 py-1.5 rounded-full border font-bold flex-shrink-0 transition-all ${day.closed?'border-[#EBEBEB] text-[#9B9B9B] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
+          className={`text-[11px] px-3 py-1.5 rounded-full border font-bold flex-shrink-0 transition-all ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
         >
           {day.closed?'Closed':'● Open'}
         </button>
@@ -1722,13 +1722,13 @@ export default function BuilderClient({ business,initialConfig }: {
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-white text-[#0A0A0A]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>
+    <div className="flex h-[100dvh] overflow-hidden bg-[#F7F7F5] text-[#0A0A0A]" style={{fontFamily:"'Inter',system-ui,sans-serif"}}>
 
       {/* ── LEFT SIDEBAR (desktop) ── */}
-      <aside className="hidden md:flex w-[210px] flex-shrink-0 flex-col border-r border-[#EBEBEB] bg-white">
+      <aside className="hidden md:flex w-[210px] flex-shrink-0 flex-col bg-[#0A0A0A]">
         {/* Wordmark */}
-        <div className="px-5 h-14 flex items-center border-b border-[#F0F0F0] flex-shrink-0">
-          <span className="font-bold text-[17px] tracking-tight text-[#111]">OpenStatus</span>
+        <div className="px-5 h-14 flex items-center flex-shrink-0">
+          <span className="font-bold text-[17px] tracking-[-0.04em] text-white">OpenStatus</span>
         </div>
         {/* Nav */}
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
@@ -1736,36 +1736,36 @@ export default function BuilderClient({ business,initialConfig }: {
             <button key={key} onClick={()=>setSidebarTab(key)}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
                 sidebarTab===key
-                  ?'bg-[#AADF1E] text-[#111]'
-                  :'text-[#6B6B6B] hover:bg-[#F5F5F5] hover:text-[#111]'
+                  ?'bg-[#0A0A0A] text-white'
+                  :'text-white/55 hover:bg-white/8 hover:text-white'
               }`}>
-              <span className={sidebarTab===key?'text-[#111]':'text-[#9B9B9B]'}>{icon}</span>
+              <span className={sidebarTab===key?'text-white':'text-white/35'}>{icon}</span>
               {label}
             </button>
           ))}
         </nav>
         {/* Bottom CTAs */}
-        <div className="px-4 py-4 border-t border-[#F0F0F0] space-y-2.5 flex-shrink-0">
-          <button className="w-full text-left text-[11px] font-bold text-[#AADF1E] hover:underline leading-snug">
+        <div className="px-4 py-4 border-t border-white/10 space-y-2.5 flex-shrink-0">
+          <button className="w-full text-left text-[11px] font-bold text-white/65 hover:underline leading-snug">
             Upgrade to unlock<br/>more features →
           </button>
-          <button className="w-full text-left text-[11px] text-[#9B9B9B] hover:text-[#111] transition-colors font-medium">
+          <button className="w-full text-left text-[11px] text-white/40 hover:text-white transition-colors font-medium">
             Need help?
           </button>
         </div>
       </aside>
 
       {/* ── MAIN AREA ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
 
         {/* ── TOP NAV BAR ── */}
-        <header className="h-14 border-b border-[#EBEBEB] flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white">
-          <span className="text-[11px] font-bold tracking-[0.14em] text-[#9B9B9B] uppercase">{sidebarLabel}</span>
+        <header className="h-14 border-b border-black/6 flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/80 backdrop-blur-sm">
+          <span className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase">{sidebarLabel}</span>
           <div className="flex items-center gap-3">
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
                 className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#6B6B6B] hover:text-[#111] transition-colors">
-                View your link <span className="text-[#9B9B9B]">↗</span>
+                View your link <span className="text-[#858585]">↗</span>
               </a>
             )}
             <button className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
@@ -1773,12 +1773,12 @@ export default function BuilderClient({ business,initialConfig }: {
             </button>
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#F5F5F5] text-[#9B9B9B]':saveError?'bg-red-100 text-red-600':'bg-[#AADF1E] text-[#111] hover:bg-[#99CF0E]'}`}>
+                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
                 {saving?'Saving…':saved?'✓ Saved':saveError?'Error':'Publish'}
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
             </div>
-            <div className="w-8 h-8 rounded-full bg-[#AADF1E] flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 cursor-pointer select-none">
+            <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 cursor-pointer select-none">
               {(business?.name??'E').charAt(0).toUpperCase()}
             </div>
           </div>
@@ -1788,27 +1788,27 @@ export default function BuilderClient({ business,initialConfig }: {
         <div className="flex-1 flex overflow-hidden">
 
           {/* ── MAIN CONTENT ── */}
-          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0">
+          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white rounded-tl-2xl md:shadow-[-4px_0_0_0_rgba(0,0,0,0.02)]">
 
             {/* ══ HOURS & STATUS ══ */}
             {sidebarTab==='hours'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 {/* Header */}
                 <div className="mb-7">
-                  <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-bold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#F5F5F5] text-[#9B9B9B]'}`}>
+                  <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-bold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                     {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
                   </div>
-                  <h1 className="text-[26px] font-bold text-[#0A0A0A] leading-tight tracking-[-0.02em]">
+                  <h1 className="text-[26px] font-bold text-[#0A0A0A] leading-tight tracking-[-0.04em]">
                     Stay up to date, in real time.
                   </h1>
-                  <p className="text-[#9B9B9B] text-[14px] mt-2 leading-relaxed">
+                  <p className="text-[#858585] text-[14px] mt-2 leading-relaxed">
                     Set your hours once — customers always see the right status.
                   </p>
                 </div>
 
                 {/* Sub-tabs */}
-                <div className="flex items-center gap-1 mb-8 bg-[#F5F5F5] rounded-full p-1 w-fit">
+                <div className="flex items-center gap-1 mb-8 bg-black/5 rounded-full p-1 w-fit">
                   {([
                     {key:'regular',label:'Regular Hours'},
                     {key:'special',label:'Special Hours'},
@@ -1816,7 +1816,7 @@ export default function BuilderClient({ business,initialConfig }: {
                     {key:'auto',   label:'Auto-Updates'},
                   ] as const).map(({key,label})=>(
                     <button key={key} onClick={()=>setHoursSubTab(key)}
-                      className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap ${hoursSubTab===key?'bg-white text-[#111] shadow-sm':'text-[#9B9B9B] hover:text-[#111]'}`}>
+                      className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap ${hoursSubTab===key?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
                       {label}
                     </button>
                   ))}
@@ -1828,11 +1828,11 @@ export default function BuilderClient({ business,initialConfig }: {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-[14px] font-bold text-[#0A0A0A]">Weekly hours</p>
-                        <button onClick={copyMonToWeekdays} className="text-[12px] text-[#9B9B9B] hover:text-[#111] font-medium transition-colors">
+                        <button onClick={copyMonToWeekdays} className="text-[12px] text-[#858585] hover:text-[#111] font-medium transition-colors">
                           Copy Mon → weekdays
                         </button>
                       </div>
-                      <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden bg-white">
+                      <div className="rounded-2xl border border-[#DEDEDC] overflow-hidden bg-white">
                         {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
                       </div>
                     </div>
@@ -1848,11 +1848,11 @@ export default function BuilderClient({ business,initialConfig }: {
                           {key:'out-of-office',emoji:'✈️', label:'Out of Office',     desc:'Set away dates and a message'},
                         ].map(({key,emoji,label,desc})=>(
                           <button key={key} onClick={()=>{setQuickAction(key);setQuickMsg('');setCloseEarlyTime('15:00');}}
-                            className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#EBEBEB] bg-white hover:border-[#AADF1E] hover:bg-[#FAFFF0] transition-all text-left group">
+                            className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all text-left group">
                             <span className="text-[22px] leading-none">{emoji}</span>
                             <div>
                               <p className="text-[13px] font-bold text-[#111]">{label}</p>
-                              <p className="text-[11px] text-[#9B9B9B] mt-0.5 leading-snug">{desc}</p>
+                              <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">{desc}</p>
                             </div>
                           </button>
                         ))}
@@ -1868,18 +1868,18 @@ export default function BuilderClient({ business,initialConfig }: {
                     <div>
                       <p className="text-[14px] font-bold text-[#0A0A0A] mb-3">Live status</p>
                       {statusLoading?(
-                        <div className="rounded-2xl border border-[#EBEBEB] bg-white px-4 py-3">
-                          <p className="text-[13px] text-[#9B9B9B]">Loading…</p>
+                        <div className="rounded-2xl border border-[#DEDEDC] bg-white px-4 py-3">
+                          <p className="text-[13px] text-[#858585]">Loading…</p>
                         </div>
                       ):statusUpdates.filter(u=>u.status!=='needs_review').length>0?(
                         <div>
                           {statusUpdates.filter(u=>u.status!=='needs_review').map(u=>(
-                            <div key={u.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[#EBEBEB] bg-white px-4 py-3">
+                            <div key={u.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[#DEDEDC] bg-white px-4 py-3">
                               <div className="flex items-center gap-3">
                                 <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"/>
                                 <div>
                                   <p className="text-[14px] font-bold text-[#111]">{u.headline}</p>
-                                  {u.detail&&<p className="text-[12px] text-[#9B9B9B] mt-0.5">{u.detail}</p>}
+                                  {u.detail&&<p className="text-[12px] text-[#858585] mt-0.5">{u.detail}</p>}
                                 </div>
                               </div>
                               <button
@@ -1893,8 +1893,8 @@ export default function BuilderClient({ business,initialConfig }: {
                           ))}
                         </div>
                       ):(
-                        <div className="rounded-2xl border border-dashed border-[#DEDEDC] bg-[#FAFAFA] px-4 py-3 text-center">
-                          <p className="text-[13px] text-[#9B9B9B]">No live status — your regular hours show on your page.</p>
+                        <div className="rounded-2xl border border-dashed border-[#DEDEDC] bg-[#F7F7F5] px-4 py-3 text-center">
+                          <p className="text-[13px] text-[#858585]">No live status — your regular hours show on your page.</p>
                         </div>
                       )}
                     </div>
@@ -1907,16 +1907,16 @@ export default function BuilderClient({ business,initialConfig }: {
                         <button
                           onClick={()=>postStatus('closed_today')}
                           disabled={statusPosting}
-                          className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#EBEBEB] bg-white hover:border-[#EF4444] hover:bg-red-50/60 transition-all text-left group disabled:opacity-40"
+                          className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#EF4444] hover:bg-red-50/60 transition-all text-left group disabled:opacity-40"
                         >
                           <span className="text-[22px] leading-none">🔒</span>
                           <div>
                             <p className="text-[13px] font-bold text-[#111]">Closed today</p>
-                            <p className="text-[11px] text-[#9B9B9B] mt-0.5 leading-snug">Mark as fully closed all day</p>
+                            <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">Mark as fully closed all day</p>
                           </div>
                         </button>
                         {/* Close early */}
-                        <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#EBEBEB] bg-white">
+                        <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
                           <span className="text-[22px] leading-none">⏰</span>
                           <p className="text-[13px] font-bold text-[#111]">Close early at</p>
                           <div className="flex items-center gap-2">
@@ -1924,11 +1924,11 @@ export default function BuilderClient({ business,initialConfig }: {
                               <select
                                 value={statusCloseTime}
                                 onChange={e=>setStatusCloseTime(e.target.value)}
-                                className="w-full bg-[#F5F5F5] border border-[#EBEBEB] rounded-xl px-3 py-2 text-[12px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer"
+                                className="w-full bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-3 py-2 text-[12px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer"
                               >
                                 {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                               </select>
-                              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={11} color="#9B9B9B"/></div>
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={11} color="#858585"/></div>
                             </div>
                             <button
                               onClick={()=>postStatus('early_close')}
@@ -1942,7 +1942,7 @@ export default function BuilderClient({ business,initialConfig }: {
                       </div>
 
                       {/* Custom note */}
-                      <div className="p-4 rounded-2xl border border-[#EBEBEB] bg-white space-y-3">
+                      <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white space-y-3">
                         <div className="flex items-center gap-2">
                           <span className="text-[20px] leading-none">💬</span>
                           <p className="text-[13px] font-bold text-[#111]">Leave a note</p>
@@ -1952,7 +1952,7 @@ export default function BuilderClient({ business,initialConfig }: {
                           onChange={e=>setStatusNote(e.target.value.slice(0,100))}
                           placeholder="e.g. Running about 20 minutes behind today…"
                           rows={2}
-                          className="w-full bg-[#F5F5F5] border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"
+                          className="w-full bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"
                         />
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
@@ -1972,13 +1972,13 @@ export default function BuilderClient({ business,initialConfig }: {
                 {/* ── SPECIAL HOURS & AUTO — placeholders ── */}
                 {(hoursSubTab==='special'||hoursSubTab==='auto')&&(
                   <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F5F5F5] flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-4">
                       <LucideClock size={20} color="#C0C0C0"/>
                     </div>
                     <p className="text-[15px] font-bold text-[#0A0A0A] mb-1">
                       {hoursSubTab==='special'?'Special Hours':'Auto-Updates'}
                     </p>
-                    <p className="text-[13px] text-[#9B9B9B]">Coming soon — stay tuned!</p>
+                    <p className="text-[13px] text-[#858585]">Coming soon — stay tuned!</p>
                   </div>
                 )}
               </div>
@@ -1999,24 +1999,24 @@ export default function BuilderClient({ business,initialConfig }: {
                   <>
                     <div className="mb-7">
                       <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Design</h2>
-                      <p className="text-[#9B9B9B] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
+                      <p className="text-[#858585] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
                     </div>
 
                     {/* Google Business fetch */}
-                    <div className="mb-6 rounded-2xl border border-[#EBEBEB] bg-[#FAFAFA] p-4">
+                    <div className="mb-6 rounded-2xl border border-[#DEDEDC] bg-[#F7F7F5] p-4">
                       <div className="flex items-center gap-2 mb-3">
                         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                         <p className="text-[12px] font-bold text-[#0A0A0A]">Google Business</p>
                         {googleFetchDone&&<span className="ml-auto text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">✓ Imported</span>}
                       </div>
-                      <p className="text-[11px] text-[#9B9B9B] mb-3">Paste your Google Maps URL to auto-fill your rating, review count, and location block.</p>
+                      <p className="text-[11px] text-[#858585] mb-3">Paste your Google Maps URL to auto-fill your rating, review count, and location block.</p>
                       <div className="flex gap-2">
                         <input
                           type="url"
                           value={googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||''}
                           onChange={e=>{setGoogleFetchUrl(e.target.value);setGoogleFetchDone(false);setGoogleFetchError('');}}
                           placeholder="https://maps.google.com/maps/place/..."
-                          className="flex-1 rounded-xl border border-[#EBEBEB] bg-white px-3 py-2 text-[12px] outline-none focus:border-[#AADF1E] transition-colors"
+                          className="flex-1 rounded-xl border border-[#DEDEDC] bg-white px-3 py-2 text-[12px] outline-none focus:border-[#0A0A0A] transition-colors"
                         />
                         <button
                           disabled={!googleFetchUrl&&!allBlocks.find(b=>b.id==='location')?.googleUrl||googleFetching}
@@ -2038,24 +2038,24 @@ export default function BuilderClient({ business,initialConfig }: {
                             }catch(e){setGoogleFetchError(e instanceof Error?e.message:'Could not fetch');}
                             finally{setGoogleFetching(false);}
                           }}
-                          className="flex-shrink-0 rounded-xl bg-[#AADF1E] text-[#111] text-[12px] font-bold px-4 py-2 hover:bg-[#99CF0E] transition-colors disabled:opacity-40"
+                          className="flex-shrink-0 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold px-4 py-2 hover:bg-[#292929] transition-colors disabled:opacity-40"
                         >{googleFetching?'Fetching…':'Fetch'}</button>
                       </div>
                       {googleFetchError&&<p className="text-[11px] text-red-500 mt-2">{googleFetchError}</p>}
                     </div>
 
                     {/* Active blocks */}
-                    <div className="rounded-2xl border border-[#EBEBEB] overflow-hidden mb-1">
+                    <div className="rounded-2xl border border-[#DEDEDC] overflow-hidden mb-1">
                       {activeBlocks.length===0&&(
-                        <div className="px-4 py-8 text-center text-[13px] text-[#9B9B9B]">No blocks yet — hit + Add block below.</div>
+                        <div className="px-4 py-8 text-center text-[13px] text-[#858585]">No blocks yet — hit + Add block below.</div>
                       )}
                       {activeBlocks.map((block,i)=>(
                         <div key={block.id}
                           data-tut={i===0&&block.id==='hours'?'tut-hours':undefined}
-                          className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#FAFAFA]
+                          className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#F7F7F5]
                             ${i<activeBlocks.length-1?'border-b border-[#F5F5F5]':''}
                             ${openId===block.id?'bg-[#F8F8F8]':''}
-                            ${dragOverId===block.id&&dragId!==block.id?'border-l-[3px] border-l-[#AADF1E]':''}
+                            ${dragOverId===block.id&&dragId!==block.id?'border-l-[3px] border-l-[#0A0A0A]':''}
                             ${dragId===block.id?'opacity-40':''}
                           `}
                           style={{height:68}}
@@ -2073,7 +2073,7 @@ export default function BuilderClient({ business,initialConfig }: {
                             </div>
                             :<div className="w-[14px] flex-shrink-0"/>
                           }
-                          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#EBEBEB] bg-[#F5F5F5]"
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#DEDEDC] bg-[#EEEEEC]"
                             style={block.color?{backgroundColor:`${block.color}12`,borderColor:`${block.color}28`}:{}}>
                             <BlockIcon id={block.id} size={14} color={block.color??'#0A0A0A'}/>
                           </div>
@@ -2081,13 +2081,13 @@ export default function BuilderClient({ business,initialConfig }: {
                             <div className="flex items-center gap-2">
                               <p className="text-[13px] font-semibold text-[#0A0A0A] leading-tight">{block.title}</p>
                               {block.id==='hours'&&(
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#F5F5F5] text-[#9B9B9B]'}`}>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
                                   {liveStatus==='open'?'● open':'● closed'}
                                 </span>
                               )}
-                              {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#F5F5F5] text-[#9B9B9B] flex-shrink-0">½</span>}
+                              {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#EEEEEC] text-[#858585] flex-shrink-0">½</span>}
                             </div>
-                            <p className="text-[12px] text-[#9B9B9B] leading-tight mt-0.5 truncate">
+                            <p className="text-[12px] text-[#858585] leading-tight mt-0.5 truncate">
                               {block.id==='hours'?todayLabel:block.sub}
                             </p>
                           </div>
@@ -2105,7 +2105,7 @@ export default function BuilderClient({ business,initialConfig }: {
                     </div>
 
                     <button data-tut="tut-add" onClick={()=>setShowPicker(true)}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#9B9B9B] hover:border-[#AADF1E] hover:text-[#111] transition-all group mb-10">
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#858585] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-all group mb-10">
                       <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
                         <span className="text-[14px] leading-none">+</span>
                       </div>
@@ -2116,14 +2116,14 @@ export default function BuilderClient({ business,initialConfig }: {
                     <div className="space-y-8 border-t border-[#F0F0F0] pt-8">
                       <div>
                         <p className="text-[14px] font-bold text-[#0A0A0A] mb-1">Style</p>
-                        <p className="text-[#9B9B9B] text-[13px] mb-5">Logo, page color, and social links.</p>
+                        <p className="text-[#858585] text-[13px] mb-5">Logo, page color, and social links.</p>
                         {/* Logo upload */}
-                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Logo</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
                         <div className="flex items-center gap-4 mb-3">
                           {localBusiness?.avatar_url
                             ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                                className="w-14 h-14 rounded-full object-cover border border-[#EBEBEB] flex-shrink-0" alt="Logo"/>
-                            :<div className="w-14 h-14 rounded-full bg-[#F5F5F5] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+                                className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
+                            :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
                           }
                           <div className="flex-1 min-w-0">
                             <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
@@ -2139,7 +2139,7 @@ export default function BuilderClient({ business,initialConfig }: {
                                 }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
                                 finally{setLogoUploading(false);e.target.value='';}
                               }}/>
-                              <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F5F5F5] text-[12px] font-semibold text-[#111] hover:bg-[#EBEBEB] transition-colors ${logoUploading?'opacity-60':''}`}>
+                              <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
                                 <LucideImage size={13} color="#6B6B6B"/>
                                 {logoUploading?'Uploading…':'Upload logo'}
                               </span>
@@ -2149,7 +2149,7 @@ export default function BuilderClient({ business,initialConfig }: {
                         </div>
                         {googlePhotos.length>0&&(
                           <div className="mb-4">
-                            <p className="text-[10px] text-[#9B9B9B] mb-2">Or pick a Google Business photo as your logo:</p>
+                            <p className="text-[10px] text-[#858585] mb-2">Or pick a Google Business photo as your logo:</p>
                             <div className="flex gap-2 flex-wrap">
                               {googlePhotos.map((url,i)=>(
                                 <button key={i} onClick={async()=>{
@@ -2164,7 +2164,7 @@ export default function BuilderClient({ business,initialConfig }: {
                                   }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
                                   finally{setLogoUploading(false);}
                                 }}
-                                className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#EBEBEB] hover:border-[#AADF1E]`}
+                                className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#DEDEDC] hover:border-[#0A0A0A]`}
                                 title={`Use Google photo ${i+1}`}>
                                   <img src={url} className="w-full h-full object-cover" alt=""/>
                                 </button>
@@ -2172,25 +2172,25 @@ export default function BuilderClient({ business,initialConfig }: {
                             </div>
                           </div>
                         )}
-                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3 mt-6">Page color</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Page color</p>
                         <div className="grid grid-cols-5 gap-3 mb-4">
                           {BG_PRESETS.map(c=>(
                             <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
                               className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
-                              style={{background:c,borderColor:config.bg===c?'#0A0A0A':'#EBEBEB'}}/>
+                              style={{background:c,borderColor:config.bg===c?'#0A0A0A':'#DEDEDC'}}/>
                           ))}
                         </div>
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg border border-[#EBEBEB]" style={{background:config.bg}}/>
+                          <div className="w-8 h-8 rounded-lg border border-[#DEDEDC]" style={{background:config.bg}}/>
                           <input value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
                             placeholder="#ffffff or gradient"
-                            className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                            className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                         </div>
                       </div>
                       {/* Theme / accent color */}
                       <div>
-                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3 mt-6">Accent color</p>
-                        <p className="text-[11px] text-[#9B9B9B] mb-3">Used for the Directions button and accent elements on your page.</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Accent color</p>
+                        <p className="text-[11px] text-[#858585] mb-3">Used for the Directions button and accent elements on your page.</p>
                         <div className="grid grid-cols-7 gap-2 mb-3">
                           {['#DB6B8F','#E07D5A','#F5A623','#4CAF50','#2563EB','#7C3AED','#0891B2'].map(c=>(
                             <button key={c} onClick={()=>setConfig(p=>({...p,themeColor:c}))}
@@ -2199,19 +2199,19 @@ export default function BuilderClient({ business,initialConfig }: {
                           ))}
                         </div>
                         <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-lg border border-[#EBEBEB] flex-shrink-0" style={{background:config.themeColor??'#DB6B8F'}}/>
+                          <div className="w-7 h-7 rounded-lg border border-[#DEDEDC] flex-shrink-0" style={{background:config.themeColor??'#DB6B8F'}}/>
                           <input value={config.themeColor??''} onChange={e=>setConfig(c=>({...c,themeColor:e.target.value}))}
                             placeholder="#DB6B8F"
-                            className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                            className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                         </div>
                       </div>
                       {/* Google Place ID */}
                       <div>
-                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3 mt-6">Google Place ID</p>
-                        <p className="text-[11px] text-[#9B9B9B] mb-3">Connect your Google listing to show your star rating and pull gallery photos automatically. Find yours at <span className="font-mono">maps.google.com</span> → share → place ID.</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Google Place ID</p>
+                        <p className="text-[11px] text-[#858585] mb-3">Connect your Google listing to show your star rating and pull gallery photos automatically. Find yours at <span className="font-mono">maps.google.com</span> → share → place ID.</p>
                         <input value={config.placeId??''} onChange={e=>setConfig(c=>({...c,placeId:e.target.value.trim()}))}
                           placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4"
-                          className="w-full bg-white border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                          className="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                         {config.placeId&&(
                           <button onClick={async()=>{
                             if(!localBusiness?.id)return;
@@ -2220,14 +2220,14 @@ export default function BuilderClient({ business,initialConfig }: {
                             if(!token)return;
                             await fetch('/api/business/place-id',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({placeId:config.placeId})});
                           }}
-                          className="mt-2 px-3 py-1.5 rounded-lg bg-[#F5F5F5] text-[12px] font-semibold text-[#111] hover:bg-[#EBEBEB] transition-colors">
+                          className="mt-2 px-3 py-1.5 rounded-lg bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors">
                             Save Place ID to listing
                           </button>
                         )}
                       </div>
                       {/* Background photo */}
                       <div>
-                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Background photo</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Background photo</p>
                         {config.bgImage&&(
                           <div className="relative mb-3 rounded-xl overflow-hidden">
                             <img src={config.bgImage} className="w-full h-20 object-cover" alt="Background"/>
@@ -2250,31 +2250,31 @@ export default function BuilderClient({ business,initialConfig }: {
                               }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
                               finally{setBgUploading(false);e.target.value='';}
                             }}/>
-                            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F5F5F5] text-[12px] font-semibold text-[#111] hover:bg-[#EBEBEB] transition-colors">
+                            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors">
                               <LucideImage size={13} color="#6B6B6B"/>
                               {bgUploading?'Uploading…':'Upload photo'}
                             </span>
                           </label>
                           {googlePhotos.map((url,i)=>(
                             <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                              className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#AADF1E]':'border-[#EBEBEB] hover:border-[#AADF1E]'}`}
+                              className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}
                               title={`Google photo ${i+1}`}>
                               <img src={url} className="w-full h-full object-cover" alt=""/>
                             </button>
                           ))}
                         </div>
                         {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
-                        {googlePhotos.length>0&&<p className="text-[10px] text-[#9B9B9B] mt-1.5">Tap a thumbnail to use your Google Business photo.</p>}
+                        {googlePhotos.length>0&&<p className="text-[10px] text-[#858585] mt-1.5">Tap a thumbnail to use your Google Business photo.</p>}
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold text-[#9B9B9B] uppercase tracking-wider mb-3">Social profiles</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Social profiles</p>
                         <div className="space-y-2.5">
                           {SOCIAL_PLATFORMS.map(({key,label})=>(
                             <div key={key} className="flex items-center gap-3">
                               <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
                               <input value={config.socials[key]??''} onChange={e=>setConfig(c=>({...c,socials:{...c.socials,[key]:e.target.value}}))}
                                 placeholder={`${label} URL…`}
-                                className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                                className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                             </div>
                           ))}
                         </div>
@@ -2290,38 +2290,38 @@ export default function BuilderClient({ business,initialConfig }: {
               <div className="px-8 py-8 max-w-[600px]">
                 <div className="mb-7">
                   <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Business Info</h2>
-                  <p className="text-[#9B9B9B] text-[13px] mt-1">Your name, location, and category.</p>
+                  <p className="text-[#858585] text-[13px] mt-1">Your name, location, and category.</p>
                 </div>
-                <div className="rounded-2xl border border-[#EBEBEB] p-5 space-y-4 bg-white">
+                <div className="rounded-2xl border border-[#DEDEDC] p-5 space-y-4 bg-white">
                   <div>
-                    <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Business name</p>
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Business name</p>
                     <p className="text-[15px] font-semibold text-[#111]">{business?.name??'—'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Category</p>
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Category</p>
                     <p className="text-[15px] font-semibold text-[#111]">{business?.category??'Not set'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Description</p>
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Description</p>
                     <p className="text-[13px] text-[#6B6B6B] leading-relaxed">{business?.tagline??'No description yet.'}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Location</p>
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Location</p>
                     <div className="flex items-center gap-3">
                       <input value={config.location??''} onChange={e=>setConfig(c=>({...c,location:e.target.value}))}
                         placeholder="e.g. 123 Main St, Austin TX"
-                        className="flex-1 bg-white border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                        className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                     </div>
                   </div>
                 </div>
                 {/* Logo upload */}
                 <div className="mt-5">
-                  <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-3">Logo</p>
+                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
                   <div className="flex items-center gap-4 mb-3">
                     {localBusiness?.avatar_url
                       ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                          className="w-14 h-14 rounded-full object-cover border border-[#EBEBEB] flex-shrink-0" alt="Logo"/>
-                      :<div className="w-14 h-14 rounded-full bg-[#F5F5F5] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+                          className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
+                      :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
                     }
                     <div className="flex-1 min-w-0">
                       <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
@@ -2337,7 +2337,7 @@ export default function BuilderClient({ business,initialConfig }: {
                           }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
                           finally{setLogoUploading(false);e.target.value='';}
                         }}/>
-                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F5F5F5] text-[12px] font-semibold text-[#111] hover:bg-[#EBEBEB] transition-colors ${logoUploading?'opacity-60':''}`}>
+                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
                           {logoUploading?'Uploading…':'Upload logo'}
                         </span>
                       </label>
@@ -2346,7 +2346,7 @@ export default function BuilderClient({ business,initialConfig }: {
                   </div>
                   {googlePhotos.length>0&&(
                     <div className="mb-3">
-                      <p className="text-[10px] text-[#9B9B9B] mb-2">Or use a Google Business photo as your logo:</p>
+                      <p className="text-[10px] text-[#858585] mb-2">Or use a Google Business photo as your logo:</p>
                       <div className="flex gap-2 flex-wrap">
                         {googlePhotos.map((url,i)=>(
                           <button key={i} onClick={async()=>{
@@ -2361,7 +2361,7 @@ export default function BuilderClient({ business,initialConfig }: {
                             }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
                             finally{setLogoUploading(false);}
                           }}
-                          className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#EBEBEB] hover:border-[#AADF1E]`}
+                          className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#DEDEDC] hover:border-[#0A0A0A]`}
                           title={`Use Google photo ${i+1}`}>
                             <img src={url} className="w-full h-full object-cover" alt=""/>
                           </button>
@@ -2369,7 +2369,7 @@ export default function BuilderClient({ business,initialConfig }: {
                       </div>
                     </div>
                   )}
-                  <p className="text-[12px] text-[#9B9B9B]">
+                  <p className="text-[12px] text-[#858585]">
                     To edit your name or category, <a href="/setup?step=1" className="font-semibold text-[#111] underline underline-offset-2">go to Settings →</a>
                   </p>
                 </div>
@@ -2381,22 +2381,22 @@ export default function BuilderClient({ business,initialConfig }: {
               <div className="px-8 py-8 max-w-[600px]">
                 <div className="mb-7">
                   <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Links</h2>
-                  <p className="text-[#9B9B9B] text-[13px] mt-1">Your public OpenStatus link.</p>
+                  <p className="text-[#858585] text-[13px] mt-1">Your public OpenStatus link.</p>
                 </div>
-                <div className="rounded-2xl border border-[#EBEBEB] p-5 bg-white">
-                  <p className="text-[11px] font-bold text-[#9B9B9B] uppercase tracking-wider mb-2">Your link</p>
+                <div className="rounded-2xl border border-[#DEDEDC] p-5 bg-white">
+                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Your link</p>
                   {business?.slug?(
                     <div className="flex items-center gap-3">
-                      <code className="text-[14px] font-semibold text-[#111] bg-[#F5F5F5] px-3 py-2 rounded-xl flex-1">
+                      <code className="text-[14px] font-semibold text-[#111] bg-[#EEEEEC] px-3 py-2 rounded-xl flex-1">
                         openstatus.co/{business.slug}
                       </code>
                       <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-full bg-[#AADF1E] text-[#111] text-[12px] font-bold hover:bg-[#99CF0E] transition-colors whitespace-nowrap">
+                        className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors whitespace-nowrap">
                         Open ↗
                       </a>
                     </div>
                   ):(
-                    <p className="text-[13px] text-[#9B9B9B]">No link set yet.</p>
+                    <p className="text-[13px] text-[#858585]">No link set yet.</p>
                   )}
                 </div>
               </div>
@@ -2405,13 +2405,13 @@ export default function BuilderClient({ business,initialConfig }: {
             {/* ══ OTHER TABS — placeholder ══ */}
             {(sidebarTab==='integrations'||sidebarTab==='analytics'||sidebarTab==='settings')&&(
               <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
-                <div className="w-14 h-14 rounded-2xl bg-[#F5F5F5] flex items-center justify-center mb-5">
+                <div className="w-14 h-14 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-5">
                   {sidebarTab==='integrations'?<IconPuzzle size={22} color="#C0C0C0"/>
                   :sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
                   :<IconSettings size={22} color="#C0C0C0"/>}
                 </div>
                 <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">{sidebarLabel}</p>
-                <p className="text-[13px] text-[#9B9B9B] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
+                <p className="text-[13px] text-[#858585] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
               </div>
             )}
           </div>
@@ -2420,29 +2420,29 @@ export default function BuilderClient({ business,initialConfig }: {
           {/* Drag-to-resize handle */}
           <div
             onMouseDown={onResizeStart}
-            className="hidden md:flex w-1.5 flex-shrink-0 cursor-col-resize hover:bg-[#AADF1E]/60 active:bg-[#AADF1E] transition-colors border-l border-[#EBEBEB] group"
+            className="hidden md:flex w-1.5 flex-shrink-0 cursor-col-resize hover:bg-white/10 active:bg-white/20 transition-colors border-l border-[#DEDEDC] group"
             title="Drag to resize preview"
           >
             <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="w-0.5 h-10 rounded-full bg-[#AADF1E]" />
+              <div className="w-0.5 h-10 rounded-full bg-white/30" />
             </div>
           </div>
-          <div className="hidden md:flex flex-shrink-0 flex-col bg-[#FAFAFA]" style={{width:previewWidth}}>
+          <div className="hidden md:flex flex-shrink-0 flex-col bg-[#F7F7F5]" style={{width:previewWidth}}>
             {/* Toggle bar */}
-            <div className="h-14 border-b border-[#EBEBEB] flex items-center justify-between px-4 flex-shrink-0 bg-white">
-              <div className="flex items-center gap-0.5 bg-[#F5F5F5] rounded-full p-0.5">
+            <div className="h-14 border-b border-black/6 flex items-center justify-between px-4 flex-shrink-0 bg-white/80 backdrop-blur-sm">
+              <div className="flex items-center gap-0.5 bg-black/5 rounded-full p-0.5">
                 <button onClick={()=>setPreviewMode('mobile')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='mobile'?'bg-white text-[#111] shadow-sm':'text-[#9B9B9B] hover:text-[#111]'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='mobile'?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
                   <IconSmartphone size={11}/> Mobile
                 </button>
                 <button onClick={()=>setPreviewMode('desktop')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='desktop'?'bg-white text-[#111] shadow-sm':'text-[#9B9B9B] hover:text-[#111]'}`}>
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='desktop'?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
                   <IconMonitor size={11}/> Desktop
                 </button>
               </div>
               {business?.slug&&(
                 <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                  className="text-[11px] text-[#9B9B9B] hover:text-[#111] transition-colors font-medium whitespace-nowrap">
+                  className="text-[11px] text-[#858585] hover:text-[#111] transition-colors font-medium whitespace-nowrap">
                   Open ↗
                 </a>
               )}
@@ -2483,7 +2483,7 @@ export default function BuilderClient({ business,initialConfig }: {
       </div>
 
       {/* ── MOBILE BOTTOM NAV ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#EBEBEB] flex items-stretch"
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-black/6 flex items-stretch"
         style={{ paddingBottom:'env(safe-area-inset-bottom)' }}>
         {SIDEBAR_NAV.slice(0,4).map(({key,label,icon})=>(
           <button key={key} onClick={()=>setSidebarTab(key)}
@@ -2498,7 +2498,7 @@ export default function BuilderClient({ business,initialConfig }: {
               {label.split(' ')[0]}
             </span>
             {sidebarTab===key&&(
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#AADF1E]"/>
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#0A0A0A]"/>
             )}
           </button>
         ))}
@@ -2514,16 +2514,16 @@ export default function BuilderClient({ business,initialConfig }: {
             Preview
           </span>
           {sidebarTab===('preview')&&(
-            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#AADF1E]"/>
+            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#0A0A0A]"/>
           )}
         </button>
       </nav>
 
       {/* ── MOBILE PREVIEW SHEET ── */}
       {sidebarTab===('preview')&&(
-        <div className="md:hidden fixed inset-0 z-30 bg-[#F5F5F5] overflow-y-auto flex flex-col"
+        <div className="md:hidden fixed inset-0 z-30 bg-[#EEEEEC] overflow-y-auto flex flex-col"
           style={{ paddingBottom:'calc(56px + env(safe-area-inset-bottom))', paddingTop:'env(safe-area-inset-top)' }}>
-          <div className="flex items-center justify-between px-4 h-14 bg-white border-b border-[#EBEBEB] flex-shrink-0">
+          <div className="flex items-center justify-between px-4 h-14 bg-white border-b border-[#DEDEDC] flex-shrink-0">
             <span className="text-[13px] font-bold text-[#111]">Preview</span>
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
@@ -2543,7 +2543,7 @@ export default function BuilderClient({ business,initialConfig }: {
       {quickAction&&(
         <div className="fixed inset-0 z-50 flex" onClick={()=>setQuickAction(null)}>
           <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"/>
-          <div className="relative ml-auto w-[320px] h-full bg-white shadow-2xl flex flex-col border-l border-[#EBEBEB]" onClick={e=>e.stopPropagation()}>
+          <div className="relative ml-auto w-[320px] h-full bg-white shadow-2xl flex flex-col border-l border-[#DEDEDC]" onClick={e=>e.stopPropagation()}>
             {/* Flyout header */}
             <div className="px-5 py-4 border-b border-[#F0F0F0] flex items-center justify-between flex-shrink-0">
               <p className="text-[15px] font-bold text-[#111]">
@@ -2552,7 +2552,7 @@ export default function BuilderClient({ business,initialConfig }: {
                 :quickAction==='special-hours'?'Special Hours'
                 :'Out of Office'}
               </p>
-              <button onClick={()=>setQuickAction(null)} className="w-7 h-7 rounded-full bg-[#F5F5F5] flex items-center justify-center hover:bg-[#EBEBEB] transition-colors">
+              <button onClick={()=>setQuickAction(null)} className="w-7 h-7 rounded-full bg-[#EEEEEC] flex items-center justify-center hover:bg-[#DEDEDC] transition-colors">
                 <LucideX size={13} color="#6B6B6B"/>
               </button>
             </div>
@@ -2564,10 +2564,10 @@ export default function BuilderClient({ business,initialConfig }: {
                     <p className="text-[12px] font-semibold text-[#6B6B6B] mb-2">Close at</p>
                     <div className="relative">
                       <select value={closeEarlyTime} onChange={e=>setCloseEarlyTime(e.target.value)}
-                        className="w-full bg-[#F5F5F5] border border-[#EBEBEB] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#111] focus:outline-none focus:border-[#0A0A0A] appearance-none cursor-pointer">
+                        className="w-full bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#111] focus:outline-none focus:border-[#0A0A0A] appearance-none cursor-pointer">
                         {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                       </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={14} color="#9B9B9B"/></div>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={14} color="#858585"/></div>
                     </div>
                   </div>
                   <div>
@@ -2575,7 +2575,7 @@ export default function BuilderClient({ business,initialConfig }: {
                     <textarea value={quickMsg} onChange={e=>setQuickMsg(e.target.value.slice(0,100))}
                       placeholder="e.g. Closing early for a private event…"
                       rows={3}
-                      className="w-full bg-white border border-[#EBEBEB] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"/>
+                      className="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"/>
                     <p className="text-right text-[10px] text-[#C0C0C0] mt-1">{quickMsg.length}/100</p>
                   </div>
                 </>
@@ -2587,14 +2587,14 @@ export default function BuilderClient({ business,initialConfig }: {
               )}
               {(quickAction==='special-hours'||quickAction==='out-of-office')&&(
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <p className="text-[13px] text-[#9B9B9B]">Coming soon!</p>
+                  <p className="text-[13px] text-[#858585]">Coming soon!</p>
                 </div>
               )}
             </div>
             {/* Flyout footer */}
             <div className="px-5 py-4 border-t border-[#F0F0F0] flex gap-3 flex-shrink-0">
               <button onClick={()=>setQuickAction(null)}
-                className="flex-1 py-2.5 rounded-full border border-[#EBEBEB] text-[13px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
+                className="flex-1 py-2.5 rounded-full border border-[#DEDEDC] text-[13px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
                 Cancel
               </button>
               <button
@@ -2608,7 +2608,7 @@ export default function BuilderClient({ business,initialConfig }: {
                   }
                   setQuickAction(null);
                 }}
-                className="flex-1 py-2.5 rounded-full bg-[#AADF1E] text-[#111] text-[13px] font-bold hover:bg-[#99CF0E] transition-colors">
+                className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-white text-[13px] font-bold hover:bg-[#292929] transition-colors">
                 Update Hours
               </button>
             </div>
