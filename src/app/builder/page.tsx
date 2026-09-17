@@ -18,7 +18,7 @@ interface DbHoursRow {
 interface BusinessData {
   id: string;
   name: string;
-  slug?: string;
+  slug: string;
   avatar_url?: string;
   header_url?: string;
   tagline?: string;
