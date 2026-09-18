@@ -1448,7 +1448,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── SOCIALS ── */}
           {block.id==='socials' && (
             <div className="space-y-5">
-              <BlockStylePicker blockId="socials" selected={block.blockStyle??'icons'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo behind the social links block."/>
               <div className="space-y-3">
               <FieldLabel>Your social links</FieldLabel>
@@ -2602,6 +2601,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
 
               return(
                 <div className="px-5 py-5 overflow-y-auto h-full">
+                  {/* Intro */}
+                  <div className="mb-5 rounded-2xl bg-[#F7F7F5] border border-[#DEDEDC] px-4 py-3">
+                    <p className="text-[12px] font-bold text-[#0A0A0A] mb-1">Connect your platforms</p>
+                    <p className="text-[11px] text-[#858585] leading-relaxed">Tap <strong className="text-[#0A0A0A]">Add</strong> next to any platform, paste your link, and hit <strong className="text-[#0A0A0A]">Save</strong>. That&#39;s it — your page updates automatically when you save.</p>
+                  </div>
                   {/* Google Business */}
                   <div className="mb-5">
                     <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Business Profile</p>
@@ -2669,29 +2673,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                           url={connected?bookBlock?.url:undefined}
                           onSave={(url)=>updateBlock('book',{on:true,provider:provider.key,url})}
                           onClear={()=>updateBlock('book',{on:false,url:'',provider:''})}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {/* Social Media */}
-                  <div className="mb-5">
-                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Social Media</p>
-                    {SOCIAL_PLATFORMS.map(platform=>{
-                      const url=config.socials?.[platform.key];
-                      const connected=!!(url&&url.trim());
-                      return(
-                        <IntCard
-                          key={platform.key}
-                          cardKey={`social-${platform.key}`}
-                          icon={<SocialIcon platform={platform.key} size={22}/>}
-                          name={platform.label}
-                          desc={`Paste your ${platform.label} profile URL`}
-                          placeholder={`https://www.${platform.key}.com/yourprofile`}
-                          connected={connected}
-                          url={url||undefined}
-                          onSave={(v)=>setConfig(c=>({...c,socials:{...c.socials,[platform.key]:v}}))}
-                          onClear={()=>setConfig(c=>({...c,socials:{...c.socials,[platform.key]:''}}))}
                         />
                       );
                     })}
