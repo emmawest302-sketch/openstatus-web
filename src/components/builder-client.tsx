@@ -1066,6 +1066,135 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
   );
 }
 
+// ── Desktop page preview (matches [slug]/page.tsx layout) ─────────────────────
+function LiveDesktopPreview({ business,config }: { business:Business|null; config:OpenStatusPageConfig }) {
+  const isDark = ['#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c'].includes(config.bg);
+  const bg = config.bg || '#F7F7F5';
+  const { status, todayLabel } = getLiveStatus(config.weeklyHours);
+  const activeBlocks = config.blocks.filter(b => b.on);
+  const sortedBlocks = [
+    ...activeBlocks.filter(b => b.id === 'hours'),
+    ...activeBlocks.filter(b => b.id !== 'hours'),
+  ];
+  const locBlock = config.blocks.find(b => b.id === 'location');
+  const reviewPct = locBlock?.reviewStars && locBlock.reviewStars > 0 ? starsToPercent(locBlock.reviewStars) : null;
+  const coverPhoto = config.bgImage || business?.avatar_url;
+  const themeColor = '#DB6B8F';
+  const initials = (business?.name ?? 'B').split(/\s+/).filter(Boolean).slice(0,2).map((p:string)=>p[0]).join('').toUpperCase();
+
+  // hex to rgb helper for fade gradient
+  function hexToRgb(hex: string) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? { r:parseInt(result[1],16), g:parseInt(result[2],16), b:parseInt(result[3],16) } : { r:247,g:247,b:245 };
+  }
+  const { r,g,b: bv } = hexToRgb(bg);
+  const fadeGradient = `linear-gradient(to bottom, rgba(${r},${g},${bv},0) 0%, rgba(${r},${g},${bv},0.35) 48%, ${bg} 100%)`;
+
+  const glass: React.CSSProperties = {
+    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.72)',
+    backdropFilter: 'blur(24px) saturate(130%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(130%)',
+    border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.82)'}`,
+    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+    borderRadius: 20,
+    padding: '14px 16px',
+  };
+
+  const tx = isDark ? '#fff' : '#151515';
+  const sx = isDark ? 'rgba(255,255,255,0.5)' : '#8A8A86';
+
+  return (
+    <div style={{ minHeight: '100%', background: bg, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 14 }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>
+
+        {/* Cover photo */}
+        {coverPhoto ? (
+          <div style={{ position:'relative', height:200, overflow:'hidden' }}>
+            <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%', display:'block' }}/>
+            <div style={{ position:'absolute', inset:0, background:fadeGradient }}/>
+          </div>
+        ) : (
+          <div style={{ height:60, background:'rgba(0,0,0,0.04)' }}/>
+        )}
+
+        {/* Logo */}
+        <div style={{ display:'flex', justifyContent:'center', marginTop: coverPhoto ? -40 : 0, position:'relative', zIndex:10 }}>
+          {business?.avatar_url && !business.avatar_url.startsWith('storage:') ? (
+            <img src={business.avatar_url} alt="" style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', objectFit:'cover', boxShadow:'0 8px 32px rgba(0,0,0,0.10)', display:'block' }}/>
+          ) : (
+            <div style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', display:'grid', placeItems:'center', fontSize:24, fontWeight:800, color:themeColor, boxShadow:'0 8px 32px rgba(0,0,0,0.10)' }}>
+              {initials}
+            </div>
+          )}
+        </div>
+
+        {/* Business name */}
+        <div style={{ textAlign:'center', padding:'8px 20px 4px' }}>
+          <h1 style={{ fontSize:32, fontWeight:800, letterSpacing:'-0.03em', color:tx, lineHeight:1, margin:0, fontFamily:'Georgia, "Times New Roman", serif' }}>
+            {business?.name ?? 'Your Business'}
+          </h1>
+          {business?.tagline && (
+            <p style={{ fontSize:10, fontWeight:500, letterSpacing:'0.15em', textTransform:'uppercase', color:sx, marginTop:6 }}>
+              {business.tagline}
+            </p>
+          )}
+          {reviewPct && (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4, marginTop:6 }}>
+              <LucideStar size={11} color="#f59e0b" filled/>
+              <span style={{ fontSize:11, fontWeight:700, color:'#f59e0b' }}>{reviewPct}%</span>
+              {locBlock?.reviewCount && <span style={{ fontSize:10, color:sx }}> · {locBlock.reviewCount.toLocaleString()} reviews</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Blocks */}
+        <div style={{ padding:'10px 14px 32px', display:'flex', flexDirection:'column', gap:10 }}>
+          {sortedBlocks.length === 0 ? (
+            <p style={{ textAlign:'center', fontSize:12, color:sx, padding:'24px 0' }}>Toggle blocks to see them here</p>
+          ) : sortedBlocks.map(b => (
+            <div key={b.id} style={{ ...glass }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ width:40, height:40, borderRadius:'50%', flexShrink:0, background: isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
+                  <BlockIcon id={b.id} size={18} color={b.color}/>
+                </div>
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:15, fontWeight:700, color:tx, margin:0, letterSpacing:'-0.01em' }}>
+                    {b.id === 'hours' ? (status === 'open' ? 'Open now' : 'Closed now') : b.title}
+                  </p>
+                  <p style={{ fontSize:12, color:sx, margin:0, marginTop:2 }}>
+                    {b.id === 'hours' ? todayLabel : b.sub}
+                  </p>
+                </div>
+                {b.url && (
+                  <div style={{ fontSize:11, color:isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.3)', flexShrink:0 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Social icons */}
+        {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).length > 0 && (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'0 0 16px' }}>
+            {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).map(p => (
+              <div key={p.key} style={{ width:40, height:40, borderRadius:'50%', display:'grid', placeItems:'center', background: isDark?'rgba(255,255,255,0.10)':'rgba(0,0,0,0.06)' }}>
+                <SocialIcon platform={p.key} size={16}/>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <p style={{ textAlign:'center', fontSize:10, letterSpacing:'0.15em', textTransform:'uppercase', color:'rgba(0,0,0,0.22)', paddingBottom:24 }}>
+          Powered by OpenStatus
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Block edit panel (inline right of blocks, no modal) ───────────────────────
 function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
@@ -2433,7 +2562,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
             {/* Phone / Desktop preview */}
             <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-6 overflow-y-auto">
               {previewMode==='desktop'?(
-                business?.slug?(
                 <div className="w-full h-full flex flex-col">
                   {/* Browser chrome */}
                   <div className="flex-shrink-0 bg-[#F0F0F0] border-b border-[#DEDEDE] px-3 py-2 flex items-center gap-2">
@@ -2443,26 +2571,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                       <div className="w-3 h-3 rounded-full bg-[#28CA41]"/>
                     </div>
                     <div className="flex-1 bg-white rounded-md px-3 py-1 text-[11px] text-[#888] font-medium border border-[#DEDEDE] truncate">
-                      openstatus.co/{business.slug}
+                      openstatus.co/{business?.slug||'your-page'}
                     </div>
                   </div>
-                  {/* iframe */}
-                  <iframe
-                    key={`desktop-preview-${business.slug}`}
-                    src={`/${business.slug}`}
-                    className="flex-1 w-full border-0"
-                    sandbox="allow-scripts allow-same-origin allow-forms"
-                    title="Desktop preview"
-                  />
+                  {/* Live desktop preview */}
+                  <div className="flex-1 overflow-y-auto">
+                    <LiveDesktopPreview business={localBusiness} config={config}/>
+                  </div>
                 </div>
-                ):(
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center space-y-2">
-                      <p className="text-[13px] font-semibold text-[#111]">Desktop preview</p>
-                      <p className="text-[11px] text-[#858585]">Save your page to see the live desktop view.</p>
-                    </div>
-                  </div>
-                )
               ):(
                 <LivePhonePreview
                   business={localBusiness} config={config}
