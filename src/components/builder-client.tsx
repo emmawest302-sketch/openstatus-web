@@ -2549,7 +2549,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
               const orderBlock=allBlocks.find(b=>b.id==='order');
               const bookBlock=allBlocks.find(b=>b.id==='book');
               const [expandedKey,setExpandedKey]=React.useState<string|null>(null);
-              const [inputVal,setInputVal]=React.useState('');
 
               function IntCard({cardKey,icon,name,desc,connected,url,onSave,onClear,placeholder}:{cardKey:string;icon:React.ReactNode;name:string;desc:string;connected:boolean;url?:string;onSave:(url:string)=>void;onClear?:()=>void;placeholder:string}){
                 const isExpanded=expandedKey===cardKey;
@@ -2747,17 +2746,201 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
               );
             })()}
 
-            {/* ══ ANALYTICS + SETTINGS — placeholder ══ */}
-            {(sidebarTab==='analytics'||sidebarTab==='settings')&&(
+            {/* ══ ANALYTICS — placeholder ══ */}
+            {sidebarTab==='analytics'&&(
               <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
                 <div className="w-14 h-14 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-5">
-                  {sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
-                  :<IconSettings size={22} color="#C0C0C0"/>}
+                  <IconBarChart size={22} color="#C0C0C0"/>
                 </div>
-                <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">{sidebarLabel}</p>
+                <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">Analytics</p>
                 <p className="text-[13px] text-[#858585] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
               </div>
             )}
+
+            {/* ══ SETTINGS TAB ══ */}
+            {sidebarTab==='settings'&&(()=>{
+              const BIZ_CATS=['Coffee Shop / Café','Restaurant','Bar','Bakery','Food Truck','Retail / Boutique','Salon / Beauty','Fitness','Spa / Wellness','Services','Events / Entertainment','Non-profit','Pop-up','Market','Other'];
+              const [settingsName,setSettingsName]=React.useState(localBusiness?.name??'');
+              const [settingsCat,setSettingsCat]=React.useState(localBusiness?.category??'');
+              const [settingsDesc,setSettingsDesc]=React.useState(localBusiness?.tagline??'');
+              const [settingsLocation,setSettingsLocation]=React.useState(config.location??'');
+              const [settingsPhone,setSettingsPhone]=React.useState(allBlocks.find(b=>b.id==='call')?.url?.replace('tel:','')?? '');
+              const [settingsWebsite,setSettingsWebsite]=React.useState(allBlocks.find(b=>b.id==='website')?.url??'');
+              const [bizSaving,setBizSaving]=React.useState(false);
+              const [bizSaved,setBizSaved]=React.useState(false);
+              const [bizErr,setBizErr]=React.useState('');
+              const [userEmail,setUserEmail]=React.useState('');
+              const [newPw,setNewPw]=React.useState('');
+              const [pwSaving,setPwSaving]=React.useState(false);
+              const [pwMsg,setPwMsg]=React.useState('');
+              const [showDeleteConfirm,setShowDeleteConfirm]=React.useState(false);
+              const [deleteText,setDeleteText]=React.useState('');
+
+              React.useEffect(()=>{
+                supabase.auth.getUser().then(({data})=>setUserEmail(data.user?.email??''));
+              },[]);
+
+              async function saveBiz(){
+                if(!localBusiness?.id)return;
+                setBizSaving(true);setBizErr('');
+                const{error}=await supabase.from('businesses').update({
+                  name:settingsName.trim()||localBusiness.name,
+                  category:settingsCat,
+                  tagline:settingsDesc.trim(),
+                }).eq('id',localBusiness.id);
+                if(error){setBizErr(error.message);setBizSaving(false);return;}
+                setLocalBusiness(b=>b?({...b,name:settingsName.trim()||b.name,category:settingsCat,tagline:settingsDesc.trim()}):b);
+                setConfig(c=>({...c,location:settingsLocation}));
+                if(settingsPhone.trim()) updateBlock('call',{url:`tel:${settingsPhone.trim()}`,on:true});
+                if(settingsWebsite.trim()) updateBlock('website',{url:settingsWebsite.trim(),on:true});
+                setBizSaving(false);setBizSaved(true);setTimeout(()=>setBizSaved(false),2500);
+              }
+
+              async function changePw(){
+                if(!newPw.trim()||newPw.length<8){setPwMsg('Password must be at least 8 characters.');return;}
+                setPwSaving(true);setPwMsg('');
+                const{error}=await supabase.auth.updateUser({password:newPw});
+                setPwSaving(false);
+                if(error){setPwMsg(error.message);}else{setPwMsg('Password updated!');setNewPw('');}
+              }
+
+              async function handleLogout(){
+                await supabase.auth.signOut();
+                window.location.href='/';
+              }
+
+              const SettingField=({label,children}:{label:string;children:React.ReactNode})=>(
+                <div>
+                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-1.5">{label}</p>
+                  {children}
+                </div>
+              );
+              const inputCls="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors";
+
+              return(
+                <div className="px-5 py-5 overflow-y-auto h-full space-y-6">
+
+                  {/* ── Business Info ── */}
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Business Info</p>
+                    <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4 space-y-4">
+                      <SettingField label="Business name">
+                        <input className={inputCls} value={settingsName} onChange={e=>setSettingsName(e.target.value)} placeholder="Your business name"/>
+                      </SettingField>
+                      <SettingField label="Category">
+                        <select className={inputCls} value={settingsCat} onChange={e=>setSettingsCat(e.target.value)}>
+                          <option value="">Select a category…</option>
+                          {BIZ_CATS.map(c=><option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </SettingField>
+                      <SettingField label="Description">
+                        <textarea className={`${inputCls} resize-none`} rows={3} value={settingsDesc} onChange={e=>setSettingsDesc(e.target.value)} placeholder="A short description of your business…"/>
+                      </SettingField>
+                      <SettingField label="Location">
+                        <input className={inputCls} value={settingsLocation} onChange={e=>setSettingsLocation(e.target.value)} placeholder="123 Main St, Austin TX"/>
+                      </SettingField>
+                      <SettingField label="Phone">
+                        <input className={inputCls} type="tel" value={settingsPhone} onChange={e=>setSettingsPhone(e.target.value)} placeholder="+1 (555) 000-0000"/>
+                      </SettingField>
+                      <SettingField label="Website">
+                        <input className={inputCls} type="url" value={settingsWebsite} onChange={e=>setSettingsWebsite(e.target.value)} placeholder="https://yoursite.com"/>
+                      </SettingField>
+                      {bizErr&&<p className="text-[11px] text-red-500">{bizErr}</p>}
+                      <button onClick={saveBiz} disabled={bizSaving} className="w-full rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold py-2.5 hover:bg-[#292929] transition-colors disabled:opacity-40">
+                        {bizSaving?'Saving…':bizSaved?'✓ Saved':'Save changes'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── Subscription ── */}
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Subscription</p>
+                    <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[13px] font-bold text-[#0A0A0A]">Free plan</p>
+                          <p className="text-[11px] text-[#858585] mt-0.5">Your page is live and free forever.</p>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">Active</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Account ── */}
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Account</p>
+                    <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4 space-y-4">
+                      <SettingField label="Email">
+                        <p className="text-[13px] text-[#6B6B6B] py-1">{userEmail||'—'}</p>
+                      </SettingField>
+                      <SettingField label="Change password">
+                        <div className="flex gap-2">
+                          <input className={`${inputCls} flex-1`} type="password" value={newPw} onChange={e=>{setNewPw(e.target.value);setPwMsg('');}} placeholder="New password (8+ chars)"/>
+                          <button onClick={changePw} disabled={pwSaving||!newPw} className="flex-shrink-0 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold px-4 hover:bg-[#292929] transition-colors disabled:opacity-40">
+                            {pwSaving?'…':'Save'}
+                          </button>
+                        </div>
+                        {pwMsg&&<p className={`text-[11px] mt-1.5 ${pwMsg.startsWith('Password updated')?'text-emerald-600':'text-red-500'}`}>{pwMsg}</p>}
+                      </SettingField>
+                    </div>
+                  </div>
+
+                  {/* ── Support ── */}
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Support</p>
+                    <a href="mailto:info@openstatus.co" className="flex items-center gap-3 rounded-2xl border border-[#DEDEDC] bg-white p-4 hover:border-[#0A0A0A] transition-colors group">
+                      <div className="w-9 h-9 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-bold text-[#0A0A0A]">Email support</p>
+                        <p className="text-[11px] text-[#858585]">info@openstatus.co</p>
+                      </div>
+                      <svg className="ml-auto text-[#C0C0C0] group-hover:text-[#0A0A0A] transition-colors" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </a>
+                  </div>
+
+                  {/* ── Log out ── */}
+                  <div>
+                    <button onClick={handleLogout} className="w-full rounded-2xl border border-[#DEDEDC] bg-white p-4 text-[13px] font-bold text-[#0A0A0A] hover:border-[#0A0A0A] transition-colors text-left flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                      </div>
+                      Log out
+                    </button>
+                  </div>
+
+                  {/* ── Delete account ── */}
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Danger zone</p>
+                    {!showDeleteConfirm?(
+                      <button onClick={()=>setShowDeleteConfirm(true)} className="w-full rounded-2xl border border-[#FECACA] bg-white p-4 text-[13px] font-bold text-red-500 hover:border-red-400 hover:bg-red-50 transition-colors text-left">
+                        Delete account
+                      </button>
+                    ):(
+                      <div className="rounded-2xl border border-red-300 bg-red-50 p-4 space-y-3">
+                        <p className="text-[12px] font-bold text-red-700">Are you sure? This can&#39;t be undone.</p>
+                        <p className="text-[11px] text-red-600">Type <strong>DELETE</strong> to confirm.</p>
+                        <input className="w-full rounded-xl border border-red-300 bg-white px-3 py-2 text-[13px] focus:outline-none focus:border-red-500" value={deleteText} onChange={e=>setDeleteText(e.target.value)} placeholder="DELETE"/>
+                        <div className="flex gap-2">
+                          <button disabled={deleteText!=='DELETE'} onClick={async()=>{
+                            const{data:s}=await supabase.auth.getSession();
+                            const token=s.session?.access_token;
+                            if(!token)return;
+                            await fetch('/api/account/delete',{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
+                            await supabase.auth.signOut();
+                            window.location.href='/';
+                          }} className="flex-1 rounded-xl bg-red-600 text-white text-[12px] font-bold py-2.5 hover:bg-red-700 transition-colors disabled:opacity-40">Delete my account</button>
+                          <button onClick={()=>{setShowDeleteConfirm(false);setDeleteText('');}} className="rounded-xl border border-[#DEDEDC] text-[#6B6B6B] text-[12px] font-bold px-4 hover:border-[#0A0A0A] transition-colors">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pb-4"/>
+                </div>
+              );
+            })()}
 
           </div>
 
