@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
-type BlockSize = 'half' | 'full';
+type BlockSize = 'half' | 'full' | 'third';
 type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 interface DayHours { open: string; close: string; closed: boolean; }
 type WeeklyHours = Record<WeekDay, DayHours>;
