@@ -2514,7 +2514,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </button>
               {showAccountMenu&&<>
                 <div className="fixed inset-0 z-40" onClick={()=>setShowAccountMenu(false)}/>
-                <div className="absolute right-0 top-10 z-50 min-w-[140px] rounded-2xl bg-white shadow-xl border border-black/8 py-1 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 z-50 min-w-[140px] rounded-2xl bg-white shadow-xl border border-black/8 py-1 overflow-hidden">
                   <button onClick={async()=>{await supabase.auth.signOut();window.location.href='/login';}} className="w-full text-left px-4 py-2.5 text-[13px] text-[#D33] hover:bg-red-50 font-medium transition-colors">Sign out</button>
                 </div>
               </>}
