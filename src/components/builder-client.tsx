@@ -2545,18 +2545,195 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
               </div>
             )}
 
-            {/* ══ OTHER TABS — placeholder ══ */}
-            {(sidebarTab==='integrations'||sidebarTab==='analytics'||sidebarTab==='settings')&&(
+            {/* ══ INTEGRATIONS TAB ══ */}
+            {sidebarTab==='integrations'&&(()=>{
+              const orderBlock=allBlocks.find(b=>b.id==='order');
+              const bookBlock=allBlocks.find(b=>b.id==='book');
+              function IntCard({icon,name,desc,connected,onConnect,onEdit,url}:{icon:React.ReactNode;name:string;desc:string;connected:boolean;onConnect?:()=>void;onEdit?:()=>void;url?:string}){
+                return(
+                  <div className="flex items-center gap-3 p-3 rounded-2xl border border-[#DEDEDC] bg-white mb-2 hover:border-[#C0C0C0] transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0 overflow-hidden">{icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-bold text-[#0A0A0A] leading-tight">{name}</p>
+                      {connected&&url?(
+                        <p className="text-[10px] text-[#858585] truncate max-w-[160px]">{url.replace(/^https?:\/\//,'')}</p>
+                      ):(
+                        <p className="text-[10px] text-[#ACACAC]">{desc}</p>
+                      )}
+                    </div>
+                    {connected?(
+                      <button onClick={onEdit} className="flex-shrink-0 text-[10px] font-bold text-[#0A0A0A] border border-[#DEDEDC] rounded-full px-3 py-1 hover:border-[#0A0A0A] transition-colors">Edit</button>
+                    ):(
+                      <button onClick={onConnect} className="flex-shrink-0 text-[10px] font-bold text-white bg-[#0A0A0A] rounded-full px-3 py-1 hover:bg-[#292929] transition-colors">Add</button>
+                    )}
+                  </div>
+                );
+              }
+
+              return(
+                <div className="px-5 py-5 overflow-y-auto h-full">
+                  {/* Google Business */}
+                  <div className="mb-5">
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Business Profile</p>
+                    <IntCard
+                      icon={<svg viewBox="0 0 24 24" width="22" height="22"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>}
+                      name="Google Business"
+                      desc="Import hours, photos & reviews"
+                      connected={googleFetchDone||!!(allBlocks.find(b=>b.id==='location')?.googleUrl)}
+                      url={allBlocks.find(b=>b.id==='location')?.googleUrl}
+                      onConnect={()=>setSidebarTab('links')}
+                      onEdit={()=>setSidebarTab('links')}
+                    />
+                  </div>
+
+                  {/* Online Ordering */}
+                  <div className="mb-5">
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Online Ordering</p>
+                    {ORDER_PROVIDERS.filter(p=>p.key!=='other').map(provider=>{
+                      const connected=!!(orderBlock?.on && orderBlock?.provider===provider.key && orderBlock?.url);
+                      return(
+                        <IntCard
+                          key={provider.key}
+                          icon={<BlockIcon id={provider.key} size={22}/>}
+                          name={provider.label}
+                          desc={`Add your ${provider.label} link`}
+                          connected={connected}
+                          url={connected?orderBlock?.url:undefined}
+                          onConnect={()=>{
+                            updateBlock('order',{on:true,provider:provider.key});
+                            setSidebarTab('links');
+                            setOpenId('order');
+                          }}
+                          onEdit={()=>{setSidebarTab('links');setOpenId('order');}}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Reservations & Booking */}
+                  <div className="mb-5">
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Reservations &amp; Booking</p>
+                    {BOOK_PROVIDERS.filter(p=>p.key!=='other').map(provider=>{
+                      const connected=!!(bookBlock?.on && bookBlock?.provider===provider.key && bookBlock?.url);
+                      return(
+                        <IntCard
+                          key={provider.key}
+                          icon={<BlockIcon id={provider.key} size={22}/>}
+                          name={provider.label}
+                          desc={`Add your ${provider.label} link`}
+                          connected={connected}
+                          url={connected?bookBlock?.url:undefined}
+                          onConnect={()=>{
+                            updateBlock('book',{on:true,provider:provider.key});
+                            setSidebarTab('links');
+                            setOpenId('book');
+                          }}
+                          onEdit={()=>{setSidebarTab('links');setOpenId('book');}}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Social Media */}
+                  <div className="mb-5">
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Social Media</p>
+                    {SOCIAL_PLATFORMS.map(platform=>{
+                      const url=config.socials?.[platform.key];
+                      const connected=!!(url&&url.trim());
+                      return(
+                        <IntCard
+                          key={platform.key}
+                          icon={<SocialIcon platform={platform.key} size={22}/>}
+                          name={platform.label}
+                          desc={`Add your ${platform.label} profile`}
+                          connected={connected}
+                          url={url||undefined}
+                          onConnect={()=>{setSidebarTab('links');setOpenId('socials');}}
+                          onEdit={()=>{setSidebarTab('links');setOpenId('socials');}}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* Reviews */}
+                  <div className="mb-5">
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Reviews</p>
+                    {[
+                      {key:'yelp',    name:'Yelp',         icon:<IconYelp size={22}/>,       field:'yelpUrl'},
+                      {key:'google',  name:'Google Reviews',icon:<IconGoogle size={22}/>,     field:'googleUrl'},
+                      {key:'tripadvisor',name:'TripAdvisor',icon:<IconTripAdvisor size={22}/>,field:'tripAdvisorUrl'},
+                    ].map(r=>{
+                      const locBlock2=allBlocks.find(b=>b.id==='location');
+                      const url=(locBlock2 as unknown as Record<string,string>|undefined)?.[r.field];
+                      const connected=!!(url&&url.trim());
+                      return(
+                        <IntCard
+                          key={r.key}
+                          icon={r.icon}
+                          name={r.name}
+                          desc={`Add your ${r.name} listing`}
+                          connected={connected}
+                          url={url||undefined}
+                          onConnect={()=>{setSidebarTab('links');setOpenId('location');}}
+                          onEdit={()=>{setSidebarTab('links');setOpenId('location');}}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* QR Code */}
+                  <div className="mb-5">
+                    <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">QR Code</p>
+                    {localBusiness?.slug?(
+                      <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2zM16 16h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/></svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-bold text-[#0A0A0A] leading-tight">QR Code</p>
+                            <p className="text-[10px] text-[#ACACAC]">Print or share for easy access</p>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-[#858585] mb-3">Your unique page link:</p>
+                        <div className="flex items-center gap-2 p-2 rounded-xl bg-[#F7F7F5] border border-[#DEDEDC] mb-3">
+                          <span className="text-[11px] text-[#0A0A0A] flex-1 truncate">forothers.us/{localBusiness.slug}</span>
+                          <button
+                            onClick={()=>navigator.clipboard.writeText(`https://forothers.us/${localBusiness.slug}`)}
+                            className="flex-shrink-0 text-[10px] font-bold text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">Copy</button>
+                        </div>
+                        <a
+                          href={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://forothers.us/'+localBusiness.slug)}`}
+                          download={`${localBusiness.slug}-qr.png`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold py-2.5 hover:bg-[#292929] transition-colors">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          Download QR code
+                        </a>
+                      </div>
+                    ):(
+                      <div className="rounded-2xl border border-[#DEDEDC] bg-[#F7F7F5] p-4 text-center">
+                        <p className="text-[12px] text-[#858585]">Save your page first to get your QR code.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ══ ANALYTICS + SETTINGS — placeholder ══ */}
+            {(sidebarTab==='analytics'||sidebarTab==='settings')&&(
               <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
                 <div className="w-14 h-14 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-5">
-                  {sidebarTab==='integrations'?<IconPuzzle size={22} color="#C0C0C0"/>
-                  :sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
+                  {sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
                   :<IconSettings size={22} color="#C0C0C0"/>}
                 </div>
                 <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">{sidebarLabel}</p>
                 <p className="text-[13px] text-[#858585] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
               </div>
             )}
+
           </div>
 
           {/* ── RIGHT PREVIEW PANEL (desktop only) ── */}
