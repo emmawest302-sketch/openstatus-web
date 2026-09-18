@@ -82,7 +82,6 @@ const BLOCK_STYLES: Record<string, { key:string; label:string }[]> = {
   menu:     [{ key:'photo',   label:'Photo'   }, { key:'card',   label:'Card'    }, { key:'dark',    label:'Dark'    }],
   order:    [{ key:'brand',   label:'Brand'   }, { key:'hero',   label:'Hero'    }, { key:'cta',     label:'CTA'     }],
   book:     [{ key:'brand',   label:'Brand'   }, { key:'cal',    label:'Calendar'}, { key:'cta',     label:'CTA'     }],
-  socials:  [{ key:'icons',   label:'Icons'   }, { key:'list',   label:'List'    }],
   website:  [{ key:'photo',   label:'Photo'   }, { key:'link',   label:'Link'    }],
 };
 
@@ -112,7 +111,6 @@ const DEFAULT_BLOCKS: OpenStatusBlock[] = [
   { id:'menu',    title:'Menu',                  sub:'Tap to view',                icon:'menu', on:false,tone:'default',color:'#d97706',menuType:'url',size:'full' },
   { id:'order',   title:'Online ordering',       sub:'DoorDash, Uber Eats & more', icon:'bag',  on:false,tone:'default',color:'#dc2626',size:'half' },
   { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'half' },
-  { id:'socials', title:'Follow us',             sub:'Social media links',         icon:'share',  on:false,tone:'default',color:'#db2777',size:'full' },
   { id:'website', title:'Website',               sub:'Link to your site',          icon:'globe',  on:false,tone:'default',color:'#0891b2',size:'full' },
   { id:'updates', title:'Instagram updates',     sub:'Latest posts from Instagram',icon:'updates',on:false,tone:'default',color:'#E1306C',size:'full' },
 ];
@@ -983,28 +981,6 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,onReorder }
                     );
                   }
 
-                  // ── SOCIALS list style ──
-                  if(b.id==='socials' && bStyle==='list') {
-                    const activeSocials = SOCIAL_PLATFORMS.filter(s=>config.socials[s.key]);
-                    return (
-                      <div className="rounded-2xl border overflow-hidden" style={{ borderColor:bdr }}>
-                        {activeSocials.length===0
-                          ?<div className="flex items-center gap-2 px-2.5 py-2.5" style={{ background:cardBg }}>
-                            <BlockIcon id="socials" size={10} color={b.color}/>
-                            <p className={`text-[10px] font-semibold ${tx}`}>{b.title}</p>
-                          </div>
-                          :activeSocials.slice(0,3).map((s,i)=>(
-                            <div key={s.key} className={`flex items-center gap-2 px-2.5 py-1.5 ${i>0?'border-t':''}` } style={{ background:cardBg, borderColor:bdr }}>
-                              <SocialIcon platform={s.key} size={14}/>
-                              <p className={`text-[9px] font-medium ${tx}`}>{s.label}</p>
-                              <span className={`ml-auto text-xs ${isDark?'text-white/20':'text-black/20'}`}>›</span>
-                            </div>
-                          ))
-                        }
-                      </div>
-                    );
-                  }
-
                   // ── Generic fallback (cover photo or simple row) ──
                   if(b.coverPhoto) return (
                     <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
@@ -1460,21 +1436,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             </div>
           )}
 
-          {/* ── SOCIALS ── */}
-          {block.id==='socials' && (
-            <div className="space-y-5">
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo behind the social links block."/>
-              <div className="space-y-3">
-              <FieldLabel>Your social links</FieldLabel>
-              {SOCIAL_PLATFORMS.map(({key,label})=>(
-                <div key={key} className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
-                  <Input value={config.socials[key]??''} onChange={v=>onUpdateConfig({socials:{...config.socials,[key]:v}})} placeholder={`${label} URL…`}/>
-                </div>
-              ))}
-              </div>
-            </div>
-          )}
 
           {/* ── UPDATES ── */}
           {block.id==='updates' && (
@@ -1487,7 +1448,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           )}
 
           {/* ── WEBSITE / generic ── */}
-          {(block.id==='website'||!['location','hours','menu','order','book','socials','updates'].includes(block.id)) && (
+          {(block.id==='website'||!['location','hours','menu','order','book','updates'].includes(block.id)) && (
             <div className="space-y-5">
               {block.id==='website'&&(
                 <>
@@ -1532,7 +1493,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
 const PICKER_CATEGORIES = [
   { label:'ESSENTIALS', ids:['hours','location','menu','website'] },
   { label:'CONVERT',    ids:['order','book'] },
-  { label:'CONNECT',    ids:['socials'] },
 ];
 
 function BlockPicker({ blocks, onAdd, onClose }: {
@@ -1595,7 +1555,7 @@ const TUT_STEPS = [
   { id: null,         title: 'Welcome to your builder!',   body: "We'll walk you through the basics in 30 seconds. Hit Next to start, or Skip to explore on your own.", align: 'center' as const },
   { id: 'tut-hours',  title: 'Start with your hours',         body: 'Click the Hours block to set your open/closed times. This powers your live status that customers see instantly.', align: 'right' as const },
   { id: 'tut-preview',title: 'This is your live page',        body: "The phone preview shows exactly what customers see. Click any block on the preview to jump straight into editing it.", align: 'left' as const },
-  { id: 'tut-add',    title: 'Add more features',             body: 'Hit "+ Add block" to turn on menus, online ordering, reservations, socials, and your website link.', align: 'right' as const },
+  { id: 'tut-add',    title: 'Add more features',             body: 'Hit "+ Add block" to turn on menus, online ordering, reservations, and your website link.', align: 'right' as const },
   { id: 'tut-save',   title: 'You\'re already live!',      body: 'Your page is live at your link the moment you save. Hit Save any time to publish your latest changes.', align: 'center' as const },
 ];
 
