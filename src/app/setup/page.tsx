@@ -27,83 +27,97 @@ type Category = {
   blockIds: string[];
 };
 
+// All available block types — id → default title, subtitle, size
+const ALL_BLOCKS: Record<string, { title: string; sub: string; size: 'half' | 'full' | 'third' }> = {
+  // Shopping & ordering
+  order:       { title: 'Order ahead',          sub: 'Order for pickup or delivery', size: 'half' },
+  shop:        { title: 'Shop now',             sub: 'Browse our store',             size: 'full' },
+  arrivals:    { title: 'New arrivals',         sub: "See what's just landed",       size: 'half' },
+  bestsellers: { title: 'Best sellers',         sub: 'Our most popular items',       size: 'half' },
+  promo:       { title: 'Current promotion',    sub: "See today's deals",            size: 'full' },
+  track:       { title: 'Track my order',       sub: 'Check your order status',      size: 'full' },
+  // Booking & contact
+  book:        { title: 'Book an appointment',  sub: 'Schedule online',              size: 'half' },
+  call:        { title: 'Call us',              sub: 'Tap to call',                  size: 'half' },
+  email:       { title: 'Email us',             sub: 'Send us a message',            size: 'half' },
+  // Discovery
+  menu:        { title: 'Menu',                 sub: 'View our full menu',           size: 'half' },
+  services:    { title: 'Our services',         sub: 'See what we offer',            size: 'half' },
+  classes:     { title: 'Class schedule',       sub: 'Browse and book classes',      size: 'full' },
+  membership:  { title: 'Join / Memberships',   sub: 'Plans and pricing',            size: 'half' },
+  team:        { title: 'Meet the team',        sub: 'The people behind the work',   size: 'half' },
+  special:     { title: "Today's special",      sub: "See what's on today",          size: 'full' },
+  stops:       { title: 'Upcoming stops',       sub: "See where we'll be next",      size: 'half' },
+  // Links & presence
+  website:     { title: 'Website',              sub: 'Visit our site',               size: 'full' },
+  gallery:     { title: 'Photos',               sub: 'See our work',                 size: 'third' },
+  reviews:     { title: 'Reviews',              sub: 'Read what customers say',      size: 'third' },
+  location:    { title: 'Find us',              sub: 'Get directions',               size: 'full' },
+};
+
 const CATEGORIES: Category[] = [
+  {
+    id: 'cafe',
+    label: 'Coffee Shop / Café',
+    icon: '☕',
+    tags: ['Coffee', 'Tea', 'Pastries', 'WiFi', 'Outdoor seating', 'Study-friendly', 'Vegan options', 'Breakfast'],
+    blockIds: ['order', 'menu', 'location', 'special', 'reviews', 'gallery', 'website'],
+  },
   {
     id: 'restaurant',
     label: 'Restaurant',
     icon: '🍽️',
     tags: ['Dine-in', 'Takeout', 'Delivery', 'Reservations', 'Happy hour', 'Brunch', 'Outdoor seating', 'Pet-friendly'],
-    blockIds: ['order', 'menu', 'book', 'reviews', 'gallery', 'website'],
-  },
-  {
-    id: 'cafe',
-    label: 'Café / Coffee',
-    icon: '☕',
-    tags: ['Coffee', 'Tea', 'Pastries', 'WiFi', 'Outdoor seating', 'Study-friendly', 'Vegan options', 'Breakfast'],
-    blockIds: ['menu', 'order', 'reviews', 'gallery', 'website'],
-  },
-  {
-    id: 'bar',
-    label: 'Bar / Nightlife',
-    icon: '🍸',
-    tags: ['Cocktails', 'Sports', 'Live music', 'Happy hour', 'Rooftop', 'Game night', 'DJ'],
-    blockIds: ['menu', 'reviews', 'gallery', 'website'],
-  },
-  {
-    id: 'retail',
-    label: 'Retail / Shop',
-    icon: '🛍️',
-    tags: ['In-store pickup', 'Local brand', 'Gift wrapping', 'Custom orders', 'Online store'],
-    blockIds: ['website', 'gallery', 'reviews', 'location'],
+    blockIds: ['book', 'order', 'menu', 'location', 'reviews', 'gallery', 'website'],
   },
   {
     id: 'salon',
-    label: 'Salon / Barbershop',
+    label: 'Salon / Beauty',
     icon: '✂️',
-    tags: ['Walk-ins welcome', 'By appointment', 'Color', 'Extensions', "Men's cuts", 'Braids'],
-    blockIds: ['book', 'reviews', 'gallery', 'website', 'call'],
+    tags: ['Walk-ins welcome', 'By appointment', 'Color', 'Extensions', "Men's cuts", 'Braids', 'Nails', 'Lashes', 'Brows', 'Gift cards'],
+    blockIds: ['book', 'services', 'team', 'gallery', 'location', 'call', 'reviews'],
   },
   {
-    id: 'spa',
-    label: 'Spa / Wellness',
-    icon: '🧖',
-    tags: ['Massage', 'Facials', 'Couples', 'By appointment', 'Memberships', 'Gift cards'],
-    blockIds: ['book', 'reviews', 'website', 'call'],
+    id: 'retail',
+    label: 'Retail / Boutique',
+    icon: '🛍️',
+    tags: ['In-store pickup', 'Local brand', 'Gift wrapping', 'Custom orders', 'Curbside'],
+    blockIds: ['shop', 'location', 'arrivals', 'gallery', 'reviews', 'website'],
+  },
+  {
+    id: 'online',
+    label: 'Online Store',
+    icon: '🛒',
+    tags: ['Free shipping', 'Easy returns', 'Handmade', 'Small batch', 'Ships worldwide'],
+    blockIds: ['shop', 'arrivals', 'bestsellers', 'promo', 'track', 'reviews'],
+  },
+  {
+    id: 'foodtruck',
+    label: 'Food Truck / Mobile',
+    icon: '🚚',
+    tags: ['Street food', 'Events', 'Catering', 'Vegan', 'Cash & card', 'Family-owned'],
+    blockIds: ['location', 'menu', 'stops', 'order', 'gallery', 'reviews'],
   },
   {
     id: 'fitness',
-    label: 'Gym / Fitness',
+    label: 'Fitness',
     icon: '💪',
-    tags: ['Classes', 'Personal training', '24/7 access', 'Drop-ins welcome', 'Memberships'],
-    blockIds: ['book', 'website', 'reviews', 'call'],
-  },
-  {
-    id: 'medical',
-    label: 'Medical / Health',
-    icon: '🏥',
-    tags: ['Insurance accepted', 'Walk-ins', 'Telehealth', 'New patients welcome'],
-    blockIds: ['book', 'website', 'call', 'location'],
+    tags: ['Classes', 'Personal training', '24/7 access', 'Drop-ins welcome', 'Memberships', 'Yoga', 'Pilates', 'CrossFit'],
+    blockIds: ['classes', 'book', 'membership', 'website', 'reviews', 'call'],
   },
   {
     id: 'service',
-    label: 'Home Services',
+    label: 'Services',
     icon: '🔧',
-    tags: ['Free estimates', 'Licensed & insured', 'Same-day service', 'Emergency service'],
-    blockIds: ['book', 'website', 'call', 'email'],
-  },
-  {
-    id: 'beauty',
-    label: 'Beauty / Aesthetics',
-    icon: '💅',
-    tags: ['Nails', 'Lashes', 'Brows', 'By appointment', 'Walk-ins', 'Gift cards'],
-    blockIds: ['book', 'gallery', 'reviews', 'website', 'call'],
+    tags: ['Free estimates', 'Licensed & insured', 'Same-day service', 'Emergency calls', 'Local & trusted'],
+    blockIds: ['book', 'call', 'services', 'reviews', 'website', 'email'],
   },
   {
     id: 'events',
-    label: 'Events / Venue',
+    label: 'Events / Entertainment',
     icon: '🎉',
-    tags: ['Private events', 'Weddings', 'Corporate', 'Catering', 'Outdoor'],
-    blockIds: ['book', 'gallery', 'website', 'call', 'email'],
+    tags: ['Private events', 'Weddings', 'Corporate', 'Catering', 'Outdoor', 'Live music'],
+    blockIds: ['book', 'gallery', 'website', 'email', 'call', 'reviews'],
   },
   {
     id: 'other',
@@ -113,18 +127,6 @@ const CATEGORIES: Category[] = [
     blockIds: ['website', 'call', 'email', 'location'],
   },
 ];
-
-const ALL_BLOCKS: Record<string, { title: string; sub: string; size: 'half' | 'full' | 'third' }> = {
-  order:    { title: 'Online ordering',  sub: 'Order for pickup or delivery', size: 'half' },
-  book:     { title: 'Book an appointment', sub: 'Schedule online',          size: 'half' },
-  menu:     { title: 'Menu',             sub: 'View our menu',               size: 'third' },
-  website:  { title: 'Website',          sub: 'Visit our site',              size: 'full' },
-  gallery:  { title: 'Gallery',          sub: 'See our photos',              size: 'third' },
-  reviews:  { title: 'Reviews',          sub: 'Read what customers say',     size: 'third' },
-  call:     { title: 'Call us',          sub: 'Tap to call',                 size: 'half' },
-  email:    { title: 'Email us',         sub: 'Send us a message',           size: 'half' },
-  location: { title: 'Find us',          sub: 'Get directions',              size: 'full' },
-};
 
 function buildBlocks(blockIds: string[]): OpenStatusBlock[] {
   return blockIds
