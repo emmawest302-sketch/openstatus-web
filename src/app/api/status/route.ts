@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     const update = preset === 'closed_today'
       ? { kind: 'closed', headline: 'Closed today', detail: 'Closed for the rest of today', closes_at: null }
       : preset === 'early_close'
-        ? { kind: 'early_close', headline: `Closing early at ${displayTime(closesAt!)}`, detail: null, closes_at: closesAt }
+        ? { kind: 'closed', headline: `Closing early at ${displayTime(closesAt!)}`, detail: null, closes_at: closesAt }
         : { kind: 'other', headline: note, detail: null, closes_at: null };
 
     const { error: clearError } = await actor.admin
