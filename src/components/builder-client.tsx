@@ -1687,7 +1687,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'links'|'hours'|'integrations'|'analytics'|'settings'|'preview';
+type SidebarTab = 'design'|'links'|'hours'|'integrations'|'analytics'|'settings'|'preview'|'status';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 
@@ -2469,11 +2469,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[#F7F7F5] text-[#0A0A0A]" style={{fontFamily:"'Inter',system-ui,sans-serif"}}>
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{fontFamily:"'Inter',system-ui,sans-serif",backgroundImage:"radial-gradient(rgba(0,0,0,0.10) 1px, transparent 1px)",backgroundSize:"20px 20px",backgroundColor:"#EDECE9"}}>
 
       {/* ── FIRST-RUN BANNER ── */}
       {showFirstRun&&(
-        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:'#0A0A0A',color:'#F7F7F5',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:60,background:'#0A0A0A',color:'#F7F7F5',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div>
             <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.45)'}}>YOUR PAGE IS READY TO BUILD</span>
             <p style={{fontSize:13,marginTop:2,color:'rgba(255,255,255,0.75)'}}>Add your logo, cover photo, and links. You can change anything below.</p>
@@ -2482,74 +2482,129 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       )}
 
-      {/* ── LEFT SIDEBAR (desktop) ── */}
-      <aside className="hidden md:flex w-[210px] flex-shrink-0 flex-col bg-[#0A0A0A]">
-        {/* Wordmark */}
-        <div className="px-5 h-14 flex items-center flex-shrink-0">
-          <span className="font-bold text-[17px] tracking-[-0.04em] text-white">OpenStatus</span>
-        </div>
-        {/* Nav */}
-        <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
-          {SIDEBAR_NAV.map(({key,label,icon})=>(
-            <button key={key} onClick={()=>setSidebarTab(key)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
-                sidebarTab===key
-                  ?'bg-white/12 text-white'
-                  :'text-white/55 hover:bg-white/8 hover:text-white'
-              }`}>
-              <span className={sidebarTab===key?'text-white':'text-white/35'}>{icon}</span>
-              {label}
+      {/* ── TOP BAR ── */}
+      <header className="h-14 flex items-center justify-between px-5 flex-shrink-0" style={{background:'rgba(237,236,233,0.90)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)'}}>
+        <span className="font-bold text-[17px] tracking-[-0.04em] text-[#0A0A0A]">OpenStatus</span>
+        <div className="flex items-center gap-2">
+          {business?.slug&&(
+            <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1 text-[12px] font-semibold text-[#6B6B6B] hover:text-[#111] transition-colors mr-1">
+              Open ↗
+            </a>
+          )}
+          <div className="flex flex-col items-end gap-0.5">
+            <button onClick={save} disabled={saving} data-tut="tut-save"
+              className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
+              {saving?'Saving…':saved?'✓ Saved':saveError?'Error':'Publish'}
             </button>
-          ))}
-        </nav>
-        {/* Bottom CTAs */}
-        <div className="px-4 py-4 border-t border-white/10 space-y-2.5 flex-shrink-0">
-          <button className="w-full text-left text-[11px] font-bold text-white/65 hover:underline leading-snug">
-            Upgrade to unlock<br/>more features →
-          </button>
-          <button className="w-full text-left text-[11px] text-white/40 hover:text-white transition-colors font-medium">
-            Need help?
+            {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
+          </div>
+          {/* Settings gear — opens settings drawer */}
+          <button onClick={()=>setSidebarTab(t=>(['settings','analytics','integrations','links'].includes(t)?'design':'settings'))}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+            style={{background:'rgba(0,0,0,0.08)'}}
+            title="Settings">
+            <IconSettings size={15} color="#555"/>
           </button>
         </div>
-      </aside>
+      </header>
 
-      {/* ── MAIN AREA ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
-
-        {/* ── TOP NAV BAR ── */}
-        <header className="h-14 border-b border-black/6 flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/80 backdrop-blur-sm">
-          <span className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase">{sidebarLabel}</span>
-          <div className="flex items-center gap-3">
-            {business?.slug&&(
-              <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] hover:text-[#111] transition-colors">
-                <IconEye size={13} color="currentColor"/> Preview
-              </a>
-            )}
-            <div className="flex flex-col items-end gap-0.5">
-              <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
-                {saving?'Saving…':saved?'✓ Saved':saveError?'Error':'Publish'}
-              </button>
-              {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
-            </div>
-            <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 select-none">
-              {userInitial}
-            </div>
+      {/* ── CANVAS (phone always centered) ── */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Preview mode toggle */}
+        <div className="flex-shrink-0 flex items-center justify-center pt-3 pb-1">
+          <div className="flex items-center gap-0.5 rounded-full p-0.5" style={{background:'rgba(0,0,0,0.14)'}}>
+            <button onClick={()=>setPreviewMode('mobile')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='mobile'?'bg-white text-[#111] shadow-sm':'text-white/75 hover:text-white'}`}>
+              <IconSmartphone size={11}/> Mobile
+            </button>
+            <button onClick={()=>setPreviewMode('desktop')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='desktop'?'bg-white text-[#111] shadow-sm':'text-white/75 hover:text-white'}`}>
+              <IconMonitor size={11}/> Desktop
+            </button>
           </div>
-        </header>
+        </div>
 
-        {/* ── CONTENT + RIGHT PREVIEW ── */}
-        <div className="flex-1 flex overflow-hidden">
+        {/* Phone / Desktop preview */}
+        <div data-tut="tut-preview" className="flex-1 overflow-y-auto flex items-start justify-center py-4 px-4">
+          {previewMode==='desktop'?(
+            <div className="w-full h-full flex flex-col max-w-4xl mx-auto">
+              <div className="flex-shrink-0 bg-[#F0F0F0] border-b border-[#DEDEDE] px-3 py-2 flex items-center gap-2 rounded-t-xl">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-[#FF5F57]"/>
+                  <div className="w-3 h-3 rounded-full bg-[#FFBD2E]"/>
+                  <div className="w-3 h-3 rounded-full bg-[#28CA41]"/>
+                </div>
+                <div className="flex-1 bg-white rounded-md px-3 py-1 text-[11px] text-[#888] font-medium border border-[#DEDEDE] truncate">
+                  openstatus.co/{business?.slug||'your-page'}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto bg-white rounded-b-xl">
+                <LiveDesktopPreview business={localBusiness} config={config}/>
+              </div>
+            </div>
+          ):(
+            <LivePhonePreview
+              business={localBusiness} config={config}
+              selectedId={openId}
+              onSelectBlock={id=>{setOpenId(id);}}
+              onReorder={reorderBlocks}
+            />
+          )}
+        </div>
+      </main>
 
-          {/* ── MAIN CONTENT ── */}
-          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white rounded-tl-2xl md:shadow-[-4px_0_0_0_rgba(0,0,0,0.02)]">
+      {/* ── BOTTOM TOOLBAR ── */}
+      <div className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-3" style={{paddingBottom:'calc(12px + env(safe-area-inset-bottom))',background:'rgba(237,236,233,0.90)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)'}}>
+        <button onClick={()=>setShowPicker(true)} data-tut="tut-add"
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors shadow-sm"
+          style={{background:'#0A0A0A',color:'white'}}>
+          <span className="text-[17px] leading-none" style={{marginTop:-1}}>+</span> Elements
+        </button>
+        <button onClick={()=>setSidebarTab(t=>t==='hours'?'design':'hours')}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors shadow-sm ${sidebarTab==='hours'?'bg-[#0A0A0A] text-white':'bg-white text-[#0A0A0A] hover:bg-[#F0F0F0]'}`}>
+          <LucideClock size={14}/> Hours
+        </button>
+        <button onClick={()=>setSidebarTab(t=>t==="status"?"design":"status" as SidebarTab)}
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors shadow-sm ${sidebarTab==='status'?'bg-[#0A0A0A] text-white':'bg-white text-[#0A0A0A] hover:bg-[#F0F0F0]'}`}>
+          <IconBolt size={14}/> Status
+        </button>
+      </div>
 
-            {/* ══ HOURS & STATUS ══ */}
-            {sidebarTab==='hours'&&(
-              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
-                {/* Header */}
-                <div className="mb-7">
+      {/* ── HOURS SHEET ── */}
+      {sidebarTab==='hours'&&(
+        <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={()=>setSidebarTab('design')}>
+          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.28)',backdropFilter:'blur(3px)',WebkitBackdropFilter:'blur(3px)'}}/>
+          <div className="relative bg-white rounded-t-3xl flex flex-col shadow-2xl" style={{maxHeight:'85vh'}} onClick={e=>e.stopPropagation()}>
+            {/* Handle */}
+            <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+              <div className="w-10 h-1.5 rounded-full" style={{background:'rgba(0,0,0,0.15)'}}/>
+            </div>
+            {/* Header */}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 pb-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{color:'rgba(0,0,0,0.35)'}}>
+                  {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
+                </p>
+                <h2 className="text-[18px] font-bold text-[#0A0A0A] leading-tight mt-0.5">Hours & Status</h2>
+              </div>
+              <button onClick={()=>setSidebarTab('design')} className="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style={{background:'rgba(0,0,0,0.06)'}}>
+                <LucideX size={14} color="#555"/>
+              </button>
+            </div>
+            {/* Sub-tabs */}
+            <div className="flex-shrink-0 px-5 pb-3">
+              <div className="flex items-center gap-1 bg-black/5 rounded-full p-1 w-fit">
+                {([{key:'regular' as HoursSubTab,label:'Regular'},{key:'special' as HoursSubTab,label:'Special'},{key:'status' as HoursSubTab,label:'Status'}]).map(t=>(
+                  <button key={t.key} onClick={e=>{e.stopPropagation();setHoursSubTab(t.key);if(t.key==='status')loadStatusUpdates();}}
+                    className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${hoursSubTab===t.key?'bg-[#0A0A0A] text-white':'text-[#555] hover:bg-black/5'}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 px-5 pb-8">
                   <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-bold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                     {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
@@ -2731,448 +2786,130 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                     <p className="text-[15px] font-bold text-[#0A0A0A] mb-1">
                       {hoursSubTab==='special'?'Special Hours':'Auto-Updates'}
-                    </p>
-                    <p className="text-[13px] text-[#858585]">Coming soon — stay tuned!</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ══ DESIGN (blocks + style) ══ */}
-            {sidebarTab==='design'&&(
-              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
-                {/* Block edit panel — slides in when a block is open */}
-                {showEditPanel&&openBlock?(
-                  <BlockEditPanel
-                    block={openBlock} config={config}
-                    onUpdateBlock={u=>updateBlock(openBlock.id,u)}
-                    onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
-                    onClose={()=>setOpenId(null)}
-                  />
-                ):(
-                  <>
-                    <div className="mb-7">
-                      <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Design</h2>
-                      <p className="text-[#858585] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
-                    </div>
-
-                    {/* Google Business fetch */}
-                    <div className="mb-6 rounded-2xl border border-[#DEDEDC] bg-[#F7F7F5] p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                        <p className="text-[12px] font-bold text-[#0A0A0A]">Google Business</p>
-                        {googleFetchDone&&<span className="ml-auto text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">✓ Imported</span>}
-                      </div>
-                      <p className="text-[11px] text-[#858585] mb-3">Paste your Google Maps URL to auto-fill your rating, review count, and location block.</p>
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          value={googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||''}
-                          onChange={e=>{setGoogleFetchUrl(e.target.value);setGoogleFetchDone(false);setGoogleFetchError('');}}
-                          placeholder="https://maps.google.com/maps/place/..."
-                          className="flex-1 rounded-xl border border-[#DEDEDC] bg-white px-3 py-2 text-[12px] outline-none focus:border-[#0A0A0A] transition-colors"
-                        />
-                        <button
-                          disabled={!googleFetchUrl&&!allBlocks.find(b=>b.id==='location')?.googleUrl||googleFetching}
-                          onClick={async()=>{
-                            const url=googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||'';
-                            if(!url)return;
-                            setGoogleFetching(true);setGoogleFetchError('');setGoogleFetchDone(false);
-                            try{
-                              const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
-                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string;address?:string;phone?:string;website?:string;weeklyHours?:WeeklyHours;photoUrl?:string;photos?:string[];lat?:number;lng?:number;reviews?:Array<{author:string;rating:number;text:string;time:string}>};
-                              if(!r.ok||d.error)throw new Error(d.error??'Failed');
-                              updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??d.name??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.lat!==undefined?{lat:d.lat,lng:d.lng}:{}),...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
-                              if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours as WeeklyHours}));
-                              if(d.photoUrl) setConfig(c=>({...c,bgImage:d.photoUrl}));
-                              if(d.photos?.length) setGooglePhotos(d.photos);
-                              // Auto-set logo from first Google photo if no logo yet
-                              if(d.photos?.length && localBusiness?.id && !localBusiness.avatar_url) {
-                                const logoUrl = d.photos[0];
-                                await supabase.from('businesses').update({avatar_url:logoUrl}).eq('id',localBusiness.id);
-                                setLocalBusiness(b=>b?({...b,avatar_url:logoUrl}):b);
-                              }
-                              if(d.phone&&allBlocks.find(b=>b.id==='call')) updateBlock('call',{url:'tel:'+d.phone,on:true});
-                              if(d.website&&allBlocks.find(b=>b.id==='website')) updateBlock('website',{url:d.website,on:true});
-                              setGoogleFetchDone(true);
-                            }catch(e){setGoogleFetchError(e instanceof Error?e.message:'Could not fetch');}
-                            finally{setGoogleFetching(false);}
-                          }}
-                          className="flex-shrink-0 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold px-4 py-2 hover:bg-[#292929] transition-colors disabled:opacity-40"
-                        >{googleFetching?'Fetching…':'Fetch'}</button>
-                      </div>
-                      {googleFetchError&&<p className="text-[11px] text-red-500 mt-2">{googleFetchError}</p>}
-                    </div>
-
-                    {/* Active blocks */}
-                    <div className="rounded-2xl border border-[#DEDEDC] overflow-hidden mb-1">
-                      {activeBlocks.length===0&&(
-                        <div className="px-4 py-8 text-center text-[13px] text-[#858585]">No blocks yet — hit + Add block below.</div>
-                      )}
-                      {activeBlocks.map((block,i)=>(
-                        <div key={block.id}
-                          data-tut={i===0&&block.id==='hours'?'tut-hours':undefined}
-                          className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#F7F7F5]
-                            ${i<activeBlocks.length-1?'border-b border-[#F5F5F5]':''}
-                            ${openId===block.id?'bg-[#F8F8F8]':''}
-                            ${dragOverId===block.id&&dragId!==block.id?'border-l-[3px] border-l-[#0A0A0A]':''}
-                            ${dragId===block.id?'opacity-40':''}
-                          `}
-                          style={{height:68}}
-                          draggable={block.id!=='hours'}
-                          onDragStart={()=>{if(block.id!=='hours')setDragId(block.id);}}
-                          onDragOver={e=>{e.preventDefault();setDragOverId(block.id);}}
-                          onDragLeave={()=>setDragOverId(null)}
-                          onDrop={()=>handleDrop(block.id)}
-                          onDragEnd={()=>{setDragId(null);setDragOverId(null);}}
-                          onClick={()=>setOpenId(block.id)}
-                        >
-                          {block.id!=='hours'
-                            ?<div className="flex-shrink-0 cursor-grab opacity-25 hover:opacity-60 transition-opacity" onClick={e=>e.stopPropagation()}>
-                              <LucideGrip size={14} color="#6B6B6B"/>
-                            </div>
-                            :<div className="w-[14px] flex-shrink-0"/>
-                          }
-                          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#DEDEDC] bg-[#EEEEEC]"
-                            style={block.color?{backgroundColor:`${block.color}12`,borderColor:`${block.color}28`}:{}}>
-                            <BlockIcon id={block.id} size={14} color={block.color??'#0A0A0A'}/>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-[13px] font-semibold text-[#0A0A0A] leading-tight">{block.title}</p>
-                              {block.id==='hours'&&(
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
-                                  {liveStatus==='open'?'● open':'● closed'}
-                                </span>
-                              )}
-                              {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#EEEEEC] text-[#858585] flex-shrink-0">½</span>}
-                            </div>
-                            <p className="text-[12px] text-[#858585] leading-tight mt-0.5 truncate">
-                              {block.id==='hours'?todayLabel:block.sub}
-                            </p>
-                          </div>
-                          <LucideChevronRight size={13} color="#D0D0D0"/>
-                          {block.id!=='hours'&&(
-                            <button
-                              onClick={e=>{e.stopPropagation();updateBlock(block.id,{on:false});}}
-                              className="w-6 h-6 rounded-full flex items-center justify-center text-[#C0C0C0] hover:text-[#0A0A0A] hover:bg-[#F0F0F0] transition-all flex-shrink-0"
-                              title="Remove block">
-                              <LucideX size={11} color="currentColor"/>
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    <button data-tut="tut-add" onClick={()=>setShowPicker(true)}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#858585] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-all group mb-10">
-                      <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
-                        <span className="text-[14px] leading-none">+</span>
-                      </div>
-                      <span className="text-[13px] font-medium">Add block</span>
-                    </button>
-
-                    {/* Style: logo + background + socials */}
-                    <div className="space-y-8 border-t border-[#F0F0F0] pt-8">
-                      <div>
-                        <p className="text-[14px] font-bold text-[#0A0A0A] mb-1">Style</p>
-                        <p className="text-[#858585] text-[13px] mb-5">Logo, page color, and social links.</p>
-                        {/* Logo upload */}
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
-                        <div className="flex items-center gap-4 mb-3">
-                          {localBusiness?.avatar_url
-                            ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                                className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
-                            :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
-                          }
-                          <div className="flex-1 min-w-0">
-                            <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
-                              <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                                const file=e.target.files?.[0];if(!file)return;
-                                setLogoUploading(true);setLogoUploadError('');
-                                try{
-                                  const ref=await uploadAsset(file,'avatar');
-                                  if(localBusiness?.id){
-                                    await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                                    setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                                  }
-                                }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                                finally{setLogoUploading(false);e.target.value='';}
-                              }}/>
-                              <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
-                                <LucideImage size={13} color="#6B6B6B"/>
-                                {logoUploading?'Uploading…':'Upload logo'}
-                              </span>
-                            </label>
-                            {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
-                          </div>
-                        </div>
-                        {googlePhotos.length>0&&(
-                          <div className="mb-4">
-                            <p className="text-[10px] text-[#858585] mb-2">Or pick a Google Business photo as your logo:</p>
-                            <div className="flex gap-2 flex-wrap">
-                              {googlePhotos.map((url,i)=>(
-                                <button key={i} onClick={async()=>{
-                                  if(!localBusiness?.id){setLogoUploadError('No business found');return;}
-                                  setLogoUploading(true);setLogoUploadError('');
-                                  try{
-                                    const blob=await fetch(url).then(r=>r.blob());
-                                    const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
-                                    const ref=await uploadAsset(file,'avatar');
-                                    await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                                    setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                                  }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
-                                  finally{setLogoUploading(false);}
-                                }}
-                                className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#DEDEDC] hover:border-[#0A0A0A]`}
-                                title={`Use Google photo ${i+1}`}>
-                                  <img src={url} className="w-full h-full object-cover" alt=""/>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Page color</p>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {BG_PRESETS.map(c=>(
-                            <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
-                              className="w-7 h-7 rounded-full transition-all hover:scale-110"
-                              style={{background:c,boxShadow:config.bg===c?`0 0 0 2px #fff,0 0 0 4px #0A0A0A`:'0 0 0 1px rgba(0,0,0,0.10)'}}
-                              title={c}/>
-                          ))}
-                          {/* Color wheel button */}
-                          <label className="w-7 h-7 rounded-full cursor-pointer flex items-center justify-center transition-all hover:scale-110" title="Custom color"
-                            style={{background:'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)',boxShadow:'0 0 0 1px rgba(0,0,0,0.15)'}}>
-                            <input type="color" value={config.bg.startsWith('#')?config.bg:'#ffffff'}
-                              onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
-                              className="opacity-0 absolute w-0 h-0" tabIndex={-1}/>
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full border border-[#DEDEDC] flex-shrink-0" style={{background:config.bg}}/>
-                          <span className="text-[12px] text-[#858585]">Current color</span>
-                        </div>
-                      </div>
-
-
-                      {/* Background photo */}
-                      <div>
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Background photo</p>
-                        {config.bgImage&&(
-                          <div className="relative mb-3 rounded-xl overflow-hidden">
-                            <img src={config.bgImage} className="w-full h-20 object-cover" alt="Background"/>
-                            <button onClick={()=>setConfig(c=>({...c,bgImage:undefined}))}
-                              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
-                              <LucideX size={10} color="white"/>
-                            </button>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
-                            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                              const file=e.target.files?.[0];if(!file)return;
-                              setBgUploading(true);setBgUploadError('');
-                              try{
-                                const ref=await uploadAsset(file,'header');
-                                const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:ref;
-                                setConfig(c=>({...c,bgImage:bgUrl}));
-                                if(localBusiness?.id)await supabase.from('businesses').update({header_url:ref}).eq('id',localBusiness.id);
-                              }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
-                              finally{setBgUploading(false);e.target.value='';}
-                            }}/>
-                            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors">
-                              <LucideImage size={13} color="#6B6B6B"/>
-                              {bgUploading?'Uploading…':'Upload photo'}
-                            </span>
-                          </label>
-                          {googlePhotos.map((url,i)=>(
-                            <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                              className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}
-                              title={`Google photo ${i+1}`}>
-                              <img src={url} className="w-full h-full object-cover" alt=""/>
-                            </button>
-                          ))}
-                        </div>
-                        {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
-                        {googlePhotos.length>0&&<p className="text-[10px] text-[#858585] mt-1.5">Tap a thumbnail to use your Google Business photo.</p>}
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Social profiles</p>
-                        <div className="space-y-2.5">
-                          {SOCIAL_PLATFORMS.map(({key,label})=>(
-                            <div key={key} className="flex items-center gap-3">
-                              <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
-                              <input value={config.socials[key]??''} onChange={e=>setConfig(c=>({...c,socials:{...c.socials,[key]:e.target.value}}))}
-                                placeholder={`${label} URL…`}
-                                className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-
-                        {/* ══ LINKS ══ */}
-            {sidebarTab==='links'&&(
-              <div className="px-8 py-8 max-w-[600px]">
-                <div className="mb-7">
-                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Links</h2>
-                  <p className="text-[#858585] text-[13px] mt-1">Your public OpenStatus link.</p>
-                </div>
-                <div className="rounded-2xl border border-[#DEDEDC] p-5 bg-white">
-                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Your link</p>
-                  {business?.slug?(
-                    <div className="flex items-center gap-3">
-                      <code className="text-[14px] font-semibold text-[#111] bg-[#EEEEEC] px-3 py-2 rounded-xl flex-1">
-                        openstatus.co/{business.slug}
-                      </code>
-                      <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors whitespace-nowrap">
-                        Open ↗
-                      </a>
-                    </div>
-                  ):(
-                    <p className="text-[13px] text-[#858585]">No link set yet.</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ══ INTEGRATIONS TAB ══ */}
-            {sidebarTab==='integrations'&&<IntegrationsPanel allBlocks={allBlocks} updateBlock={updateBlock} setConfig={setConfig} setGooglePhotos={setGooglePhotos} localBusiness={localBusiness} setLocalBusiness={setLocalBusiness} googleFetchDone={googleFetchDone}/>}
-
-            {/* ══ ANALYTICS ══ */}
-            {sidebarTab==='analytics'&&(
-              <AnalyticsPanel businessId={localBusiness?.id??''}/>
-            )}
-
-            {/* ══ SETTINGS TAB ══ */}
-            {sidebarTab==='settings'&&<SettingsPanel localBusiness={localBusiness} setLocalBusiness={setLocalBusiness} config={config} setConfig={setConfig} allBlocks={allBlocks} updateBlock={updateBlock}/>}
-
-          </div>
-
-          {/* ── RIGHT PREVIEW PANEL (desktop only) ── */}
-          {/* Drag-to-resize handle */}
-          <div
-            onMouseDown={onResizeStart}
-            className="hidden md:flex w-1.5 flex-shrink-0 cursor-col-resize hover:bg-white/10 active:bg-white/20 transition-colors border-l border-[#DEDEDC] group"
-            title="Drag to resize preview"
-          >
-            <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="w-0.5 h-10 rounded-full bg-white/30" />
             </div>
           </div>
-          <div className="hidden md:flex flex-col bg-[#F7F7F5]" style={{flex:'1 1 0',minWidth:320}}>
-            {/* Toggle bar */}
-            <div className="h-14 border-b border-black/6 flex items-center justify-between px-4 flex-shrink-0 bg-white/80 backdrop-blur-sm">
-              <div className="flex items-center gap-0.5 bg-black/5 rounded-full p-0.5">
-                <button onClick={()=>setPreviewMode('mobile')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='mobile'?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
-                  <IconSmartphone size={11}/> Mobile
-                </button>
-                <button onClick={()=>setPreviewMode('desktop')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='desktop'?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
-                  <IconMonitor size={11}/> Desktop
-                </button>
-              </div>
-              {business?.slug&&(
-                <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                  className="text-[11px] text-[#858585] hover:text-[#111] transition-colors font-medium whitespace-nowrap">
-                  Open ↗
-                </a>
-              )}
+        </div>
+      )}
+
+      {/* ── STATUS QUICK SHEET (reuses quick action flyout via Status button) ── */}
+      {sidebarTab===('status' as SidebarTab)&&(
+        <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={()=>setSidebarTab('design')}>
+          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.28)',backdropFilter:'blur(3px)',WebkitBackdropFilter:'blur(3px)'}}/>
+          <div className="relative bg-white rounded-t-3xl flex flex-col shadow-2xl pb-8" style={{maxHeight:'70vh'}} onClick={e=>e.stopPropagation()}>
+            <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
+              <div className="w-10 h-1.5 rounded-full" style={{background:'rgba(0,0,0,0.15)'}}/>
             </div>
-            {/* Phone / Desktop preview */}
-            <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-8 overflow-y-auto" style={{backgroundImage:"radial-gradient(rgba(0,0,0,0.10) 1px, transparent 1px)",backgroundSize:"20px 20px",backgroundColor:"#EDECE9"}}>
-              {previewMode==='desktop'?(
-                <div className="w-full h-full flex flex-col">
-                  {/* Browser chrome */}
-                  <div className="flex-shrink-0 bg-[#F0F0F0] border-b border-[#DEDEDE] px-3 py-2 flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-[#FF5F57]"/>
-                      <div className="w-3 h-3 rounded-full bg-[#FFBD2E]"/>
-                      <div className="w-3 h-3 rounded-full bg-[#28CA41]"/>
-                    </div>
-                    <div className="flex-1 bg-white rounded-md px-3 py-1 text-[11px] text-[#888] font-medium border border-[#DEDEDE] truncate">
-                      openstatus.co/{business?.slug||'your-page'}
-                    </div>
+            <div className="flex-shrink-0 flex items-center justify-between px-5 pb-4">
+              <h2 className="text-[18px] font-bold text-[#0A0A0A]">Live Status</h2>
+              <button onClick={()=>setSidebarTab('design')} className="w-8 h-8 rounded-full flex items-center justify-center" style={{background:'rgba(0,0,0,0.06)'}}>
+                <LucideX size={14} color="#555"/>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-5 space-y-3">
+              {/* Active status banner */}
+              {statusUpdates.filter(u=>u.status==='active').map(u=>(
+                <div key={u.id} className="rounded-2xl p-4 flex items-start gap-3" style={{background:'rgba(245,243,240,1)',border:'1px solid rgba(0,0,0,0.07)'}}>
+                  <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0"/>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-[#0A0A0A] leading-snug">{u.headline}</p>
+                    {u.detail&&<p className="text-[12px] text-[#6B6B6B] mt-0.5">{u.detail}</p>}
                   </div>
-                  {/* Live desktop preview */}
-                  <div className="flex-1 overflow-y-auto">
-                    <LiveDesktopPreview business={localBusiness} config={config}/>
+                  <button onClick={async e=>{e.stopPropagation();await clearStatus();}} className="text-[11px] font-semibold text-red-500 hover:text-red-700 transition-colors flex-shrink-0">Clear</button>
+                </div>
+              ))}
+              {/* Quick presets */}
+              {[
+                {preset:'close-early',label:'Close Early',icon:'🔒',desc:'Set early closing time'},
+                {preset:'close-today',label:'Close Today',icon:'🚫',desc:'Mark as closed all day'},
+                {preset:'out-of-office',label:'Out of Office',icon:'✈️',desc:'Away for a while'},
+                {preset:'note_today',label:'Today's Note',icon:'📝',desc:'Share a quick update'},
+              ].map(({preset,label,icon,desc})=>(
+                <button key={preset} onClick={e=>{e.stopPropagation();setSidebarTab('design');setQuickAction(preset.replace('close-early','close-early').replace('close-today','close-today').replace('out-of-office','out-of-office'));}}
+                  className="w-full flex items-center gap-3 rounded-2xl p-4 text-left transition-colors hover:bg-black/3"
+                  style={{background:'rgba(245,243,240,1)',border:'1px solid rgba(0,0,0,0.07)'}}>
+                  <span className="text-[20px]">{icon}</span>
+                  <div>
+                    <p className="text-[13px] font-bold text-[#0A0A0A]">{label}</p>
+                    <p className="text-[11px] text-[#858585]">{desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SETTINGS DRAWER ── */}
+      {['settings','analytics','integrations','links'].includes(sidebarTab)&&(
+        <div className="fixed inset-0 z-50 flex justify-end" onClick={()=>setSidebarTab('design')}>
+          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.20)',backdropFilter:'blur(3px)',WebkitBackdropFilter:'blur(3px)'}}/>
+          <div className="relative flex flex-col bg-white shadow-2xl border-l border-[#DEDEDC]"
+            style={{width:'100%',maxWidth:420,height:'100%'}} onClick={e=>e.stopPropagation()}>
+            {/* Drawer header */}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 h-14 border-b border-[#DEDEDC]">
+              <div className="flex items-center gap-1 bg-black/5 rounded-full p-0.5 overflow-x-auto">
+                {([
+                  {k:'analytics' as SidebarTab, l:'Analytics'},
+                  {k:'integrations' as SidebarTab, l:'Integrations'},
+                  {k:'settings' as SidebarTab, l:'Settings'},
+                  {k:'links' as SidebarTab, l:'Links'},
+                ]).map(t=>(
+                  <button key={t.k} onClick={e=>{e.stopPropagation();setSidebarTab(t.k);}}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${sidebarTab===t.k?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+              <button onClick={()=>setSidebarTab('design')} className="w-7 h-7 rounded-full flex items-center justify-center ml-2 flex-shrink-0 transition-colors" style={{background:'rgba(0,0,0,0.06)'}}>
+                <LucideX size={13} color="#555"/>
+              </button>
+            </div>
+            {/* Drawer content */}
+            <div className="flex-1 overflow-y-auto">
+              {sidebarTab==='analytics'&&<AnalyticsPanel businessId={localBusiness?.id??''}/>}
+              {sidebarTab==='integrations'&&<IntegrationsPanel allBlocks={allBlocks} updateBlock={updateBlock} setConfig={setConfig} setGooglePhotos={setGooglePhotos} localBusiness={localBusiness} setLocalBusiness={setLocalBusiness} googleFetchDone={googleFetchDone}/>}
+              {sidebarTab==='settings'&&<SettingsPanel localBusiness={localBusiness} setLocalBusiness={setLocalBusiness} config={config} setConfig={setConfig} allBlocks={allBlocks} updateBlock={updateBlock}/>}
+              {sidebarTab==='links'&&(
+                <div className="px-5 py-6">
+                  <div className="rounded-2xl border border-[#DEDEDC] p-5">
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Your public link</p>
+                    {business?.slug?(
+                      <div className="flex items-center gap-3">
+                        <code className="text-[13px] font-semibold text-[#111] bg-[#EEEEEC] px-3 py-2 rounded-xl flex-1 truncate">
+                          openstatus.co/{business.slug}
+                        </code>
+                        <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                          className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors whitespace-nowrap">
+                          Open ↗
+                        </a>
+                      </div>
+                    ):(
+                      <p className="text-[13px] text-[#858585]">No link set yet.</p>
+                    )}
                   </div>
                 </div>
-              ):(
-                <LivePhonePreview
-                  business={localBusiness} config={config}
-                  selectedId={openId}
-                  onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
-                  onReorder={reorderBlocks}
-                />
               )}
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ── MOBILE BOTTOM NAV ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-black/6 flex items-stretch"
-        style={{ paddingBottom:'env(safe-area-inset-bottom)' }}>
-        {SIDEBAR_NAV.slice(0,4).map(({key,label,icon})=>(
-          <button key={key} onClick={()=>setSidebarTab(key)}
-            className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
-              sidebarTab===key ? 'text-[#0A0A0A]' : 'text-[#B0B0B0]'
-            }`}>
-            <span className={`transition-all ${sidebarTab===key?'scale-110':''}`}
-              style={{color:sidebarTab===key?'#0A0A0A':'#C0C0C0'}}>
-              {icon}
-            </span>
-            <span className={`text-[9px] font-semibold leading-none ${sidebarTab===key?'text-[#0A0A0A]':'text-[#C0C0C0]'}`}>
-              {label.split(' ')[0]}
-            </span>
-            {sidebarTab===key&&(
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#0A0A0A]"/>
-            )}
-          </button>
-        ))}
-        {/* Preview tab */}
-        <button onClick={()=>setSidebarTab('preview')}
-          className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
-            sidebarTab===('preview') ? 'text-[#0A0A0A]' : 'text-[#B0B0B0]'
-          }`}>
-          <span style={{color:sidebarTab===('preview')?'#0A0A0A':'#C0C0C0'}}>
-            <IconSmartphone size={15}/>
-          </span>
-          <span className={`text-[9px] font-semibold leading-none ${sidebarTab===('preview')?'text-[#0A0A0A]':'text-[#C0C0C0]'}`}>
-            Preview
-          </span>
-          {sidebarTab===('preview')&&(
-            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#0A0A0A]"/>
-          )}
-        </button>
-      </nav>
-
-      {/* ── MOBILE PREVIEW SHEET ── */}
-      {sidebarTab===('preview')&&(
-        <div className="md:hidden fixed inset-0 z-30 bg-[#EEEEEC] overflow-y-auto flex flex-col"
-          style={{ paddingBottom:'calc(56px + env(safe-area-inset-bottom))', paddingTop:'env(safe-area-inset-top)' }}>
-          <div className="flex items-center justify-between px-4 h-14 bg-white border-b border-[#DEDEDC] flex-shrink-0">
-            <span className="text-[13px] font-bold text-[#111]">Preview</span>
-            {business?.slug&&(
-              <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                className="text-[12px] font-semibold text-[#6B6B6B] hover:text-[#111]">
-                Open link ↗
-              </a>
-            )}
-          </div>
-          <div className="flex-1 flex items-start justify-center py-6 px-4">
-            <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
-              onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
-              onReorder={reorderBlocks}/>
+      {/* ── BLOCK EDIT SHEET ── */}
+      {openId&&openBlock&&(
+        <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={()=>setOpenId(null)}>
+          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.28)',backdropFilter:'blur(3px)',WebkitBackdropFilter:'blur(3px)'}}/>
+          <div className="relative bg-white rounded-t-3xl flex flex-col shadow-2xl" style={{maxHeight:'88vh'}} onClick={e=>e.stopPropagation()}>
+            <div className="flex-shrink-0 pt-3 pb-1 flex justify-center">
+              <div className="w-10 h-1.5 rounded-full" style={{background:'rgba(0,0,0,0.15)'}}/>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <BlockEditPanel
+                block={openBlock} config={config}
+                onUpdateBlock={u=>updateBlock(openBlock.id,u)}
+                onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
+                onClose={()=>setOpenId(null)}
+              />
+            </div>
           </div>
         </div>
       )}
