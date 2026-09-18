@@ -38,8 +38,18 @@ interface Business {
 
 // ── constants ──────────────────────────────────────────────────────────────────
 const BG_PRESETS = [
-  '#ffffff','#1B5E20','#388E3C','#A5D6A7','#FFAB40',
-  '#0a0a0a','#FF7043','#f8f5f0','#fafafa','#1c1c1c',
+  // Row 1: light neutrals
+  '#ffffff','#fafafa','#f8f5f0','#f5f0e8','#fef9f0',
+  // Row 2: pinks/reds
+  '#fde8e8','#fbbfbf','#f87171','#ef4444','#dc2626',
+  // Row 3: oranges/yellows
+  '#fed7aa','#fb923c','#fbbf24','#facc15','#eab308',
+  // Row 4: greens
+  '#bbf7d0','#4ade80','#22c55e','#16a34a','#166534',
+  // Row 5: blues/purples
+  '#bfdbfe','#60a5fa','#3b82f6','#1d4ed8','#7c3aed',
+  // Row 6: darks
+  '#e5e7eb','#6b7280','#374151','#1c1c1c','#0a0a0a',
 ];
 const BLOCK_COLORS = ['#1B5E20','#388E3C','#FF7043','#FFAB40','#A5D6A7','#0a0a0a','#2563eb','#dc2626'];
 const ORDER_PROVIDERS = [
@@ -1771,8 +1781,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
   async function save() {
     setSaving(true);setSaveError('');
     const {error}=await supabase.auth.updateUser({data:{openstatus_page:config}});
+    if(error){setSaving(false);setSaveError(error.message);return;}
+    // Sync weekly hours to business_hours table so the published page shows them
+    if(localBusiness?.id && config.weeklyHours) {
+      const DAY_MAP: Record<string,number> = {mon:0,tue:1,wed:2,thu:3,fri:4,sat:5,sun:6};
+      const hoursRows = Object.entries(config.weeklyHours).map(([dayKey,day]) => ({
+        business_id: localBusiness.id,
+        day_of_week: DAY_MAP[dayKey],
+        opens_at:  day.closed ? null : (day.open  || '09:00'),
+        closes_at: day.closed ? null : (day.close || '17:00'),
+        is_closed: !!day.closed,
+      }));
+      await supabase.from('business_hours').upsert(hoursRows, { onConflict: 'business_id,day_of_week' });
+    }
     setSaving(false);
-    if(error){setSaveError(error.message);return;}
     setSaved(true);setTimeout(()=>setSaved(false),2500);
   }
 
@@ -1912,13 +1934,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
           <div className="flex items-center gap-3">
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#6B6B6B] hover:text-[#111] transition-colors">
-                View your link <span className="text-[#858585]">↗</span>
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] hover:text-[#111] transition-colors">
+                <IconEye size={13} color="currentColor"/> Preview
               </a>
             )}
-            <button className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
-              <IconEye size={13} color="currentColor"/> Preview
-            </button>
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
                 className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
@@ -2180,6 +2199,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                               if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours as WeeklyHours}));
                               if(d.photoUrl) setConfig(c=>({...c,bgImage:d.photoUrl}));
                               if(d.photos?.length) setGooglePhotos(d.photos);
+                              // Auto-set logo from first Google photo if no logo yet
+                              if(d.photos?.length && localBusiness?.id && !localBusiness.avatar_url) {
+                                const logoUrl = d.photos[0];
+                                await supabase.from('businesses').update({avatar_url:logoUrl}).eq('id',localBusiness.id);
+                                setLocalBusiness(b=>b?({...b,avatar_url:logoUrl}):b);
+                              }
                               if(d.phone&&allBlocks.find(b=>b.id==='call')) updateBlock('call',{url:'tel:'+d.phone,on:true});
                               if(d.website&&allBlocks.find(b=>b.id==='website')) updateBlock('website',{url:d.website,on:true});
                               setGoogleFetchDone(true);
@@ -2321,18 +2346,24 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                           </div>
                         )}
                         <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Page color</p>
-                        <div className="grid grid-cols-5 gap-3 mb-4">
+                        <div className="flex flex-wrap gap-2 mb-3">
                           {BG_PRESETS.map(c=>(
                             <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
-                              className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
-                              style={{background:c,borderColor:config.bg===c?'#0A0A0A':'#DEDEDC'}}/>
+                              className="w-7 h-7 rounded-full transition-all hover:scale-110"
+                              style={{background:c,boxShadow:config.bg===c?`0 0 0 2px #fff,0 0 0 4px #0A0A0A`:'0 0 0 1px rgba(0,0,0,0.10)'}}
+                              title={c}/>
                           ))}
+                          {/* Color wheel button */}
+                          <label className="w-7 h-7 rounded-full cursor-pointer flex items-center justify-center transition-all hover:scale-110" title="Custom color"
+                            style={{background:'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)',boxShadow:'0 0 0 1px rgba(0,0,0,0.15)'}}>
+                            <input type="color" value={config.bg.startsWith('#')?config.bg:'#ffffff'}
+                              onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
+                              className="opacity-0 absolute w-0 h-0" tabIndex={-1}/>
+                          </label>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg border border-[#DEDEDC]" style={{background:config.bg}}/>
-                          <input value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
-                            placeholder="#ffffff or gradient"
-                            className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full border border-[#DEDEDC] flex-shrink-0" style={{background:config.bg}}/>
+                          <span className="text-[12px] text-[#858585]">Current color</span>
                         </div>
                       </div>
 

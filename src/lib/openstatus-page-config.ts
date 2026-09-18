@@ -66,13 +66,19 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
         };
       })
     : defaultOpenStatusBlocks;
+  const SOCIAL_LABELS: Record<string, string> = { instagram:'Instagram', tiktok:'TikTok', facebook:'Facebook', twitter:'Twitter / X', youtube:'YouTube' };
   const socials: OpenStatusSocial[] = Array.isArray(raw.socials)
     ? raw.socials.map((item, index) => {
         if (typeof item === 'string') return { id: `social-${index}`, label: item, url: '', on: true };
         const social = item && typeof item === 'object' ? item as Partial<OpenStatusSocial> : {};
         return { id: typeof social.id === 'string' ? social.id : `social-${index}`, label: typeof social.label === 'string' ? social.label : 'Social', url: typeof social.url === 'string' ? social.url : '', on: social.on !== false };
       })
-    : [];
+    : raw.socials && typeof raw.socials === 'object' && !Array.isArray(raw.socials)
+      // Handle new builder format: Record<string, string>  e.g. {instagram:'https://...', tiktok:''}
+      ? Object.entries(raw.socials as Record<string, string>)
+          .filter(([, v]) => typeof v === 'string' && v.trim())
+          .map(([key, url]) => ({ id: key, label: SOCIAL_LABELS[key] ?? key, url: url as string, on: true }))
+      : [];
   return {
     blocks,
     bg: typeof raw.bg === 'string' ? raw.bg : '#FFFFFF',

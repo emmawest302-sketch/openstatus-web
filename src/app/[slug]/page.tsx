@@ -169,7 +169,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
         {/* ── Cover photo ── */}
         {coverPhoto ? (
-          <div style={{ position: 'relative', height: 280, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
+          <div style={{ position: 'relative', height: 360, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverPhoto}
@@ -189,7 +189,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         {/* ── Logo ── */}
         <div style={{
           display: 'flex', justifyContent: 'center',
-          marginTop: coverPhoto ? -52 : 0,
+          marginTop: coverPhoto ? -64 : 0,
           position: 'relative', zIndex: 10,
         }}>
           {avatar ? (
