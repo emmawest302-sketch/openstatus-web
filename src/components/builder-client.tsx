@@ -2280,6 +2280,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [showFirstRun,setShowFirstRun]=useState(isFirstRun);
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
+  const [showStoryNudge,setShowStoryNudge]=useState(false);
+  const lastSavedHours=useRef<typeof config.weeklyHours>(undefined);
   const [saveError,setSaveError]=useState('');
   const [googleFetchUrl,setGoogleFetchUrl]=useState('');
   const [googleFetching,setGoogleFetching]=useState(false);
@@ -2384,7 +2386,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       await supabase.from('business_hours').upsert(hoursRows, { onConflict: 'business_id,day_of_week' });
     }
     setSaving(false);
+    // Detect if hours changed → nudge to post on story
+    const hoursChanged = localBusiness?.id && config.weeklyHours &&
+      JSON.stringify(config.weeklyHours) !== JSON.stringify(lastSavedHours.current);
+    lastSavedHours.current = config.weeklyHours;
     setSaved(true);setTimeout(()=>setSaved(false),2500);
+    if(hoursChanged){ setShowStoryNudge(true); setTimeout(()=>setShowStoryNudge(false),12000); }
   }
 
   // Hours table row
@@ -2990,6 +2997,53 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-white text-[13px] font-bold hover:bg-[#292929] transition-colors">
                 Update Hours
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── STORY NUDGE ── */}
+      {showStoryNudge&&(
+        <div
+          className="fixed z-[70] flex flex-col"
+          style={{bottom:'calc(80px + env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',width:'calc(100% - 32px)',maxWidth:360,animation:'slideUp 0.3s ease-out'}}
+        >
+          <style>{`@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
+          <div className="rounded-2xl overflow-hidden shadow-2xl" style={{background:'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)',padding:2}}>
+            <div className="rounded-[14px] bg-white px-4 py-4">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-[14px] font-bold text-[#0A0A0A] leading-snug">Let your followers know 📣</p>
+                  <p className="text-[12px] text-[#6B6B6B] mt-0.5 leading-snug">Your hours just updated — post it on your story so customers are in the loop.</p>
+                </div>
+                <button onClick={()=>setShowStoryNudge(false)} className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 hover:bg-black/5 transition-colors">
+                  <LucideX size={12} color="#999"/>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                {business?.slug&&(
+                  <button
+                    onClick={()=>{
+                      const url=`https://openstatus.co/${business.slug}`;
+                      const text=`Our hours have been updated! Check out our latest schedule at ${url}`;
+                      if(navigator.share){navigator.share({title:'Our hours updated',text,url}).catch(()=>{});}
+                      else{window.open(`https://www.instagram.com/`,'_blank');}
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[12px] font-bold text-white transition-opacity hover:opacity-90"
+                    style={{background:'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)'}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    Share to Story
+                  </button>
+                )}
+                <button
+                  onClick={()=>{
+                    if(business?.slug) navigator.clipboard?.writeText(`https://openstatus.co/${business.slug}`).catch(()=>{});
+                    setShowStoryNudge(false);
+                  }}
+                  className="px-3 py-2.5 rounded-xl text-[12px] font-semibold text-[#6B6B6B] hover:bg-black/5 transition-colors border border-[#DEDEDC]">
+                  Copy link
+                </button>
+              </div>
             </div>
           </div>
         </div>
