@@ -1073,123 +1073,151 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
   const bg = config.bg || '#F7F7F5';
   const { status, todayLabel } = getLiveStatus(config.weeklyHours);
   const activeBlocks = config.blocks.filter(b => b.on);
-  const sortedBlocks = [
-    ...activeBlocks.filter(b => b.id === 'hours'),
-    ...activeBlocks.filter(b => b.id !== 'hours'),
-  ];
+  // Hours always first, like the real page
+  const hoursBlock = activeBlocks.find(b => b.id === 'hours');
   const locBlock = config.blocks.find(b => b.id === 'location');
+  const otherBlocks = activeBlocks.filter(b => b.id !== 'hours' && b.id !== 'location');
   const reviewPct = locBlock?.reviewStars && locBlock.reviewStars > 0 ? starsToPercent(locBlock.reviewStars) : null;
-  const coverPhoto = config.bgImage || business?.avatar_url;
-  const themeColor = '#DB6B8F';
+  const coverPhoto = config.bgImage;
+  const avatarUrl = business?.avatar_url && !business.avatar_url.startsWith('storage:') ? business.avatar_url : null;
+  const avatarStorageUrl = business?.avatar_url?.startsWith('storage:') && business?.id ? `/api/assets?businessId=${business.id}&kind=avatar` : null;
+  const avatar = avatarUrl || avatarStorageUrl;
   const initials = (business?.name ?? 'B').split(/\s+/).filter(Boolean).slice(0,2).map((p:string)=>p[0]).join('').toUpperCase();
-
-  // hex to rgb helper for fade gradient
   function hexToRgb(hex: string) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? { r:parseInt(result[1],16), g:parseInt(result[2],16), b:parseInt(result[3],16) } : { r:247,g:247,b:245 };
   }
   const { r,g,b: bv } = hexToRgb(bg);
-  const fadeGradient = `linear-gradient(to bottom, rgba(${r},${g},${bv},0) 0%, rgba(${r},${g},${bv},0.35) 48%, ${bg} 100%)`;
-
+  const fadeGradient = `linear-gradient(to bottom, rgba(${r},${g},${bv},0) 0%, rgba(${r},${g},${bv},0.08) 22%, rgba(${r},${g},${bv},0.35) 48%, rgba(${r},${g},${bv},0.72) 72%, ${bg} 100%)`;
   const glass: React.CSSProperties = {
     background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.72)',
     backdropFilter: 'blur(24px) saturate(130%)',
     WebkitBackdropFilter: 'blur(24px) saturate(130%)',
     border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.82)'}`,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+    boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
     borderRadius: 20,
-    padding: '14px 16px',
+    padding: '16px 18px',
   };
-
   const tx = isDark ? '#fff' : '#151515';
   const sx = isDark ? 'rgba(255,255,255,0.5)' : '#8A8A86';
+  const themeColor = config.themeColor || '#DB6B8F';
+  // span helper matching real page
+  const spanCols = (b: OpenStatusBlock) => b.size === 'third' ? 2 : b.size === 'half' ? 3 : 6;
 
   return (
-    <div style={{ minHeight: '100%', background: bg, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 14 }}>
+    <div style={{ minHeight: '100%', background: bg, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 13 }}>
       <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>
 
-        {/* Cover photo */}
+        {/* Cover photo — 360px like real page */}
         {coverPhoto ? (
-          <div style={{ position:'relative', height:200, overflow:'hidden' }}>
-            <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%', display:'block' }}/>
+          <div style={{ position:'relative', height:260, overflow:'hidden' }}>
+            <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'50% 60%', display:'block' }}/>
             <div style={{ position:'absolute', inset:0, background:fadeGradient }}/>
           </div>
         ) : (
-          <div style={{ height:60, background:'rgba(0,0,0,0.04)' }}/>
+          <div style={{ height:72, background:'rgba(0,0,0,0.04)' }}/>
         )}
 
-        {/* Logo */}
-        <div style={{ display:'flex', justifyContent:'center', marginTop: coverPhoto ? -40 : 0, position:'relative', zIndex:10 }}>
-          {business?.avatar_url && !business.avatar_url.startsWith('storage:') ? (
-            <img src={business.avatar_url} alt="" style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', objectFit:'cover', boxShadow:'0 8px 32px rgba(0,0,0,0.10)', display:'block' }}/>
+        {/* Logo — 96px like real page (104px scaled) */}
+        <div style={{ display:'flex', justifyContent:'center', marginTop: coverPhoto ? -52 : 0, position:'relative', zIndex:10 }}>
+          {avatar ? (
+            <img src={avatar} alt="" style={{ width:96, height:96, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', objectFit:'cover', boxShadow:'0 8px 32px rgba(0,0,0,0.12)', display:'block' }}/>
           ) : (
-            <div style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', display:'grid', placeItems:'center', fontSize:24, fontWeight:800, color:themeColor, boxShadow:'0 8px 32px rgba(0,0,0,0.10)' }}>
+            <div style={{ width:96, height:96, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', display:'grid', placeItems:'center', fontSize:28, fontWeight:800, color:themeColor, boxShadow:'0 8px 32px rgba(0,0,0,0.12)' }}>
               {initials}
             </div>
           )}
         </div>
 
-        {/* Business name */}
-        <div style={{ textAlign:'center', padding:'8px 20px 4px' }}>
-          <h1 style={{ fontSize:32, fontWeight:800, letterSpacing:'-0.03em', color:tx, lineHeight:1, margin:0, fontFamily:'Georgia, "Times New Roman", serif' }}>
+        {/* Name + tagline */}
+        <div style={{ textAlign:'center', padding:'10px 20px 6px' }}>
+          <h1 style={{ fontSize:28, fontWeight:800, letterSpacing:'-0.03em', color:tx, lineHeight:1.1, margin:0, fontFamily:'Georgia, "Times New Roman", serif' }}>
             {business?.name ?? 'Your Business'}
           </h1>
           {business?.tagline && (
-            <p style={{ fontSize:10, fontWeight:500, letterSpacing:'0.15em', textTransform:'uppercase', color:sx, marginTop:6 }}>
+            <p style={{ fontSize:10, fontWeight:500, letterSpacing:'0.15em', textTransform:'uppercase', color:sx, marginTop:6, margin:'6px 0 0' }}>
               {business.tagline}
             </p>
           )}
           {reviewPct && (
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4, marginTop:6 }}>
-              <LucideStar size={11} color="#f59e0b" filled/>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               <span style={{ fontSize:11, fontWeight:700, color:'#f59e0b' }}>{reviewPct}%</span>
-              {locBlock?.reviewCount && <span style={{ fontSize:10, color:sx }}> · {locBlock.reviewCount.toLocaleString()} reviews</span>}
+              {locBlock?.reviewCount && <span style={{ fontSize:10, color:sx }}> · {locBlock.reviewCount.toLocaleString()}</span>}
             </div>
           )}
         </div>
 
-        {/* Blocks */}
-        <div style={{ padding:'10px 14px 32px', display:'flex', flexDirection:'column', gap:10 }}>
-          {sortedBlocks.length === 0 ? (
-            <p style={{ textAlign:'center', fontSize:12, color:sx, padding:'24px 0' }}>Toggle blocks to see them here</p>
-          ) : sortedBlocks.map(b => (
-            <div key={b.id} style={{ ...glass }}>
+        {/* Hours block — inline like real page */}
+        {hoursBlock && hoursBlock.on && (
+          <div style={{ padding:'8px 12px 0' }}>
+            <div style={{ ...glass, display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:36, height:36, borderRadius:'50%', flexShrink:0, background:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
+                <BlockIcon id="hours" size={16} color={hoursBlock.color}/>
+              </div>
+              <div style={{ flex:1 }}>
+                <p style={{ fontSize:14, fontWeight:700, color:tx, margin:0, letterSpacing:'-0.01em' }}>
+                  {status === 'open' ? 'Open now' : 'Closed now'}
+                </p>
+                <p style={{ fontSize:11, color:status==='open'?'#22C55E':'#8A8A86', margin:0, marginTop:1 }}>{todayLabel}</p>
+              </div>
+              <div style={{ width:8, height:8, borderRadius:'50%', background:status==='open'?'#22C55E':'#8A8A86', flexShrink:0 }}/>
+            </div>
+          </div>
+        )}
+
+        {/* Location block — inline if present */}
+        {locBlock && locBlock.on && (locBlock.address||locBlock.sub) && (
+          <div style={{ padding:'8px 12px 0' }}>
+            <div style={{ ...glass }}>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ width:40, height:40, borderRadius:'50%', flexShrink:0, background: isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
-                  <BlockIcon id={b.id} size={18} color={b.color}/>
+                <div style={{ width:36, height:36, borderRadius:'50%', flexShrink:0, background:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
+                  <BlockIcon id="location" size={16} color={locBlock.color}/>
                 </div>
-                <div style={{ flex:1 }}>
-                  <p style={{ fontSize:15, fontWeight:700, color:tx, margin:0, letterSpacing:'-0.01em' }}>
-                    {b.id === 'hours' ? (status === 'open' ? 'Open now' : 'Closed now') : b.title}
-                  </p>
-                  <p style={{ fontSize:12, color:sx, margin:0, marginTop:2 }}>
-                    {b.id === 'hours' ? todayLabel : b.sub}
-                  </p>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ fontSize:13, fontWeight:700, color:tx, margin:0 }}>{locBlock.title||'Location'}</p>
+                  <p style={{ fontSize:11, color:sx, margin:0, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{locBlock.address||locBlock.sub}</p>
                 </div>
-                {b.url && (
-                  <div style={{ fontSize:11, color:isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.3)', flexShrink:0 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </div>
-                )}
+                <div style={{ height:36, paddingLeft:12, paddingRight:12, borderRadius:10, background:themeColor, display:'flex', alignItems:'center', fontSize:11, fontWeight:700, color:'#fff', flexShrink:0 }}>Directions</div>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
 
-        {/* Social icons */}
-        {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).length > 0 && (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'0 0 16px' }}>
-            {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).map(p => (
-              <div key={p.key} style={{ width:40, height:40, borderRadius:'50%', display:'grid', placeItems:'center', background: isDark?'rgba(255,255,255,0.10)':'rgba(0,0,0,0.06)' }}>
-                <SocialIcon platform={p.key} size={16}/>
+        {/* Other blocks — 6-col grid matching real page */}
+        {otherBlocks.length > 0 && (
+          <div style={{ padding:'8px 12px 0', display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:8 }}>
+            {otherBlocks.map(b => (
+              <div key={b.id} style={{ gridColumn:`span ${spanCols(b)}`, ...glass }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ width:34, height:34, borderRadius:'50%', flexShrink:0, background:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
+                    <BlockIcon id={b.id} size={15} color={b.color}/>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ fontSize:13, fontWeight:700, color:tx, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.title}</p>
+                    {b.sub && <p style={{ fontSize:10, color:sx, margin:0, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.sub}</p>}
+                  </div>
+                  {b.url && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={sx} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>}
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Footer */}
+        {/* Social row */}
+        {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).length > 0 && (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'16px 0' }}>
+            {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).map(p => (
+              <div key={p.key} style={{ width:38, height:38, borderRadius:'50%', display:'grid', placeItems:'center', background: isDark?'rgba(255,255,255,0.10)':'rgba(0,0,0,0.06)' }}>
+                <SocialIcon platform={p.key} size={15}/>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer slug */}
         <p style={{ textAlign:'center', fontSize:10, letterSpacing:'0.15em', textTransform:'uppercase', color:'rgba(0,0,0,0.22)', paddingBottom:24 }}>
-          Powered by OpenStatus
+          openstatus.co/{business?.slug||'your-page'}
         </p>
       </div>
     </div>
@@ -2259,7 +2287,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [googleFetchDone,setGoogleFetchDone]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
-  const [previewWidth,setPreviewWidth]=useState(420);
+  const [previewWidth,setPreviewWidth]=useState(500);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
   const [userInitial,setUserInitial]=useState('•');
   const [showAccountMenu,setShowAccountMenu]=useState(false);
@@ -3070,7 +3098,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               )}
             </div>
             {/* Phone / Desktop preview */}
-            <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-6 overflow-y-auto">
+            <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-8 overflow-y-auto" style={{backgroundImage:"radial-gradient(rgba(0,0,0,0.10) 1px, transparent 1px)",backgroundSize:"20px 20px",backgroundColor:"#EDECE9"}}>
               {previewMode==='desktop'?(
                 <div className="w-full h-full flex flex-col">
                   {/* Browser chrome */}
