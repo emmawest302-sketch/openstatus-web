@@ -1659,7 +1659,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings'|'preview';
+type SidebarTab = 'design'|'links'|'hours'|'integrations'|'analytics'|'settings'|'preview';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 
@@ -1881,6 +1881,159 @@ function IntegrationsPanel({allBlocks,updateBlock,setConfig,setGooglePhotos,loca
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── AnalyticsPanel ────────────────────────────────────────────────────────────
+type AnalyticsData={days:number;metrics:{views:number;uniqueVisitors:number;directions:number;menu:number;orders:number;clicks:number};topActions:{id:string;count:number}[];trafficSources:{source:string;count:number}[];trend:{date:string;views:number;clicks:number}[]};
+const actionLabel=(id:string)=>({map:'Directions',menu:'Menu',order:'Order',book:'Booking',website:'Website',call:'Call',shop:'Shop','gift-cards':'Gift cards',catering:'Catering',events:'Events',careers:'Careers',email:'Email'} as Record<string,string>)[id]||id.replace(/-/g,' ').replace(/^./,(x:string)=>x.toUpperCase());
+
+function AnalyticsPanel({ businessId }: { businessId: string }) {
+  const [days, setDays] = React.useState(30);
+  const [data, setData] = React.useState<AnalyticsData|null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+
+  React.useEffect(() => {
+    if (!businessId) return;
+    void (async () => {
+      setLoading(true); setError('');
+      const { data: s } = await supabase.auth.getSession();
+      if (!s.session) { setError('Not signed in'); setLoading(false); return; }
+      const res = await fetch(`/api/analytics?days=${days}`, { headers: { Authorization: `Bearer ${s.session.access_token}` } });
+      const json = await res.json().catch(() => ({ error: 'Could not load analytics' }));
+      if (!res.ok) { setError(json.error || 'Could not load analytics'); setData(null); }
+      else setData(json);
+      setLoading(false);
+    })();
+  }, [businessId, days]);
+
+  const m = data?.metrics;
+  const maxTrend = Math.max(1, ...(data?.trend || []).map((x: {views:number}) => x.views));
+  const maxAction = Math.max(1, ...(data?.topActions || []).map((x: {count:number}) => x.count));
+
+  return (
+    <div className="px-6 py-6 max-w-[600px]">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h2 className="text-[20px] font-bold text-[#0A0A0A] leading-tight">Analytics</h2>
+          <p className="text-[12px] text-[#858585] mt-0.5">How customers interact with your page</p>
+        </div>
+        <div className="flex items-center gap-1 bg-[#F5F5F3] rounded-full p-0.5">
+          {([7,30,90] as const).map(n=>(
+            <button key={n} onClick={()=>setDays(n)}
+              className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all ${days===n?'bg-white text-[#0A0A0A] shadow-sm':'text-[#858585]'}`}>
+              {n}d
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-2xl bg-[#FFF4E5] border border-[#F5C97A] p-4 mb-4">
+          <p className="text-[13px] font-semibold text-[#92400E]">{error}</p>
+          {error.includes('not set up') && (
+            <p className="text-[12px] text-[#B45309] mt-1">Run the <code className="bg-white/60 px-1 rounded">page_events</code> table migration in Supabase to enable analytics.</p>
+          )}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i=><div key={i} className="h-16 rounded-2xl bg-[#EEEEEC] animate-pulse"/>)}
+        </div>
+      ) : data ? (
+        <div className="space-y-4">
+          {/* Key metrics */}
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ['Unique visitors', m!.uniqueVisitors, '#C8FF62'],
+              ['Page views',      m!.views,          '#FFFFFF'],
+              ['Directions',      m!.directions,     '#FFFFFF'],
+              ['Actions',         m!.clicks,         '#FFFFFF'],
+            ] as const).map(([name, value, bg])=>(
+              <div key={String(name)} className="rounded-2xl border border-[#EEEEEC] p-4" style={{background: bg}}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#858585]">{name}</p>
+                <p className="text-[28px] font-bold text-[#0A0A0A] mt-1 leading-none">{value.toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Action rate pill */}
+          <div className="rounded-2xl bg-[#0A0A0A] px-5 py-4 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">Action rate</p>
+              <p className="text-[22px] font-bold text-white mt-0.5">
+                {m!.views ? Math.round(m!.clicks / m!.views * 100) : 0}%
+              </p>
+            </div>
+            <p className="text-[11px] text-white/35 max-w-[140px] text-right leading-snug">of visitors took an action on your page</p>
+          </div>
+
+          {/* Trend chart */}
+          {data.trend.length > 0 && (
+            <div className="rounded-2xl border border-[#EEEEEC] bg-white p-4">
+              <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Page views — last {days} days</p>
+              <div className="flex items-end gap-0.5 h-24">
+                {data.trend.map((x: {date:string;views:number})=>(
+                  <div key={x.date} className="group relative flex-1 flex items-end h-full">
+                    <div className="w-full rounded-t-[3px] bg-[#0A0A0A] hover:bg-[#444] transition-colors"
+                      style={{height:`${Math.max(4, x.views / maxTrend * 100)}%`}}/>
+                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded-lg bg-black px-2 py-1 text-[9px] text-white z-10">
+                      {x.date.slice(5)}: {x.views}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Top actions */}
+          {data.topActions.length > 0 && (
+            <div className="rounded-2xl border border-[#EEEEEC] bg-white p-4">
+              <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Top actions</p>
+              <div className="space-y-3">
+                {data.topActions.slice(0,5).map((x: {id:string;count:number}, i: number)=>(
+                  <div key={x.id}>
+                    <div className="flex justify-between text-[12px] mb-1">
+                      <span className="font-semibold text-[#0A0A0A]">{i+1}. {actionLabel(x.id)}</span>
+                      <span className="text-[#858585]">{x.count}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-[#EEEEEC] overflow-hidden">
+                      <div className="h-full rounded-full bg-[#0A0A0A]" style={{width:`${x.count/maxAction*100}%`}}/>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Traffic sources */}
+          {data.trafficSources.length > 0 && (
+            <div className="rounded-2xl border border-[#EEEEEC] bg-white p-4">
+              <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Traffic sources</p>
+              <div className="space-y-2">
+                {data.trafficSources.slice(0,5).map((x: {source:string;count:number})=>(
+                  <div key={x.source} className="flex items-center justify-between">
+                    <span className="text-[12px] font-semibold text-[#0A0A0A]">{x.source}</span>
+                    <span className="text-[12px] text-[#858585]">{x.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Full analytics link */}
+          <a href="/analytics" target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-[#DEDEDC] text-[12px] font-semibold text-[#0A0A0A] hover:bg-[#F5F5F3] transition-colors">
+            View full analytics ↗
+          </a>
+        </div>
+      ) : !error ? (
+        <div className="text-center py-12 text-[13px] text-[#858585]">No data yet. Share your page to start tracking visits.</div>
+      ) : null}
     </div>
   );
 }
@@ -2834,98 +2987,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
 
-            {/* ══ BUSINESS INFO ══ */}
-            {sidebarTab==='business'&&(
-              <div className="px-8 py-8 max-w-[600px]">
-                <div className="mb-7">
-                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Business Info</h2>
-                  <p className="text-[#858585] text-[13px] mt-1">Your name, location, and category.</p>
-                </div>
-                <div className="rounded-2xl border border-[#DEDEDC] p-5 space-y-4 bg-white">
-                  <div>
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Business name</p>
-                    <p className="text-[15px] font-semibold text-[#111]">{business?.name??'—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Category</p>
-                    <p className="text-[15px] font-semibold text-[#111]">{business?.category??'Not set'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Description</p>
-                    <p className="text-[13px] text-[#6B6B6B] leading-relaxed">{business?.tagline??'No description yet.'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Location</p>
-                    <div className="flex items-center gap-3">
-                      <input value={config.location??''} onChange={e=>setConfig(c=>({...c,location:e.target.value}))}
-                        placeholder="e.g. 123 Main St, Austin TX"
-                        className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                    </div>
-                  </div>
-                </div>
-                {/* Logo upload */}
-                <div className="mt-5">
-                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
-                  <div className="flex items-center gap-4 mb-3">
-                    {localBusiness?.avatar_url
-                      ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                          className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
-                      :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
-                    }
-                    <div className="flex-1 min-w-0">
-                      <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
-                        <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                          const file=e.target.files?.[0];if(!file)return;
-                          setLogoUploading(true);setLogoUploadError('');
-                          try{
-                            const ref=await uploadAsset(file,'avatar');
-                            if(localBusiness?.id){
-                              await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                              setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                            }
-                          }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                          finally{setLogoUploading(false);e.target.value='';}
-                        }}/>
-                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
-                          {logoUploading?'Uploading…':'Upload logo'}
-                        </span>
-                      </label>
-                      {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
-                    </div>
-                  </div>
-                  {googlePhotos.length>0&&(
-                    <div className="mb-3">
-                      <p className="text-[10px] text-[#858585] mb-2">Or use a Google Business photo as your logo:</p>
-                      <div className="flex gap-2 flex-wrap">
-                        {googlePhotos.map((url,i)=>(
-                          <button key={i} onClick={async()=>{
-                            if(!localBusiness?.id){setLogoUploadError('No business found');return;}
-                            setLogoUploading(true);setLogoUploadError('');
-                            try{
-                              const blob=await fetch(url).then(r=>r.blob());
-                              const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
-                              const ref=await uploadAsset(file,'avatar');
-                              await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                              setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                            }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
-                            finally{setLogoUploading(false);}
-                          }}
-                          className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#DEDEDC] hover:border-[#0A0A0A]`}
-                          title={`Use Google photo ${i+1}`}>
-                            <img src={url} className="w-full h-full object-cover" alt=""/>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-[12px] text-[#858585]">
-                    To edit your name or category, <a href="/setup?step=1" className="font-semibold text-[#111] underline underline-offset-2">go to Settings →</a>
-                  </p>
-                </div>
-              </div>
-            )}
 
-            {/* ══ LINKS ══ */}
+                        {/* ══ LINKS ══ */}
             {sidebarTab==='links'&&(
               <div className="px-8 py-8 max-w-[600px]">
                 <div className="mb-7">
@@ -2954,15 +3017,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {/* ══ INTEGRATIONS TAB ══ */}
             {sidebarTab==='integrations'&&<IntegrationsPanel allBlocks={allBlocks} updateBlock={updateBlock} setConfig={setConfig} setGooglePhotos={setGooglePhotos} localBusiness={localBusiness} setLocalBusiness={setLocalBusiness} googleFetchDone={googleFetchDone}/>}
 
-            {/* ══ ANALYTICS — placeholder ══ */}
+            {/* ══ ANALYTICS ══ */}
             {sidebarTab==='analytics'&&(
-              <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
-                <div className="w-14 h-14 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-5">
-                  <IconBarChart size={22} color="#C0C0C0"/>
-                </div>
-                <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">Analytics</p>
-                <p className="text-[13px] text-[#858585] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
-              </div>
+              <AnalyticsPanel businessId={localBusiness?.id??''}/>
             )}
 
             {/* ══ SETTINGS TAB ══ */}
