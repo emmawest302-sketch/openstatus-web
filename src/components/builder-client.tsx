@@ -2612,6 +2612,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
             {/* Scrollable content */}
             <div className="overflow-y-auto flex-1 px-5 pb-8">
+                <div>
                   <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-bold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                     {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
@@ -2833,7 +2834,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {preset:'close-early',label:'Close Early',icon:'🔒',desc:'Set early closing time'},
                 {preset:'close-today',label:'Close Today',icon:'🚫',desc:'Mark as closed all day'},
                 {preset:'out-of-office',label:'Out of Office',icon:'✈️',desc:'Away for a while'},
-                {preset:'note_today',label:'Today's Note',icon:'📝',desc:'Share a quick update'},
+                {preset:'note_today',label:"Today's Note",icon:'📝',desc:'Share a quick update'},
               ].map(({preset,label,icon,desc})=>(
                 <button key={preset} onClick={e=>{e.stopPropagation();setSidebarTab('design');setQuickAction(preset.replace('close-early','close-early').replace('close-today','close-today').replace('out-of-office','out-of-office'));}}
                   className="w-full flex items-center gap-3 rounded-2xl p-4 text-left transition-colors hover:bg-black/3"
