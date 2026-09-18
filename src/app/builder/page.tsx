@@ -23,6 +23,7 @@ interface BusinessData {
   header_url?: string;
   tagline?: string;
   instagram_handle?: string;
+  onboarded_at?: string | null;
   _businessId: string;
 }
 
@@ -72,7 +73,7 @@ function BuilderPageInner() {
 
       const { data: biz, error: bizError } = await supabase
         .from('businesses')
-        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle')
+        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, onboarded_at')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -96,7 +97,7 @@ function BuilderPageInner() {
         }
       }
 
-      setBusiness({ ...biz, slug: biz.slug ?? '', _businessId: biz.id });
+      setBusiness({ ...biz, slug: biz.slug ?? '', _businessId: biz.id, onboarded_at: biz.onboarded_at ?? null });
       setInitialConfig(config);
       setReady(true);
     })();
@@ -115,7 +116,7 @@ function BuilderPageInner() {
 
   if (!ready) return <LoadingScreen />;
 
-  return <BuilderClient business={business} initialConfig={initialConfig!} isFirstRun={isNew} />;
+  return <BuilderClient business={business} initialConfig={initialConfig!} isFirstRun={isNew} onboardedAt={business?.onboarded_at ?? null} />;
 }
 
 export default function BuilderPage() {

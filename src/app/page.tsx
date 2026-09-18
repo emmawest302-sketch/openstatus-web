@@ -90,6 +90,13 @@ export default function HomePage() {
   };
 
   const busy = loading || oauthLoading !== null;
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const inputStyle: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box',
@@ -131,23 +138,25 @@ export default function HomePage() {
         <header style={{
           position: 'relative', zIndex: 10,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '22px 40px',
+          padding: isMobile ? '16px 20px' : '22px 40px',
           maxWidth: 1280, margin: '0 auto', width: '100%', boxSizing: 'border-box',
         }}>
           <span style={{ color: '#FFFFFF', fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em' }}>
             OpenStatus
           </span>
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
-            <a href="#product" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Product</a>
-            <a href="#about" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>About</a>
-            <a href="#pricing" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Pricing</a>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 36 }}>
+            {!isMobile && <>
+              <a href="#product" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Product</a>
+              <a href="#about" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>About</a>
+              <a href="#pricing" style={{ color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>Pricing</a>
+            </>}
             <Link href="/signup" style={{
-              color: '#FFFFFF', fontSize: 14, fontWeight: 600, textDecoration: 'none',
+              color: '#FFFFFF', fontSize: isMobile ? 13 : 14, fontWeight: 600, textDecoration: 'none',
               border: '1.5px solid rgba(255,255,255,0.65)',
-              borderRadius: 999, padding: '9px 22px',
+              borderRadius: 999, padding: isMobile ? '8px 16px' : '9px 22px',
               backdropFilter: 'blur(8px)',
             }}>
-              Create account
+              {isMobile ? 'Sign up' : 'Create account'}
             </Link>
           </nav>
         </header>
@@ -155,10 +164,10 @@ export default function HomePage() {
         {/* ── Hero body ── */}
         <div style={{
           position: 'relative', zIndex: 10, flex: 1,
-          display: 'grid', gridTemplateColumns: '1fr 460px',
-          gap: 40, alignItems: 'center',
+          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 460px',
+          gap: isMobile ? 24 : 40, alignItems: 'center',
           maxWidth: 1280, margin: '0 auto', width: '100%',
-          padding: '20px 40px 40px', boxSizing: 'border-box',
+          padding: isMobile ? '20px 20px 40px' : '20px 40px 40px', boxSizing: 'border-box',
         }}>
           {/* Left: headline */}
           <div>
@@ -288,7 +297,7 @@ export default function HomePage() {
         <div style={{
           position: 'relative', zIndex: 10,
           borderTop: '1px solid rgba(255,255,255,0.12)',
-          padding: '22px 40px',
+          padding: isMobile ? '22px 20px' : '22px 40px',
           maxWidth: 1280, margin: '0 auto', width: '100%', boxSizing: 'border-box',
         }}>
           <p style={{
@@ -310,7 +319,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════
           PRODUCT
       ══════════════════════════════════════════════════════════════ */}
-      <section id="product" style={{ background: '#F7F7F5', padding: '100px 40px' }}>
+      <section id="product" style={{ background: '#F7F7F5', padding: isMobile ? '60px 20px' : '100px 40px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#858585', marginBottom: 16 }}>
             Product
@@ -374,7 +383,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════
           ABOUT
       ══════════════════════════════════════════════════════════════ */}
-      <section id="about" style={{ background: '#0A0A0A', padding: '100px 40px' }}>
+      <section id="about" style={{ background: '#0A0A0A', padding: isMobile ? '60px 20px' : '100px 40px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.40)', marginBottom: 16 }}>
             About
@@ -403,7 +412,7 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════
           PRICING
       ══════════════════════════════════════════════════════════════ */}
-      <section id="pricing" style={{ background: '#F7F7F5', padding: '100px 40px' }}>
+      <section id="pricing" style={{ background: '#F7F7F5', padding: isMobile ? '60px 20px' : '100px 40px' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#858585', marginBottom: 16 }}>
             Pricing
@@ -489,10 +498,10 @@ export default function HomePage() {
       {/* ══════════════════════════════════════════════════════════════
           FOOTER
       ══════════════════════════════════════════════════════════════ */}
-      <footer style={{ background: '#0A0A0A', padding: '48px 40px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+      <footer style={{ background: '#0A0A0A', padding: isMobile ? '32px 20px' : '48px 40px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         <div style={{
           maxWidth: 1100, margin: '0 auto',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row',
           flexWrap: 'wrap', gap: 20,
         }}>
           <div>

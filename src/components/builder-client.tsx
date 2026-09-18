@@ -33,7 +33,7 @@ export interface OpenStatusPageConfig {
 }
 interface Business {
   id: string; name: string; slug: string;
-  avatar_url?: string; tagline?: string; category?: string;
+  avatar_url?: string; tagline?: string; category?: string; onboarded_at?: string | null;
 }
 
 // ── constants ──────────────────────────────────────────────────────────────────
@@ -1465,7 +1465,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {block.id==='updates' && (
             <div className="space-y-4">
               <div className="rounded-xl bg-[#FFF0F5] border border-[#F9A8D4] p-4">
-                <p className="text-[12px] font-semibold text-[#BE185D]">📸 Instagram updates</p>
+                <p className="text-[12px] font-semibold text-[#BE185D]">Instagram updates</p>
                 <p className="text-[11px] text-[#858585] mt-1 leading-snug">Shows your 3 most recent Instagram posts as updates on your page. Make sure Meta is connected in your setup.</p>
               </div>
             </div>
@@ -1577,11 +1577,11 @@ function BlockPicker({ blocks, onAdd, onClose }: {
 
 // ── tutorial overlay ───────────────────────────────────────────────────────────
 const TUT_STEPS = [
-  { id: null,         title: 'Welcome to your builder! 👋',   body: "We'll walk you through the basics in 30 seconds. Hit Next to start, or Skip to explore on your own.", align: 'center' as const },
+  { id: null,         title: 'Welcome to your builder!',   body: "We'll walk you through the basics in 30 seconds. Hit Next to start, or Skip to explore on your own.", align: 'center' as const },
   { id: 'tut-hours',  title: 'Start with your hours',         body: 'Click the Hours block to set your open/closed times. This powers your live status that customers see instantly.', align: 'right' as const },
   { id: 'tut-preview',title: 'This is your live page',        body: "The phone preview shows exactly what customers see. Click any block on the preview to jump straight into editing it.", align: 'left' as const },
   { id: 'tut-add',    title: 'Add more features',             body: 'Hit "+ Add block" to turn on menus, online ordering, reservations, socials, and your website link.', align: 'right' as const },
-  { id: 'tut-save',   title: 'You\'re already live! 🎉',      body: 'Your page is live at your link the moment you save. Hit Save any time to publish your latest changes.', align: 'center' as const },
+  { id: 'tut-save',   title: 'You\'re already live!',      body: 'Your page is live at your link the moment you save. Hit Save any time to publish your latest changes.', align: 'center' as const },
 ];
 
 function TutorialOverlay({ onDone }: { onDone: () => void }) {
@@ -2103,8 +2103,8 @@ function SettingsPanel({localBusiness,setLocalBusiness,config,setConfig,allBlock
 }
 
 // ── main export ────────────────────────────────────────────────────────────────
-export default function BuilderClient({ business,initialConfig,isFirstRun=false }: {
-  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean;
+export default function BuilderClient({ business,initialConfig,isFirstRun=false,onboardedAt=null }: {
+  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null;
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('design');
@@ -2120,7 +2120,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
   const [statusCloseTime,setStatusCloseTime]=useState('15:00');
   const [openId,setOpenId]=useState<string|null>(null);
   const [showPicker,setShowPicker]=useState(false);
-  const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
+  const [showTutorial,setShowTutorial]=useState(()=>{if(onboardedAt)return false;try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
   const [showFirstRun,setShowFirstRun]=useState(isFirstRun);
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
@@ -2423,15 +2423,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                       <p className="text-[14px] font-bold text-[#0A0A0A] mb-4">Quick Actions</p>
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          {key:'close-early',  emoji:'⏰', label:'Close Early',       desc:'Close before your regular time today'},
-                          {key:'close-today',  emoji:'🔒', label:'Close Today',       desc:'Mark as fully closed for the day'},
-                          {key:'special-hours',emoji:'📅', label:'Add Special Hours', desc:'Holiday, event, or seasonal hours'},
-                          {key:'out-of-office',emoji:'✈️', label:'Out of Office',     desc:'Set away dates and a message'},
-                        ].map(({key,emoji,label,desc})=>(
+                          {key:'close-early', label:'Close Early',       desc:'Close before your regular time today'},
+                          {key:'close-today', label:'Close Today',       desc:'Mark as fully closed for the day'},
+                          {key:'special-hours', label:'Add Special Hours', desc:'Holiday, event, or seasonal hours'},
+                          {key:'out-of-office', label:'Out of Office',     desc:'Set away dates and a message'},
+                        ].map(({key,label,desc})=>(
                           <button key={key} onClick={()=>{setQuickAction(key);setQuickMsg('');setCloseEarlyTime('15:00');}}
                             className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all text-left group">
-                            <span className="text-[22px] leading-none">{emoji}</span>
-                            <div>
+                                            <div>
                               <p className="text-[13px] font-bold text-[#111]">{label}</p>
                               <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">{desc}</p>
                             </div>
@@ -2490,7 +2489,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                           disabled={statusPosting}
                           className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#EF4444] hover:bg-red-50/60 transition-all text-left group disabled:opacity-40"
                         >
-                          <span className="text-[22px] leading-none">🔒</span>
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#F0F0EE]"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                           <div>
                             <p className="text-[13px] font-bold text-[#111]">Closed today</p>
                             <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">Mark as fully closed all day</p>
@@ -2498,7 +2497,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                         </button>
                         {/* Close early */}
                         <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                          <span className="text-[22px] leading-none">⏰</span>
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#F0F0EE]"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
                           <p className="text-[13px] font-bold text-[#111]">Close early at</p>
                           <div className="flex items-center gap-2">
                             <div className="relative flex-1">
@@ -2525,7 +2524,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                       {/* Custom note */}
                       <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white space-y-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-[20px] leading-none">💬</span>
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#F0F0EE]"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
                           <p className="text-[13px] font-bold text-[#111]">Leave a note</p>
                         </div>
                         <textarea
@@ -3177,7 +3176,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
 
       {/* Tutorial overlay */}
       {showTutorial&&!showPicker&&(
-        <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{}}}/>
+        <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{} if(business?.id){supabase.from('businesses').update({onboarded_at:new Date().toISOString()}).eq('id',business.id).then(()=>{});}}}/>
       )}
 
       {/* Block picker overlay */}
