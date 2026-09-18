@@ -2549,22 +2549,52 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
             {sidebarTab==='integrations'&&(()=>{
               const orderBlock=allBlocks.find(b=>b.id==='order');
               const bookBlock=allBlocks.find(b=>b.id==='book');
-              function IntCard({icon,name,desc,connected,onConnect,onEdit,url}:{icon:React.ReactNode;name:string;desc:string;connected:boolean;onConnect?:()=>void;onEdit?:()=>void;url?:string}){
+              const [expandedKey,setExpandedKey]=React.useState<string|null>(null);
+              const [inputVal,setInputVal]=React.useState('');
+
+              function IntCard({cardKey,icon,name,desc,connected,url,onSave,onClear,placeholder}:{cardKey:string;icon:React.ReactNode;name:string;desc:string;connected:boolean;url?:string;onSave:(url:string)=>void;onClear?:()=>void;placeholder:string}){
+                const isExpanded=expandedKey===cardKey;
+                const [localVal,setLocalVal]=React.useState(url??'');
+                React.useEffect(()=>{if(isExpanded)setLocalVal(url??'');},[isExpanded,url]);
                 return(
-                  <div className="flex items-center gap-3 p-3 rounded-2xl border border-[#DEDEDC] bg-white mb-2 hover:border-[#C0C0C0] transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0 overflow-hidden">{icon}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-bold text-[#0A0A0A] leading-tight">{name}</p>
-                      {connected&&url?(
-                        <p className="text-[10px] text-[#858585] truncate max-w-[160px]">{url.replace(/^https?:\/\//,'')}</p>
+                  <div className={`rounded-2xl border bg-white mb-2 transition-colors ${isExpanded?'border-[#0A0A0A]':'border-[#DEDEDC] hover:border-[#C0C0C0]'}`}>
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0 overflow-hidden">{icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold text-[#0A0A0A] leading-tight">{name}</p>
+                        {connected&&url?(
+                          <p className="text-[10px] text-emerald-600 truncate max-w-[160px]">✓ {url.replace(/^https?:\/\//,'')}</p>
+                        ):(
+                          <p className="text-[10px] text-[#ACACAC]">{desc}</p>
+                        )}
+                      </div>
+                      {connected?(
+                        <button onClick={()=>{setExpandedKey(isExpanded?null:cardKey);}} className="flex-shrink-0 text-[10px] font-bold text-[#0A0A0A] border border-[#DEDEDC] rounded-full px-3 py-1 hover:border-[#0A0A0A] transition-colors">{isExpanded?'Cancel':'Edit'}</button>
                       ):(
-                        <p className="text-[10px] text-[#ACACAC]">{desc}</p>
+                        <button onClick={()=>setExpandedKey(isExpanded?null:cardKey)} className="flex-shrink-0 text-[10px] font-bold text-white bg-[#0A0A0A] rounded-full px-3 py-1 hover:bg-[#292929] transition-colors">Add</button>
                       )}
                     </div>
-                    {connected?(
-                      <button onClick={onEdit} className="flex-shrink-0 text-[10px] font-bold text-[#0A0A0A] border border-[#DEDEDC] rounded-full px-3 py-1 hover:border-[#0A0A0A] transition-colors">Edit</button>
-                    ):(
-                      <button onClick={onConnect} className="flex-shrink-0 text-[10px] font-bold text-white bg-[#0A0A0A] rounded-full px-3 py-1 hover:bg-[#292929] transition-colors">Add</button>
+                    {isExpanded&&(
+                      <div className="px-3 pb-3 flex flex-col gap-2">
+                        <input
+                          autoFocus
+                          type="url"
+                          value={localVal}
+                          onChange={e=>setLocalVal(e.target.value)}
+                          placeholder={placeholder}
+                          className="w-full rounded-xl border border-[#DEDEDC] bg-[#F7F7F5] px-3 py-2 text-[12px] outline-none focus:border-[#0A0A0A] transition-colors"
+                          onKeyDown={e=>{if(e.key==='Enter'&&localVal.trim()){onSave(localVal.trim());setExpandedKey(null);}if(e.key==='Escape')setExpandedKey(null);}}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            disabled={!localVal.trim()}
+                            onClick={()=>{if(localVal.trim()){onSave(localVal.trim());setExpandedKey(null);}}}
+                            className="flex-1 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold py-2 hover:bg-[#292929] transition-colors disabled:opacity-40">Save</button>
+                          {connected&&onClear&&(
+                            <button onClick={()=>{onClear();setExpandedKey(null);}} className="rounded-xl border border-[#DEDEDC] text-[#858585] text-[12px] font-bold px-4 py-2 hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors">Remove</button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
@@ -2576,13 +2606,27 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                   <div className="mb-5">
                     <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Business Profile</p>
                     <IntCard
+                      cardKey="google-business"
                       icon={<svg viewBox="0 0 24 24" width="22" height="22"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>}
                       name="Google Business"
-                      desc="Import hours, photos & reviews"
+                      desc="Paste your Google Maps URL to import"
+                      placeholder="https://maps.google.com/maps/place/..."
                       connected={googleFetchDone||!!(allBlocks.find(b=>b.id==='location')?.googleUrl)}
                       url={allBlocks.find(b=>b.id==='location')?.googleUrl}
-                      onConnect={()=>setSidebarTab('links')}
-                      onEdit={()=>setSidebarTab('links')}
+                      onSave={async(url)=>{
+                        updateBlock('location',{googleUrl:url});
+                        try{
+                          const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
+                          const d=await r.json();
+                          if(r.ok&&!d.error){
+                            updateBlock('location',{reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.lat!==undefined?{lat:d.lat,lng:d.lng}:{}),...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
+                            if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours}));
+                            if(d.photos?.length) setGooglePhotos(d.photos);
+                            if(d.photos?.length&&localBusiness?.id&&!localBusiness.avatar_url){await supabase.from('businesses').update({avatar_url:d.photos[0]}).eq('id',localBusiness.id);setLocalBusiness(b=>b?({...b,avatar_url:d.photos[0]}):b);}
+                          }
+                        }catch(e){}
+                      }}
+                      onClear={()=>updateBlock('location',{googleUrl:''})}
                     />
                   </div>
 
@@ -2594,17 +2638,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                       return(
                         <IntCard
                           key={provider.key}
+                          cardKey={`order-${provider.key}`}
                           icon={<BlockIcon id={provider.key} size={22}/>}
                           name={provider.label}
-                          desc={`Add your ${provider.label} link`}
+                          desc={`Paste your ${provider.label} link`}
+                          placeholder={`https://www.${provider.key}.com/...`}
                           connected={connected}
                           url={connected?orderBlock?.url:undefined}
-                          onConnect={()=>{
-                            updateBlock('order',{on:true,provider:provider.key});
-                            setSidebarTab('links');
-                            setOpenId('order');
-                          }}
-                          onEdit={()=>{setSidebarTab('links');setOpenId('order');}}
+                          onSave={(url)=>updateBlock('order',{on:true,provider:provider.key,url})}
+                          onClear={()=>updateBlock('order',{on:false,url:'',provider:''})}
                         />
                       );
                     })}
@@ -2618,17 +2660,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                       return(
                         <IntCard
                           key={provider.key}
+                          cardKey={`book-${provider.key}`}
                           icon={<BlockIcon id={provider.key} size={22}/>}
                           name={provider.label}
-                          desc={`Add your ${provider.label} link`}
+                          desc={`Paste your ${provider.label} link`}
+                          placeholder={`https://www.${provider.key}.com/...`}
                           connected={connected}
                           url={connected?bookBlock?.url:undefined}
-                          onConnect={()=>{
-                            updateBlock('book',{on:true,provider:provider.key});
-                            setSidebarTab('links');
-                            setOpenId('book');
-                          }}
-                          onEdit={()=>{setSidebarTab('links');setOpenId('book');}}
+                          onSave={(url)=>updateBlock('book',{on:true,provider:provider.key,url})}
+                          onClear={()=>updateBlock('book',{on:false,url:'',provider:''})}
                         />
                       );
                     })}
@@ -2643,13 +2683,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                       return(
                         <IntCard
                           key={platform.key}
+                          cardKey={`social-${platform.key}`}
                           icon={<SocialIcon platform={platform.key} size={22}/>}
                           name={platform.label}
-                          desc={`Add your ${platform.label} profile`}
+                          desc={`Paste your ${platform.label} profile URL`}
+                          placeholder={`https://www.${platform.key}.com/yourprofile`}
                           connected={connected}
                           url={url||undefined}
-                          onConnect={()=>{setSidebarTab('links');setOpenId('socials');}}
-                          onEdit={()=>{setSidebarTab('links');setOpenId('socials');}}
+                          onSave={(v)=>setConfig(c=>({...c,socials:{...c.socials,[platform.key]:v}}))}
+                          onClear={()=>setConfig(c=>({...c,socials:{...c.socials,[platform.key]:''}}))}
                         />
                       );
                     })}
@@ -2658,24 +2700,26 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false 
                   {/* Reviews */}
                   <div className="mb-5">
                     <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Reviews</p>
-                    {[
-                      {key:'yelp',    name:'Yelp',         icon:<IconYelp size={22}/>,       field:'yelpUrl'},
-                      {key:'google',  name:'Google Reviews',icon:<IconGoogle size={22}/>,     field:'googleUrl'},
-                      {key:'tripadvisor',name:'TripAdvisor',icon:<IconTripAdvisor size={22}/>,field:'tripAdvisorUrl'},
-                    ].map(r=>{
-                      const locBlock2=allBlocks.find(b=>b.id==='location');
-                      const url=(locBlock2 as unknown as Record<string,string>|undefined)?.[r.field];
+                    {([
+                      {key:'yelp',       name:'Yelp',          icon:<IconYelp size={22}/>,        field:'yelpUrl' as const,        ph:'https://www.yelp.com/biz/...'},
+                      {key:'google-rev', name:'Google Reviews', icon:<IconGoogle size={22}/>,      field:'googleUrl' as const,       ph:'https://maps.google.com/...'},
+                      {key:'tripadvisor',name:'TripAdvisor',    icon:<IconTripAdvisor size={22}/>, field:'tripAdvisorUrl' as const,  ph:'https://www.tripadvisor.com/...'},
+                    ] as {key:string;name:string;icon:React.ReactNode;field:'yelpUrl'|'googleUrl'|'tripAdvisorUrl';ph:string}[]).map(r=>{
+                      const locB=allBlocks.find(b=>b.id==='location');
+                      const url=locB?.[r.field]??'';
                       const connected=!!(url&&url.trim());
                       return(
                         <IntCard
                           key={r.key}
+                          cardKey={`rev-${r.key}`}
                           icon={r.icon}
                           name={r.name}
-                          desc={`Add your ${r.name} listing`}
+                          desc={`Paste your ${r.name} listing URL`}
+                          placeholder={r.ph}
                           connected={connected}
                           url={url||undefined}
-                          onConnect={()=>{setSidebarTab('links');setOpenId('location');}}
-                          onEdit={()=>{setSidebarTab('links');setOpenId('location');}}
+                          onSave={(v)=>updateBlock('location',{[r.field]:v})}
+                          onClear={()=>updateBlock('location',{[r.field]:''})}
                         />
                       );
                     })}
