@@ -2233,7 +2233,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode }[] = [
     { key:'design',       label:'Design',        icon:<IconPalette size={15}/> },
     { key:'links',        label:'Links',         icon:<IconLink size={15}/> },
-    { key:'business',     label:'Business Info', icon:<IconBuilding size={15}/> },
     { key:'hours',        label:'Hours & Status',icon:<LucideClock size={15}/> },
     { key:'integrations', label:'Integrations',  icon:<IconPuzzle size={15}/> },
     { key:'analytics',    label:'Analytics',     icon:<IconBarChart size={15}/> },
