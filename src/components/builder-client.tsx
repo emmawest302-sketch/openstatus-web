@@ -762,7 +762,9 @@ function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
 }
 
 // ── Screen preview (no phone frame) ───────────────────────────────────────────
-function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { business:Business|null; config:OpenStatusPageConfig; selectedId?:string|null; onSelectBlock?:(id:string)=>void }) {
+function LivePhonePreview({ business,config,selectedId,onSelectBlock,onReorder }: { business:Business|null; config:OpenStatusPageConfig; selectedId?:string|null; onSelectBlock?:(id:string)=>void; onReorder?:(fromId:string,toId:string)=>void }) {
+  const [pDragId,setPDragId]=React.useState<string|null>(null);
+  const [pDragOver,setPDragOver]=React.useState<string|null>(null);
   const activeBlocks = config.blocks.filter(b=>b.on);
   // Hours always first in preview
   const sortedBlocks = [
@@ -1049,9 +1051,22 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
 
                 const isSelected = selectedId === b.id;
                 return (
-                  <div key={b.id} className={`${isHalf?'col-span-1':'col-span-2'} ${onSelectBlock?'cursor-pointer':''}`}
+                  <div key={b.id}
+                    draggable={b.id!=='hours'&&!!onReorder}
+                    onDragStart={()=>{if(b.id!=='hours')setPDragId(b.id);}}
+                    onDragOver={e=>{e.preventDefault();if(b.id!==pDragId)setPDragOver(b.id);}}
+                    onDrop={e=>{e.preventDefault();if(pDragId&&pDragId!==b.id&&b.id!=='hours'){onReorder?.(pDragId,b.id);}setPDragId(null);setPDragOver(null);}}
+                    onDragEnd={()=>{setPDragId(null);setPDragOver(null);}}
+                    className={`${isHalf?'col-span-1':'col-span-2'} ${onSelectBlock?'cursor-pointer':''} ${b.id!=='hours'&&onReorder?'cursor-grab active:cursor-grabbing':''}`}
                     onClick={()=>onSelectBlock?.(b.id)}
-                    style={isSelected?{ outline:'2px solid #0A0A0A', borderRadius:16, outlineOffset:2 }:{}}
+                    style={{
+                      ...(isSelected?{ outline:'2px solid #0A0A0A', borderRadius:16, outlineOffset:2 }:{}),
+                      opacity: pDragId===b.id ? 0.4 : 1,
+                      outline: pDragOver===b.id&&pDragId!==b.id ? '2px dashed #0A0A0A' : (isSelected?'2px solid #0A0A0A':undefined),
+                      borderRadius: 16,
+                      outlineOffset: 2,
+                      transition: 'opacity 0.15s',
+                    }}
                   >
                     {inner}
                   </div>
@@ -2133,6 +2148,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   const [previewWidth,setPreviewWidth]=useState(420);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
+  const [userInitial,setUserInitial]=useState('•');
+  React.useEffect(()=>{
+    supabase.auth.getUser().then(({data})=>{
+      const u=data.user;
+      const name=u?.user_metadata?.full_name||u?.user_metadata?.name||'';
+      const initial=name?name.trim()[0].toUpperCase():(u?.email?u.email[0].toUpperCase():'•');
+      setUserInitial(initial);
+    });
+  },[]);
   const [logoUploading,setLogoUploading]=useState(false);
   const [logoUploadError,setLogoUploadError]=useState('');
   const [bgUploading,setBgUploading]=useState(false);
@@ -2187,6 +2211,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       return{...c,blocks:bs};
     });
     setDragId(null);setDragOverId(null);
+  }
+  function reorderBlocks(fromId:string,toId:string) {
+    if(!fromId||fromId===toId||fromId==='hours'||toId==='hours')return;
+    setConfig(c=>{
+      const bs=[...c.blocks];
+      const fi=bs.findIndex(b=>b.id===fromId),ti=bs.findIndex(b=>b.id===toId);
+      if(fi<0||ti<0)return c;
+      const [moved]=bs.splice(fi,1);bs.splice(ti,0,moved);
+      return{...c,blocks:bs};
+    });
   }
   function copyMonToWeekdays() {
     const mon=hours.mon;
@@ -2360,7 +2394,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
             </div>
             <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 cursor-pointer select-none">
-              {(business?.name??'E').charAt(0).toUpperCase()}
+              {userInitial}
             </div>
           </div>
         </header>
@@ -3033,6 +3067,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   business={localBusiness} config={config}
                   selectedId={openId}
                   onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
+                  onReorder={reorderBlocks}
                 />
               )}
             </div>
@@ -3092,7 +3127,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           </div>
           <div className="flex-1 flex items-start justify-center py-6 px-4">
             <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
-              onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
+              onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
+              onReorder={reorderBlocks}/>
           </div>
         </div>
       )}
