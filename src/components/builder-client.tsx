@@ -2262,6 +2262,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [previewWidth,setPreviewWidth]=useState(420);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
   const [userInitial,setUserInitial]=useState('•');
+  const [showAccountMenu,setShowAccountMenu]=useState(false);
   React.useEffect(()=>{
     supabase.auth.getUser().then(({data})=>{
       const u=data.user;
@@ -2505,8 +2506,18 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
             </div>
-            <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 cursor-pointer select-none">
-              {userInitial}
+            <div className="relative flex-shrink-0">
+              <button onClick={()=>setShowAccountMenu(m=>!m)} className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-[#111] text-[12px] font-bold cursor-pointer focus:outline-none" style={{background:localBusiness?.avatar_url?'transparent':'rgba(255,255,255,0.30)'}}>
+                {localBusiness?.avatar_url
+                  ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url} alt="" className="w-full h-full object-cover"/>
+                  :<span>{userInitial}</span>}
+              </button>
+              {showAccountMenu&&<>
+                <div className="fixed inset-0 z-40" onClick={()=>setShowAccountMenu(false)}/>
+                <div className="absolute right-0 top-10 z-50 min-w-[140px] rounded-2xl bg-white shadow-xl border border-black/8 py-1 overflow-hidden">
+                  <button onClick={async()=>{await supabase.auth.signOut();window.location.href='/login';}} className="w-full text-left px-4 py-2.5 text-[13px] text-[#D33] hover:bg-red-50 font-medium transition-colors">Sign out</button>
+                </div>
+              </>}
             </div>
           </div>
         </header>

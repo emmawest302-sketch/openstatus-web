@@ -98,56 +98,57 @@ export default function OwnerQuickStatus({
 
   if (!isOwner) return null;
 
-  // ── Expanded update panel (unchanged) ─────────────────────────────────────
+  // ── Expanded update panel ─────────────────────────────────────────────────
   const panel = (
-    <div className={variant === 'floating' ? 'border-t-2 border-black bg-[#F4F1E8] p-4 shadow-[0_-12px_35px_rgba(0,0,0,0.18)]' : 'border-2 border-black bg-[#A7E348] p-5 md:p-6'}>
-      <div className="flex items-start justify-between gap-4">
+    <div style={{
+      margin: variant === 'floating' ? '0 12px 12px' : undefined,
+      background: 'rgba(255,255,255,0.96)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      border: '1px solid rgba(0,0,0,0.10)',
+      borderRadius: variant === 'floating' ? 22 : 18,
+      boxShadow: variant === 'floating' ? '0 8px 40px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.08)' : '0 4px 20px rgba(0,0,0,0.08)',
+      padding: '20px 20px 16px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
         <div>
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.14em]">Update live status</p>
-          <p className="mt-1 text-sm text-black/60">What should customers know right now?</p>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#8A8A8A', margin: 0 }}>Update live status</p>
+          <p style={{ fontSize: 15, fontWeight: 600, color: '#0A0A0A', margin: '3px 0 0', letterSpacing: '-0.02em' }}>What should customers know?</p>
         </div>
         {variant === 'floating' ? (
-          <button type="button" onClick={() => setExpanded(false)} className="min-h-11 min-w-11 border-2 border-black bg-white text-xl" aria-label="Close owner controls">×</button>
+          <button type="button" onClick={() => setExpanded(false)} aria-label="Close" style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(0,0,0,0.10)', background: '#F5F5F3', fontSize: 16, color: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>×</button>
         ) : null}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="Status type">
-        {([
-          ['closed', 'Close now'],
-          ['early', 'Close early'],
-        ] as const).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => { setMode(value); setMessage(''); }}
-            className={`min-h-12 border-2 border-black px-2 text-sm font-bold ${mode === value ? 'bg-black text-white' : 'bg-white text-black'}`}
-            aria-pressed={mode === value}
-          >
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+        {([['closed', 'Close now'], ['early', 'Close early']] as const).map(([value, label]) => (
+          <button key={value} type="button" onClick={() => { setMode(value); setMessage(''); }} aria-pressed={mode === value}
+            style={{ height: 44, borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: mode === value ? '#0A0A0A' : '#F5F5F3', color: mode === value ? '#fff' : '#0A0A0A', fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
             {label}
           </button>
         ))}
       </div>
 
       {mode === 'early' ? (
-        <label className="mt-4 block">
-          <span className="mb-1.5 block text-sm font-bold">Closing time today</span>
-          <input type="time" value={closeTime} onChange={(event) => setCloseTime(event.target.value)} className="min-h-12 w-full border-2 border-black bg-white px-3 text-base" />
+        <label style={{ display: 'block', marginBottom: 14 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 6 }}>Closing time today</span>
+          <input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} style={{ width: '100%', height: 44, borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: '#F9F9F7', padding: '0 12px', fontSize: 14, boxSizing: 'border-box' }} />
         </label>
       ) : null}
 
-      <label className="mt-4 block">
-        <span className="mb-1.5 block text-sm font-bold">Reason <span className="font-normal text-black/45">(optional)</span></span>
-        <input value={reason} onChange={(event) => setReason(event.target.value)} maxLength={120} placeholder="Holiday, weather, or private event…" className="min-h-12 w-full border-2 border-black bg-white px-3 text-base" />
+      <label style={{ display: 'block', marginBottom: 14 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#555', display: 'block', marginBottom: 6 }}>Reason <span style={{ fontWeight: 400, color: '#ADADAD' }}>(optional)</span></span>
+        <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={120} placeholder="Holiday, weather, or private event…" style={{ width: '100%', height: 44, borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: '#F9F9F7', padding: '0 12px', fontSize: 14, boxSizing: 'border-box' }} />
       </label>
 
-      {message ? <p className="mt-3 bg-white px-3 py-2 text-sm font-medium" role="status">{message}</p> : null}
+      {message ? <p style={{ fontSize: 13, color: '#166534', background: '#DCFCE7', borderRadius: 10, padding: '8px 12px', marginBottom: 12 }} role="status">{message}</p> : null}
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-        <button type="button" onClick={publish} disabled={saving} className="min-h-14 flex-1 border-2 border-black bg-black px-4 font-bold uppercase text-white disabled:opacity-50">
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" onClick={publish} disabled={saving} style={{ flex: 1, height: 48, borderRadius: 14, border: 'none', background: '#0A0A0A', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.5 : 1, letterSpacing: '0.02em' }}>
           {saving ? 'Updating…' : mode === 'closed' ? 'Close for today' : 'Publish update'}
         </button>
         {hasOwnerUpdate ? (
-          <button type="button" onClick={() => void request({ action: 'clear' })} disabled={saving} className="min-h-14 border-2 border-black bg-white px-4 font-bold uppercase disabled:opacity-50">
+          <button type="button" onClick={() => void request({ action: 'clear' })} disabled={saving} style={{ height: 48, paddingLeft: 16, paddingRight: 16, borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#F5F5F3', color: '#0A0A0A', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.5 : 1, whiteSpace: 'nowrap' }}>
             Back to regular hours
           </button>
         ) : null}
