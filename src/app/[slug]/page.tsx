@@ -42,11 +42,26 @@ function hexToRgb(hex: string) {
 export default async function LiveStatus({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const admin = getAdminClient();
-  const { data: business } = await admin
+  // Try full query; fall back gracefully if optional columns (timezone, place_id) don't exist yet
+  type BizRow = { id: string; user_id: string; name: string; tagline: string | null; avatar_url: string | null; header_url: string | null; timezone: string | null; place_id: string | null };
+  let business: BizRow | null = null;
+  const { data: fullData, error: fullError } = await admin
     .from('businesses')
     .select('id,user_id,name,tagline,avatar_url,header_url,timezone,place_id')
     .eq('slug', slug.toLowerCase())
     .maybeSingle();
+  if (fullError) {
+    // Column may not exist — retry without optional fields
+    const { data: basicData } = await admin
+      .from('businesses')
+      .select('id,user_id,name,tagline,avatar_url,header_url')
+      .eq('slug', slug.toLowerCase())
+      .maybeSingle();
+    if (!basicData) notFound();
+    business = { ...(basicData as Omit<BizRow, 'timezone'|'place_id'>), timezone: null, place_id: null };
+  } else {
+    business = fullData as BizRow | null;
+  }
   if (!business) notFound();
 
   // Fetch Google Places website for menu/reviews auto-linking
