@@ -22,12 +22,11 @@ function toSlug(str: string) {
 type Category = {
   id: string;
   label: string;
-  icon: string;
   tags: string[];
   blockIds: string[];
 };
 
-// All available block types — id → default title, subtitle, size
+// All available block types: id -> default title, subtitle, size
 const ALL_BLOCKS: Record<string, { title: string; sub: string; size: 'half' | 'full' | 'third' }> = {
   // Shopping & ordering
   order:       { title: 'Order ahead',          sub: 'Order for pickup or delivery', size: 'half' },
@@ -59,70 +58,60 @@ const CATEGORIES: Category[] = [
   {
     id: 'cafe',
     label: 'Coffee Shop / Café',
-    icon: '☕',
     tags: ['Coffee', 'Tea', 'Pastries', 'WiFi', 'Outdoor seating', 'Study-friendly', 'Vegan options', 'Breakfast'],
     blockIds: ['order', 'menu', 'location', 'special', 'reviews', 'gallery', 'website'],
   },
   {
     id: 'restaurant',
     label: 'Restaurant',
-    icon: '🍽️',
     tags: ['Dine-in', 'Takeout', 'Delivery', 'Reservations', 'Happy hour', 'Brunch', 'Outdoor seating', 'Pet-friendly'],
     blockIds: ['book', 'order', 'menu', 'location', 'reviews', 'gallery', 'website'],
   },
   {
     id: 'salon',
     label: 'Salon / Beauty',
-    icon: '✂️',
     tags: ['Walk-ins welcome', 'By appointment', 'Color', 'Extensions', "Men's cuts", 'Braids', 'Nails', 'Lashes', 'Brows', 'Gift cards'],
     blockIds: ['book', 'services', 'team', 'gallery', 'location', 'call', 'reviews'],
   },
   {
     id: 'retail',
     label: 'Retail / Boutique',
-    icon: '🛍️',
     tags: ['In-store pickup', 'Local brand', 'Gift wrapping', 'Custom orders', 'Curbside'],
     blockIds: ['shop', 'location', 'arrivals', 'gallery', 'reviews', 'website'],
   },
   {
     id: 'online',
     label: 'Online Store',
-    icon: '🛒',
     tags: ['Free shipping', 'Easy returns', 'Handmade', 'Small batch', 'Ships worldwide'],
     blockIds: ['shop', 'arrivals', 'bestsellers', 'promo', 'track', 'reviews'],
   },
   {
     id: 'foodtruck',
     label: 'Food Truck / Mobile',
-    icon: '🚚',
     tags: ['Street food', 'Events', 'Catering', 'Vegan', 'Cash & card', 'Family-owned'],
     blockIds: ['location', 'menu', 'stops', 'order', 'gallery', 'reviews'],
   },
   {
     id: 'fitness',
     label: 'Fitness',
-    icon: '💪',
     tags: ['Classes', 'Personal training', '24/7 access', 'Drop-ins welcome', 'Memberships', 'Yoga', 'Pilates', 'CrossFit'],
     blockIds: ['classes', 'book', 'membership', 'website', 'reviews', 'call'],
   },
   {
     id: 'service',
     label: 'Services',
-    icon: '🔧',
     tags: ['Free estimates', 'Licensed & insured', 'Same-day service', 'Emergency calls', 'Local & trusted'],
     blockIds: ['book', 'call', 'services', 'reviews', 'website', 'email'],
   },
   {
     id: 'events',
     label: 'Events / Entertainment',
-    icon: '🎉',
     tags: ['Private events', 'Weddings', 'Corporate', 'Catering', 'Outdoor', 'Live music'],
     blockIds: ['book', 'gallery', 'website', 'email', 'call', 'reviews'],
   },
   {
     id: 'other',
     label: 'Other',
-    icon: '📌',
     tags: [],
     blockIds: ['website', 'call', 'email', 'location'],
   },
@@ -141,6 +130,33 @@ function buildBlocks(blockIds: string[]): OpenStatusBlock[] {
       url: '',
       size: ALL_BLOCKS[id].size,
     }));
+}
+
+// ─── CATEGORY ICONS ────────────────────────────────────────────
+
+const CATEGORY_ICONS: Record<string, string> = {
+  cafe:      'M17 8h1a4 4 0 0 1 0 8h-1 M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z M6 1v3 M10 1v3 M14 1v3',
+  restaurant:'M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2 M7 2v20 M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7',
+  salon:     'M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M8 6l8 12 M16 6l-8 12',
+  retail:    'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0',
+  online:    'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10',
+  foodtruck: 'M1 3h15v13H1z M16 8h4l3 3v5h-7V8z M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  fitness:   'M6 5v14 M2 8h4 M2 16h4 M18 5v14 M20 8h-4 M20 16h-4 M6 12h12',
+  service:   'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
+  events:    'M3 4h18v18H3V4z M16 2v4 M8 2v4 M3 10h18 M8 14h.01 M12 14h.01 M16 14h.01',
+  other:     'M5 12h.01 M12 12h.01 M19 12h.01',
+};
+
+function CategoryIcon({ id, active }: { id: string; active: boolean }) {
+  const d = CATEGORY_ICONS[id] ?? CATEGORY_ICONS.other;
+  const paths = d.split(' M ').map((p: string, i: number) => i === 0 ? p : 'M ' + p);
+  return (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+      {paths.map((p: string, i: number) => (
+        <path key={i} d={p} stroke={active ? 'rgba(247,247,245,0.9)' : '#444'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      ))}
+    </svg>
+  );
 }
 
 // ─── STEP INDICATOR ──────────────────────────────────────────────────────────
@@ -192,6 +208,7 @@ export default function SetupPage() {
 
   // Step 3: Tags
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
 
   // Step 4: Location
   const [locationQuery, setLocationQuery] = useState('');
@@ -574,7 +591,7 @@ export default function SetupPage() {
                     fontFamily: "'Inter', system-ui, sans-serif",
                   }}
                 >
-                  <span style={{ fontSize: 18, lineHeight: 1 }}>{cat.icon}</span>
+                  <CategoryIcon id={cat.id} active={categoryId === cat.id}/>
                   <span>{cat.label}</span>
                 </button>
               ))}
@@ -591,7 +608,7 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* ── STEP 3: Tags ──────────────────────────────────────────────── */}
+        {/* ── STEP 3: Tags */}
         {step === 3 && (
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
@@ -608,50 +625,104 @@ export default function SetupPage() {
             }}>
               Describe what<br />you offer
             </h1>
-            <p style={{ fontSize: 14, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
-              Optional — customers see these as quick-scan tags.
+            <p style={{ fontSize: 14, color: '#858585', marginBottom: 20, lineHeight: 1.5 }}>
+              Add short tags customers will see on your page. Type one and press Enter.
             </p>
 
-            {selectedCategory && selectedCategory.tags.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
-                {selectedCategory.tags.map(tag => {
-                  const active = selectedTags.includes(tag);
-                  return (
+            {/* Tag input */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              border: '1.5px solid #DEDEDC',
+              borderRadius: 16,
+              background: '#fff',
+              padding: '4px 8px 4px 16px',
+              marginBottom: 12,
+              flexWrap: 'wrap',
+              gap: 6,
+            }}>
+              {selectedTags.map(tag => (
+                <span key={tag} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  background: '#0A0A0A', color: '#F7F7F5',
+                  borderRadius: 99, padding: '5px 10px',
+                  fontSize: 12, fontWeight: 600,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                }}>
+                  {tag}
+                  <button
+                    onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                    style={{ background: 'none', border: 'none', color: 'rgba(247,247,245,0.6)', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1, fontFamily: 'inherit' }}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                placeholder={selectedTags.length === 0 ? 'e.g. Outdoor seating' : 'Add another...'}
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                    e.preventDefault();
+                    const val = tagInput.trim().replace(/,$/, '');
+                    if (val && !selectedTags.includes(val) && selectedTags.length < 8) {
+                      setSelectedTags(prev => [...prev, val]);
+                    }
+                    setTagInput('');
+                  }
+                  if (e.key === 'Backspace' && !tagInput && selectedTags.length > 0) {
+                    setSelectedTags(prev => prev.slice(0, -1));
+                  }
+                }}
+                style={{
+                  flex: 1, minWidth: 120, border: 'none', outline: 'none',
+                  fontSize: 14, color: '#0A0A0A', padding: '8px 4px',
+                  background: 'transparent',
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                }}
+              />
+            </div>
+
+            {/* Example suggestions */}
+            {selectedCategory && selectedCategory.tags.length > 0 && (
+              <div>
+                <p style={{ fontSize: 11, color: '#ABABAB', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Examples
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 32 }}>
+                  {selectedCategory.tags.filter(t => !selectedTags.includes(t)).map(tag => (
                     <button
                       key={tag}
-                      onClick={() => setSelectedTags(prev =>
-                        active ? prev.filter(t => t !== tag) : [...prev, tag]
-                      )}
+                      onClick={() => {
+                        if (!selectedTags.includes(tag) && selectedTags.length < 8) {
+                          setSelectedTags(prev => [...prev, tag]);
+                        }
+                      }}
                       style={{
-                        padding: '9px 16px',
+                        padding: '7px 13px',
                         borderRadius: 99,
-                        border: `1.5px solid ${active ? '#0A0A0A' : '#DEDEDC'}`,
-                        background: active ? '#0A0A0A' : '#fff',
-                        color: active ? '#F7F7F5' : '#292929',
-                        fontSize: 13,
-                        fontWeight: 600,
+                        border: '1.5px solid #DEDEDC',
+                        background: '#fff',
+                        color: '#555',
+                        fontSize: 12,
+                        fontWeight: 500,
                         cursor: 'pointer',
-                        transition: 'all 0.12s ease',
                         fontFamily: "'Inter', system-ui, sans-serif",
                       }}
                     >
-                      {tag}
+                      + {tag}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            ) : (
-              <p style={{ fontSize: 14, color: '#858585', marginBottom: 32, padding: '20px 0' }}>
-                No tags needed for this category — just continue.
-              </p>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button onClick={saveStep3} style={primaryBtn}>
-                <span>{selectedTags.length > 0 ? 'Continue' : 'Skip for now'}</span>
-                <span>→</span>
-              </button>
-            </div>
+            <button onClick={saveStep3} style={{ ...primaryBtn, marginTop: selectedCategory && selectedCategory.tags.length > 0 ? 0 : 32 }}>
+              <span>{selectedTags.length > 0 ? 'Continue' : 'Skip for now'}</span>
+              <span>→</span>
+            </button>
           </div>
         )}
 
@@ -673,7 +744,7 @@ export default function SetupPage() {
               Where are<br />you located?
             </h1>
             <p style={{ fontSize: 14, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
-              Optional — helps customers find you and powers your map block.
+              Optional. Helps customers find you and powers your map block.
             </p>
 
             <div style={{ position: 'relative', marginBottom: 32 }}>
@@ -740,7 +811,9 @@ export default function SetupPage() {
                   alignItems: 'center',
                   gap: 8,
                 }}>
-                  <span style={{ fontSize: 14 }}>📍</span>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" stroke="#555" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#0A0A0A' }}>{selectedPlace.name}</div>
                     <div style={{ fontSize: 12, color: '#858585' }}>{selectedPlace.address}</div>
