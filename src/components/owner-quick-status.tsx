@@ -98,6 +98,7 @@ export default function OwnerQuickStatus({
 
   if (!isOwner) return null;
 
+  // ── Expanded update panel (unchanged) ─────────────────────────────────────
   const panel = (
     <div className={variant === 'floating' ? 'border-t-2 border-black bg-[#F4F1E8] p-4 shadow-[0_-12px_35px_rgba(0,0,0,0.18)]' : 'border-2 border-black bg-[#A7E348] p-5 md:p-6'}>
       <div className="flex items-start justify-between gap-4">
@@ -156,25 +157,108 @@ export default function OwnerQuickStatus({
 
   if (variant === 'dashboard') return <section className="mb-5">{panel}</section>;
 
+  // ── Floating owner bar (redesigned) ───────────────────────────────────────
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[440px] pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[560px] pb-[env(safe-area-inset-bottom)]">
       {expanded ? panel : (
-        <div className="m-3 flex items-center gap-2 border-2 border-black bg-[#A7E348] p-2 shadow-[6px_6px_0_#0A0A0A]">
-          <span className="min-w-0 flex-1 pl-2">
-            <span className="block truncate text-sm font-bold">Signed in as {businessName}</span>
-            <span className="block text-xs text-black/60">Only you can see this control</span>
-          </span>
+        <div
+          style={{
+            margin: '0 12px 12px',
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(0,0,0,0.10)',
+            borderRadius: 18,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 8px 8px 14px',
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}
+        >
+          {/* Label */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#0A0A0A', margin: 0, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {businessName}
+            </p>
+            <p style={{ fontSize: 11, color: '#8A8A8A', margin: 0, lineHeight: 1.3 }}>Owner view</p>
+          </div>
+
+          {/* Open button */}
           <button
             type="button"
-            onClick={() => void request(hasOwnerUpdate ? { action: 'clear' } : { action: 'publish', preset: 'closed_today' })}
-            disabled={saving}
-            className="min-h-12 shrink-0 border-2 border-black bg-black px-3 text-sm font-bold uppercase text-white disabled:opacity-50"
+            onClick={() => void request({ action: 'clear' })}
+            disabled={saving || !hasOwnerUpdate}
+            style={{
+              height: 36,
+              paddingLeft: 14,
+              paddingRight: 14,
+              borderRadius: 10,
+              border: '1px solid rgba(0,0,0,0.10)',
+              background: hasOwnerUpdate ? '#DCFCE7' : '#F5F5F3',
+              color: hasOwnerUpdate ? '#166534' : '#BDBDBD',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: hasOwnerUpdate ? 'pointer' : 'default',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s',
+              flexShrink: 0,
+            }}
           >
-            {saving ? 'Updating…' : hasOwnerUpdate ? 'Back to normal' : 'Close now'}
+            ✓ Open
           </button>
-          <button type="button" onClick={() => setExpanded(true)} className="min-h-12 min-w-12 shrink-0 border-2 border-black bg-white text-xl font-bold" aria-label="More status options">
-            +
+
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            disabled={saving}
+            style={{
+              height: 36,
+              paddingLeft: 14,
+              paddingRight: 14,
+              borderRadius: 10,
+              border: '1px solid rgba(0,0,0,0.10)',
+              background: hasOwnerUpdate ? '#F5F5F3' : '#FEE2E2',
+              color: hasOwnerUpdate ? '#BDBDBD' : '#991B1B',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s',
+              flexShrink: 0,
+            }}
+          >
+            ✕ Close
           </button>
+
+          {/* Dashboard button */}
+          <a
+            href="/builder"
+            style={{
+              height: 36,
+              paddingLeft: 14,
+              paddingRight: 14,
+              borderRadius: 10,
+              background: '#0A0A0A',
+              color: '#FFFFFF',
+              fontSize: 12,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'background 0.15s',
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            Dashboard
+          </a>
         </div>
       )}
     </div>
