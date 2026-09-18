@@ -2290,7 +2290,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [previewWidth,setPreviewWidth]=useState(500);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
   const [userInitial,setUserInitial]=useState('•');
-  const [showAccountMenu,setShowAccountMenu]=useState(false);
   React.useEffect(()=>{
     supabase.auth.getUser().then(({data})=>{
       const u=data.user;
@@ -2534,18 +2533,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
             </div>
-            <div className="relative flex-shrink-0">
-              <button onClick={()=>setShowAccountMenu(m=>!m)} className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-[#111] text-[12px] font-bold cursor-pointer focus:outline-none" style={{background:localBusiness?.avatar_url?'transparent':'rgba(255,255,255,0.30)'}}>
-                {localBusiness?.avatar_url
-                  ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url} alt="" className="w-full h-full object-cover"/>
-                  :<span>{userInitial}</span>}
-              </button>
-              {showAccountMenu&&<>
-                <div className="fixed inset-0 z-40" onClick={()=>setShowAccountMenu(false)}/>
-                <div className="absolute right-0 top-full mt-2 z-50 min-w-[140px] rounded-2xl bg-white shadow-xl border border-black/8 py-1 overflow-hidden">
-                  <button onClick={async()=>{await supabase.auth.signOut();window.location.href='/login';}} className="w-full text-left px-4 py-2.5 text-[13px] text-[#D33] hover:bg-red-50 font-medium transition-colors">Sign out</button>
-                </div>
-              </>}
+            <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 select-none">
+              {userInitial}
             </div>
           </div>
         </header>
@@ -3077,7 +3066,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <div className="w-0.5 h-10 rounded-full bg-white/30" />
             </div>
           </div>
-          <div className="hidden md:flex flex-shrink-0 flex-col bg-[#F7F7F5]" style={{width:previewWidth}}>
+          <div className="hidden md:flex flex-col bg-[#F7F7F5]" style={{flex:'1 1 0',minWidth:320}}>
             {/* Toggle bar */}
             <div className="h-14 border-b border-black/6 flex items-center justify-between px-4 flex-shrink-0 bg-white/80 backdrop-blur-sm">
               <div className="flex items-center gap-0.5 bg-black/5 rounded-full p-0.5">
