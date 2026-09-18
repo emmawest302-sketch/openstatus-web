@@ -2786,6 +2786,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                     <p className="text-[15px] font-bold text-[#0A0A0A] mb-1">
                       {hoursSubTab==='special'?'Special Hours':'Auto-Updates'}
+                    </p>
+                    <p className="text-[13px] text-[#858585]">Coming soon — stay tuned!</p>
+                  </div>
+                )}
             </div>
           </div>
         </div>
