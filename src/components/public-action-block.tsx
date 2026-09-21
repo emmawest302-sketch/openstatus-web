@@ -66,12 +66,12 @@ export default function PublicActionBlock({ block, businessId }: Props) {
   const card = (
     <div
       style={{
-        display: 'flex', alignItems: 'center', gap: 14,
+        display: 'flex', alignItems: 'center', gap: 11,
         background: 'rgba(255,255,255,0.72)',
         backdropFilter: 'blur(24px) saturate(130%)',
         WebkitBackdropFilter: 'blur(24px) saturate(130%)',
         border: '1px solid rgba(255,255,255,0.82)',
-        borderRadius: 20, padding: '15px 18px',
+        borderRadius: 18, padding: '11px 14px',
         boxShadow: hovered
           ? '0 12px 36px rgba(0,0,0,0.10)'
           : '0 8px 30px rgba(0,0,0,0.06)',
@@ -82,19 +82,19 @@ export default function PublicActionBlock({ block, businessId }: Props) {
     >
       {/* Icon circle */}
       <div style={{
-        width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+        width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
         background: iconBg, display: 'grid', placeItems: 'center',
       }}>
         <BlockIcon id={block.id} color={iconColor}/>
       </div>
 
       {/* Text */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: '#151515', lineHeight: 1.3 }}>
+      <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#151515', lineHeight: 1.35 }}>
           {block.title}
         </div>
         {block.sub && (
-          <div style={{ fontSize: 12, color: '#8A8A86', marginTop: 2, lineHeight: 1.3 }}>
+          <div style={{ fontSize: 11, color: '#8A8A86', marginTop: 2, lineHeight: 1.35, overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const }}>
             {block.sub}
           </div>
         )}

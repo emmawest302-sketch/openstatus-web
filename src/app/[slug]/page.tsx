@@ -186,7 +186,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
         {/* ── Cover photo ── */}
         {coverPhoto ? (
-          <div style={{ position: 'relative', height: 220, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
+          <div style={{ position: 'relative', height: 200, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverPhoto}
@@ -206,7 +206,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         {/* ── Logo ── */}
         <div style={{
           display: 'flex', justifyContent: 'center',
-          marginTop: coverPhoto ? -52 : 0,
+          marginTop: coverPhoto ? -38 : 0,
           position: 'relative', zIndex: 10,
         }}>
           {avatar ? (
@@ -214,7 +214,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             <img
               src={avatar} alt={`${business.name} logo`}
               style={{
-                width: 104, height: 104, borderRadius: '50%',
+                width: 80, height: 80, borderRadius: '50%',
                 border: '3px solid rgba(255,255,255,0.90)',
                 background: 'rgba(255,255,255,0.80)',
                 objectFit: 'cover',
@@ -225,12 +225,12 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             />
           ) : (
             <div style={{
-              width: 104, height: 104, borderRadius: '50%',
+              width: 80, height: 80, borderRadius: '50%',
               border: '3px solid rgba(255,255,255,0.90)',
               background: 'rgba(255,255,255,0.80)',
               backdropFilter: 'blur(20px)',
               display: 'grid', placeItems: 'center',
-              fontSize: 32, fontWeight: 800, color: themeColor,
+              fontSize: 22, fontWeight: 800, color: themeColor,
               boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
             }}>
               {initials}
@@ -239,9 +239,9 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         </div>
 
         {/* ── Business name ── */}
-        <div style={{ textAlign: 'center', padding: '10px 20px 4px' }}>
+        <div style={{ textAlign: 'center', padding: '6px 16px 2px' }}>
           <h1 style={{
-            fontSize: 48, fontWeight: 800, letterSpacing: '-0.035em',
+            fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em',
             color: '#151515', lineHeight: 1, margin: 0,
             fontFamily: enrichedConfig.font ?? 'Georgia, "Times New Roman", serif',
           }}>
@@ -249,8 +249,8 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           </h1>
           {business.tagline && (
             <p style={{
-              fontSize: 11, fontWeight: 500, letterSpacing: '0.18em',
-              textTransform: 'uppercase', color: '#4B4B4B', marginTop: 8,
+              fontSize: 10, fontWeight: 500, letterSpacing: '0.16em',
+              textTransform: 'uppercase', color: '#4B4B4B', marginTop: 5,
             }}>
               {business.tagline}
             </p>
@@ -258,12 +258,12 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         </div>
 
         {/* ── Rating row ── */}
-        <div style={{ padding: '10px 16px 0' }}>
+        <div style={{ padding: '6px 14px 0' }}>
           <PublicRatingRow businessId={business.id} placeId={business.place_id}/>
         </div>
 
         {/* ── Blocks ── */}
-        <div style={{ padding: '10px 14px 48px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding: '8px 12px 36px', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
           {/* Hours card */}
           {hoursBlockOn && (
@@ -272,11 +272,11 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
               borderRadius: 22,
               overflow: 'hidden',
             }}>
-              <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '16px 18px' }}>
+              <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '11px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   {/* Icon */}
                   <div style={{
-                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
                     background: isOpen ? 'rgba(34,197,94,0.10)' : 'rgba(0,0,0,0.05)',
                     display: 'grid', placeItems: 'center',
                   }}>
@@ -293,7 +293,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
                         width: 7, height: 7, borderRadius: '50%',
                         background: dot, display: 'inline-block', flexShrink: 0,
                       }}/>
-                      <span style={{ fontSize: 17, fontWeight: 700, color: '#151515', letterSpacing: '-0.02em' }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: '#151515', letterSpacing: '-0.02em' }}>
                         {bigText}
                       </span>
                     </div>
