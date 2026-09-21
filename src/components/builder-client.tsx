@@ -1740,9 +1740,13 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
       <div className="border-t border-[#EBEBEB] pt-3 mt-1">
         {googleConnected?(
           <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#2E7D5B] font-medium">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Auto-syncs to Google on every Save
+            </div>
             <button onClick={pushToGoogle} disabled={pushing} className="w-full px-4 py-2 rounded-xl border border-[#0A0A0A] text-[#0A0A0A] text-[12px] font-semibold disabled:opacity-50 hover:bg-[#F5F5F5] transition-colors flex items-center justify-center gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12l8-8 8 8M12 4v16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              {pushing?'Pushing…':'Push hours to Google'}
+              {pushing?'Pushing…':'Push hours to Google now'}
             </button>
             {pushMsg&&<p className={`text-[11px] font-medium ${pushMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{pushMsg}</p>}
           </div>
@@ -1855,6 +1859,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     setSaving(false);
     if(error){setSaveError(error.message);return;}
     setSaved(true);setTimeout(()=>setSaved(false),2500);
+    // Auto-sync hours to Google if connected — fire-and-forget, never blocks save
+    if(googleConnected && config.weeklyHours){
+      supabase.auth.getSession().then(({data:{session}})=>{
+        if(!session?.access_token) return;
+        fetch('/api/google/hours',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify({weeklyHours:config.weeklyHours}),
+        }).catch(()=>{});
+      }).catch(()=>{});
+    }
   }
 
   // Hours table row
@@ -2796,17 +2811,33 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </button>
               <button
                 onClick={()=>{
+                  const todayKey=(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()];
+                  let updatedHours: WeeklyHours | undefined;
                   if(quickAction==='close-early'){
-                    const todayKey=(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()];
-                    setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],close:closeEarlyTime}}}));
+                    const newHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],close:closeEarlyTime}};
+                    updatedHours=newHours;
+                    setConfig(c=>({...c,weeklyHours:newHours}));
                   } else if(quickAction==='close-today'){
-                    const todayKey=(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()];
-                    setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],closed:true}}}));
+                    const newHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],closed:true}};
+                    updatedHours=newHours;
+                    setConfig(c=>({...c,weeklyHours:newHours}));
                   }
                   setQuickAction(null);
+                  // Auto-push to Google if connected — fire-and-forget
+                  if(googleConnected && updatedHours){
+                    const gh=updatedHours;
+                    supabase.auth.getSession().then(({data:{session}})=>{
+                      if(!session?.access_token) return;
+                      fetch('/api/google/hours',{
+                        method:'POST',
+                        headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+                        body:JSON.stringify({weeklyHours:gh}),
+                      }).catch(()=>{});
+                    }).catch(()=>{});
+                  }
                 }}
                 className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-white text-[13px] font-bold hover:bg-[#292929] transition-colors">
-                Update Hours
+                {googleConnected?'Update & Sync to Google':'Update Hours'}
               </button>
             </div>
           </div>
