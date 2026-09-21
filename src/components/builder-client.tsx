@@ -645,17 +645,29 @@ function AccentColorPicker({ value, onChange }: { value?: string; onChange:(v:st
 }
 
 // Photo upload field
-function PhotoField({ label, value, onChange, placeholder, hint }: {
+function PhotoField({ label, value, onChange, placeholder, hint, uploadFile }: {
   label: string; value: string; onChange: (v:string)=>void;
   placeholder?: string; hint?: string;
+  /** When provided, files are uploaded via this fn and the returned URL is stored (not base64). */
+  uploadFile?: (file: File) => Promise<string>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadErr, setUploadErr] = React.useState('');
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); };
-    reader.readAsDataURL(file);
+    if (uploadFile) {
+      setUploading(true); setUploadErr('');
+      try { onChange(await uploadFile(file)); }
+      catch(err) { setUploadErr(err instanceof Error ? err.message : 'Upload failed'); }
+      finally { setUploading(false); e.target.value=''; }
+    } else {
+      // Fallback: read as data URL (only used when no uploadFile provided)
+      const reader = new FileReader();
+      reader.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); };
+      reader.readAsDataURL(file);
+    }
   }
   return (
     <div>
@@ -674,11 +686,12 @@ function PhotoField({ label, value, onChange, placeholder, hint }: {
         : (
           <div>
             <div
-              onClick={()=>fileRef.current?.click()}
-              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F7F7F5] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
+              onClick={()=>!uploading&&fileRef.current?.click()}
+              className={`rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F7F7F5] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all ${uploading?'pointer-events-none opacity-60':''}`}>
               <LucideImage size={18} color="#858585"/>
-              <p className="text-[12px] text-[#858585]">Click to upload</p>
+              <p className="text-[12px] text-[#858585]">{uploading?'Uploading…':'Click to upload'}</p>
             </div>
+            {uploadErr && <p className="text-[11px] text-red-500 mt-1">{uploadErr}</p>}
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile}/>
             <div className="flex items-center gap-2 mt-2">
               <div className="flex-1 h-px bg-[#DEDEDC]"/>
@@ -1229,12 +1242,14 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
 }
 
 // ── Block edit panel (inline right of blocks, no modal) ───────────────────────
-function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,businessId }: {
+function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,businessId,uploadFile }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
   onUpdateConfig:(u:Partial<OpenStatusPageConfig>)=>void;
   onClose:()=>void;
   businessId?:string;
+  /** Async fn to upload a file and return a displayable URL. When provided, PhotoFields won't use base64. */
+  uploadFile?:(file:File)=>Promise<string>;
 }) {
   const hours=config.weeklyHours??DEFAULT_WEEK_HOURS;
   const {status,todayLabel}=getLiveStatus(hours);
@@ -1282,6 +1297,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
                 value={block.coverPhoto??''}
                 onChange={v=>onUpdateBlock({coverPhoto:v})}
                 hint="A photo of your storefront or location."
+                uploadFile={uploadFile}
               />
               <div>
                 <FieldLabel>Address</FieldLabel>
@@ -1435,7 +1451,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
           {block.id==='menu' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="menu" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional banner photo shown at the top of the menu block."/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional banner photo shown at the top of the menu block." uploadFile={uploadFile}/>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={()=>onUpdateBlock({menuType:'pdf'})}
@@ -1476,7 +1492,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
           {block.id==='order' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="order" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo shown behind the block."/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo shown behind the block." uploadFile={uploadFile}/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1493,7 +1509,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
           {block.id==='book' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="book" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} uploadFile={uploadFile}/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1523,7 +1539,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
               {block.id==='website'&&(
                 <>
                   <BlockStylePicker blockId="website" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-                  <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
+                  <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} uploadFile={uploadFile}/>
                   <div><FieldLabel>Website URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
                 </>
               )}
@@ -2413,7 +2429,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   }
   async function save() {
     setSaving(true);setSaveError('');
-    const {error}=await supabase.auth.updateUser({data:{openstatus_page:config}});
+    // Strip any base64 data URLs before saving to user metadata.
+    // Storing base64 images in JWT cookies causes 494 REQUEST_HEADER_TOO_LARGE on Vercel.
+    const safeConfig = {
+      ...config,
+      bgImage: config.bgImage?.startsWith('data:') ? undefined : config.bgImage,
+      blocks: config.blocks.map(b=>({...b, coverPhoto: b.coverPhoto?.startsWith('data:') ? '' : (b.coverPhoto??'')})),
+    };
+    const {error}=await supabase.auth.updateUser({data:{openstatus_page:safeConfig}});
     if(error){setSaving(false);setSaveError(error.message);return;}
     // Sync weekly hours to business_hours table so the published page shows them
     if(localBusiness?.id && config.weeklyHours) {
@@ -2963,6 +2986,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
                 onClose={()=>setOpenId(null)}
                 businessId={localBusiness?.id}
+                uploadFile={localBusiness?.id ? async(file)=>{
+                  const ref=await uploadAsset(file,'header');
+                  return `/api/assets?businessId=${localBusiness.id}&kind=header`;
+                } : undefined}
               />
             </div>
           </div>

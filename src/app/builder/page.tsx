@@ -86,6 +86,30 @@ function BuilderPageInner() {
       const raw = user.user_metadata?.openstatus_page ?? null;
       const config = normalizeOpenStatusPageConfig(raw);
 
+      // ── Cleanup: strip any base64 images from user metadata on load ──────────
+      // base64 data URLs in JWT cookies cause 494 REQUEST_HEADER_TOO_LARGE on Vercel.
+      // We detect and remove them, then save the clean version back immediately.
+      const hasDirtyBase64 =
+        (raw?.bgImage as string | undefined)?.startsWith('data:') ||
+        (raw?.blocks as {coverPhoto?:string}[] | undefined)?.some(b=>b.coverPhoto?.startsWith('data:'));
+      if (hasDirtyBase64) {
+        const cleaned = {
+          ...raw,
+          bgImage: (raw?.bgImage as string | undefined)?.startsWith('data:') ? undefined : raw?.bgImage,
+          blocks: (raw?.blocks as {coverPhoto?:string}[] | undefined)?.map(b=>({
+            ...b,
+            coverPhoto: b.coverPhoto?.startsWith('data:') ? '' : b.coverPhoto,
+          })),
+        };
+        // Save cleaned version silently — don't block the page load
+        supabase.auth.updateUser({ data: { openstatus_page: cleaned } }).catch(()=>{});
+      }
+
+      // Reconstruct bgImage from businesses.header_url if not already set
+      if (!config.bgImage && biz.header_url) {
+        config.bgImage = `/api/assets?businessId=${biz.id}&kind=header`;
+      }
+
       const hasMetaHours = raw && raw.weeklyHours && typeof raw.weeklyHours === 'object';
       if (!hasMetaHours) {
         const { data: dbHours } = await supabase
