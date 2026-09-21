@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -46,6 +46,20 @@ export default function SignupPage() {
   const [oauthLoading, setOauthLoading] = useState<'google' | 'meta' | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+
+  // Redirect already-authenticated users to their dashboard
+  useEffect(() => {
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data: biz } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      router.replace(biz ? '/builder' : '/setup');
+    })();
+  }, [router]);
 
   const busy = loading || oauthLoading !== null;
 

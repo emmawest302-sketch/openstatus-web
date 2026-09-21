@@ -53,6 +53,20 @@ export default function HomePage() {
     }
   }, []);
 
+  // Redirect already-authenticated users to their dashboard
+  useEffect(() => {
+    void (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data: biz } = await supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      router.replace(biz ? '/builder' : '/setup');
+    })();
+  }, [router]);
+
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);

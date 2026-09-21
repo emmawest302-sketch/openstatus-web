@@ -208,6 +208,10 @@ function LucideLayoutList({ size=14,color='currentColor' }: { size?: number; col
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="5"/><rect x="3" y="11" width="18" height="5"/><rect x="3" y="19" width="18" height="2"/></svg>;
 }
 
+function IconBolt({ size=14,color='currentColor' }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>;
+}
+
 function BlockIcon({ id, size=16, color='currentColor' }: { id:string; size?:number; color?:string }) {
   switch(id) {
     case 'location': return <LucidePin size={size} color={color}/>;
