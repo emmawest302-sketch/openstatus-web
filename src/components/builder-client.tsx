@@ -1506,9 +1506,11 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
 
 // ── Block picker (command palette style) ──────────────────────────────────────
 const PICKER_CATEGORIES = [
-  { label:'ESSENTIALS', ids:['hours','location','menu','website'] },
-  { label:'CONVERT',    ids:['order','book'] },
-  { label:'CONNECT',    ids:['socials'] },
+  { label:'Essential',      ids:['hours','location'] },
+  { label:'Food & Beverage',ids:['menu','order'] },
+  { label:'Engagement',     ids:['book','updates'] },
+  { label:'Contact',        ids:['website'] },
+  { label:'Social',         ids:['socials'] },
 ];
 
 function BlockPicker({ blocks, onAdd, onClose }: {
@@ -1675,7 +1677,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings'|'preview'|'style';
+type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'photos';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
@@ -1792,6 +1794,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [googleFetchError,setGoogleFetchError]=useState('');
   const [googleFetchDone,setGoogleFetchDone]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
+  const [mobileBlockCat,setMobileBlockCat]=useState<string>('All');
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   const [previewWidth,setPreviewWidth]=useState(420);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
@@ -1910,11 +1913,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   }
 
   const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode }[] = [
-    { key:'design',       label:'Blocks',        icon:<IconPalette size={15}/> },
-    { key:'business',     label:'Business',      icon:<IconBuilding size={15}/> },
-    { key:'hours',        label:'Hours',         icon:<LucideClock size={15}/> },
-    { key:'style',        label:'Style',         icon:<svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> },
-    { key:'settings',     label:'Settings',      icon:<IconSettings size={15}/> },
+    { key:'business', label:'Business', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+    { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
+    { key:'photos',   label:'Photos',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
+    { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="14.5" r="2.5"/><circle cx="17.5" cy="14.5" r="2.5"/><path d="M6.5 14.5a7 7 0 0 1 11-5.5"/></svg> },
+    { key:'settings', label:'Settings', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
   ];
 
   const sidebarLabel = SIDEBAR_NAV.find(n=>n.key===sidebarTab)?.label ?? '';
@@ -2011,7 +2014,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
 
         {/* ── TOP NAV BAR ── */}
-        <header className="h-14 border-b border-[#E8EBF0] flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm">
+        <header className="hidden md:flex h-14 border-b border-[#E8EBF0] items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm">
           <span className="text-[13px] font-semibold text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>{sidebarLabel}</span>
           <div className="flex items-center gap-3">
             {business?.slug&&(
@@ -2042,7 +2045,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </header>
 
         {/* ── CONTENT + RIGHT PREVIEW ── */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="hidden md:flex flex-1 overflow-hidden">
 
           {/* ── MAIN CONTENT ── */}
           <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white/72 backdrop-blur-md rounded-tl-2xl">
@@ -3041,47 +3044,341 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </div>
 
+      {/* ══════════════════════════════════════════════════════════
+           MOBILE LAYOUT  (hidden on md+)
+           ══════════════════════════════════════════════════════════ */}
+
+      {/* Mobile dark top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-[52px] bg-[#0D0D0D] flex items-center justify-between px-4 gap-3"
+        style={{paddingTop:'env(safe-area-inset-top)'}}>
+        <span className="text-white font-bold text-[17px] tracking-[-0.03em]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
+        <div className="flex items-center gap-2">
+          {business?.slug&&(
+            <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+              className="px-3 py-1 rounded-full border border-white/25 text-white text-[12px] font-semibold flex items-center gap-1">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </a>
+          )}
+          <button onClick={save} disabled={saving}
+            className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':'bg-white text-[#0D0D0D]'}`}>
+            {saving?'Saving…':saved?'✓ Saved':'Publish'}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile phone preview (always visible behind bottom sheet) */}
+      <div className="md:hidden fixed left-0 right-0 bg-[#F0F2F5] flex items-center justify-center overflow-hidden"
+        style={{top:'calc(52px + env(safe-area-inset-top))',bottom:'calc(48vh + 56px + env(safe-area-inset-bottom))'}}>
+        <div className="transform scale-[0.72] origin-center" style={{marginTop:'-5%'}}>
+          <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
+            onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
+        </div>
+      </div>
+
+      {/* Mobile bottom sheet */}
+      <div className="md:hidden fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
+        style={{bottom:'calc(56px + env(safe-area-inset-bottom))',height:'48vh'}}>
+
+        {/* Drag handle */}
+        <div className="flex-shrink-0 flex justify-center pt-2.5 pb-1">
+          <div className="w-10 h-1 rounded-full bg-[#E2E8F0]"/>
+        </div>
+
+        {/* ── BLOCKS tab content ── */}
+        {sidebarTab==='design'&&(
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-start justify-between px-4 pt-1 pb-2 flex-shrink-0">
+              <div>
+                <h2 className="text-[20px] font-bold text-[#111] leading-tight">Add blocks</h2>
+                <p className="text-[12px] text-[#667085] mt-0.5">Choose what to show on your page. Drag to reorder.</p>
+              </div>
+              <button className="w-8 h-8 rounded-full bg-[#F4F6FA] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
+            </div>
+            {/* Category pills */}
+            <div className="flex gap-2 px-4 pb-3 overflow-x-auto flex-shrink-0" style={{scrollbarWidth:'none',msOverflowStyle:'none'}}>
+              {['All','Essential','Food & Beverage','Engagement','Contact','Social','More'].map(cat=>(
+                <button key={cat} onClick={()=>setMobileBlockCat(cat)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${mobileBlockCat===cat?'bg-[#111] text-white':'bg-[#F4F6FA] text-[#667085]'}`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+            {/* Block grid */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+              <div className="grid grid-cols-2 gap-3">
+                {(()=>{
+                  const catMap: Record<string,string[]> = {
+                    'Essential':['hours','location'],
+                    'Food & Beverage':['menu','order'],
+                    'Engagement':['book','updates'],
+                    'Contact':['website'],
+                    'Social':['socials'],
+                    'More':[],
+                  };
+                  const showIds = mobileBlockCat==='All'
+                    ? DEFAULT_BLOCKS.map(b=>b.id)
+                    : (catMap[mobileBlockCat]??[]);
+                  return DEFAULT_BLOCKS.filter(b=>showIds.includes(b.id)).map(def=>{
+                    const isOn = allBlocks.find(b=>b.id===def.id)?.on;
+                    return (
+                      <button key={def.id}
+                        onClick={()=>{ if(!isOn) enableBlock(def.id); else { setOpenId(def.id); } }}
+                        className="flex items-center gap-2.5 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-left active:bg-[#F0F2F5] transition-colors">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{backgroundColor:`${def.color}18`,border:`1px solid ${def.color}30`}}>
+                          <BlockIcon id={def.id} size={18} color={def.color}/>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-semibold text-[#111] leading-tight truncate">{def.title}</p>
+                          <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{def.sub}</p>
+                        </div>
+                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0 ${isOn?'bg-[#111] border-[#111]':'border-[#D0D5DD]'}`}>
+                          {isOn
+                            ?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            :<span className="text-[14px] leading-none text-[#98A2B3]">+</span>
+                          }
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── BUSINESS tab content ── */}
+        {sidebarTab==='business'&&(
+          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Business</h2>
+            <p className="text-[13px] text-[#667085] mb-4">Manage your business info in the settings above (desktop) or go to Account Settings.</p>
+            <a href="/setup?step=1" className="flex items-center gap-3 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-[13px] font-semibold text-[#111]">
+              <div className="w-10 h-10 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-semibold text-[#111]">Business Profile</p>
+                <p className="text-[11px] text-[#667085]">Name, address, phone & category</p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+            {/* Live hours status */}
+            <div className="mt-3 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[13px] font-semibold text-[#111]">Hours & Status</p>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#667085]'}`}>
+                  {liveStatus==='open'?'● Open now':'● Closed'}
+                </span>
+              </div>
+              <p className="text-[12px] text-[#667085]">{todayLabel}</p>
+              <button onClick={()=>setSidebarTab('hours' as SidebarTab)}
+                className="mt-3 text-[12px] font-semibold text-[#667085] hover:text-[#111] underline underline-offset-2">
+                Edit hours →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── HOURS tab (accessible from Business → Edit hours) ── */}
+        {sidebarTab==='hours'&&(
+          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+            <div className="flex items-center gap-2 pt-1 pb-3">
+              <button onClick={()=>setSidebarTab('business')}
+                className="w-7 h-7 rounded-full bg-[#F4F6FA] flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <h2 className="text-[18px] font-bold text-[#111]">Hours</h2>
+            </div>
+            <div className="rounded-2xl border border-[#E8EBF0] overflow-hidden bg-white">
+              {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
+            </div>
+          </div>
+        )}
+
+        {/* ── PHOTOS tab ── */}
+        {sidebarTab==='photos'&&(
+          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Photos</h2>
+            {/* Logo */}
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Logo</p>
+              <div className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+                {localBusiness?.avatar_url
+                  ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                    className="w-14 h-14 rounded-full object-cover border border-[#E8EBF0] flex-shrink-0" alt="Logo"/>
+                  :<div className="w-14 h-14 rounded-full bg-[#E8EBF0] flex items-center justify-center flex-shrink-0"><LucideImage size={20} color="#98A2B3"/></div>
+                }
+                <label className={`cursor-pointer flex-1 ${logoUploading?'pointer-events-none':''}`}>
+                  <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                    const file=e.target.files?.[0];if(!file)return;
+                    setLogoUploading(true);setLogoUploadError('');
+                    try{
+                      const ref=await uploadAsset(file,'avatar');
+                      if(localBusiness?.id){
+                        await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                        setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                      }
+                    }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                    finally{setLogoUploading(false);e.target.value='';}
+                  }}/>
+                  <span className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#E8EBF0] text-[12px] font-semibold text-[#111] w-fit ${logoUploading?'opacity-60':''}`}>
+                    <LucideImage size={13} color="#667085"/>
+                    {logoUploading?'Uploading…':'Change logo'}
+                  </span>
+                </label>
+              </div>
+              {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
+            </div>
+            {/* Cover / background */}
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Cover Photo</p>
+              <label className={`cursor-pointer block ${bgUploading?'pointer-events-none':''}`}>
+                <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                  const file=e.target.files?.[0];if(!file)return;
+                  setBgUploading(true);setBgUploadError('');
+                  try{
+                    const ref=await uploadAsset(file,'header');
+                    setConfig(c=>({...c,bgImage:ref}));
+                  }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+                  finally{setBgUploading(false);e.target.value='';}
+                }}/>
+                <div className="h-24 rounded-2xl border border-[#E8EBF0] overflow-hidden relative">
+                  {config.bgImage
+                    ?<img src={config.bgImage.startsWith('storage:')&&localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:config.bgImage}
+                       className="w-full h-full object-cover" alt="Cover"/>
+                    :<div className="w-full h-full bg-[#F9FAFB] flex flex-col items-center justify-center gap-1">
+                      <LucideImage size={22} color="#98A2B3"/>
+                      <span className="text-[12px] font-semibold text-[#667085]">{bgUploading?'Uploading…':'Upload cover photo'}</span>
+                    </div>
+                  }
+                  {config.bgImage&&<div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <span className="text-[12px] font-bold text-white">Change photo</span>
+                  </div>}
+                </div>
+              </label>
+              {bgUploadError&&<p className="text-[11px] text-red-500 mt-1">{bgUploadError}</p>}
+            </div>
+            {/* Google photos */}
+            {googlePhotos.length>0&&(
+              <div>
+                <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">From Google</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {googlePhotos.slice(0,6).map((url,i)=>(
+                    <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+                      className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${config.bgImage===url?'border-[#111]':'border-transparent'}`}>
+                      <img src={url} className="w-full h-full object-cover" alt="Google photo"/>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STYLE tab ── */}
+        {sidebarTab==='style'&&(
+          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Style</h2>
+            {/* Page color */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Page Color</p>
+            <div className="flex items-center gap-2 mb-4">
+              {['#FFAB40','#f8f5f0','#E8F5E9','#E3F2FD','#FCE4EC','#F3E5F5','#FFF8E1','#ECEFF1'].map(c=>(
+                <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
+                  className={`w-8 h-8 rounded-full border-2 transition-all flex-shrink-0 ${config.bg===c?'border-[#111] scale-110':'border-transparent'}`}
+                  style={{backgroundColor:c}}/>
+              ))}
+              <input type="color" value={config.bg} onChange={e=>setConfig(p=>({...p,bg:e.target.value}))}
+                className="w-8 h-8 rounded-full cursor-pointer border border-[#E8EBF0] overflow-hidden p-0 flex-shrink-0"
+                title="Custom color"/>
+            </div>
+            {/* Social links */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2 mt-4">Social Profiles</p>
+            <div className="space-y-2">
+              {[
+                {key:'instagram', label:'Instagram', placeholder:'@username or full URL'},
+                {key:'tiktok',    label:'TikTok',    placeholder:'@username or full URL'},
+                {key:'facebook',  label:'Facebook',  placeholder:'Page URL'},
+                {key:'twitter',   label:'Twitter / X',placeholder:'@username or full URL'},
+                {key:'youtube',   label:'YouTube',   placeholder:'Channel URL'},
+              ].map(({key,label,placeholder})=>(
+                <div key={key} className="flex items-center gap-2 bg-[#F9FAFB] rounded-xl border border-[#E8EBF0] px-3 py-2">
+                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">{label}</span>
+                  <input value={(config.socials??{})[key]??''}
+                    onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
+                    placeholder={placeholder}
+                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── SETTINGS tab ── */}
+        {sidebarTab==='settings'&&(
+          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Settings</h2>
+            {/* Your link */}
+            {business?.slug&&(
+              <div className="mb-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+                <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-1">Your Link</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[14px] font-semibold text-[#111] flex-1 truncate">openstatus.co/{business.slug}</p>
+                  <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-[#667085] hover:text-[#111] flex items-center gap-1">
+                    Open ↗
+                  </a>
+                </div>
+              </div>
+            )}
+            {/* Google Business */}
+            {googleConnected&&(
+              <div className="mb-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                  <p className="text-[12px] font-bold text-[#111]">Google Business Connected</p>
+                </div>
+                <p className="text-[11px] text-[#667085]">Hours sync to your Google profile when you save.</p>
+              </div>
+            )}
+            {/* Account */}
+            <a href="/setup?step=1" className="flex items-center gap-3 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <div className="w-10 h-10 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-semibold text-[#111]">Account Settings</p>
+                <p className="text-[11px] text-[#667085]">Manage your profile and preferences</p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </div>
+        )}
+
+      </div>{/* end bottom sheet */}
+
       {/* ── MOBILE BOTTOM NAV ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-[#E8EBF0] flex items-stretch"
-        style={{ paddingBottom:'env(safe-area-inset-bottom)' }}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch"
+        style={{ paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))' }}>
         {SIDEBAR_NAV.map(({key,label,icon})=>(
           <button key={key} onClick={()=>setSidebarTab(key)}
-            className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
-              sidebarTab===key ? 'text-[#111111]' : 'text-[#98A2B3]'
-            }`}>
-            <span className={`transition-all ${sidebarTab===key?'scale-110':''}`}
-              style={{color:sidebarTab===key?'#111111':'#98A2B3'}}>
+            className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors`}>
+            {/* Active tab background bubble */}
+            {sidebarTab===key&&(
+              <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>
+            )}
+            <span className="relative z-10" style={{color:sidebarTab===key?'#111111':'#98A2B3'}}>
               {icon}
             </span>
-            <span className={`text-[9px] font-semibold leading-none ${sidebarTab===key?'text-[#111111]':'text-[#98A2B3]'}`}>
-              {label.split(' ')[0]}
+            <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab===key?'text-[#111111]':'text-[#98A2B3]'}`}>
+              {label}
             </span>
-            {sidebarTab===key&&(
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#111111]"/>
-            )}
           </button>
         ))}
       </nav>
-
-      {/* ── MOBILE PREVIEW SHEET ── */}
-      {sidebarTab===('preview')&&(
-        <div className="md:hidden fixed inset-0 z-30 bg-[#EEEEEC] overflow-y-auto flex flex-col"
-          style={{ paddingBottom:'calc(56px + env(safe-area-inset-bottom))', paddingTop:'env(safe-area-inset-top)' }}>
-          <div className="flex items-center justify-between px-4 h-14 bg-white border-b border-[#DEDEDC] flex-shrink-0">
-            <span className="text-[13px] font-bold text-[#111]">Preview</span>
-            {business?.slug&&(
-              <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                className="text-[12px] font-semibold text-[#6B6B6B] hover:text-[#111]">
-                Open link ↗
-              </a>
-            )}
-          </div>
-          <div className="flex-1 flex items-start justify-center py-6 px-4">
-            <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
-              onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
-          </div>
-        </div>
-      )}
 
       {/* ── QUICK ACTION FLYOUT ── */}
       {quickAction&&(
