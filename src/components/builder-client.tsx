@@ -2618,15 +2618,60 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
 
             {/* ══ OTHER TABS — placeholder ══ */}
-            {(sidebarTab==='integrations'||sidebarTab==='analytics'||sidebarTab==='settings')&&(
+            {(sidebarTab==='analytics'||sidebarTab==='settings')&&(
               <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
                 <div className="w-14 h-14 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-5">
-                  {sidebarTab==='integrations'?<IconPuzzle size={22} color="#C0C0C0"/>
-                  :sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
+                  {sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
                   :<IconSettings size={22} color="#C0C0C0"/>}
                 </div>
                 <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">{sidebarLabel}</p>
                 <p className="text-[13px] text-[#858585] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
+              </div>
+            )}
+            {sidebarTab==='integrations'&&(
+              <div className="p-5 space-y-4">
+                <p className="text-[13px] font-bold text-[#0A0A0A]">Integrations</p>
+                {/* Google Business Profile card */}
+                <div className={`rounded-2xl border p-4 ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#DEDEDC] bg-white'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-white border border-[#EBEBEB] flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-[13px] font-bold text-[#0A0A0A]">Google Business Profile</p>
+                        {googleConnected&&(
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#BBF7D0] text-[#166534] text-[10px] font-bold">
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            Connected
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#858585] mt-0.5 leading-relaxed">
+                        {googleConnected
+                          ? 'Your hours sync to Google automatically whenever you save.'
+                          : 'Connect to keep your Google listing hours in sync with this page.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    {googleConnected?(
+                      <a href="/connect/google"
+                        className="inline-flex items-center gap-1.5 text-[11px] text-[#858585] hover:text-[#0A0A0A] transition-colors font-medium">
+                        Manage connection ↗
+                      </a>
+                    ):(
+                      <a href="/connect/google"
+                        className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
+                        Connect Google Business
+                      </a>
+                    )}
+                  </div>
+                </div>
+                {/* More integrations coming soon */}
+                <p className="text-[11px] text-[#C0C0C0] text-center pt-2">More integrations coming soon</p>
               </div>
             )}
           </div>
@@ -2810,22 +2855,27 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 Cancel
               </button>
               <button
-                onClick={()=>{
+                onClick={async ()=>{
                   const todayKey=(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()];
                   let updatedHours: WeeklyHours | undefined;
                   if(quickAction==='close-early'){
-                    const newHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],close:closeEarlyTime}};
-                    updatedHours=newHours;
-                    setConfig(c=>({...c,weeklyHours:newHours}));
+                    updatedHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],close:closeEarlyTime}};
                   } else if(quickAction==='close-today'){
-                    const newHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],closed:true}};
-                    updatedHours=newHours;
-                    setConfig(c=>({...c,weeklyHours:newHours}));
+                    updatedHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],closed:true}};
                   }
                   setQuickAction(null);
-                  // Auto-push to Google if connected — fire-and-forget
-                  if(googleConnected && updatedHours){
-                    const gh=updatedHours;
+                  if(!updatedHours) return;
+                  // Update local state
+                  const gh=updatedHours;
+                  setConfig(c=>({...c,weeklyHours:gh}));
+                  // Save to Supabase immediately so OpenStatus page updates
+                  setSaving(true);
+                  const newConfig={...config,weeklyHours:gh};
+                  const {error}=await supabase.auth.updateUser({data:{openstatus_page:newConfig}});
+                  setSaving(false);
+                  if(!error){setSaved(true);setTimeout(()=>setSaved(false),2500);}
+                  // Push to Google if connected — fire-and-forget
+                  if(googleConnected){
                     supabase.auth.getSession().then(({data:{session}})=>{
                       if(!session?.access_token) return;
                       fetch('/api/google/hours',{
