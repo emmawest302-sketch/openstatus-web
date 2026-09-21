@@ -1786,7 +1786,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
   const [saveError,setSaveError]=useState('');
-  const [googleSyncStatus,setGoogleSyncStatus]=useState<null|'syncing'|'ok'|{error:string}>(null);
   const [googleFetchUrl,setGoogleFetchUrl]=useState('');
   const [googleFetching,setGoogleFetching]=useState(false);
   const [googleFetchError,setGoogleFetchError]=useState('');
@@ -1860,28 +1859,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     setSaving(false);
     if(error){setSaveError(error.message);return;}
     setSaved(true);setTimeout(()=>setSaved(false),2500);
-    // Auto-sync hours to Google if connected
+    // Auto-sync hours to Google if connected — fire-and-forget, never blocks save
     if(googleConnected && config.weeklyHours){
-      setGoogleSyncStatus('syncing');
-      supabase.auth.getSession().then(async ({data:{session}})=>{
-        if(!session?.access_token){setGoogleSyncStatus({error:'Session expired'});return;}
-        try{
-          const r=await fetch('/api/google/hours',{
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-            body:JSON.stringify({weeklyHours:config.weeklyHours}),
-          });
-          const body=await r.json().catch(()=>({}));
-          if(r.ok){
-            setGoogleSyncStatus('ok');
-            setTimeout(()=>setGoogleSyncStatus(null),4000);
-          } else {
-            setGoogleSyncStatus({error:body?.error??`Google sync failed (${r.status})`});
-          }
-        }catch(e){
-          setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});
-        }
-      }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
+      supabase.auth.getSession().then(({data:{session}})=>{
+        if(!session?.access_token) return;
+        fetch('/api/google/hours',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify({weeklyHours:config.weeklyHours}),
+        }).catch(()=>{});
+      }).catch(()=>{});
     }
   }
 
@@ -2034,11 +2021,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {saving?'Saving…':saved?'✓ Saved':saveError?'Error':'Publish'}
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
-              {googleConnected&&googleSyncStatus==='syncing'&&<p className="text-[10px] text-[#4285F4] text-right">Syncing to Google…</p>}
-              {googleConnected&&googleSyncStatus==='ok'&&<p className="text-[10px] text-[#166534] text-right">✓ Synced to Google</p>}
-              {googleConnected&&googleSyncStatus&&typeof googleSyncStatus==='object'&&(
-                <p className="text-[10px] text-[#C4453F] max-w-[160px] text-right leading-tight" title={googleSyncStatus.error}>Google sync failed — check Integrations tab</p>
-              )}
             </div>
             <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 cursor-pointer select-none">
               {(business?.name??'E').charAt(0).toUpperCase()}
@@ -2696,41 +2678,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-col gap-2">
+                  <div className="mt-3">
                     {googleConnected?(
-                      <>
-                        <button
-                          onClick={async()=>{
-                            setGoogleSyncStatus('syncing');
-                            const {data:{session}}=await supabase.auth.getSession();
-                            if(!session?.access_token){setGoogleSyncStatus({error:'Session expired'});return;}
-                            try{
-                              const r=await fetch('/api/google/hours',{
-                                method:'POST',
-                                headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-                                body:JSON.stringify({weeklyHours:config.weeklyHours??DEFAULT_WEEK_HOURS}),
-                              });
-                              const body=await r.json().catch(()=>({}));
-                              if(r.ok){setGoogleSyncStatus('ok');setTimeout(()=>setGoogleSyncStatus(null),4000);}
-                              else{setGoogleSyncStatus({error:body?.error??`Sync failed (${r.status})`});}
-                            }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
-                          }}
-                          disabled={googleSyncStatus==='syncing'}
-                          className="w-full py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] disabled:opacity-50 transition-colors"
-                        >
-                          {googleSyncStatus==='syncing'?'Syncing…':'Sync hours to Google now'}
-                        </button>
-                        {googleSyncStatus==='ok'&&(
-                          <p className="text-[11px] text-[#166534] text-center font-medium">✓ Synced to Google</p>
-                        )}
-                        {googleSyncStatus&&typeof googleSyncStatus==='object'&&(
-                          <p className="text-[11px] text-[#C4453F] leading-snug">{googleSyncStatus.error}</p>
-                        )}
-                        <a href="/connect/google"
-                          className="inline-flex items-center gap-1.5 text-[11px] text-[#858585] hover:text-[#0A0A0A] transition-colors font-medium">
-                          Manage connection ↗
-                        </a>
-                      </>
+                      <a href="/connect/google"
+                        className="inline-flex items-center gap-1.5 text-[11px] text-[#858585] hover:text-[#0A0A0A] transition-colors font-medium">
+                        Manage connection ↗
+                      </a>
                     ):(
                       <a href="/connect/google"
                         className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
@@ -2952,22 +2905,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   const {error}=await supabase.auth.updateUser({data:{openstatus_page:newConfig}});
                   setSaving(false);
                   if(!error){setSaved(true);setTimeout(()=>setSaved(false),2500);}
-                  // Push to Google if connected
+                  // Push to Google if connected — fire-and-forget
                   if(googleConnected){
-                    setGoogleSyncStatus('syncing');
-                    supabase.auth.getSession().then(async ({data:{session}})=>{
-                      if(!session?.access_token){setGoogleSyncStatus({error:'Session expired'});return;}
-                      try{
-                        const r=await fetch('/api/google/hours',{
-                          method:'POST',
-                          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-                          body:JSON.stringify({weeklyHours:gh}),
-                        });
-                        const body=await r.json().catch(()=>({}));
-                        if(r.ok){setGoogleSyncStatus('ok');setTimeout(()=>setGoogleSyncStatus(null),4000);}
-                        else{setGoogleSyncStatus({error:body?.error??`Google sync failed (${r.status})`});}
-                      }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
-                    }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
+                    supabase.auth.getSession().then(({data:{session}})=>{
+                      if(!session?.access_token) return;
+                      fetch('/api/google/hours',{
+                        method:'POST',
+                        headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+                        body:JSON.stringify({weeklyHours:gh}),
+                      }).catch(()=>{});
+                    }).catch(()=>{});
                   }
                 }}
                 className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-white text-[13px] font-bold hover:bg-[#292929] transition-colors">
