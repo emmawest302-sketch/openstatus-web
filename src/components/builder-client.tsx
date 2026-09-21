@@ -817,16 +817,10 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
               </div>
             )}
             {reviewPct && <span className={`text-[8px] ${sx}`}>·</span>}
-            <div className="flex items-center gap-2">
-              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
-                <LucideThumbsUp size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
-                <span className="text-[8px] font-medium">{(config.likeCount??0)+24}</span>
-              </button>
-              <button className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
-                <LucideThumbsDown size={8} color={isDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)'}/>
-                <span className="text-[8px] font-medium">{(config.dislikeCount??0)+2}</span>
-              </button>
-            </div>
+            <button className={`flex items-center gap-1 px-2 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              <span className="text-[8px] font-medium">Share</span>
+            </button>
           </div>
           {(config.tags??[]).length>0 && (
             <TagsRow tags={config.tags??[]} isDark={isDark}/>
@@ -1010,15 +1004,16 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
 
                   // ── Generic fallback (cover photo or simple row) ──
                   if(b.coverPhoto) return (
-                    <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
-                      <img src={b.coverPhoto} className={`w-full object-cover ${isHalf?'h-[52px]':'h-[48px]'}`} alt=""/>
-                      <div className="flex items-center gap-2 px-2.5 py-2" style={{ background:cardBg }}>
-                        <BlockIcon id={b.id} size={10} color={b.color}/>
-                        <div className="min-w-0">
-                          <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
-                          <p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>
-                        </div>
+                    <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio:'1/1' }}>
+                      <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
+                      <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
+                      <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
+                        <p className={`text-[9px] font-bold truncate`} style={{ color:'#fff' }}>{b.title}</p>
+                        {b.sub&&<p className={`text-[7px] truncate`} style={{ color:'rgba(255,255,255,0.75)' }}>{b.sub}</p>}
                       </div>
+                      {b.url&&<div style={{ position:'absolute', top:5, right:5, width:14, height:14, borderRadius:'50%', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      </div>}
                     </div>
                   );
                   // ── UPDATES (Instagram) ──
@@ -2586,7 +2581,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                 const ref=await uploadAsset(file,'header');
                                 const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:ref;
                                 setConfig(c=>({...c,bgImage:bgUrl}));
-                                if(localBusiness?.id)await supabase.from('businesses').update({header_url:ref}).eq('id',localBusiness.id);
                               }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
                               finally{setBgUploading(false);e.target.value='';}
                             }}/>
@@ -2858,9 +2852,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           setBgUploading(true);setBgUploadError('');
                           try{
                             const ref=await uploadAsset(file,'header');
-                            const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:ref;
+                            const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
                             setConfig(c=>({...c,bgImage:bgUrl}));
-                            if(localBusiness?.id)await supabase.from('businesses').update({header_url:ref}).eq('id',localBusiness.id);
                           }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
                           finally{setBgUploading(false);e.target.value='';}
                         }}/>
@@ -2878,20 +2871,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                     {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
                   </div>
-                  {/* Social profiles */}
-                  <div>
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Social profiles</p>
-                    <div className="space-y-2.5">
-                      {SOCIAL_PLATFORMS.map(({key,label})=>(
-                        <div key={key} className="flex items-center gap-3">
-                          <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
-                          <input value={config.socials[key]??''} onChange={e=>setConfig(c=>({...c,socials:{...c.socials,[key]:e.target.value}}))}
-                            placeholder={`${label} URL…`}
-                            className="flex-1 bg-white border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111111] placeholder:text-[#98A2B3] focus:outline-none focus:border-[#111111] transition-colors"/>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+
                 </div>
               </div>
             )}
@@ -3481,7 +3461,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   setBgUploading(true);setBgUploadError('');
                   try{
                     const ref=await uploadAsset(file,'header');
-                    setConfig(c=>({...c,bgImage:ref}));
+                    const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
+                    setConfig(c=>({...c,bgImage:bgUrl}));
                   }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
                   finally{setBgUploading(false);e.target.value='';}
                 }}/>
@@ -3611,25 +3592,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <input type="color" value={config.bg} onChange={e=>setConfig(p=>({...p,bg:e.target.value}))}
                 className="w-8 h-8 rounded-full cursor-pointer border border-[#E8EBF0] overflow-hidden p-0 flex-shrink-0"
                 title="Custom color"/>
-            </div>
-            {/* Social links */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2 mt-4">Social Profiles</p>
-            <div className="space-y-2">
-              {[
-                {key:'instagram', label:'Instagram', placeholder:'@username or full URL'},
-                {key:'tiktok',    label:'TikTok',    placeholder:'@username or full URL'},
-                {key:'facebook',  label:'Facebook',  placeholder:'Page URL'},
-                {key:'twitter',   label:'Twitter / X',placeholder:'@username or full URL'},
-                {key:'youtube',   label:'YouTube',   placeholder:'Channel URL'},
-              ].map(({key,label,placeholder})=>(
-                <div key={key} className="flex items-center gap-2 bg-[#F9FAFB] rounded-xl border border-[#E8EBF0] px-3 py-2">
-                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">{label}</span>
-                  <input value={(config.socials??{})[key]??''}
-                    onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
-                    placeholder={placeholder}
-                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
-                </div>
-              ))}
             </div>
           </div>
         )}

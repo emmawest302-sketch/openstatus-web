@@ -34,19 +34,28 @@ export async function GET(req: NextRequest) {
   const businessId = req.nextUrl.searchParams.get('businessId') ?? '';
   const kind = req.nextUrl.searchParams.get('kind');
   if (!businessId || (kind !== 'avatar' && kind !== 'header')) return new NextResponse(null, { status: 400 });
+  // Path is encoded in the URL so we can serve directly without a DB lookup
+  const vParam = req.nextUrl.searchParams.get('v') ?? '';
   const admin = getAdminClient();
-  const column = kind === 'avatar' ? 'avatar_url' : 'header_url';
-  const { data: business } = await admin.from('businesses').select('avatar_url, header_url').eq('id', businessId).maybeSingle();
-  const reference = business?.[column];
-  if (typeof reference !== 'string' || !reference.startsWith('storage:')) return new NextResponse(null, { status: 404 });
-  const path = reference.slice('storage:'.length);
-  if (!path.startsWith(`${businessId}/${kind}-`)) return new NextResponse(null, { status: 404 });
+  let path: string;
+  if (vParam && vParam.startsWith(`${businessId}/${kind}-`)) {
+    // New style: path in URL param
+    path = vParam;
+  } else {
+    // Legacy style: look up from businesses table
+    const column = kind === 'avatar' ? 'avatar_url' : 'header_url';
+    const { data: business } = await admin.from('businesses').select('avatar_url, header_url').eq('id', businessId).maybeSingle();
+    const reference = business?.[column];
+    if (typeof reference !== 'string' || !reference.startsWith('storage:')) return new NextResponse(null, { status: 404 });
+    path = reference.slice('storage:'.length);
+    if (!path.startsWith(`${businessId}/${kind}-`)) return new NextResponse(null, { status: 404 });
+  }
   const { data, error } = await admin.storage.from(BUCKET).download(path);
   if (error || !data) return new NextResponse(null, { status: 404 });
   return new NextResponse(await data.arrayBuffer(), {
     headers: {
       'Content-Type': data.type || 'application/octet-stream',
-      'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+      'Cache-Control': 'private, max-age=86400, immutable',
       'X-Content-Type-Options': 'nosniff',
     },
   });
@@ -75,10 +84,13 @@ export async function POST(req: NextRequest) {
       const { error: uploadError } = await owner.admin.storage.from(BUCKET).upload(path, bytes, { contentType: fileValue.type, cacheControl: '3600', upsert: false });
       if (uploadError) throw uploadError;
 
-      const column = kind === 'avatar' ? 'avatar_url' : 'header_url';
       const reference = `storage:${path}`;
-      const { error: saveError } = await owner.admin.from('businesses').update({ [column]: reference, updated_at: new Date().toISOString() }).eq('id', owner.businessId);
-      if (saveError) throw saveError;
+      // Update avatar_url in DB for avatars (profile pics need to be referenced by DB)
+      // For header/background images we skip the DB update to avoid column constraint issues
+      if (kind === 'avatar') {
+        const { error: saveError } = await owner.admin.from('businesses').update({ avatar_url: reference, updated_at: new Date().toISOString() }).eq('id', owner.businessId);
+        if (saveError) throw saveError;
+      }
 
       return NextResponse.json({ reference, url: `/api/assets?businessId=${owner.businessId}&kind=${kind}&v=${encodeURIComponent(path)}` });
     }
