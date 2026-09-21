@@ -1679,8 +1679,8 @@ type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 // ── main export ────────────────────────────────────────────────────────────────
-export default function BuilderClient({ business,initialConfig,isFirstRun=false }: {
-  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean;
+export default function BuilderClient({ business,initialConfig,isFirstRun=false,onboardedAt }: {
+  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null;
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('design');
