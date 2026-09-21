@@ -1919,7 +1919,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     { key:'business', label:'Business', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
     { key:'photos',   label:'Photos',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
-    { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="6.5" cy="14.5" r="2.5"/><circle cx="17.5" cy="14.5" r="2.5"/><path d="M6.5 14.5a7 7 0 0 1 11-5.5"/></svg> },
+    { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg> },
     { key:'settings', label:'Settings', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
   ];
 
@@ -3164,13 +3164,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     'Food & Beverage':['menu','order'],
                     'Engagement':['book','updates'],
                     'Contact':['website'],
-                    'Social':['socials'],
                     'More':[],
                   };
                   const showIds = mobileBlockCat==='All'
                     ? DEFAULT_BLOCKS.map(b=>b.id)
                     : (catMap[mobileBlockCat]??[]);
-                  return DEFAULT_BLOCKS.filter(b=>showIds.includes(b.id)).map(def=>{
+                  return DEFAULT_BLOCKS.filter(b=>showIds.includes(b.id)&&b.id!=='socials').map(def=>{
                     const isOn = allBlocks.find(b=>b.id===def.id)?.on;
                     return (
                       <div key={def.id}
@@ -3207,31 +3206,93 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {sidebarTab==='business'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
             <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Business</h2>
-            <p className="text-[13px] text-[#667085] mb-4">Manage your business info in the settings above (desktop) or go to Account Settings.</p>
-            <a href="/setup?step=1" className="flex items-center gap-3 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-[13px] font-semibold text-[#111]">
-              <div className="w-10 h-10 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+
+            {/* Google Business sync */}
+            <div className="mb-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <div className="flex items-center gap-2 mb-2">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                <p className="text-[12px] font-bold text-[#111]">Google Business</p>
+                {googleFetchDone&&<span className="ml-auto text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">✓ Imported</span>}
               </div>
-              <div className="flex-1">
-                <p className="text-[13px] font-semibold text-[#111]">Business Profile</p>
-                <p className="text-[11px] text-[#667085]">Name, address, phone & category</p>
+              <p className="text-[11px] text-[#858585] mb-2">Paste your Google Maps URL to auto-fill hours, rating, photos & location.</p>
+              <div className="flex gap-2">
+                <input type="url" value={googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||''}
+                  onChange={e=>{setGoogleFetchUrl(e.target.value);setGoogleFetchDone(false);setGoogleFetchError('');}}
+                  placeholder="https://maps.google.com/…"
+                  className="flex-1 rounded-xl border border-[#DEDEDC] bg-white px-3 py-2 text-[11px] outline-none focus:border-[#0A0A0A] transition-colors min-w-0"/>
+                <button
+                  disabled={(!googleFetchUrl&&!allBlocks.find(b=>b.id==='location')?.googleUrl)||googleFetching}
+                  onClick={async()=>{
+                    const url=googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||'';
+                    if(!url)return;
+                    setGoogleFetching(true);setGoogleFetchError('');setGoogleFetchDone(false);
+                    try{
+                      const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
+                      const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string;address?:string;phone?:string;website?:string;weeklyHours?:WeeklyHours;photoUrl?:string;photos?:string[];lat?:number;lng?:number;reviews?:Array<{author:string;rating:number;text:string;time:string}>};
+                      if(!r.ok||d.error)throw new Error(d.error??'Failed');
+                      updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??d.name??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.lat!==undefined?{lat:d.lat,lng:d.lng}:{}),...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
+                      if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours as WeeklyHours}));
+                      if(d.photoUrl) setConfig(c=>({...c,bgImage:d.photoUrl}));
+                      if(d.photos?.length) setGooglePhotos(d.photos);
+                      if(d.phone&&allBlocks.find(b=>b.id==='call')) updateBlock('call',{url:'tel:'+d.phone,on:true});
+                      if(d.website&&allBlocks.find(b=>b.id==='website')) updateBlock('website',{url:d.website,on:true});
+                      setGoogleFetchDone(true);
+                    }catch(e){setGoogleFetchError(e instanceof Error?e.message:'Could not fetch');}
+                    finally{setGoogleFetching(false);}
+                  }}
+                  className="flex-shrink-0 rounded-xl bg-[#0A0A0A] text-white text-[11px] font-bold px-3 py-2 hover:bg-[#292929] transition-colors disabled:opacity-40">
+                  {googleFetching?'…':'Sync'}
+                </button>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-            {/* Live hours status */}
-            <div className="mt-3 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-              <div className="flex items-center justify-between mb-2">
+              {googleFetchError&&<p className="text-[11px] text-red-500 mt-1">{googleFetchError}</p>}
+            </div>
+
+            {/* Hours & Status */}
+            <div className="mb-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <div className="flex items-center justify-between mb-1">
                 <p className="text-[13px] font-semibold text-[#111]">Hours & Status</p>
                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#667085]'}`}>
                   {liveStatus==='open'?'● Open now':'● Closed'}
                 </span>
               </div>
-              <p className="text-[12px] text-[#667085]">{todayLabel}</p>
+              <p className="text-[12px] text-[#667085] mb-2">{todayLabel}</p>
               <button onClick={()=>setSidebarTab('hours' as SidebarTab)}
-                className="mt-3 text-[12px] font-semibold text-[#667085] hover:text-[#111] underline underline-offset-2">
+                className="text-[12px] font-semibold text-[#667085] hover:text-[#111] underline underline-offset-2">
                 Edit hours →
               </button>
             </div>
+
+            {/* Social Profiles */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Social Profiles</p>
+            <div className="space-y-2 mb-3">
+              {[
+                {key:'instagram', label:'Instagram', placeholder:'@username or full URL'},
+                {key:'tiktok',    label:'TikTok',    placeholder:'@username or full URL'},
+                {key:'facebook',  label:'Facebook',  placeholder:'Page URL'},
+                {key:'twitter',   label:'Twitter / X',placeholder:'@username or full URL'},
+                {key:'youtube',   label:'YouTube',   placeholder:'Channel URL'},
+              ].map(({key,label,placeholder})=>(
+                <div key={key} className="flex items-center gap-2 bg-[#F9FAFB] rounded-xl border border-[#E8EBF0] px-3 py-2">
+                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">{label}</span>
+                  <input value={(config.socials??{})[key]??''}
+                    onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
+                    placeholder={placeholder}
+                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                </div>
+              ))}
+            </div>
+
+            {/* Account link */}
+            <a href="/setup?step=1" className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-[12px] font-semibold text-[#111]">Business Profile</p>
+                <p className="text-[10px] text-[#667085]">Name, address, phone & category</p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
           </div>
         )}
 
@@ -3254,15 +3315,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {/* ── PHOTOS tab ── */}
         {sidebarTab==='photos'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Photos</h2>
+            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-1">Photos</h2>
+            <p className="text-[11px] text-[#98A2B3] mb-4">Upload photos for your page and each active widget</p>
+
+            {/* ── Page-level photos ── */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Page</p>
+
             {/* Logo */}
-            <div className="mb-4">
-              <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Logo</p>
-              <div className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+            <div className="mb-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <p className="text-[11px] font-semibold text-[#111] mb-2">Logo</p>
+              <div className="flex items-center gap-3">
                 {localBusiness?.avatar_url
                   ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                    className="w-14 h-14 rounded-full object-cover border border-[#E8EBF0] flex-shrink-0" alt="Logo"/>
-                  :<div className="w-14 h-14 rounded-full bg-[#E8EBF0] flex items-center justify-center flex-shrink-0"><LucideImage size={20} color="#98A2B3"/></div>
+                    className="w-12 h-12 rounded-full object-cover border border-[#E8EBF0] flex-shrink-0" alt="Logo"/>
+                  :<div className="w-12 h-12 rounded-full bg-[#E8EBF0] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#98A2B3"/></div>
                 }
                 <label className={`cursor-pointer flex-1 ${logoUploading?'pointer-events-none':''}`}>
                   <input type="file" accept="image/*" className="hidden" onChange={async e=>{
@@ -3285,9 +3351,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
               {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
             </div>
+
             {/* Cover / background */}
-            <div className="mb-4">
-              <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Cover Photo</p>
+            <div className="mb-4 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <p className="text-[11px] font-semibold text-[#111] mb-2">Cover Photo</p>
               <label className={`cursor-pointer block ${bgUploading?'pointer-events-none':''}`}>
                 <input type="file" accept="image/*" className="hidden" onChange={async e=>{
                   const file=e.target.files?.[0];if(!file)return;
@@ -3298,25 +3365,26 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
                   finally{setBgUploading(false);e.target.value='';}
                 }}/>
-                <div className="h-24 rounded-2xl border border-[#E8EBF0] overflow-hidden relative">
+                <div className="h-20 rounded-xl border border-[#E8EBF0] overflow-hidden relative">
                   {config.bgImage
                     ?<img src={config.bgImage.startsWith('storage:')&&localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:config.bgImage}
                        className="w-full h-full object-cover" alt="Cover"/>
-                    :<div className="w-full h-full bg-[#F9FAFB] flex flex-col items-center justify-center gap-1">
-                      <LucideImage size={22} color="#98A2B3"/>
-                      <span className="text-[12px] font-semibold text-[#667085]">{bgUploading?'Uploading…':'Upload cover photo'}</span>
+                    :<div className="w-full h-full bg-[#F0F2F5] flex flex-col items-center justify-center gap-1">
+                      <LucideImage size={20} color="#98A2B3"/>
+                      <span className="text-[11px] font-semibold text-[#667085]">{bgUploading?'Uploading…':'Tap to upload'}</span>
                     </div>
                   }
-                  {config.bgImage&&<div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <span className="text-[12px] font-bold text-white">Change photo</span>
+                  {config.bgImage&&<div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <span className="text-[11px] font-bold text-white bg-black/40 px-3 py-1 rounded-full">{bgUploading?'Uploading…':'Change'}</span>
                   </div>}
                 </div>
               </label>
               {bgUploadError&&<p className="text-[11px] text-red-500 mt-1">{bgUploadError}</p>}
             </div>
-            {/* Google photos */}
+
+            {/* Google photos pool */}
             {googlePhotos.length>0&&(
-              <div>
+              <div className="mb-5">
                 <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">From Google</p>
                 <div className="grid grid-cols-3 gap-2">
                   {googlePhotos.slice(0,6).map((url,i)=>(
@@ -3328,6 +3396,65 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
               </div>
             )}
+
+            {/* ── Per-block photos ── */}
+            {(()=>{
+              const photoBlocks = activeBlocks.filter(b=>['location','menu','order','book','socials','website'].includes(b.id));
+              if(photoBlocks.length===0) return null;
+              return (
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2 mt-2">Widgets</p>
+                  <div className="space-y-3">
+                    {photoBlocks.map(blk=>{
+                      const def = DEFAULT_BLOCKS.find(d=>d.id===blk.id);
+                      const photoLabel = blk.id==='location' ? 'Place photo' : 'Cover photo';
+                      const hint = blk.id==='location' ? 'Storefront or place photo' :
+                                   blk.id==='menu'     ? 'Banner at top of menu' :
+                                   blk.id==='socials'  ? 'Photo behind social links' : '';
+                      return (
+                        <div key={blk.id} className="p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                              style={{backgroundColor:`${def?.color??'#111'}18`}}>
+                              <BlockIcon id={blk.id} size={14} color={def?.color??'#111'}/>
+                            </div>
+                            <p className="text-[11px] font-semibold text-[#111]">{blk.title??def?.title}</p>
+                          </div>
+                          <label className="cursor-pointer block">
+                            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                              const file=e.target.files?.[0]; if(!file) return;
+                              const reader=new FileReader();
+                              reader.onload=ev=>{ if(ev.target?.result) updateBlock(blk.id,{coverPhoto:ev.target.result as string}); };
+                              reader.readAsDataURL(file);
+                              e.target.value='';
+                            }}/>
+                            <div className="h-16 rounded-xl border border-[#E8EBF0] overflow-hidden relative">
+                              {blk.coverPhoto
+                                ?<img src={blk.coverPhoto} className="w-full h-full object-cover" alt=""/>
+                                :<div className="w-full h-full bg-[#F0F2F5] flex items-center justify-center gap-2">
+                                  <LucideImage size={16} color="#98A2B3"/>
+                                  <span className="text-[11px] text-[#98A2B3]">{hint||photoLabel} — tap to upload</span>
+                                </div>
+                              }
+                              {blk.coverPhoto&&<div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                <span className="text-[10px] font-bold text-white bg-black/40 px-2 py-0.5 rounded-full">Change</span>
+                              </div>}
+                            </div>
+                          </label>
+                          {blk.coverPhoto&&(
+                            <button onClick={()=>updateBlock(blk.id,{coverPhoto:''})}
+                              className="mt-1.5 text-[10px] text-[#98A2B3] hover:text-red-500 transition-colors">
+                              Remove photo
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
           </div>
         )}
 
