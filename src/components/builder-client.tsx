@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
-type BlockSize = 'half' | 'full' | 'third';
+type BlockSize = 'half' | 'full';
 type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 interface DayHours { open: string; close: string; closed: boolean; }
 type WeeklyHours = Record<WeekDay, DayHours>;
@@ -33,23 +33,13 @@ export interface OpenStatusPageConfig {
 }
 interface Business {
   id: string; name: string; slug: string;
-  avatar_url?: string; tagline?: string; category?: string; onboarded_at?: string | null;
+  avatar_url?: string; tagline?: string; category?: string;
 }
 
 // ── constants ──────────────────────────────────────────────────────────────────
 const BG_PRESETS = [
-  // Row 1: light neutrals
-  '#ffffff','#fafafa','#f8f5f0','#f5f0e8','#fef9f0',
-  // Row 2: pinks/reds
-  '#fde8e8','#fbbfbf','#f87171','#ef4444','#dc2626',
-  // Row 3: oranges/yellows
-  '#fed7aa','#fb923c','#fbbf24','#facc15','#eab308',
-  // Row 4: greens
-  '#bbf7d0','#4ade80','#22c55e','#16a34a','#166534',
-  // Row 5: blues/purples
-  '#bfdbfe','#60a5fa','#3b82f6','#1d4ed8','#7c3aed',
-  // Row 6: darks
-  '#e5e7eb','#6b7280','#374151','#1c1c1c','#0a0a0a',
+  '#ffffff','#1B5E20','#388E3C','#A5D6A7','#FFAB40',
+  '#0a0a0a','#FF7043','#f8f5f0','#fafafa','#1c1c1c',
 ];
 const BLOCK_COLORS = ['#1B5E20','#388E3C','#FF7043','#FFAB40','#A5D6A7','#0a0a0a','#2563eb','#dc2626'];
 const ORDER_PROVIDERS = [
@@ -82,6 +72,7 @@ const BLOCK_STYLES: Record<string, { key:string; label:string }[]> = {
   menu:     [{ key:'photo',   label:'Photo'   }, { key:'card',   label:'Card'    }, { key:'dark',    label:'Dark'    }],
   order:    [{ key:'brand',   label:'Brand'   }, { key:'hero',   label:'Hero'    }, { key:'cta',     label:'CTA'     }],
   book:     [{ key:'brand',   label:'Brand'   }, { key:'cal',    label:'Calendar'}, { key:'cta',     label:'CTA'     }],
+  socials:  [{ key:'icons',   label:'Icons'   }, { key:'list',   label:'List'    }],
   website:  [{ key:'photo',   label:'Photo'   }, { key:'link',   label:'Link'    }],
 };
 
@@ -111,6 +102,7 @@ const DEFAULT_BLOCKS: OpenStatusBlock[] = [
   { id:'menu',    title:'Menu',                  sub:'Tap to view',                icon:'menu', on:false,tone:'default',color:'#d97706',menuType:'url',size:'full' },
   { id:'order',   title:'Online ordering',       sub:'DoorDash, Uber Eats & more', icon:'bag',  on:false,tone:'default',color:'#dc2626',size:'half' },
   { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'half' },
+  { id:'socials', title:'Follow us',             sub:'Social media links',         icon:'share',  on:false,tone:'default',color:'#db2777',size:'full' },
   { id:'website', title:'Website',               sub:'Link to your site',          icon:'globe',  on:false,tone:'default',color:'#0891b2',size:'full' },
   { id:'updates', title:'Instagram updates',     sub:'Latest posts from Instagram',icon:'updates',on:false,tone:'default',color:'#E1306C',size:'full' },
 ];
@@ -206,10 +198,6 @@ function LucideLayoutGrid({ size=14,color='currentColor' }: { size?: number; col
 }
 function LucideLayoutList({ size=14,color='currentColor' }: { size?: number; color?: string }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="5"/><rect x="3" y="11" width="18" height="5"/><rect x="3" y="19" width="18" height="2"/></svg>;
-}
-
-function IconBolt({ size=14,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>;
 }
 
 function BlockIcon({ id, size=16, color='currentColor' }: { id:string; size?:number; color?:string }) {
@@ -645,29 +633,17 @@ function AccentColorPicker({ value, onChange }: { value?: string; onChange:(v:st
 }
 
 // Photo upload field
-function PhotoField({ label, value, onChange, placeholder, hint, uploadFile }: {
+function PhotoField({ label, value, onChange, placeholder, hint }: {
   label: string; value: string; onChange: (v:string)=>void;
   placeholder?: string; hint?: string;
-  /** When provided, files are uploaded via this fn and the returned URL is stored (not base64). */
-  uploadFile?: (file: File) => Promise<string>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = React.useState(false);
-  const [uploadErr, setUploadErr] = React.useState('');
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (uploadFile) {
-      setUploading(true); setUploadErr('');
-      try { onChange(await uploadFile(file)); }
-      catch(err) { setUploadErr(err instanceof Error ? err.message : 'Upload failed'); }
-      finally { setUploading(false); e.target.value=''; }
-    } else {
-      // Fallback: read as data URL (only used when no uploadFile provided)
-      const reader = new FileReader();
-      reader.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); };
-      reader.readAsDataURL(file);
-    }
+    const reader = new FileReader();
+    reader.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); };
+    reader.readAsDataURL(file);
   }
   return (
     <div>
@@ -686,12 +662,11 @@ function PhotoField({ label, value, onChange, placeholder, hint, uploadFile }: {
         : (
           <div>
             <div
-              onClick={()=>!uploading&&fileRef.current?.click()}
-              className={`rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F7F7F5] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all ${uploading?'pointer-events-none opacity-60':''}`}>
+              onClick={()=>fileRef.current?.click()}
+              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F7F7F5] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
               <LucideImage size={18} color="#858585"/>
-              <p className="text-[12px] text-[#858585]">{uploading?'Uploading…':'Click to upload'}</p>
+              <p className="text-[12px] text-[#858585]">Click to upload</p>
             </div>
-            {uploadErr && <p className="text-[11px] text-red-500 mt-1">{uploadErr}</p>}
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile}/>
             <div className="flex items-center gap-2 mt-2">
               <div className="flex-1 h-px bg-[#DEDEDC]"/>
@@ -777,9 +752,7 @@ function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
 }
 
 // ── Screen preview (no phone frame) ───────────────────────────────────────────
-function LivePhonePreview({ business,config,selectedId,onSelectBlock,onReorder }: { business:Business|null; config:OpenStatusPageConfig; selectedId?:string|null; onSelectBlock?:(id:string)=>void; onReorder?:(fromId:string,toId:string)=>void }) {
-  const [pDragId,setPDragId]=React.useState<string|null>(null);
-  const [pDragOver,setPDragOver]=React.useState<string|null>(null);
+function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { business:Business|null; config:OpenStatusPageConfig; selectedId?:string|null; onSelectBlock?:(id:string)=>void }) {
   const activeBlocks = config.blocks.filter(b=>b.on);
   // Hours always first in preview
   const sortedBlocks = [
@@ -998,6 +971,28 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,onReorder }
                     );
                   }
 
+                  // ── SOCIALS list style ──
+                  if(b.id==='socials' && bStyle==='list') {
+                    const activeSocials = SOCIAL_PLATFORMS.filter(s=>config.socials[s.key]);
+                    return (
+                      <div className="rounded-2xl border overflow-hidden" style={{ borderColor:bdr }}>
+                        {activeSocials.length===0
+                          ?<div className="flex items-center gap-2 px-2.5 py-2.5" style={{ background:cardBg }}>
+                            <BlockIcon id="socials" size={10} color={b.color}/>
+                            <p className={`text-[10px] font-semibold ${tx}`}>{b.title}</p>
+                          </div>
+                          :activeSocials.slice(0,3).map((s,i)=>(
+                            <div key={s.key} className={`flex items-center gap-2 px-2.5 py-1.5 ${i>0?'border-t':''}` } style={{ background:cardBg, borderColor:bdr }}>
+                              <SocialIcon platform={s.key} size={14}/>
+                              <p className={`text-[9px] font-medium ${tx}`}>{s.label}</p>
+                              <span className={`ml-auto text-xs ${isDark?'text-white/20':'text-black/20'}`}>›</span>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    );
+                  }
+
                   // ── Generic fallback (cover photo or simple row) ──
                   if(b.coverPhoto) return (
                     <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
@@ -1044,22 +1039,9 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,onReorder }
 
                 const isSelected = selectedId === b.id;
                 return (
-                  <div key={b.id}
-                    draggable={b.id!=='hours'&&!!onReorder}
-                    onDragStart={()=>{if(b.id!=='hours')setPDragId(b.id);}}
-                    onDragOver={e=>{e.preventDefault();if(b.id!==pDragId)setPDragOver(b.id);}}
-                    onDrop={e=>{e.preventDefault();if(pDragId&&pDragId!==b.id&&b.id!=='hours'){onReorder?.(pDragId,b.id);}setPDragId(null);setPDragOver(null);}}
-                    onDragEnd={()=>{setPDragId(null);setPDragOver(null);}}
-                    className={`${isHalf?'col-span-1':'col-span-2'} ${onSelectBlock?'cursor-pointer':''} ${b.id!=='hours'&&onReorder?'cursor-grab active:cursor-grabbing':''}`}
+                  <div key={b.id} className={`${isHalf?'col-span-1':'col-span-2'} ${onSelectBlock?'cursor-pointer':''}`}
                     onClick={()=>onSelectBlock?.(b.id)}
-                    style={{
-                      ...(isSelected?{ outline:'2px solid #0A0A0A', borderRadius:16, outlineOffset:2 }:{}),
-                      opacity: pDragId===b.id ? 0.4 : 1,
-                      outline: pDragOver===b.id&&pDragId!==b.id ? '2px dashed #0A0A0A' : (isSelected?'2px solid #0A0A0A':undefined),
-                      borderRadius: 16,
-                      outlineOffset: 2,
-                      transition: 'opacity 0.15s',
-                    }}
+                    style={isSelected?{ outline:'2px solid #0A0A0A', borderRadius:16, outlineOffset:2 }:{}}
                   >
                     {inner}
                   </div>
@@ -1090,151 +1072,123 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
   const bg = config.bg || '#F7F7F5';
   const { status, todayLabel } = getLiveStatus(config.weeklyHours);
   const activeBlocks = config.blocks.filter(b => b.on);
-  // Hours always first, like the real page
-  const hoursBlock = activeBlocks.find(b => b.id === 'hours');
+  const sortedBlocks = [
+    ...activeBlocks.filter(b => b.id === 'hours'),
+    ...activeBlocks.filter(b => b.id !== 'hours'),
+  ];
   const locBlock = config.blocks.find(b => b.id === 'location');
-  const otherBlocks = activeBlocks.filter(b => b.id !== 'hours' && b.id !== 'location');
   const reviewPct = locBlock?.reviewStars && locBlock.reviewStars > 0 ? starsToPercent(locBlock.reviewStars) : null;
-  const coverPhoto = config.bgImage;
-  const avatarUrl = business?.avatar_url && !business.avatar_url.startsWith('storage:') ? business.avatar_url : null;
-  const avatarStorageUrl = business?.avatar_url?.startsWith('storage:') && business?.id ? `/api/assets?businessId=${business.id}&kind=avatar` : null;
-  const avatar = avatarUrl || avatarStorageUrl;
+  const coverPhoto = config.bgImage || business?.avatar_url;
+  const themeColor = '#DB6B8F';
   const initials = (business?.name ?? 'B').split(/\s+/).filter(Boolean).slice(0,2).map((p:string)=>p[0]).join('').toUpperCase();
+
+  // hex to rgb helper for fade gradient
   function hexToRgb(hex: string) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? { r:parseInt(result[1],16), g:parseInt(result[2],16), b:parseInt(result[3],16) } : { r:247,g:247,b:245 };
   }
   const { r,g,b: bv } = hexToRgb(bg);
-  const fadeGradient = `linear-gradient(to bottom, rgba(${r},${g},${bv},0) 0%, rgba(${r},${g},${bv},0.08) 22%, rgba(${r},${g},${bv},0.35) 48%, rgba(${r},${g},${bv},0.72) 72%, ${bg} 100%)`;
+  const fadeGradient = `linear-gradient(to bottom, rgba(${r},${g},${bv},0) 0%, rgba(${r},${g},${bv},0.35) 48%, ${bg} 100%)`;
+
   const glass: React.CSSProperties = {
     background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.72)',
     backdropFilter: 'blur(24px) saturate(130%)',
     WebkitBackdropFilter: 'blur(24px) saturate(130%)',
     border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.82)'}`,
-    boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
     borderRadius: 20,
-    padding: '16px 18px',
+    padding: '14px 16px',
   };
+
   const tx = isDark ? '#fff' : '#151515';
   const sx = isDark ? 'rgba(255,255,255,0.5)' : '#8A8A86';
-  const themeColor = config.themeColor || '#DB6B8F';
-  // span helper matching real page
-  const spanCols = (b: OpenStatusBlock) => b.size === 'third' ? 2 : b.size === 'half' ? 3 : 6;
 
   return (
-    <div style={{ minHeight: '100%', background: bg, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 13 }}>
+    <div style={{ minHeight: '100%', background: bg, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 14 }}>
       <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>
 
-        {/* Cover photo — 360px like real page */}
+        {/* Cover photo */}
         {coverPhoto ? (
-          <div style={{ position:'relative', height:260, overflow:'hidden' }}>
-            <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'50% 60%', display:'block' }}/>
+          <div style={{ position:'relative', height:200, overflow:'hidden' }}>
+            <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%', display:'block' }}/>
             <div style={{ position:'absolute', inset:0, background:fadeGradient }}/>
           </div>
         ) : (
-          <div style={{ height:72, background:'rgba(0,0,0,0.04)' }}/>
+          <div style={{ height:60, background:'rgba(0,0,0,0.04)' }}/>
         )}
 
-        {/* Logo — 96px like real page (104px scaled) */}
-        <div style={{ display:'flex', justifyContent:'center', marginTop: coverPhoto ? -52 : 0, position:'relative', zIndex:10 }}>
-          {avatar ? (
-            <img src={avatar} alt="" style={{ width:96, height:96, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', objectFit:'cover', boxShadow:'0 8px 32px rgba(0,0,0,0.12)', display:'block' }}/>
+        {/* Logo */}
+        <div style={{ display:'flex', justifyContent:'center', marginTop: coverPhoto ? -40 : 0, position:'relative', zIndex:10 }}>
+          {business?.avatar_url && !business.avatar_url.startsWith('storage:') ? (
+            <img src={business.avatar_url} alt="" style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', objectFit:'cover', boxShadow:'0 8px 32px rgba(0,0,0,0.10)', display:'block' }}/>
           ) : (
-            <div style={{ width:96, height:96, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', display:'grid', placeItems:'center', fontSize:28, fontWeight:800, color:themeColor, boxShadow:'0 8px 32px rgba(0,0,0,0.12)' }}>
+            <div style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', display:'grid', placeItems:'center', fontSize:24, fontWeight:800, color:themeColor, boxShadow:'0 8px 32px rgba(0,0,0,0.10)' }}>
               {initials}
             </div>
           )}
         </div>
 
-        {/* Name + tagline */}
-        <div style={{ textAlign:'center', padding:'10px 20px 6px' }}>
-          <h1 style={{ fontSize:28, fontWeight:800, letterSpacing:'-0.03em', color:tx, lineHeight:1.1, margin:0, fontFamily:'Georgia, "Times New Roman", serif' }}>
+        {/* Business name */}
+        <div style={{ textAlign:'center', padding:'8px 20px 4px' }}>
+          <h1 style={{ fontSize:32, fontWeight:800, letterSpacing:'-0.03em', color:tx, lineHeight:1, margin:0, fontFamily:'Georgia, "Times New Roman", serif' }}>
             {business?.name ?? 'Your Business'}
           </h1>
           {business?.tagline && (
-            <p style={{ fontSize:10, fontWeight:500, letterSpacing:'0.15em', textTransform:'uppercase', color:sx, marginTop:6, margin:'6px 0 0' }}>
+            <p style={{ fontSize:10, fontWeight:500, letterSpacing:'0.15em', textTransform:'uppercase', color:sx, marginTop:6 }}>
               {business.tagline}
             </p>
           )}
           {reviewPct && (
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4, marginTop:6 }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <LucideStar size={11} color="#f59e0b" filled/>
               <span style={{ fontSize:11, fontWeight:700, color:'#f59e0b' }}>{reviewPct}%</span>
-              {locBlock?.reviewCount && <span style={{ fontSize:10, color:sx }}> · {locBlock.reviewCount.toLocaleString()}</span>}
+              {locBlock?.reviewCount && <span style={{ fontSize:10, color:sx }}> · {locBlock.reviewCount.toLocaleString()} reviews</span>}
             </div>
           )}
         </div>
 
-        {/* Hours block — inline like real page */}
-        {hoursBlock && hoursBlock.on && (
-          <div style={{ padding:'8px 12px 0' }}>
-            <div style={{ ...glass, display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ width:36, height:36, borderRadius:'50%', flexShrink:0, background:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
-                <BlockIcon id="hours" size={16} color={hoursBlock.color}/>
-              </div>
-              <div style={{ flex:1 }}>
-                <p style={{ fontSize:14, fontWeight:700, color:tx, margin:0, letterSpacing:'-0.01em' }}>
-                  {status === 'open' ? 'Open now' : 'Closed now'}
-                </p>
-                <p style={{ fontSize:11, color:status==='open'?'#22C55E':'#8A8A86', margin:0, marginTop:1 }}>{todayLabel}</p>
-              </div>
-              <div style={{ width:8, height:8, borderRadius:'50%', background:status==='open'?'#22C55E':'#8A8A86', flexShrink:0 }}/>
-            </div>
-          </div>
-        )}
-
-        {/* Location block — inline if present */}
-        {locBlock && locBlock.on && (locBlock.address||locBlock.sub) && (
-          <div style={{ padding:'8px 12px 0' }}>
-            <div style={{ ...glass }}>
+        {/* Blocks */}
+        <div style={{ padding:'10px 14px 32px', display:'flex', flexDirection:'column', gap:10 }}>
+          {sortedBlocks.length === 0 ? (
+            <p style={{ textAlign:'center', fontSize:12, color:sx, padding:'24px 0' }}>Toggle blocks to see them here</p>
+          ) : sortedBlocks.map(b => (
+            <div key={b.id} style={{ ...glass }}>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ width:36, height:36, borderRadius:'50%', flexShrink:0, background:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
-                  <BlockIcon id="location" size={16} color={locBlock.color}/>
+                <div style={{ width:40, height:40, borderRadius:'50%', flexShrink:0, background: isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
+                  <BlockIcon id={b.id} size={18} color={b.color}/>
                 </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ fontSize:13, fontWeight:700, color:tx, margin:0 }}>{locBlock.title||'Location'}</p>
-                  <p style={{ fontSize:11, color:sx, margin:0, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{locBlock.address||locBlock.sub}</p>
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:15, fontWeight:700, color:tx, margin:0, letterSpacing:'-0.01em' }}>
+                    {b.id === 'hours' ? (status === 'open' ? 'Open now' : 'Closed now') : b.title}
+                  </p>
+                  <p style={{ fontSize:12, color:sx, margin:0, marginTop:2 }}>
+                    {b.id === 'hours' ? todayLabel : b.sub}
+                  </p>
                 </div>
-                <div style={{ height:36, paddingLeft:12, paddingRight:12, borderRadius:10, background:themeColor, display:'flex', alignItems:'center', fontSize:11, fontWeight:700, color:'#fff', flexShrink:0 }}>Directions</div>
+                {b.url && (
+                  <div style={{ fontSize:11, color:isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.3)', flexShrink:0 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* Other blocks — 6-col grid matching real page */}
-        {otherBlocks.length > 0 && (
-          <div style={{ padding:'8px 12px 0', display:'grid', gridTemplateColumns:'repeat(6, 1fr)', gap:8 }}>
-            {otherBlocks.map(b => (
-              <div key={b.id} style={{ gridColumn:`span ${spanCols(b)}`, ...glass }}>
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <div style={{ width:34, height:34, borderRadius:'50%', flexShrink:0, background:isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
-                    <BlockIcon id={b.id} size={15} color={b.color}/>
-                  </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <p style={{ fontSize:13, fontWeight:700, color:tx, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.title}</p>
-                    {b.sub && <p style={{ fontSize:10, color:sx, margin:0, marginTop:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{b.sub}</p>}
-                  </div>
-                  {b.url && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={sx} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Social row */}
+        {/* Social icons */}
         {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).length > 0 && (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'16px 0' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'0 0 16px' }}>
             {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).map(p => (
-              <div key={p.key} style={{ width:38, height:38, borderRadius:'50%', display:'grid', placeItems:'center', background: isDark?'rgba(255,255,255,0.10)':'rgba(0,0,0,0.06)' }}>
-                <SocialIcon platform={p.key} size={15}/>
+              <div key={p.key} style={{ width:40, height:40, borderRadius:'50%', display:'grid', placeItems:'center', background: isDark?'rgba(255,255,255,0.10)':'rgba(0,0,0,0.06)' }}>
+                <SocialIcon platform={p.key} size={16}/>
               </div>
             ))}
           </div>
         )}
 
-        {/* Footer slug */}
+        {/* Footer */}
         <p style={{ textAlign:'center', fontSize:10, letterSpacing:'0.15em', textTransform:'uppercase', color:'rgba(0,0,0,0.22)', paddingBottom:24 }}>
-          openstatus.co/{business?.slug||'your-page'}
+          Powered by OpenStatus
         </p>
       </div>
     </div>
@@ -1242,19 +1196,14 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
 }
 
 // ── Block edit panel (inline right of blocks, no modal) ───────────────────────
-function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,businessId,uploadFile }: {
+function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
   onUpdateConfig:(u:Partial<OpenStatusPageConfig>)=>void;
   onClose:()=>void;
-  businessId?:string;
-  /** Async fn to upload a file and return a displayable URL. When provided, PhotoFields won't use base64. */
-  uploadFile?:(file:File)=>Promise<string>;
 }) {
   const hours=config.weeklyHours??DEFAULT_WEEK_HOURS;
   const {status,todayLabel}=getLiveStatus(hours);
-  const [googleSyncing,setGoogleSyncing]=React.useState(false);
-  const [googleSyncMsg,setGoogleSyncMsg]=React.useState<{ok:boolean;text:string}|null>(null);
   function copyMonToWeekdays() {
     const mon=hours.mon;
     onUpdateConfig({ weeklyHours:{ ...hours, tue:{...mon},wed:{...mon},thu:{...mon},fri:{...mon} } });
@@ -1297,7 +1246,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
                 value={block.coverPhoto??''}
                 onChange={v=>onUpdateBlock({coverPhoto:v})}
                 hint="A photo of your storefront or location."
-                uploadFile={uploadFile}
               />
               <div>
                 <FieldLabel>Address</FieldLabel>
@@ -1409,41 +1357,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
                   })}
                 </div>
               </div>
-
-              {/* ── Sync to Google Business ── */}
-              <div className="pt-1">
-                <button
-                  onClick={async()=>{
-                    if(!businessId)return;
-                    setGoogleSyncing(true);setGoogleSyncMsg(null);
-                    try{
-                      const{data:s}=await supabase.auth.getSession();
-                      const token=s.session?.access_token;
-                      if(!token){setGoogleSyncMsg({ok:false,text:'Sign in to sync'});return;}
-                      const r=await fetch('/api/google/hours',{
-                        method:'POST',
-                        headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-                        body:JSON.stringify({weeklyHours:hours}),
-                      });
-                      const d=await r.json();
-                      if(r.status===202){setGoogleSyncMsg({ok:false,text:d.error??'Pending API approval'});}
-                      else if(r.ok){setGoogleSyncMsg({ok:true,text:'Synced to Google ✓'});}
-                      else{setGoogleSyncMsg({ok:false,text:d.error??'Sync failed'});}
-                    }catch(e){setGoogleSyncMsg({ok:false,text:e instanceof Error?e.message:'Sync failed'});}
-                    finally{setGoogleSyncing(false);}
-                  }}
-                  disabled={googleSyncing||!businessId}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#DEDEDC] bg-white py-2.5 text-[13px] font-semibold text-[#0A0A0A] hover:border-[#0A0A0A] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <IconGoogle size={16}/>
-                  {googleSyncing?'Syncing…':'Sync hours to Google Business'}
-                </button>
-                {googleSyncMsg&&(
-                  <p className={`text-[11px] mt-2 text-center ${googleSyncMsg.ok?'text-emerald-600':'text-[#858585]'}`}>
-                    {googleSyncMsg.text}
-                  </p>
-                )}
-              </div>
             </div>
           )}
 
@@ -1451,7 +1364,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
           {block.id==='menu' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="menu" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional banner photo shown at the top of the menu block." uploadFile={uploadFile}/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional banner photo shown at the top of the menu block."/>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={()=>onUpdateBlock({menuType:'pdf'})}
@@ -1492,7 +1405,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
           {block.id==='order' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="order" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo shown behind the block." uploadFile={uploadFile}/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo shown behind the block."/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1509,7 +1422,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
           {block.id==='book' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="book" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} uploadFile={uploadFile}/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1522,24 +1435,40 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
             </div>
           )}
 
+          {/* ── SOCIALS ── */}
+          {block.id==='socials' && (
+            <div className="space-y-5">
+              <BlockStylePicker blockId="socials" selected={block.blockStyle??'icons'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
+              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo behind the social links block."/>
+              <div className="space-y-3">
+              <FieldLabel>Your social links</FieldLabel>
+              {SOCIAL_PLATFORMS.map(({key,label})=>(
+                <div key={key} className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
+                  <Input value={config.socials[key]??''} onChange={v=>onUpdateConfig({socials:{...config.socials,[key]:v}})} placeholder={`${label} URL…`}/>
+                </div>
+              ))}
+              </div>
+            </div>
+          )}
 
           {/* ── UPDATES ── */}
           {block.id==='updates' && (
             <div className="space-y-4">
               <div className="rounded-xl bg-[#FFF0F5] border border-[#F9A8D4] p-4">
-                <p className="text-[12px] font-semibold text-[#BE185D]">Instagram updates</p>
+                <p className="text-[12px] font-semibold text-[#BE185D]">📸 Instagram updates</p>
                 <p className="text-[11px] text-[#858585] mt-1 leading-snug">Shows your 3 most recent Instagram posts as updates on your page. Make sure Meta is connected in your setup.</p>
               </div>
             </div>
           )}
 
           {/* ── WEBSITE / generic ── */}
-          {(block.id==='website'||!['location','hours','menu','order','book','updates'].includes(block.id)) && (
+          {(block.id==='website'||!['location','hours','menu','order','book','socials','updates'].includes(block.id)) && (
             <div className="space-y-5">
               {block.id==='website'&&(
                 <>
                   <BlockStylePicker blockId="website" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-                  <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} uploadFile={uploadFile}/>
+                  <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
                   <div><FieldLabel>Website URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
                 </>
               )}
@@ -1579,6 +1508,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,busi
 const PICKER_CATEGORIES = [
   { label:'ESSENTIALS', ids:['hours','location','menu','website'] },
   { label:'CONVERT',    ids:['order','book'] },
+  { label:'CONNECT',    ids:['socials'] },
 ];
 
 function BlockPicker({ blocks, onAdd, onClose }: {
@@ -1638,11 +1568,11 @@ function BlockPicker({ blocks, onAdd, onClose }: {
 
 // ── tutorial overlay ───────────────────────────────────────────────────────────
 const TUT_STEPS = [
-  { id: null,         title: 'Welcome to your builder!',   body: "We'll walk you through the basics in 30 seconds. Hit Next to start, or Skip to explore on your own.", align: 'center' as const },
+  { id: null,         title: 'Welcome to your builder! 👋',   body: "We'll walk you through the basics in 30 seconds. Hit Next to start, or Skip to explore on your own.", align: 'center' as const },
   { id: 'tut-hours',  title: 'Start with your hours',         body: 'Click the Hours block to set your open/closed times. This powers your live status that customers see instantly.', align: 'right' as const },
   { id: 'tut-preview',title: 'This is your live page',        body: "The phone preview shows exactly what customers see. Click any block on the preview to jump straight into editing it.", align: 'left' as const },
-  { id: 'tut-add',    title: 'Add more features',             body: 'Hit "+ Add block" to turn on menus, online ordering, reservations, and your website link.', align: 'right' as const },
-  { id: 'tut-save',   title: 'You\'re already live!',      body: 'Your page is live at your link the moment you save. Hit Save any time to publish your latest changes.', align: 'center' as const },
+  { id: 'tut-add',    title: 'Add more features',             body: 'Hit "+ Add block" to turn on menus, online ordering, reservations, socials, and your website link.', align: 'right' as const },
+  { id: 'tut-save',   title: 'You\'re already live! 🎉',      body: 'Your page is live at your link the moment you save. Hit Save any time to publish your latest changes.', align: 'center' as const },
 ];
 
 function TutorialOverlay({ onDone }: { onDone: () => void }) {
@@ -1745,585 +1675,19 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'links'|'hours'|'integrations'|'analytics'|'settings'|'preview'|'status';
+type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings'|'preview';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
-
-// ── IntCard (standalone component — must not be nested in render) ────────────
-function IntCard({cardKey,icon,name,desc,connected,url,onSave,onClear,placeholder,expandedKey,setExpandedKey}:{
-  cardKey:string;icon:React.ReactNode;name:string;desc:string;connected:boolean;url?:string;
-  onSave:(url:string)=>void;onClear?:()=>void;placeholder:string;
-  expandedKey:string|null;setExpandedKey:(k:string|null)=>void;
-}){
-  const isExpanded=expandedKey===cardKey;
-  const [localVal,setLocalVal]=React.useState(url??'');
-  React.useEffect(()=>{if(isExpanded)setLocalVal(url??'');},[isExpanded,url]);
-  return(
-    <div className={`rounded-2xl border bg-white mb-2 transition-colors ${isExpanded?'border-[#0A0A0A]':'border-[#DEDEDC] hover:border-[#C0C0C0]'}`}>
-      <div className="flex items-center gap-3 p-3">
-        <div className="w-10 h-10 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0 overflow-hidden">{icon}</div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-bold text-[#0A0A0A] leading-tight">{name}</p>
-          {connected&&url?(
-            <p className="text-[10px] text-emerald-600 truncate max-w-[160px]">✓ {url.replace(/^https?:\/\//,'')}</p>
-          ):(
-            <p className="text-[10px] text-[#ACACAC]">{desc}</p>
-          )}
-        </div>
-        {connected?(
-          <button onClick={()=>{setExpandedKey(isExpanded?null:cardKey);}} className="flex-shrink-0 text-[10px] font-bold text-[#0A0A0A] border border-[#DEDEDC] rounded-full px-3 py-1 hover:border-[#0A0A0A] transition-colors">{isExpanded?'Cancel':'Edit'}</button>
-        ):(
-          <button onClick={()=>setExpandedKey(isExpanded?null:cardKey)} className="flex-shrink-0 text-[10px] font-bold text-white bg-[#0A0A0A] rounded-full px-3 py-1 hover:bg-[#292929] transition-colors">Add</button>
-        )}
-      </div>
-      {isExpanded&&(
-        <div className="px-3 pb-3 flex flex-col gap-2">
-          <input
-            autoFocus
-            type="url"
-            value={localVal}
-            onChange={e=>setLocalVal(e.target.value)}
-            placeholder={placeholder}
-            className="w-full rounded-xl border border-[#DEDEDC] bg-[#F7F7F5] px-3 py-2 text-[12px] outline-none focus:border-[#0A0A0A] transition-colors"
-            onKeyDown={e=>{if(e.key==='Enter'&&localVal.trim()){onSave(localVal.trim());setExpandedKey(null);}if(e.key==='Escape')setExpandedKey(null);}}
-          />
-          <div className="flex gap-2">
-            <button
-              disabled={!localVal.trim()}
-              onClick={()=>{if(localVal.trim()){onSave(localVal.trim());setExpandedKey(null);}}}
-              className="flex-1 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold py-2 hover:bg-[#292929] transition-colors disabled:opacity-40">Save</button>
-            {connected&&onClear&&(
-              <button onClick={()=>{onClear();setExpandedKey(null);}} className="rounded-xl border border-[#DEDEDC] text-[#858585] text-[12px] font-bold px-4 py-2 hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors">Remove</button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── IntegrationsPanel (top-level component — hooks always called) ─────────────
-function IntegrationsPanel({allBlocks,updateBlock,setConfig,setGooglePhotos,localBusiness,setLocalBusiness,googleFetchDone}:{
-  allBlocks:OpenStatusBlock[];
-  updateBlock:(id:string,partial:Partial<OpenStatusBlock>)=>void;
-  setConfig:React.Dispatch<React.SetStateAction<OpenStatusPageConfig>>;
-  setGooglePhotos:React.Dispatch<React.SetStateAction<string[]>>;
-  localBusiness:Business|null;
-  setLocalBusiness:React.Dispatch<React.SetStateAction<Business|null>>;
-  googleFetchDone:boolean;
-}){
-  const orderBlock=allBlocks.find(b=>b.id==='order');
-  const bookBlock=allBlocks.find(b=>b.id==='book');
-  const [expandedKey,setExpandedKey]=React.useState<string|null>(null);
-  return(
-    <div className="px-5 py-5 overflow-y-auto h-full">
-      {/* Intro */}
-      <div className="mb-5 rounded-2xl bg-[#F7F7F5] border border-[#DEDEDC] px-4 py-3">
-        <p className="text-[12px] font-bold text-[#0A0A0A] mb-1">Connect your platforms</p>
-        <p className="text-[11px] text-[#858585] leading-relaxed">Tap <strong className="text-[#0A0A0A]">Add</strong> next to any platform, paste your link, and hit <strong className="text-[#0A0A0A]">Save</strong>. That&#39;s it — your page updates automatically when you save.</p>
-      </div>
-      {/* Google Business */}
-      <div className="mb-5">
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Business Profile</p>
-        <IntCard
-          cardKey="google-business"
-          icon={<svg viewBox="0 0 24 24" width="22" height="22"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>}
-          name="Google Business"
-          desc="Paste your Google Maps URL to import"
-          placeholder="https://maps.google.com/maps/place/..."
-          connected={googleFetchDone||!!(allBlocks.find(b=>b.id==='location')?.googleUrl)}
-          url={allBlocks.find(b=>b.id==='location')?.googleUrl}
-          expandedKey={expandedKey}
-          setExpandedKey={setExpandedKey}
-          onSave={async(url)=>{
-            updateBlock('location',{googleUrl:url});
-            try{
-              const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
-              const d=await r.json();
-              if(r.ok&&!d.error){
-                updateBlock('location',{reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.lat!==undefined?{lat:d.lat,lng:d.lng}:{}),...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
-                if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours}));
-                if(d.photos?.length) setGooglePhotos(d.photos);
-                if(d.photos?.length&&localBusiness?.id&&!localBusiness.avatar_url){await supabase.from('businesses').update({avatar_url:d.photos[0]}).eq('id',localBusiness.id);setLocalBusiness(b=>b?({...b,avatar_url:d.photos[0]}):b);}
-              }
-            }catch(e){}
-          }}
-          onClear={()=>updateBlock('location',{googleUrl:''})}
-        />
-      </div>
-
-      {/* Online Ordering */}
-      <div className="mb-5">
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Online Ordering</p>
-        {ORDER_PROVIDERS.filter(p=>p.key!=='other').map(provider=>{
-          const connected=!!(orderBlock?.on && orderBlock?.provider===provider.key && orderBlock?.url);
-          return(
-            <IntCard
-              key={provider.key}
-              cardKey={`order-${provider.key}`}
-              icon={<BlockIcon id={provider.key} size={22}/>}
-              name={provider.label}
-              desc={`Paste your ${provider.label} link`}
-              placeholder={`https://www.${provider.key}.com/...`}
-              connected={connected}
-              url={connected?orderBlock?.url:undefined}
-              expandedKey={expandedKey}
-              setExpandedKey={setExpandedKey}
-              onSave={(url)=>updateBlock('order',{on:true,provider:provider.key,url})}
-              onClear={()=>updateBlock('order',{on:false,url:'',provider:''})}
-            />
-          );
-        })}
-      </div>
-
-      {/* Reservations & Booking */}
-      <div className="mb-5">
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Reservations &amp; Booking</p>
-        {BOOK_PROVIDERS.filter(p=>p.key!=='other').map(provider=>{
-          const connected=!!(bookBlock?.on && bookBlock?.provider===provider.key && bookBlock?.url);
-          return(
-            <IntCard
-              key={provider.key}
-              cardKey={`book-${provider.key}`}
-              icon={<BlockIcon id={provider.key} size={22}/>}
-              name={provider.label}
-              desc={`Paste your ${provider.label} link`}
-              placeholder={`https://www.${provider.key}.com/...`}
-              connected={connected}
-              url={connected?bookBlock?.url:undefined}
-              expandedKey={expandedKey}
-              setExpandedKey={setExpandedKey}
-              onSave={(url)=>updateBlock('book',{on:true,provider:provider.key,url})}
-              onClear={()=>updateBlock('book',{on:false,url:'',provider:''})}
-            />
-          );
-        })}
-      </div>
-
-      {/* Reviews */}
-      <div className="mb-5">
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Reviews</p>
-        {([
-          {key:'yelp',       name:'Yelp',          icon:<IconYelp size={22}/>,        field:'yelpUrl' as const,        ph:'https://www.yelp.com/biz/...'},
-          {key:'google-rev', name:'Google Reviews', icon:<IconGoogle size={22}/>,      field:'googleUrl' as const,       ph:'https://maps.google.com/...'},
-          {key:'tripadvisor',name:'TripAdvisor',    icon:<IconTripAdvisor size={22}/>, field:'tripAdvisorUrl' as const,  ph:'https://www.tripadvisor.com/...'},
-        ] as {key:string;name:string;icon:React.ReactNode;field:'yelpUrl'|'googleUrl'|'tripAdvisorUrl';ph:string}[]).map(r=>{
-          const locB=allBlocks.find(b=>b.id==='location');
-          const url=locB?.[r.field]??'';
-          const connected=!!(url&&url.trim());
-          return(
-            <IntCard
-              key={r.key}
-              cardKey={`rev-${r.key}`}
-              icon={r.icon}
-              name={r.name}
-              desc={`Paste your ${r.name} listing URL`}
-              placeholder={r.ph}
-              connected={connected}
-              url={url||undefined}
-              expandedKey={expandedKey}
-              setExpandedKey={setExpandedKey}
-              onSave={(v)=>updateBlock('location',{[r.field]:v})}
-              onClear={()=>updateBlock('location',{[r.field]:''})}
-            />
-          );
-        })}
-      </div>
-
-      {/* QR Code */}
-      <div className="mb-5">
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">QR Code</p>
-        {localBusiness?.slug?(
-          <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2zM16 16h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/></svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-bold text-[#0A0A0A] leading-tight">QR Code</p>
-                <p className="text-[10px] text-[#ACACAC]">Print or share for easy access</p>
-              </div>
-            </div>
-            <p className="text-[11px] text-[#858585] mb-3">Your unique page link:</p>
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-[#F7F7F5] border border-[#DEDEDC] mb-3">
-              <span className="text-[11px] text-[#0A0A0A] flex-1 truncate">forothers.us/{localBusiness.slug}</span>
-              <button
-                onClick={()=>navigator.clipboard.writeText(`https://forothers.us/${localBusiness.slug}`)}
-                className="flex-shrink-0 text-[10px] font-bold text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors">Copy</button>
-            </div>
-            <a
-              href={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://forothers.us/'+localBusiness.slug)}`}
-              download={`${localBusiness.slug}-qr.png`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold py-2.5 hover:bg-[#292929] transition-colors">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download QR code
-            </a>
-          </div>
-        ):(
-          <div className="rounded-2xl border border-[#DEDEDC] bg-[#F7F7F5] p-4 text-center">
-            <p className="text-[12px] text-[#858585]">Save your page first to get your QR code.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── AnalyticsPanel ────────────────────────────────────────────────────────────
-type AnalyticsData={days:number;metrics:{views:number;uniqueVisitors:number;directions:number;menu:number;orders:number;clicks:number};topActions:{id:string;count:number}[];trafficSources:{source:string;count:number}[];trend:{date:string;views:number;clicks:number}[]};
-const actionLabel=(id:string)=>({map:'Directions',menu:'Menu',order:'Order',book:'Booking',website:'Website',call:'Call',shop:'Shop','gift-cards':'Gift cards',catering:'Catering',events:'Events',careers:'Careers',email:'Email'} as Record<string,string>)[id]||id.replace(/-/g,' ').replace(/^./,(x:string)=>x.toUpperCase());
-
-function AnalyticsPanel({ businessId }: { businessId: string }) {
-  const [days, setDays] = React.useState(30);
-  const [data, setData] = React.useState<AnalyticsData|null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
-
-  React.useEffect(() => {
-    if (!businessId) return;
-    void (async () => {
-      setLoading(true); setError('');
-      const { data: s } = await supabase.auth.getSession();
-      if (!s.session) { setError('Not signed in'); setLoading(false); return; }
-      const res = await fetch(`/api/analytics?days=${days}`, { headers: { Authorization: `Bearer ${s.session.access_token}` } });
-      const json = await res.json().catch(() => ({ error: 'Could not load analytics' }));
-      if (!res.ok) { setError(json.error || 'Could not load analytics'); setData(null); }
-      else setData(json);
-      setLoading(false);
-    })();
-  }, [businessId, days]);
-
-  const m = data?.metrics;
-  const maxTrend = Math.max(1, ...(data?.trend || []).map((x: {views:number}) => x.views));
-  const maxAction = Math.max(1, ...(data?.topActions || []).map((x: {count:number}) => x.count));
-
-  return (
-    <div className="px-6 py-6 max-w-[600px]">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-[20px] font-bold text-[#0A0A0A] leading-tight">Analytics</h2>
-          <p className="text-[12px] text-[#858585] mt-0.5">How customers interact with your page</p>
-        </div>
-        <div className="flex items-center gap-1 bg-[#F5F5F3] rounded-full p-0.5">
-          {([7,30,90] as const).map(n=>(
-            <button key={n} onClick={()=>setDays(n)}
-              className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all ${days===n?'bg-white text-[#0A0A0A] shadow-sm':'text-[#858585]'}`}>
-              {n}d
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {error && (
-        <div className="rounded-2xl bg-[#FFF4E5] border border-[#F5C97A] p-4 mb-4">
-          <p className="text-[13px] font-semibold text-[#92400E]">{error}</p>
-          {error.includes('not set up') && (
-            <p className="text-[12px] text-[#B45309] mt-1">Run the <code className="bg-white/60 px-1 rounded">page_events</code> table migration in Supabase to enable analytics.</p>
-          )}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="space-y-3">
-          {[1,2,3].map(i=><div key={i} className="h-16 rounded-2xl bg-[#EEEEEC] animate-pulse"/>)}
-        </div>
-      ) : data ? (
-        <div className="space-y-4">
-          {/* Key metrics */}
-          <div className="grid grid-cols-2 gap-2">
-            {([
-              ['Unique visitors', m!.uniqueVisitors, '#C8FF62'],
-              ['Page views',      m!.views,          '#FFFFFF'],
-              ['Directions',      m!.directions,     '#FFFFFF'],
-              ['Actions',         m!.clicks,         '#FFFFFF'],
-            ] as const).map(([name, value, bg])=>(
-              <div key={String(name)} className="rounded-2xl border border-[#EEEEEC] p-4" style={{background: bg}}>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#858585]">{name}</p>
-                <p className="text-[28px] font-bold text-[#0A0A0A] mt-1 leading-none">{value.toLocaleString()}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Action rate pill */}
-          <div className="rounded-2xl bg-[#0A0A0A] px-5 py-4 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">Action rate</p>
-              <p className="text-[22px] font-bold text-white mt-0.5">
-                {m!.views ? Math.round(m!.clicks / m!.views * 100) : 0}%
-              </p>
-            </div>
-            <p className="text-[11px] text-white/35 max-w-[140px] text-right leading-snug">of visitors took an action on your page</p>
-          </div>
-
-          {/* Trend chart */}
-          {data.trend.length > 0 && (
-            <div className="rounded-2xl border border-[#EEEEEC] bg-white p-4">
-              <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Page views — last {days} days</p>
-              <div className="flex items-end gap-0.5 h-24">
-                {data.trend.map((x: {date:string;views:number})=>(
-                  <div key={x.date} className="group relative flex-1 flex items-end h-full">
-                    <div className="w-full rounded-t-[3px] bg-[#0A0A0A] hover:bg-[#444] transition-colors"
-                      style={{height:`${Math.max(4, x.views / maxTrend * 100)}%`}}/>
-                    <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded-lg bg-black px-2 py-1 text-[9px] text-white z-10">
-                      {x.date.slice(5)}: {x.views}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Top actions */}
-          {data.topActions.length > 0 && (
-            <div className="rounded-2xl border border-[#EEEEEC] bg-white p-4">
-              <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Top actions</p>
-              <div className="space-y-3">
-                {data.topActions.slice(0,5).map((x: {id:string;count:number}, i: number)=>(
-                  <div key={x.id}>
-                    <div className="flex justify-between text-[12px] mb-1">
-                      <span className="font-semibold text-[#0A0A0A]">{i+1}. {actionLabel(x.id)}</span>
-                      <span className="text-[#858585]">{x.count}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-[#EEEEEC] overflow-hidden">
-                      <div className="h-full rounded-full bg-[#0A0A0A]" style={{width:`${x.count/maxAction*100}%`}}/>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Traffic sources */}
-          {data.trafficSources.length > 0 && (
-            <div className="rounded-2xl border border-[#EEEEEC] bg-white p-4">
-              <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Traffic sources</p>
-              <div className="space-y-2">
-                {data.trafficSources.slice(0,5).map((x: {source:string;count:number})=>(
-                  <div key={x.source} className="flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-[#0A0A0A]">{x.source}</span>
-                    <span className="text-[12px] text-[#858585]">{x.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Full analytics link */}
-          <a href="/analytics" target="_blank" rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-[#DEDEDC] text-[12px] font-semibold text-[#0A0A0A] hover:bg-[#F5F5F3] transition-colors">
-            View full analytics ↗
-          </a>
-        </div>
-      ) : !error ? (
-        <div className="text-center py-12 text-[13px] text-[#858585]">No data yet. Share your page to start tracking visits.</div>
-      ) : null}
-    </div>
-  );
-}
-
-// ── SettingsPanel (top-level component — hooks always called) ─────────────────
-function SettingsPanel({localBusiness,setLocalBusiness,config,setConfig,allBlocks,updateBlock}:{
-  localBusiness:Business|null;
-  setLocalBusiness:React.Dispatch<React.SetStateAction<Business|null>>;
-  config:OpenStatusPageConfig;
-  setConfig:React.Dispatch<React.SetStateAction<OpenStatusPageConfig>>;
-  allBlocks:OpenStatusBlock[];
-  updateBlock:(id:string,partial:Partial<OpenStatusBlock>)=>void;
-}){
-  const BIZ_CATS=['Coffee Shop / Café','Restaurant','Bar','Bakery','Food Truck','Retail / Boutique','Salon / Beauty','Fitness','Spa / Wellness','Services','Events / Entertainment','Non-profit','Pop-up','Market','Other'];
-  const [settingsName,setSettingsName]=React.useState(localBusiness?.name??'');
-  const [settingsCat,setSettingsCat]=React.useState(localBusiness?.category??'');
-  const [settingsDesc,setSettingsDesc]=React.useState(localBusiness?.tagline??'');
-  const [settingsLocation,setSettingsLocation]=React.useState(config.location??'');
-  const [settingsPhone,setSettingsPhone]=React.useState(allBlocks.find(b=>b.id==='call')?.url?.replace('tel:','')?? '');
-  const [settingsWebsite,setSettingsWebsite]=React.useState(allBlocks.find(b=>b.id==='website')?.url??'');
-  const [bizSaving,setBizSaving]=React.useState(false);
-  const [bizSaved,setBizSaved]=React.useState(false);
-  const [bizErr,setBizErr]=React.useState('');
-  const [userEmail,setUserEmail]=React.useState('');
-  const [newPw,setNewPw]=React.useState('');
-  const [pwSaving,setPwSaving]=React.useState(false);
-  const [pwMsg,setPwMsg]=React.useState('');
-  const [showDeleteConfirm,setShowDeleteConfirm]=React.useState(false);
-  const [deleteText,setDeleteText]=React.useState('');
-
-  React.useEffect(()=>{
-    supabase.auth.getUser().then(({data})=>setUserEmail(data.user?.email??''));
-  },[]);
-
-  async function saveBiz(){
-    if(!localBusiness?.id)return;
-    setBizSaving(true);setBizErr('');
-    const{error}=await supabase.from('businesses').update({
-      name:settingsName.trim()||localBusiness.name,
-      category:settingsCat,
-      tagline:settingsDesc.trim(),
-    }).eq('id',localBusiness.id);
-    if(error){setBizErr(error.message);setBizSaving(false);return;}
-    setLocalBusiness(b=>b?({...b,name:settingsName.trim()||b.name,category:settingsCat,tagline:settingsDesc.trim()}):b);
-    setConfig(c=>({...c,location:settingsLocation}));
-    if(settingsPhone.trim()) updateBlock('call',{url:`tel:${settingsPhone.trim()}`,on:true});
-    if(settingsWebsite.trim()) updateBlock('website',{url:settingsWebsite.trim(),on:true});
-    setBizSaving(false);setBizSaved(true);setTimeout(()=>setBizSaved(false),2500);
-  }
-
-  async function changePw(){
-    if(!newPw.trim()||newPw.length<8){setPwMsg('Password must be at least 8 characters.');return;}
-    setPwSaving(true);setPwMsg('');
-    const{error}=await supabase.auth.updateUser({password:newPw});
-    setPwSaving(false);
-    if(error){setPwMsg(error.message);}else{setPwMsg('Password updated!');setNewPw('');}
-  }
-
-  async function handleLogout(){
-    await supabase.auth.signOut();
-    window.location.href='/';
-  }
-
-  const SettingField=({label,children}:{label:string;children:React.ReactNode})=>(
-    <div>
-      <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-1.5">{label}</p>
-      {children}
-    </div>
-  );
-  const inputCls="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors";
-
-  return(
-    <div className="px-5 py-5 overflow-y-auto h-full space-y-6">
-
-      {/* ── Business Info ── */}
-      <div>
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Business Info</p>
-        <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4 space-y-4">
-          <SettingField label="Business name">
-            <input className={inputCls} value={settingsName} onChange={e=>setSettingsName(e.target.value)} placeholder="Your business name"/>
-          </SettingField>
-          <SettingField label="Category">
-            <select className={inputCls} value={settingsCat} onChange={e=>setSettingsCat(e.target.value)}>
-              <option value="">Select a category…</option>
-              {BIZ_CATS.map(c=><option key={c} value={c}>{c}</option>)}
-            </select>
-          </SettingField>
-          <SettingField label="Description">
-            <textarea className={`${inputCls} resize-none`} rows={3} value={settingsDesc} onChange={e=>setSettingsDesc(e.target.value)} placeholder="A short description of your business…"/>
-          </SettingField>
-          <SettingField label="Location">
-            <input className={inputCls} value={settingsLocation} onChange={e=>setSettingsLocation(e.target.value)} placeholder="123 Main St, Austin TX"/>
-          </SettingField>
-          <SettingField label="Phone">
-            <input className={inputCls} type="tel" value={settingsPhone} onChange={e=>setSettingsPhone(e.target.value)} placeholder="+1 (555) 000-0000"/>
-          </SettingField>
-          <SettingField label="Website">
-            <input className={inputCls} type="url" value={settingsWebsite} onChange={e=>setSettingsWebsite(e.target.value)} placeholder="https://yoursite.com"/>
-          </SettingField>
-          {bizErr&&<p className="text-[11px] text-red-500">{bizErr}</p>}
-          <button onClick={saveBiz} disabled={bizSaving} className="w-full rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold py-2.5 hover:bg-[#292929] transition-colors disabled:opacity-40">
-            {bizSaving?'Saving…':bizSaved?'✓ Saved':'Save changes'}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Subscription ── */}
-      <div>
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Subscription</p>
-        <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[13px] font-bold text-[#0A0A0A]">Free plan</p>
-              <p className="text-[11px] text-[#858585] mt-0.5">Your page is live and free forever.</p>
-            </div>
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">Active</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Account ── */}
-      <div>
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Account</p>
-        <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4 space-y-4">
-          <SettingField label="Email">
-            <p className="text-[13px] text-[#6B6B6B] py-1">{userEmail||'—'}</p>
-          </SettingField>
-          <SettingField label="Change password">
-            <div className="flex gap-2">
-              <input className={`${inputCls} flex-1`} type="password" value={newPw} onChange={e=>{setNewPw(e.target.value);setPwMsg('');}} placeholder="New password (8+ chars)"/>
-              <button onClick={changePw} disabled={pwSaving||!newPw} className="flex-shrink-0 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold px-4 hover:bg-[#292929] transition-colors disabled:opacity-40">
-                {pwSaving?'…':'Save'}
-              </button>
-            </div>
-            {pwMsg&&<p className={`text-[11px] mt-1.5 ${pwMsg.startsWith('Password updated')?'text-emerald-600':'text-red-500'}`}>{pwMsg}</p>}
-          </SettingField>
-        </div>
-      </div>
-
-      {/* ── Support ── */}
-      <div>
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Support</p>
-        <a href="mailto:info@openstatus.co" className="flex items-center gap-3 rounded-2xl border border-[#DEDEDC] bg-white p-4 hover:border-[#0A0A0A] transition-colors group">
-          <div className="w-9 h-9 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          </div>
-          <div>
-            <p className="text-[12px] font-bold text-[#0A0A0A]">Email support</p>
-            <p className="text-[11px] text-[#858585]">info@openstatus.co</p>
-          </div>
-          <svg className="ml-auto text-[#C0C0C0] group-hover:text-[#0A0A0A] transition-colors" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </a>
-      </div>
-
-      {/* ── Log out ── */}
-      <div>
-        <button onClick={handleLogout} className="w-full rounded-2xl border border-[#DEDEDC] bg-white p-4 text-[13px] font-bold text-[#0A0A0A] hover:border-[#0A0A0A] transition-colors text-left flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#F7F7F5] flex items-center justify-center flex-shrink-0">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          </div>
-          Log out
-        </button>
-      </div>
-
-      {/* ── Delete account ── */}
-      <div>
-        <p className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase mb-3">Danger zone</p>
-        {!showDeleteConfirm?(
-          <button onClick={()=>setShowDeleteConfirm(true)} className="w-full rounded-2xl border border-[#FECACA] bg-white p-4 text-[13px] font-bold text-red-500 hover:border-red-400 hover:bg-red-50 transition-colors text-left">
-            Delete account
-          </button>
-        ):(
-          <div className="rounded-2xl border border-red-300 bg-red-50 p-4 space-y-3">
-            <p className="text-[12px] font-bold text-red-700">Are you sure? This can&#39;t be undone.</p>
-            <p className="text-[11px] text-red-600">Type <strong>DELETE</strong> to confirm.</p>
-            <input className="w-full rounded-xl border border-red-300 bg-white px-3 py-2 text-[13px] focus:outline-none focus:border-red-500" value={deleteText} onChange={e=>setDeleteText(e.target.value)} placeholder="DELETE"/>
-            <div className="flex gap-2">
-              <button disabled={deleteText!=='DELETE'} onClick={async()=>{
-                const{data:s}=await supabase.auth.getSession();
-                const token=s.session?.access_token;
-                if(!token)return;
-                await fetch('/api/account/delete',{method:'DELETE',headers:{Authorization:`Bearer ${token}`}});
-                await supabase.auth.signOut();
-                window.location.href='/';
-              }} className="flex-1 rounded-xl bg-red-600 text-white text-[12px] font-bold py-2.5 hover:bg-red-700 transition-colors disabled:opacity-40">Delete my account</button>
-              <button onClick={()=>{setShowDeleteConfirm(false);setDeleteText('');}} className="rounded-xl border border-[#DEDEDC] text-[#6B6B6B] text-[12px] font-bold px-4 hover:border-[#0A0A0A] transition-colors">Cancel</button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="pb-4"/>
-    </div>
-  );
-}
-
 // ── main export ────────────────────────────────────────────────────────────────
-export default function BuilderClient({ business,initialConfig,isFirstRun=false,onboardedAt=null }: {
-  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null;
+export default function BuilderClient({ business,initialConfig,isFirstRun=false }: {
+  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean;
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('design');
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('regular');
-  const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>('mobile');
+  const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>(
+    typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'desktop' : 'mobile'
+  );
   const [quickAction,setQuickAction]=useState<string|null>(null);
   const [closeEarlyTime,setCloseEarlyTime]=useState('15:00');
   const [quickMsg,setQuickMsg]=useState('');
@@ -2334,12 +1698,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [statusCloseTime,setStatusCloseTime]=useState('15:00');
   const [openId,setOpenId]=useState<string|null>(null);
   const [showPicker,setShowPicker]=useState(false);
-  const [showTutorial,setShowTutorial]=useState(()=>{if(onboardedAt)return false;try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
+  const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
   const [showFirstRun,setShowFirstRun]=useState(isFirstRun);
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
-  const [showStoryNudge,setShowStoryNudge]=useState(false);
-  const lastSavedHours=useRef<typeof config.weeklyHours>(undefined);
   const [saveError,setSaveError]=useState('');
   const [googleFetchUrl,setGoogleFetchUrl]=useState('');
   const [googleFetching,setGoogleFetching]=useState(false);
@@ -2347,17 +1709,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [googleFetchDone,setGoogleFetchDone]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
-  const [previewWidth,setPreviewWidth]=useState(500);
+  const [previewWidth,setPreviewWidth]=useState(420);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
-  const [userInitial,setUserInitial]=useState('•');
-  React.useEffect(()=>{
-    supabase.auth.getUser().then(({data})=>{
-      const u=data.user;
-      const name=u?.user_metadata?.full_name||u?.user_metadata?.name||'';
-      const initial=name?name.trim()[0].toUpperCase():(u?.email?u.email[0].toUpperCase():'•');
-      setUserInitial(initial);
-    });
-  },[]);
   const [logoUploading,setLogoUploading]=useState(false);
   const [logoUploadError,setLogoUploadError]=useState('');
   const [bgUploading,setBgUploading]=useState(false);
@@ -2413,50 +1766,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     });
     setDragId(null);setDragOverId(null);
   }
-  function reorderBlocks(fromId:string,toId:string) {
-    if(!fromId||fromId===toId||fromId==='hours'||toId==='hours')return;
-    setConfig(c=>{
-      const bs=[...c.blocks];
-      const fi=bs.findIndex(b=>b.id===fromId),ti=bs.findIndex(b=>b.id===toId);
-      if(fi<0||ti<0)return c;
-      const [moved]=bs.splice(fi,1);bs.splice(ti,0,moved);
-      return{...c,blocks:bs};
-    });
-  }
   function copyMonToWeekdays() {
     const mon=hours.mon;
     setConfig(c=>({...c,weeklyHours:{...hours,tue:mon,wed:mon,thu:mon,fri:mon}}));
   }
   async function save() {
     setSaving(true);setSaveError('');
-    // Strip any base64 data URLs before saving to user metadata.
-    // Storing base64 images in JWT cookies causes 494 REQUEST_HEADER_TOO_LARGE on Vercel.
-    const safeConfig = {
-      ...config,
-      bgImage: config.bgImage?.startsWith('data:') ? undefined : config.bgImage,
-      blocks: config.blocks.map(b=>({...b, coverPhoto: b.coverPhoto?.startsWith('data:') ? '' : (b.coverPhoto??'')})),
-    };
-    const {error}=await supabase.auth.updateUser({data:{openstatus_page:safeConfig}});
-    if(error){setSaving(false);setSaveError(error.message);return;}
-    // Sync weekly hours to business_hours table so the published page shows them
-    if(localBusiness?.id && config.weeklyHours) {
-      const DAY_MAP: Record<string,number> = {mon:0,tue:1,wed:2,thu:3,fri:4,sat:5,sun:6};
-      const hoursRows = Object.entries(config.weeklyHours).map(([dayKey,day]) => ({
-        business_id: localBusiness.id,
-        day_of_week: DAY_MAP[dayKey],
-        opens_at:  day.closed ? null : (day.open  || '09:00'),
-        closes_at: day.closed ? null : (day.close || '17:00'),
-        is_closed: !!day.closed,
-      }));
-      await supabase.from('business_hours').upsert(hoursRows, { onConflict: 'business_id,day_of_week' });
-    }
+    const {error}=await supabase.auth.updateUser({data:{openstatus_page:config}});
     setSaving(false);
-    // Detect if hours changed → nudge to post on story
-    const hoursChanged = localBusiness?.id && config.weeklyHours &&
-      JSON.stringify(config.weeklyHours) !== JSON.stringify(lastSavedHours.current);
-    lastSavedHours.current = config.weeklyHours;
+    if(error){setSaveError(error.message);return;}
     setSaved(true);setTimeout(()=>setSaved(false),2500);
-    if(hoursChanged){ setShowStoryNudge(true); setTimeout(()=>setShowStoryNudge(false),12000); }
   }
 
   // Hours table row
@@ -2486,6 +1805,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode }[] = [
     { key:'design',       label:'Design',        icon:<IconPalette size={15}/> },
     { key:'links',        label:'Links',         icon:<IconLink size={15}/> },
+    { key:'business',     label:'Business Info', icon:<IconBuilding size={15}/> },
     { key:'hours',        label:'Hours & Status',icon:<LucideClock size={15}/> },
     { key:'integrations', label:'Integrations',  icon:<IconPuzzle size={15}/> },
     { key:'analytics',    label:'Analytics',     icon:<IconBarChart size={15}/> },
@@ -2541,11 +1861,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{fontFamily:"'Inter',system-ui,sans-serif",backgroundImage:"radial-gradient(rgba(0,0,0,0.10) 1px, transparent 1px)",backgroundSize:"20px 20px",backgroundColor:"#EDECE9"}}>
+    <div className="flex h-[100dvh] overflow-hidden bg-[#F7F7F5] text-[#0A0A0A]" style={{fontFamily:"'Inter',system-ui,sans-serif"}}>
 
       {/* ── FIRST-RUN BANNER ── */}
       {showFirstRun&&(
-        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:60,background:'#0A0A0A',color:'#F7F7F5',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:'#0A0A0A',color:'#F7F7F5',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div>
             <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.45)'}}>YOUR PAGE IS READY TO BUILD</span>
             <p style={{fontSize:13,marginTop:2,color:'rgba(255,255,255,0.75)'}}>Add your logo, cover photo, and links. You can change anything below.</p>
@@ -2554,130 +1874,77 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       )}
 
-      {/* ── TOP BAR ── */}
-      <header className="h-14 flex items-center justify-between px-5 flex-shrink-0" style={{background:'rgba(237,236,233,0.90)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)'}}>
-        <span className="font-bold text-[17px] tracking-[-0.04em] text-[#0A0A0A]">OpenStatus</span>
-        <div className="flex items-center gap-2">
-          {business?.slug&&(
-            <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1 text-[12px] font-semibold text-[#6B6B6B] hover:text-[#111] transition-colors mr-1">
-              Open ↗
-            </a>
-          )}
-          <div className="flex flex-col items-end gap-0.5">
-            <button onClick={save} disabled={saving} data-tut="tut-save"
-              className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
-              {saving?'Saving…':saved?'✓ Saved':saveError?'Error':'Publish'}
+      {/* ── LEFT SIDEBAR (desktop) ── */}
+      <aside className="hidden md:flex w-[210px] flex-shrink-0 flex-col bg-[#0A0A0A]">
+        {/* Wordmark */}
+        <div className="px-5 h-14 flex items-center flex-shrink-0">
+          <span className="font-bold text-[17px] tracking-[-0.04em] text-white">OpenStatus</span>
+        </div>
+        {/* Nav */}
+        <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
+          {SIDEBAR_NAV.map(({key,label,icon})=>(
+            <button key={key} onClick={()=>setSidebarTab(key)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
+                sidebarTab===key
+                  ?'bg-white/12 text-white'
+                  :'text-white/55 hover:bg-white/8 hover:text-white'
+              }`}>
+              <span className={sidebarTab===key?'text-white':'text-white/35'}>{icon}</span>
+              {label}
             </button>
-            {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
-          </div>
-          {/* Settings gear — opens settings drawer */}
-          <button onClick={()=>setSidebarTab(t=>(['settings','analytics','integrations','links'].includes(t)?'design':'settings'))}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-            style={{background:'rgba(0,0,0,0.08)'}}
-            title="Settings">
-            <IconSettings size={15} color="#555"/>
+          ))}
+        </nav>
+        {/* Bottom CTAs */}
+        <div className="px-4 py-4 border-t border-white/10 space-y-2.5 flex-shrink-0">
+          <button className="w-full text-left text-[11px] font-bold text-white/65 hover:underline leading-snug">
+            Upgrade to unlock<br/>more features →
+          </button>
+          <button className="w-full text-left text-[11px] text-white/40 hover:text-white transition-colors font-medium">
+            Need help?
           </button>
         </div>
-      </header>
+      </aside>
 
-      {/* ── CANVAS (phone always centered) ── */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Preview mode toggle */}
-        <div className="flex-shrink-0 flex items-center justify-center pt-3 pb-1">
-          <div className="flex items-center gap-0.5 rounded-full p-0.5" style={{background:'rgba(0,0,0,0.14)'}}>
-            <button onClick={()=>setPreviewMode('mobile')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='mobile'?'bg-white text-[#111] shadow-sm':'text-white/75 hover:text-white'}`}>
-              <IconSmartphone size={11}/> Mobile
+      {/* ── MAIN AREA ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
+
+        {/* ── TOP NAV BAR ── */}
+        <header className="h-14 border-b border-black/6 flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/80 backdrop-blur-sm">
+          <span className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase">{sidebarLabel}</span>
+          <div className="flex items-center gap-3">
+            {business?.slug&&(
+              <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#6B6B6B] hover:text-[#111] transition-colors">
+                View your link <span className="text-[#858585]">↗</span>
+              </a>
+            )}
+            <button className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
+              <IconEye size={13} color="currentColor"/> Preview
             </button>
-            <button onClick={()=>setPreviewMode('desktop')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='desktop'?'bg-white text-[#111] shadow-sm':'text-white/75 hover:text-white'}`}>
-              <IconMonitor size={11}/> Desktop
-            </button>
-          </div>
-        </div>
-
-        {/* Phone / Desktop preview */}
-        <div data-tut="tut-preview" className="flex-1 overflow-y-auto flex items-start justify-center py-4 px-4">
-          {previewMode==='desktop'?(
-            <div className="w-full h-full flex flex-col max-w-4xl mx-auto">
-              <div className="flex-shrink-0 bg-[#F0F0F0] border-b border-[#DEDEDE] px-3 py-2 flex items-center gap-2 rounded-t-xl">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-[#FF5F57]"/>
-                  <div className="w-3 h-3 rounded-full bg-[#FFBD2E]"/>
-                  <div className="w-3 h-3 rounded-full bg-[#28CA41]"/>
-                </div>
-                <div className="flex-1 bg-white rounded-md px-3 py-1 text-[11px] text-[#888] font-medium border border-[#DEDEDE] truncate">
-                  openstatus.co/{business?.slug||'your-page'}
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto bg-white rounded-b-xl">
-                <LiveDesktopPreview business={localBusiness} config={config}/>
-              </div>
-            </div>
-          ):(
-            <LivePhonePreview
-              business={localBusiness} config={config}
-              selectedId={openId}
-              onSelectBlock={id=>{setOpenId(id);}}
-              onReorder={reorderBlocks}
-            />
-          )}
-        </div>
-      </main>
-
-      {/* ── BOTTOM TOOLBAR ── */}
-      <div className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-3" style={{paddingBottom:'calc(12px + env(safe-area-inset-bottom))',background:'rgba(237,236,233,0.90)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)'}}>
-        <button onClick={()=>setShowPicker(true)} data-tut="tut-add"
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors shadow-sm"
-          style={{background:'#0A0A0A',color:'white'}}>
-          <span className="text-[17px] leading-none" style={{marginTop:-1}}>+</span> Elements
-        </button>
-        <button onClick={()=>setSidebarTab(t=>t==='hours'?'design':'hours')}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors shadow-sm ${sidebarTab==='hours'?'bg-[#0A0A0A] text-white':'bg-white text-[#0A0A0A] hover:bg-[#F0F0F0]'}`}>
-          <LucideClock size={14}/> Hours
-        </button>
-        <button onClick={()=>setSidebarTab(t=>t==="status"?"design":"status" as SidebarTab)}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-[13px] font-semibold transition-colors shadow-sm ${sidebarTab==='status'?'bg-[#0A0A0A] text-white':'bg-white text-[#0A0A0A] hover:bg-[#F0F0F0]'}`}>
-          <IconBolt size={14}/> Status
-        </button>
-      </div>
-
-      {/* ── HOURS SHEET ── */}
-      {sidebarTab==='hours'&&(
-        <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={()=>setSidebarTab('design')}>
-          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.28)',backdropFilter:'blur(3px)',WebkitBackdropFilter:'blur(3px)'}}/>
-          <div className="relative bg-white rounded-t-3xl flex flex-col shadow-2xl" style={{maxHeight:'85vh'}} onClick={e=>e.stopPropagation()}>
-            {/* Handle */}
-            <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
-              <div className="w-10 h-1.5 rounded-full" style={{background:'rgba(0,0,0,0.15)'}}/>
-            </div>
-            {/* Header */}
-            <div className="flex-shrink-0 flex items-center justify-between px-5 pb-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{color:'rgba(0,0,0,0.35)'}}>
-                  {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
-                </p>
-                <h2 className="text-[18px] font-bold text-[#0A0A0A] leading-tight mt-0.5">Hours & Status</h2>
-              </div>
-              <button onClick={()=>setSidebarTab('design')} className="w-8 h-8 rounded-full flex items-center justify-center transition-colors" style={{background:'rgba(0,0,0,0.06)'}}>
-                <LucideX size={14} color="#555"/>
+            <div className="flex flex-col items-end gap-0.5">
+              <button onClick={save} disabled={saving} data-tut="tut-save"
+                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
+                {saving?'Saving…':saved?'✓ Saved':saveError?'Error':'Publish'}
               </button>
+              {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
             </div>
-            {/* Sub-tabs */}
-            <div className="flex-shrink-0 px-5 pb-3">
-              <div className="flex items-center gap-1 bg-black/5 rounded-full p-1 w-fit">
-                {([{key:'regular' as HoursSubTab,label:'Regular'},{key:'special' as HoursSubTab,label:'Special'},{key:'status' as HoursSubTab,label:'Status'}]).map(t=>(
-                  <button key={t.key} onClick={e=>{e.stopPropagation();setHoursSubTab(t.key);if(t.key==='status')loadStatusUpdates();}}
-                    className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${hoursSubTab===t.key?'bg-[#0A0A0A] text-white':'text-[#555] hover:bg-black/5'}`}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+            <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 cursor-pointer select-none">
+              {(business?.name??'E').charAt(0).toUpperCase()}
             </div>
-            {/* Scrollable content */}
-            <div className="overflow-y-auto flex-1 px-5 pb-8">
-                <div>
+          </div>
+        </header>
+
+        {/* ── CONTENT + RIGHT PREVIEW ── */}
+        <div className="flex-1 flex overflow-hidden">
+
+          {/* ── MAIN CONTENT ── */}
+          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white rounded-tl-2xl md:shadow-[-4px_0_0_0_rgba(0,0,0,0.02)]">
+
+            {/* ══ HOURS & STATUS ══ */}
+            {sidebarTab==='hours'&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
+                {/* Header */}
+                <div className="mb-7">
                   <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-bold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                     {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
@@ -2725,14 +1992,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <p className="text-[14px] font-bold text-[#0A0A0A] mb-4">Quick Actions</p>
                       <div className="grid grid-cols-2 gap-3">
                         {[
-                          {key:'close-early', label:'Close Early',       desc:'Close before your regular time today'},
-                          {key:'close-today', label:'Close Today',       desc:'Mark as fully closed for the day'},
-                          {key:'special-hours', label:'Add Special Hours', desc:'Holiday, event, or seasonal hours'},
-                          {key:'out-of-office', label:'Out of Office',     desc:'Set away dates and a message'},
-                        ].map(({key,label,desc})=>(
+                          {key:'close-early',  emoji:'⏰', label:'Close Early',       desc:'Close before your regular time today'},
+                          {key:'close-today',  emoji:'🔒', label:'Close Today',       desc:'Mark as fully closed for the day'},
+                          {key:'special-hours',emoji:'📅', label:'Add Special Hours', desc:'Holiday, event, or seasonal hours'},
+                          {key:'out-of-office',emoji:'✈️', label:'Out of Office',     desc:'Set away dates and a message'},
+                        ].map(({key,emoji,label,desc})=>(
                           <button key={key} onClick={()=>{setQuickAction(key);setQuickMsg('');setCloseEarlyTime('15:00');}}
                             className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all text-left group">
-                                            <div>
+                            <span className="text-[22px] leading-none">{emoji}</span>
+                            <div>
                               <p className="text-[13px] font-bold text-[#111]">{label}</p>
                               <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">{desc}</p>
                             </div>
@@ -2791,7 +2059,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           disabled={statusPosting}
                           className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#EF4444] hover:bg-red-50/60 transition-all text-left group disabled:opacity-40"
                         >
-                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#F0F0EE]"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                          <span className="text-[22px] leading-none">🔒</span>
                           <div>
                             <p className="text-[13px] font-bold text-[#111]">Closed today</p>
                             <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">Mark as fully closed all day</p>
@@ -2799,7 +2067,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         </button>
                         {/* Close early */}
                         <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#F0F0EE]"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                          <span className="text-[22px] leading-none">⏰</span>
                           <p className="text-[13px] font-bold text-[#111]">Close early at</p>
                           <div className="flex items-center gap-2">
                             <div className="relative flex-1">
@@ -2826,7 +2094,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       {/* Custom note */}
                       <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white space-y-3">
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#F0F0EE]"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+                          <span className="text-[20px] leading-none">💬</span>
                           <p className="text-[13px] font-bold text-[#111]">Leave a note</p>
                         </div>
                         <textarea
@@ -2863,135 +2131,521 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <p className="text-[13px] text-[#858585]">Coming soon — stay tuned!</p>
                   </div>
                 )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── STATUS QUICK SHEET (reuses quick action flyout via Status button) ── */}
-      {sidebarTab===('status' as SidebarTab)&&(
-        <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={()=>setSidebarTab('design')}>
-          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.28)',backdropFilter:'blur(3px)',WebkitBackdropFilter:'blur(3px)'}}/>
-          <div className="relative bg-white rounded-t-3xl flex flex-col shadow-2xl pb-8" style={{maxHeight:'70vh'}} onClick={e=>e.stopPropagation()}>
-            <div className="flex-shrink-0 pt-3 pb-2 flex justify-center">
-              <div className="w-10 h-1.5 rounded-full" style={{background:'rgba(0,0,0,0.15)'}}/>
-            </div>
-            <div className="flex-shrink-0 flex items-center justify-between px-5 pb-4">
-              <h2 className="text-[18px] font-bold text-[#0A0A0A]">Live Status</h2>
-              <button onClick={()=>setSidebarTab('design')} className="w-8 h-8 rounded-full flex items-center justify-center" style={{background:'rgba(0,0,0,0.06)'}}>
-                <LucideX size={14} color="#555"/>
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1 px-5 space-y-3">
-              {/* Active status banner */}
-              {statusUpdates.filter(u=>u.status==='active').map(u=>(
-                <div key={u.id} className="rounded-2xl p-4 flex items-start gap-3" style={{background:'rgba(245,243,240,1)',border:'1px solid rgba(0,0,0,0.07)'}}>
-                  <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0"/>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold text-[#0A0A0A] leading-snug">{u.headline}</p>
-                    {u.detail&&<p className="text-[12px] text-[#6B6B6B] mt-0.5">{u.detail}</p>}
-                  </div>
-                  <button onClick={async e=>{e.stopPropagation();await clearStatus();}} className="text-[11px] font-semibold text-red-500 hover:text-red-700 transition-colors flex-shrink-0">Clear</button>
-                </div>
-              ))}
-              {/* Quick presets */}
-              {[
-                {preset:'close-early',label:'Close Early',icon:'🔒',desc:'Set early closing time'},
-                {preset:'close-today',label:'Close Today',icon:'🚫',desc:'Mark as closed all day'},
-                {preset:'out-of-office',label:'Out of Office',icon:'✈️',desc:'Away for a while'},
-                {preset:'note_today',label:"Today's Note",icon:'📝',desc:'Share a quick update'},
-              ].map(({preset,label,icon,desc})=>(
-                <button key={preset} onClick={e=>{e.stopPropagation();setSidebarTab('design');setQuickAction(preset.replace('close-early','close-early').replace('close-today','close-today').replace('out-of-office','out-of-office'));}}
-                  className="w-full flex items-center gap-3 rounded-2xl p-4 text-left transition-colors hover:bg-black/3"
-                  style={{background:'rgba(245,243,240,1)',border:'1px solid rgba(0,0,0,0.07)'}}>
-                  <span className="text-[20px]">{icon}</span>
-                  <div>
-                    <p className="text-[13px] font-bold text-[#0A0A0A]">{label}</p>
-                    <p className="text-[11px] text-[#858585]">{desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── SETTINGS DRAWER ── */}
-      {['settings','analytics','integrations','links'].includes(sidebarTab)&&(
-        <div className="fixed inset-0 z-50 flex justify-end" onClick={()=>setSidebarTab('design')}>
-          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.20)',backdropFilter:'blur(3px)',WebkitBackdropFilter:'blur(3px)'}}/>
-          <div className="relative flex flex-col bg-white shadow-2xl border-l border-[#DEDEDC]"
-            style={{width:'100%',maxWidth:420,height:'100%'}} onClick={e=>e.stopPropagation()}>
-            {/* Drawer header */}
-            <div className="flex-shrink-0 flex items-center justify-between px-5 h-14 border-b border-[#DEDEDC]">
-              <div className="flex items-center gap-1 bg-black/5 rounded-full p-0.5 overflow-x-auto">
-                {([
-                  {k:'analytics' as SidebarTab, l:'Analytics'},
-                  {k:'integrations' as SidebarTab, l:'Integrations'},
-                  {k:'settings' as SidebarTab, l:'Settings'},
-                  {k:'links' as SidebarTab, l:'Links'},
-                ]).map(t=>(
-                  <button key={t.k} onClick={e=>{e.stopPropagation();setSidebarTab(t.k);}}
-                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all ${sidebarTab===t.k?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
-                    {t.l}
-                  </button>
-                ))}
               </div>
-              <button onClick={()=>setSidebarTab('design')} className="w-7 h-7 rounded-full flex items-center justify-center ml-2 flex-shrink-0 transition-colors" style={{background:'rgba(0,0,0,0.06)'}}>
-                <LucideX size={13} color="#555"/>
-              </button>
-            </div>
-            {/* Drawer content */}
-            <div className="flex-1 overflow-y-auto">
-              {sidebarTab==='analytics'&&<AnalyticsPanel businessId={localBusiness?.id??''}/>}
-              {sidebarTab==='integrations'&&<IntegrationsPanel allBlocks={allBlocks} updateBlock={updateBlock} setConfig={setConfig} setGooglePhotos={setGooglePhotos} localBusiness={localBusiness} setLocalBusiness={setLocalBusiness} googleFetchDone={googleFetchDone}/>}
-              {sidebarTab==='settings'&&<SettingsPanel localBusiness={localBusiness} setLocalBusiness={setLocalBusiness} config={config} setConfig={setConfig} allBlocks={allBlocks} updateBlock={updateBlock}/>}
-              {sidebarTab==='links'&&(
-                <div className="px-5 py-6">
-                  <div className="rounded-2xl border border-[#DEDEDC] p-5">
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Your public link</p>
-                    {business?.slug?(
-                      <div className="flex items-center gap-3">
-                        <code className="text-[13px] font-semibold text-[#111] bg-[#EEEEEC] px-3 py-2 rounded-xl flex-1 truncate">
-                          openstatus.co/{business.slug}
-                        </code>
-                        <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                          className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors whitespace-nowrap">
-                          Open ↗
-                        </a>
+            )}
+
+            {/* ══ DESIGN (blocks + style) ══ */}
+            {sidebarTab==='design'&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
+                {/* Block edit panel — slides in when a block is open */}
+                {showEditPanel&&openBlock?(
+                  <BlockEditPanel
+                    block={openBlock} config={config}
+                    onUpdateBlock={u=>updateBlock(openBlock.id,u)}
+                    onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
+                    onClose={()=>setOpenId(null)}
+                  />
+                ):(
+                  <>
+                    <div className="mb-7">
+                      <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Design</h2>
+                      <p className="text-[#858585] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
+                    </div>
+
+                    {/* Google Business fetch */}
+                    <div className="mb-6 rounded-2xl border border-[#DEDEDC] bg-[#F7F7F5] p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                        <p className="text-[12px] font-bold text-[#0A0A0A]">Google Business</p>
+                        {googleFetchDone&&<span className="ml-auto text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">✓ Imported</span>}
                       </div>
-                    ):(
-                      <p className="text-[13px] text-[#858585]">No link set yet.</p>
-                    )}
+                      <p className="text-[11px] text-[#858585] mb-3">Paste your Google Maps URL to auto-fill your rating, review count, and location block.</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||''}
+                          onChange={e=>{setGoogleFetchUrl(e.target.value);setGoogleFetchDone(false);setGoogleFetchError('');}}
+                          placeholder="https://maps.google.com/maps/place/..."
+                          className="flex-1 rounded-xl border border-[#DEDEDC] bg-white px-3 py-2 text-[12px] outline-none focus:border-[#0A0A0A] transition-colors"
+                        />
+                        <button
+                          disabled={!googleFetchUrl&&!allBlocks.find(b=>b.id==='location')?.googleUrl||googleFetching}
+                          onClick={async()=>{
+                            const url=googleFetchUrl||allBlocks.find(b=>b.id==='location')?.googleUrl||'';
+                            if(!url)return;
+                            setGoogleFetching(true);setGoogleFetchError('');setGoogleFetchDone(false);
+                            try{
+                              const r=await fetch(`/api/google/rating?url=${encodeURIComponent(url)}`);
+                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string;address?:string;phone?:string;website?:string;weeklyHours?:WeeklyHours;photoUrl?:string;photos?:string[];lat?:number;lng?:number;reviews?:Array<{author:string;rating:number;text:string;time:string}>};
+                              if(!r.ok||d.error)throw new Error(d.error??'Failed');
+                              updateBlock('location',{googleUrl:url,reviewStars:d.rating,reviewCount:d.reviewCount,sub:d.address??d.name??allBlocks.find(b=>b.id==='location')?.sub??'',...(d.lat!==undefined?{lat:d.lat,lng:d.lng}:{}),...(d.reviews?{reviews:d.reviews}:{}),...(d.photoUrl?{coverPhoto:d.photoUrl}:{})});
+                              if(d.weeklyHours) setConfig(c=>({...c,weeklyHours:d.weeklyHours as WeeklyHours}));
+                              if(d.photoUrl) setConfig(c=>({...c,bgImage:d.photoUrl}));
+                              if(d.photos?.length) setGooglePhotos(d.photos);
+                              if(d.phone&&allBlocks.find(b=>b.id==='call')) updateBlock('call',{url:'tel:'+d.phone,on:true});
+                              if(d.website&&allBlocks.find(b=>b.id==='website')) updateBlock('website',{url:d.website,on:true});
+                              setGoogleFetchDone(true);
+                            }catch(e){setGoogleFetchError(e instanceof Error?e.message:'Could not fetch');}
+                            finally{setGoogleFetching(false);}
+                          }}
+                          className="flex-shrink-0 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold px-4 py-2 hover:bg-[#292929] transition-colors disabled:opacity-40"
+                        >{googleFetching?'Fetching…':'Fetch'}</button>
+                      </div>
+                      {googleFetchError&&<p className="text-[11px] text-red-500 mt-2">{googleFetchError}</p>}
+                    </div>
+
+                    {/* Active blocks */}
+                    <div className="rounded-2xl border border-[#DEDEDC] overflow-hidden mb-1">
+                      {activeBlocks.length===0&&(
+                        <div className="px-4 py-8 text-center text-[13px] text-[#858585]">No blocks yet — hit + Add block below.</div>
+                      )}
+                      {activeBlocks.map((block,i)=>(
+                        <div key={block.id}
+                          data-tut={i===0&&block.id==='hours'?'tut-hours':undefined}
+                          className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#F7F7F5]
+                            ${i<activeBlocks.length-1?'border-b border-[#F5F5F5]':''}
+                            ${openId===block.id?'bg-[#F8F8F8]':''}
+                            ${dragOverId===block.id&&dragId!==block.id?'border-l-[3px] border-l-[#0A0A0A]':''}
+                            ${dragId===block.id?'opacity-40':''}
+                          `}
+                          style={{height:68}}
+                          draggable={block.id!=='hours'}
+                          onDragStart={()=>{if(block.id!=='hours')setDragId(block.id);}}
+                          onDragOver={e=>{e.preventDefault();setDragOverId(block.id);}}
+                          onDragLeave={()=>setDragOverId(null)}
+                          onDrop={()=>handleDrop(block.id)}
+                          onDragEnd={()=>{setDragId(null);setDragOverId(null);}}
+                          onClick={()=>setOpenId(block.id)}
+                        >
+                          {block.id!=='hours'
+                            ?<div className="flex-shrink-0 cursor-grab opacity-25 hover:opacity-60 transition-opacity" onClick={e=>e.stopPropagation()}>
+                              <LucideGrip size={14} color="#6B6B6B"/>
+                            </div>
+                            :<div className="w-[14px] flex-shrink-0"/>
+                          }
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#DEDEDC] bg-[#EEEEEC]"
+                            style={block.color?{backgroundColor:`${block.color}12`,borderColor:`${block.color}28`}:{}}>
+                            <BlockIcon id={block.id} size={14} color={block.color??'#0A0A0A'}/>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-[13px] font-semibold text-[#0A0A0A] leading-tight">{block.title}</p>
+                              {block.id==='hours'&&(
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
+                                  {liveStatus==='open'?'● open':'● closed'}
+                                </span>
+                              )}
+                              {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#EEEEEC] text-[#858585] flex-shrink-0">½</span>}
+                            </div>
+                            <p className="text-[12px] text-[#858585] leading-tight mt-0.5 truncate">
+                              {block.id==='hours'?todayLabel:block.sub}
+                            </p>
+                          </div>
+                          <LucideChevronRight size={13} color="#D0D0D0"/>
+                          {block.id!=='hours'&&(
+                            <button
+                              onClick={e=>{e.stopPropagation();updateBlock(block.id,{on:false});}}
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-[#C0C0C0] hover:text-[#0A0A0A] hover:bg-[#F0F0F0] transition-all flex-shrink-0"
+                              title="Remove block">
+                              <LucideX size={11} color="currentColor"/>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <button data-tut="tut-add" onClick={()=>setShowPicker(true)}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#858585] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-all group mb-10">
+                      <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
+                        <span className="text-[14px] leading-none">+</span>
+                      </div>
+                      <span className="text-[13px] font-medium">Add block</span>
+                    </button>
+
+                    {/* Style: logo + background + socials */}
+                    <div className="space-y-8 border-t border-[#F0F0F0] pt-8">
+                      <div>
+                        <p className="text-[14px] font-bold text-[#0A0A0A] mb-1">Style</p>
+                        <p className="text-[#858585] text-[13px] mb-5">Logo, page color, and social links.</p>
+                        {/* Logo upload */}
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
+                        <div className="flex items-center gap-4 mb-3">
+                          {localBusiness?.avatar_url
+                            ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                                className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
+                            :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+                          }
+                          <div className="flex-1 min-w-0">
+                            <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
+                              <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                                const file=e.target.files?.[0];if(!file)return;
+                                setLogoUploading(true);setLogoUploadError('');
+                                try{
+                                  const ref=await uploadAsset(file,'avatar');
+                                  if(localBusiness?.id){
+                                    await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                                    setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                                  }
+                                }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                                finally{setLogoUploading(false);e.target.value='';}
+                              }}/>
+                              <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
+                                <LucideImage size={13} color="#6B6B6B"/>
+                                {logoUploading?'Uploading…':'Upload logo'}
+                              </span>
+                            </label>
+                            {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
+                          </div>
+                        </div>
+                        {googlePhotos.length>0&&(
+                          <div className="mb-4">
+                            <p className="text-[10px] text-[#858585] mb-2">Or pick a Google Business photo as your logo:</p>
+                            <div className="flex gap-2 flex-wrap">
+                              {googlePhotos.map((url,i)=>(
+                                <button key={i} onClick={async()=>{
+                                  if(!localBusiness?.id){setLogoUploadError('No business found');return;}
+                                  setLogoUploading(true);setLogoUploadError('');
+                                  try{
+                                    const blob=await fetch(url).then(r=>r.blob());
+                                    const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
+                                    const ref=await uploadAsset(file,'avatar');
+                                    await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                                    setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                                  }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
+                                  finally{setLogoUploading(false);}
+                                }}
+                                className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#DEDEDC] hover:border-[#0A0A0A]`}
+                                title={`Use Google photo ${i+1}`}>
+                                  <img src={url} className="w-full h-full object-cover" alt=""/>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Page color</p>
+                        <div className="grid grid-cols-5 gap-3 mb-4">
+                          {BG_PRESETS.map(c=>(
+                            <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
+                              className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
+                              style={{background:c,borderColor:config.bg===c?'#0A0A0A':'#DEDEDC'}}/>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg border border-[#DEDEDC]" style={{background:config.bg}}/>
+                          <input value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
+                            placeholder="#ffffff or gradient"
+                            className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                        </div>
+                      </div>
+
+
+                      {/* Background photo */}
+                      <div>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Background photo</p>
+                        {config.bgImage&&(
+                          <div className="relative mb-3 rounded-xl overflow-hidden">
+                            <img src={config.bgImage} className="w-full h-20 object-cover" alt="Background"/>
+                            <button onClick={()=>setConfig(c=>({...c,bgImage:undefined}))}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
+                              <LucideX size={10} color="white"/>
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
+                            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                              const file=e.target.files?.[0];if(!file)return;
+                              setBgUploading(true);setBgUploadError('');
+                              try{
+                                const ref=await uploadAsset(file,'header');
+                                const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:ref;
+                                setConfig(c=>({...c,bgImage:bgUrl}));
+                                if(localBusiness?.id)await supabase.from('businesses').update({header_url:ref}).eq('id',localBusiness.id);
+                              }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+                              finally{setBgUploading(false);e.target.value='';}
+                            }}/>
+                            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors">
+                              <LucideImage size={13} color="#6B6B6B"/>
+                              {bgUploading?'Uploading…':'Upload photo'}
+                            </span>
+                          </label>
+                          {googlePhotos.map((url,i)=>(
+                            <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+                              className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}
+                              title={`Google photo ${i+1}`}>
+                              <img src={url} className="w-full h-full object-cover" alt=""/>
+                            </button>
+                          ))}
+                        </div>
+                        {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
+                        {googlePhotos.length>0&&<p className="text-[10px] text-[#858585] mt-1.5">Tap a thumbnail to use your Google Business photo.</p>}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Social profiles</p>
+                        <div className="space-y-2.5">
+                          {SOCIAL_PLATFORMS.map(({key,label})=>(
+                            <div key={key} className="flex items-center gap-3">
+                              <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
+                              <input value={config.socials[key]??''} onChange={e=>setConfig(c=>({...c,socials:{...c.socials,[key]:e.target.value}}))}
+                                placeholder={`${label} URL…`}
+                                className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ BUSINESS INFO ══ */}
+            {sidebarTab==='business'&&(
+              <div className="px-8 py-8 max-w-[600px]">
+                <div className="mb-7">
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Business Info</h2>
+                  <p className="text-[#858585] text-[13px] mt-1">Your name, location, and category.</p>
+                </div>
+                <div className="rounded-2xl border border-[#DEDEDC] p-5 space-y-4 bg-white">
+                  <div>
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Business name</p>
+                    <p className="text-[15px] font-semibold text-[#111]">{business?.name??'—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Category</p>
+                    <p className="text-[15px] font-semibold text-[#111]">{business?.category??'Not set'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Description</p>
+                    <p className="text-[13px] text-[#6B6B6B] leading-relaxed">{business?.tagline??'No description yet.'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Location</p>
+                    <div className="flex items-center gap-3">
+                      <input value={config.location??''} onChange={e=>setConfig(c=>({...c,location:e.target.value}))}
+                        placeholder="e.g. 123 Main St, Austin TX"
+                        className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                    </div>
                   </div>
                 </div>
+                {/* Logo upload */}
+                <div className="mt-5">
+                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
+                  <div className="flex items-center gap-4 mb-3">
+                    {localBusiness?.avatar_url
+                      ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                          className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
+                      :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
+                        <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                          const file=e.target.files?.[0];if(!file)return;
+                          setLogoUploading(true);setLogoUploadError('');
+                          try{
+                            const ref=await uploadAsset(file,'avatar');
+                            if(localBusiness?.id){
+                              await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                              setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                            }
+                          }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                          finally{setLogoUploading(false);e.target.value='';}
+                        }}/>
+                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
+                          {logoUploading?'Uploading…':'Upload logo'}
+                        </span>
+                      </label>
+                      {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
+                    </div>
+                  </div>
+                  {googlePhotos.length>0&&(
+                    <div className="mb-3">
+                      <p className="text-[10px] text-[#858585] mb-2">Or use a Google Business photo as your logo:</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {googlePhotos.map((url,i)=>(
+                          <button key={i} onClick={async()=>{
+                            if(!localBusiness?.id){setLogoUploadError('No business found');return;}
+                            setLogoUploading(true);setLogoUploadError('');
+                            try{
+                              const blob=await fetch(url).then(r=>r.blob());
+                              const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
+                              const ref=await uploadAsset(file,'avatar');
+                              await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                              setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                            }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
+                            finally{setLogoUploading(false);}
+                          }}
+                          className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#DEDEDC] hover:border-[#0A0A0A]`}
+                          title={`Use Google photo ${i+1}`}>
+                            <img src={url} className="w-full h-full object-cover" alt=""/>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-[12px] text-[#858585]">
+                    To edit your name or category, <a href="/setup?step=1" className="font-semibold text-[#111] underline underline-offset-2">go to Settings →</a>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ══ LINKS ══ */}
+            {sidebarTab==='links'&&(
+              <div className="px-8 py-8 max-w-[600px]">
+                <div className="mb-7">
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Links</h2>
+                  <p className="text-[#858585] text-[13px] mt-1">Your public OpenStatus link.</p>
+                </div>
+                <div className="rounded-2xl border border-[#DEDEDC] p-5 bg-white">
+                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Your link</p>
+                  {business?.slug?(
+                    <div className="flex items-center gap-3">
+                      <code className="text-[14px] font-semibold text-[#111] bg-[#EEEEEC] px-3 py-2 rounded-xl flex-1">
+                        openstatus.co/{business.slug}
+                      </code>
+                      <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors whitespace-nowrap">
+                        Open ↗
+                      </a>
+                    </div>
+                  ):(
+                    <p className="text-[13px] text-[#858585]">No link set yet.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ══ OTHER TABS — placeholder ══ */}
+            {(sidebarTab==='integrations'||sidebarTab==='analytics'||sidebarTab==='settings')&&(
+              <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
+                <div className="w-14 h-14 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-5">
+                  {sidebarTab==='integrations'?<IconPuzzle size={22} color="#C0C0C0"/>
+                  :sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
+                  :<IconSettings size={22} color="#C0C0C0"/>}
+                </div>
+                <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">{sidebarLabel}</p>
+                <p className="text-[13px] text-[#858585] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
+              </div>
+            )}
+          </div>
+
+          {/* ── RIGHT PREVIEW PANEL (desktop only) ── */}
+          {/* Drag-to-resize handle */}
+          <div
+            onMouseDown={onResizeStart}
+            className="hidden md:flex w-1.5 flex-shrink-0 cursor-col-resize hover:bg-white/10 active:bg-white/20 transition-colors border-l border-[#DEDEDC] group"
+            title="Drag to resize preview"
+          >
+            <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-0.5 h-10 rounded-full bg-white/30" />
+            </div>
+          </div>
+          <div className="hidden md:flex flex-shrink-0 flex-col bg-[#F7F7F5]" style={{width:previewWidth}}>
+            {/* Toggle bar */}
+            <div className="h-14 border-b border-black/6 flex items-center justify-between px-4 flex-shrink-0 bg-white/80 backdrop-blur-sm">
+              <div className="flex items-center gap-0.5 bg-black/5 rounded-full p-0.5">
+                <button onClick={()=>setPreviewMode('mobile')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='mobile'?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
+                  <IconSmartphone size={11}/> Mobile
+                </button>
+                <button onClick={()=>setPreviewMode('desktop')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='desktop'?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
+                  <IconMonitor size={11}/> Desktop
+                </button>
+              </div>
+              {business?.slug&&(
+                <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                  className="text-[11px] text-[#858585] hover:text-[#111] transition-colors font-medium whitespace-nowrap">
+                  Open ↗
+                </a>
+              )}
+            </div>
+            {/* Phone / Desktop preview */}
+            <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-6 overflow-y-auto">
+              {previewMode==='desktop'?(
+                <div className="w-full h-full flex flex-col">
+                  {/* Browser chrome */}
+                  <div className="flex-shrink-0 bg-[#F0F0F0] border-b border-[#DEDEDE] px-3 py-2 flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-[#FF5F57]"/>
+                      <div className="w-3 h-3 rounded-full bg-[#FFBD2E]"/>
+                      <div className="w-3 h-3 rounded-full bg-[#28CA41]"/>
+                    </div>
+                    <div className="flex-1 bg-white rounded-md px-3 py-1 text-[11px] text-[#888] font-medium border border-[#DEDEDE] truncate">
+                      openstatus.co/{business?.slug||'your-page'}
+                    </div>
+                  </div>
+                  {/* Live desktop preview */}
+                  <div className="flex-1 overflow-y-auto">
+                    <LiveDesktopPreview business={localBusiness} config={config}/>
+                  </div>
+                </div>
+              ):(
+                <LivePhonePreview
+                  business={localBusiness} config={config}
+                  selectedId={openId}
+                  onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
+                />
               )}
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* ── BLOCK EDIT SHEET ── */}
-      {openId&&openBlock&&(
-        <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={()=>setOpenId(null)}>
-          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.28)',backdropFilter:'blur(3px)',WebkitBackdropFilter:'blur(3px)'}}/>
-          <div className="relative bg-white rounded-t-3xl flex flex-col shadow-2xl" style={{maxHeight:'88vh'}} onClick={e=>e.stopPropagation()}>
-            <div className="flex-shrink-0 pt-3 pb-1 flex justify-center">
-              <div className="w-10 h-1.5 rounded-full" style={{background:'rgba(0,0,0,0.15)'}}/>
-            </div>
-            <div className="overflow-y-auto flex-1">
-              <BlockEditPanel
-                block={openBlock} config={config}
-                onUpdateBlock={u=>updateBlock(openBlock.id,u)}
-                onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
-                onClose={()=>setOpenId(null)}
-                businessId={localBusiness?.id}
-                uploadFile={localBusiness?.id ? async(file)=>{
-                  const ref=await uploadAsset(file,'header');
-                  return `/api/assets?businessId=${localBusiness.id}&kind=header`;
-                } : undefined}
-              />
-            </div>
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-black/6 flex items-stretch"
+        style={{ paddingBottom:'env(safe-area-inset-bottom)' }}>
+        {SIDEBAR_NAV.slice(0,4).map(({key,label,icon})=>(
+          <button key={key} onClick={()=>setSidebarTab(key)}
+            className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
+              sidebarTab===key ? 'text-[#0A0A0A]' : 'text-[#B0B0B0]'
+            }`}>
+            <span className={`transition-all ${sidebarTab===key?'scale-110':''}`}
+              style={{color:sidebarTab===key?'#0A0A0A':'#C0C0C0'}}>
+              {icon}
+            </span>
+            <span className={`text-[9px] font-semibold leading-none ${sidebarTab===key?'text-[#0A0A0A]':'text-[#C0C0C0]'}`}>
+              {label.split(' ')[0]}
+            </span>
+            {sidebarTab===key&&(
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#0A0A0A]"/>
+            )}
+          </button>
+        ))}
+        {/* Preview tab */}
+        <button onClick={()=>setSidebarTab('preview')}
+          className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
+            sidebarTab===('preview') ? 'text-[#0A0A0A]' : 'text-[#B0B0B0]'
+          }`}>
+          <span style={{color:sidebarTab===('preview')?'#0A0A0A':'#C0C0C0'}}>
+            <IconSmartphone size={15}/>
+          </span>
+          <span className={`text-[9px] font-semibold leading-none ${sidebarTab===('preview')?'text-[#0A0A0A]':'text-[#C0C0C0]'}`}>
+            Preview
+          </span>
+          {sidebarTab===('preview')&&(
+            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#0A0A0A]"/>
+          )}
+        </button>
+      </nav>
+
+      {/* ── MOBILE PREVIEW SHEET ── */}
+      {sidebarTab===('preview')&&(
+        <div className="md:hidden fixed inset-0 z-30 bg-[#EEEEEC] overflow-y-auto flex flex-col"
+          style={{ paddingBottom:'calc(56px + env(safe-area-inset-bottom))', paddingTop:'env(safe-area-inset-top)' }}>
+          <div className="flex items-center justify-between px-4 h-14 bg-white border-b border-[#DEDEDC] flex-shrink-0">
+            <span className="text-[13px] font-bold text-[#111]">Preview</span>
+            {business?.slug&&(
+              <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                className="text-[12px] font-semibold text-[#6B6B6B] hover:text-[#111]">
+                Open link ↗
+              </a>
+            )}
+          </div>
+          <div className="flex-1 flex items-start justify-center py-6 px-4">
+            <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
+              onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
           </div>
         </div>
       )}
@@ -3073,56 +2727,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       )}
 
-      {/* ── STORY NUDGE ── */}
-      {showStoryNudge&&(
-        <div
-          className="fixed z-[70] flex flex-col"
-          style={{bottom:'calc(80px + env(safe-area-inset-bottom))',left:'50%',transform:'translateX(-50%)',width:'calc(100% - 32px)',maxWidth:360,animation:'slideUp 0.3s ease-out'}}
-        >
-          <style>{`@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
-          <div className="rounded-2xl overflow-hidden shadow-2xl" style={{background:'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)',padding:2}}>
-            <div className="rounded-[14px] bg-white px-4 py-4">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div>
-                  <p className="text-[14px] font-bold text-[#0A0A0A] leading-snug">Let your followers know 📣</p>
-                  <p className="text-[12px] text-[#6B6B6B] mt-0.5 leading-snug">Your hours just updated — post it on your story so customers are in the loop.</p>
-                </div>
-                <button onClick={()=>setShowStoryNudge(false)} className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 hover:bg-black/5 transition-colors">
-                  <LucideX size={12} color="#999"/>
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                {business?.slug&&(
-                  <button
-                    onClick={()=>{
-                      const url=`https://openstatus.co/${business.slug}`;
-                      const text=`Our hours have been updated! Check out our latest schedule at ${url}`;
-                      if(navigator.share){navigator.share({title:'Our hours updated',text,url}).catch(()=>{});}
-                      else{window.open(`https://www.instagram.com/`,'_blank');}
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[12px] font-bold text-white transition-opacity hover:opacity-90"
-                    style={{background:'linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)'}}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                    Share to Story
-                  </button>
-                )}
-                <button
-                  onClick={()=>{
-                    if(business?.slug) navigator.clipboard?.writeText(`https://openstatus.co/${business.slug}`).catch(()=>{});
-                    setShowStoryNudge(false);
-                  }}
-                  className="px-3 py-2.5 rounded-xl text-[12px] font-semibold text-[#6B6B6B] hover:bg-black/5 transition-colors border border-[#DEDEDC]">
-                  Copy link
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Tutorial overlay */}
       {showTutorial&&!showPicker&&(
-        <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{} if(business?.id){supabase.from('businesses').update({onboarded_at:new Date().toISOString()}).eq('id',business.id).then(()=>{});}}}/>
+        <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{}}}/>
       )}
 
       {/* Block picker overlay */}
