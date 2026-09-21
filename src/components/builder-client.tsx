@@ -3091,7 +3091,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <div className="min-h-full flex items-start justify-center py-6 px-4"
           style={{backgroundImage:'radial-gradient(circle,#C8CBD2 1px,transparent 1px)',backgroundSize:'20px 20px'}}>
           {/* Phone page — no phone frame, just the scrollable content card */}
-          <div className="w-full max-w-[390px] rounded-[32px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+          <div className="w-full rounded-[24px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.16)]"
             onClick={()=>{ if(mobileSheetOpen) setMobileSheetOpen(false); }}>
             <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
               onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');setMobileSheetOpen(true);}}/>
@@ -3103,28 +3103,39 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
         style={{display:isMobile?"flex":"none",bottom:'calc(56px + env(safe-area-inset-bottom))',height:'52vh',transform:mobileSheetOpen?'translateY(0)':'translateY(110%)',transition:'transform 0.3s cubic-bezier(0.32,0.72,0,1)'}}>
 
-        {/* Drag handle — swipe down to close */}
-        <div className="flex-shrink-0 flex justify-center pt-2.5 pb-3 cursor-grab active:cursor-grabbing select-none"
-          onTouchStart={e=>{ sheetDragRef.current={startY:e.touches[0].clientY,open:mobileSheetOpen}; }}
-          onTouchEnd={e=>{
-            if(!sheetDragRef.current)return;
-            const delta=e.changedTouches[0].clientY-sheetDragRef.current.startY;
-            if(delta>30)setMobileSheetOpen(false);
-            sheetDragRef.current=null;
-          }}
-          onMouseDown={e=>{ sheetDragRef.current={startY:e.clientY,open:mobileSheetOpen}; }}
-          onMouseUp={e=>{
-            if(!sheetDragRef.current)return;
-            const delta=e.clientY-sheetDragRef.current.startY;
-            if(delta>44)setMobileSheetOpen(false);
-            sheetDragRef.current=null;
-          }}>
-          <div className="w-10 h-1 rounded-full bg-[#D0D5DD]"/>
-        </div>
+        {/* Close button — tap to dismiss sheet */}
+        <button onClick={()=>setMobileSheetOpen(false)}
+          className="flex-shrink-0 flex items-center justify-center w-full pt-3 pb-2 active:opacity-60"
+          aria-label="Close panel">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F0F2F5]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            <span className="text-[11px] font-semibold text-[#667085]">Close</span>
+          </div>
+        </button>
 
         {/* ── BLOCKS tab content ── */}
         {sidebarTab==='design'&&(
           <div className="flex-1 flex flex-col overflow-hidden">
+            {/* If a block is selected, show its edit panel */}
+            {openId&&openBlock?(
+              <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+                <div className="flex items-center gap-2 pt-1 pb-3 flex-shrink-0">
+                  <button onClick={()=>setOpenId(null)}
+                    className="flex items-center gap-1 text-[12px] font-semibold text-[#667085] hover:text-[#111] transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                  </button>
+                  <span className="text-[14px] font-bold text-[#111]">{openBlock.title||'Edit block'}</span>
+                </div>
+                <BlockEditPanel
+                  block={openBlock} config={config}
+                  onUpdateBlock={u=>updateBlock(openBlock.id,u)}
+                  onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
+                  onClose={()=>setOpenId(null)}
+                />
+              </div>
+            ):(
+            <>
             {/* Header */}
             <div className="flex items-start justify-between px-4 pt-1 pb-2 flex-shrink-0">
               <div>
@@ -3185,6 +3196,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 })()}
               </div>
             </div>
+            </>
+            )}
           </div>
         )}
 
