@@ -1225,14 +1225,17 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
 }
 
 // ── Block edit panel (inline right of blocks, no modal) ───────────────────────
-function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
+function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,businessId }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
   onUpdateConfig:(u:Partial<OpenStatusPageConfig>)=>void;
   onClose:()=>void;
+  businessId?:string;
 }) {
   const hours=config.weeklyHours??DEFAULT_WEEK_HOURS;
   const {status,todayLabel}=getLiveStatus(hours);
+  const [googleSyncing,setGoogleSyncing]=React.useState(false);
+  const [googleSyncMsg,setGoogleSyncMsg]=React.useState<{ok:boolean;text:string}|null>(null);
   function copyMonToWeekdays() {
     const mon=hours.mon;
     onUpdateConfig({ weeklyHours:{ ...hours, tue:{...mon},wed:{...mon},thu:{...mon},fri:{...mon} } });
@@ -1385,6 +1388,41 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* ── Sync to Google Business ── */}
+              <div className="pt-1">
+                <button
+                  onClick={async()=>{
+                    if(!businessId)return;
+                    setGoogleSyncing(true);setGoogleSyncMsg(null);
+                    try{
+                      const{data:s}=await supabase.auth.getSession();
+                      const token=s.session?.access_token;
+                      if(!token){setGoogleSyncMsg({ok:false,text:'Sign in to sync'});return;}
+                      const r=await fetch('/api/google/hours',{
+                        method:'POST',
+                        headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                        body:JSON.stringify({weeklyHours:hours}),
+                      });
+                      const d=await r.json();
+                      if(r.status===202){setGoogleSyncMsg({ok:false,text:d.error??'Pending API approval'});}
+                      else if(r.ok){setGoogleSyncMsg({ok:true,text:'Synced to Google ✓'});}
+                      else{setGoogleSyncMsg({ok:false,text:d.error??'Sync failed'});}
+                    }catch(e){setGoogleSyncMsg({ok:false,text:e instanceof Error?e.message:'Sync failed'});}
+                    finally{setGoogleSyncing(false);}
+                  }}
+                  disabled={googleSyncing||!businessId}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-[#DEDEDC] bg-white py-2.5 text-[13px] font-semibold text-[#0A0A0A] hover:border-[#0A0A0A] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <IconGoogle size={16}/>
+                  {googleSyncing?'Syncing…':'Sync hours to Google Business'}
+                </button>
+                {googleSyncMsg&&(
+                  <p className={`text-[11px] mt-2 text-center ${googleSyncMsg.ok?'text-emerald-600':'text-[#858585]'}`}>
+                    {googleSyncMsg.text}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -2920,6 +2958,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 onUpdateBlock={u=>updateBlock(openBlock.id,u)}
                 onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
                 onClose={()=>setOpenId(null)}
+                businessId={localBusiness?.id}
               />
             </div>
           </div>
