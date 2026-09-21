@@ -39,6 +39,7 @@ export type OpenStatusPageConfig = {
   location?: string;
   tags?: string[];
   weeklyHours?: WeeklyHours;
+  font?: string;
 };
 
 export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
@@ -87,5 +88,6 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
     socials,
     location: typeof raw.location === 'string' ? raw.location : '',
     tags: Array.isArray(raw.tags) ? raw.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 8) : [],
+    font: typeof raw.font === 'string' ? raw.font : undefined,
   };
 }
