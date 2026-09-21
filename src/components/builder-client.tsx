@@ -1675,7 +1675,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings'|'preview';
+type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings'|'preview'|'style';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
@@ -1910,12 +1910,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   }
 
   const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode }[] = [
-    { key:'design',       label:'Design',        icon:<IconPalette size={15}/> },
-    { key:'links',        label:'Links',         icon:<IconLink size={15}/> },
-    { key:'business',     label:'Business Info', icon:<IconBuilding size={15}/> },
-    { key:'hours',        label:'Hours & Status',icon:<LucideClock size={15}/> },
-    { key:'integrations', label:'Integrations',  icon:<IconPuzzle size={15}/> },
-    { key:'analytics',    label:'Analytics',     icon:<IconBarChart size={15}/> },
+    { key:'design',       label:'Blocks',        icon:<IconPalette size={15}/> },
+    { key:'business',     label:'Business',      icon:<IconBuilding size={15}/> },
+    { key:'hours',        label:'Hours',         icon:<LucideClock size={15}/> },
+    { key:'style',        label:'Style',         icon:<svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> },
     { key:'settings',     label:'Settings',      icon:<IconSettings size={15}/> },
   ];
 
@@ -1968,7 +1966,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[#F7F7F5] text-[#0A0A0A]" style={{fontFamily:"'Inter',system-ui,sans-serif"}}>
+    <div className="flex h-[100dvh] overflow-hidden bg-[#F0F2F5] text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>
 
       {/* ── FIRST-RUN BANNER ── */}
       {showFirstRun&&(
@@ -1982,10 +1980,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       )}
 
       {/* ── LEFT SIDEBAR (desktop) ── */}
-      <aside className="hidden md:flex w-[210px] flex-shrink-0 flex-col bg-[#0A0A0A]">
+      <aside className="hidden md:flex w-[220px] flex-shrink-0 flex-col bg-white/80 backdrop-blur border-r border-[#E8EBF0]">
         {/* Wordmark */}
         <div className="px-5 h-14 flex items-center flex-shrink-0">
-          <span className="font-bold text-[17px] tracking-[-0.04em] text-white">OpenStatus</span>
+          <span className="font-bold text-[18px] tracking-[-0.04em] text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
         </div>
         {/* Nav */}
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
@@ -1993,22 +1991,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <button key={key} onClick={()=>setSidebarTab(key)}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
                 sidebarTab===key
-                  ?'bg-white/12 text-white'
-                  :'text-white/55 hover:bg-white/8 hover:text-white'
+                  ?'bg-[#111111] text-white'
+                  :'text-[#667085] hover:bg-[#F4F6FA] hover:text-[#111111]'
               }`}>
-              <span className={sidebarTab===key?'text-white':'text-white/35'}>{icon}</span>
+              <span className={sidebarTab===key?'text-white':'text-[#98A2B3]'}>{icon}</span>
               {label}
             </button>
           ))}
         </nav>
         {/* Bottom CTAs */}
-        <div className="px-4 py-4 border-t border-white/10 space-y-2.5 flex-shrink-0">
-          <button className="w-full text-left text-[11px] font-bold text-white/65 hover:underline leading-snug">
-            Upgrade to unlock<br/>more features →
-          </button>
-          <button className="w-full text-left text-[11px] text-white/40 hover:text-white transition-colors font-medium">
-            Need help?
-          </button>
+        <div className="px-4 py-4 border-t border-[#E8EBF0] flex-shrink-0">
+          <a href="/setup?step=1" className="w-full flex items-center gap-2 text-[11px] font-semibold text-[#98A2B3] hover:text-[#111111] transition-colors">
+            ⚙ Account settings
+          </a>
         </div>
       </aside>
 
@@ -2016,8 +2011,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
 
         {/* ── TOP NAV BAR ── */}
-        <header className="h-14 border-b border-black/6 flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/80 backdrop-blur-sm">
-          <span className="text-[10px] font-bold tracking-[0.18em] text-black/35 uppercase">{sidebarLabel}</span>
+        <header className="h-14 border-b border-[#E8EBF0] flex items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm">
+          <span className="text-[13px] font-semibold text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>{sidebarLabel}</span>
           <div className="flex items-center gap-3">
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
@@ -2050,7 +2045,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <div className="flex-1 flex overflow-hidden">
 
           {/* ── MAIN CONTENT ── */}
-          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white rounded-tl-2xl md:shadow-[-4px_0_0_0_rgba(0,0,0,0.02)]">
+          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white/72 backdrop-blur-md rounded-tl-2xl">
 
             {/* ══ HOURS & STATUS ══ */}
             {sidebarTab==='hours'&&(
@@ -2657,15 +2652,253 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
 
-            {/* ══ OTHER TABS — placeholder ══ */}
-            {(sidebarTab==='analytics'||sidebarTab==='settings')&&(
-              <div className="flex flex-col items-center justify-center h-full py-20 text-center px-8">
-                <div className="w-14 h-14 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-5">
-                  {sidebarTab==='analytics'?<IconBarChart size={22} color="#C0C0C0"/>
-                  :<IconSettings size={22} color="#C0C0C0"/>}
+
+            {/* ══ STYLE ══ */}
+            {sidebarTab==='style'&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
+                <div className="mb-7">
+                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Style</h2>
+                  <p className="text-[#667085] text-[13px] mt-1">Logo, colors, and social links.</p>
                 </div>
-                <p className="text-[16px] font-bold text-[#0A0A0A] mb-2">{sidebarLabel}</p>
-                <p className="text-[13px] text-[#858585] max-w-[280px] leading-relaxed">This section is coming soon. Check back for updates!</p>
+                <div className="space-y-8">
+                  {/* Logo */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Logo</p>
+                    <div className="flex items-center gap-4 mb-3">
+                      {localBusiness?.avatar_url
+                        ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                            className="w-14 h-14 rounded-full object-cover border border-[#E8EBF0] flex-shrink-0" alt="Logo"/>
+                        :<div className="w-14 h-14 rounded-full bg-[#F4F6FA] flex items-center justify-center flex-shrink-0 border border-[#E8EBF0]"><LucideImage size={18} color="#98A2B3"/></div>
+                      }
+                      <div className="flex-1 min-w-0">
+                        <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
+                          <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                            const file=e.target.files?.[0];if(!file)return;
+                            setLogoUploading(true);setLogoUploadError('');
+                            try{
+                              const ref=await uploadAsset(file,'avatar');
+                              if(localBusiness?.id){
+                                await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                                setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                              }
+                            }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                            finally{setLogoUploading(false);e.target.value='';}
+                          }}/>
+                          <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-semibold text-[#111111] hover:bg-[#E8EBF0] transition-colors ${logoUploading?'opacity-60':''}`}>
+                            <LucideImage size={13} color="#667085"/>
+                            {logoUploading?'Uploading…':'Upload logo'}
+                          </span>
+                        </label>
+                        {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
+                      </div>
+                    </div>
+                    {googlePhotos.length>0&&(
+                      <div className="mb-2">
+                        <p className="text-[10px] text-[#98A2B3] mb-2">Or pick from your Google Business photos:</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {googlePhotos.map((url,i)=>(
+                            <button key={i} onClick={async()=>{
+                              if(!localBusiness?.id){setLogoUploadError('No business found');return;}
+                              setLogoUploading(true);setLogoUploadError('');
+                              try{
+                                const blob=await fetch(url).then(r=>r.blob());
+                                const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
+                                const ref=await uploadAsset(file,'avatar');
+                                await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                                setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                              }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
+                              finally{setLogoUploading(false);}
+                            }}
+                            className={`relative w-12 h-12 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#E8EBF0] hover:border-[#111111]`}>
+                              <img src={url} className="w-full h-full object-cover" alt=""/>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Page color */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Page color</p>
+                    <div className="grid grid-cols-5 gap-3 mb-4">
+                      {BG_PRESETS.map(c=>(
+                        <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
+                          className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
+                          style={{background:c,borderColor:config.bg===c?'#111111':'#E8EBF0'}}/>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg border border-[#E8EBF0]" style={{background:config.bg}}/>
+                      <input value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
+                        placeholder="#ffffff or gradient"
+                        className="flex-1 bg-white border border-[#E8EBF0] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#98A2B3] focus:outline-none focus:border-[#111111] transition-colors"/>
+                    </div>
+                  </div>
+                  {/* Background photo */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Background photo</p>
+                    {config.bgImage&&(
+                      <div className="relative mb-3 rounded-xl overflow-hidden">
+                        <img src={config.bgImage} className="w-full h-20 object-cover" alt="Background"/>
+                        <button onClick={()=>setConfig(c=>({...c,bgImage:undefined}))}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
+                          <LucideX size={10} color="white"/>
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
+                        <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                          const file=e.target.files?.[0];if(!file)return;
+                          setBgUploading(true);setBgUploadError('');
+                          try{
+                            const ref=await uploadAsset(file,'header');
+                            const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:ref;
+                            setConfig(c=>({...c,bgImage:bgUrl}));
+                            if(localBusiness?.id)await supabase.from('businesses').update({header_url:ref}).eq('id',localBusiness.id);
+                          }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+                          finally{setBgUploading(false);e.target.value='';}
+                        }}/>
+                        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-semibold text-[#111111] hover:bg-[#E8EBF0] transition-colors">
+                          <LucideImage size={13} color="#667085"/>
+                          {bgUploading?'Uploading…':'Upload photo'}
+                        </span>
+                      </label>
+                      {googlePhotos.map((url,i)=>(
+                        <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+                          className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#111111]':'border-[#E8EBF0] hover:border-[#111111]'}`}>
+                          <img src={url} className="w-full h-full object-cover" alt=""/>
+                        </button>
+                      ))}
+                    </div>
+                    {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
+                  </div>
+                  {/* Social profiles */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Social profiles</p>
+                    <div className="space-y-2.5">
+                      {SOCIAL_PLATFORMS.map(({key,label})=>(
+                        <div key={key} className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
+                          <input value={config.socials[key]??''} onChange={e=>setConfig(c=>({...c,socials:{...c.socials,[key]:e.target.value}}))}
+                            placeholder={`${label} URL…`}
+                            className="flex-1 bg-white border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111111] placeholder:text-[#98A2B3] focus:outline-none focus:border-[#111111] transition-colors"/>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* ══ SETTINGS (incl. integrations + links) ══ */}
+            {(sidebarTab==='analytics'||sidebarTab==='settings'||sidebarTab==='integrations')&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[600px] space-y-8">
+                <div>
+                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Settings</h2>
+                  <p className="text-[#667085] text-[13px] mt-1">Integrations, your link, and more.</p>
+                </div>
+                {/* Google Business */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Integrations</p>
+                  <div className={`rounded-2xl border p-4 ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E8EBF0] bg-white'}`}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-white border border-[#E8EBF0] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-[13px] font-bold text-[#111111]">Google Business Profile</p>
+                          {googleConnected&&(
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#BBF7D0] text-[#166534] text-[10px] font-bold">
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              Connected
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#667085] mt-0.5 leading-relaxed">
+                          {googleConnected
+                            ? 'Your hours sync to Google automatically when you save.'
+                            : 'Connect to keep your Google listing hours in sync.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-col gap-2">
+                      {googleConnected?(
+                        <>
+                          <button
+                            onClick={async()=>{
+                              setGoogleSyncStatus('syncing');
+                              const {data:{session}}=await supabase.auth.getSession();
+                              if(!session?.access_token){setGoogleSyncStatus({error:'Session expired'});return;}
+                              try{
+                                const r=await fetch('/api/google/hours',{
+                                  method:'POST',
+                                  headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+                                  body:JSON.stringify({weeklyHours:config.weeklyHours??DEFAULT_WEEK_HOURS}),
+                                });
+                                const body=await r.json().catch(()=>({}));
+                                if(r.ok){setGoogleSyncStatus('ok');setTimeout(()=>setGoogleSyncStatus(null),4000);}
+                                else{setGoogleSyncStatus({error:body?.error??`Sync failed (${r.status})`});}
+                              }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
+                            }}
+                            disabled={googleSyncStatus==='syncing'}
+                            className="w-full py-2 rounded-xl bg-[#111111] text-white text-[12px] font-semibold hover:bg-[#333333] disabled:opacity-50 transition-colors"
+                          >
+                            {googleSyncStatus==='syncing'?'Syncing…':'Sync hours to Google now'}
+                          </button>
+                          {googleSyncStatus==='ok'&&(
+                            <p className="text-[11px] text-[#166534] text-center font-medium">✓ Synced to Google</p>
+                          )}
+                          {googleSyncStatus&&typeof googleSyncStatus==='object'&&(
+                            <p className="text-[11px] text-[#C4453F] leading-snug">{googleSyncStatus.error}</p>
+                          )}
+                          <a href="/connect/google" className="inline-flex items-center gap-1.5 text-[11px] text-[#98A2B3] hover:text-[#111111] transition-colors font-medium">
+                            Manage connection ↗
+                          </a>
+                        </>
+                      ):(
+                        <a href="/connect/google"
+                          className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#111111] text-white text-[12px] font-semibold hover:bg-[#333333] transition-colors">
+                          Connect Google Business
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Your link */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Your OpenStatus link</p>
+                  <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white">
+                    {business?.slug?(
+                      <div className="flex items-center gap-3">
+                        <code className="text-[13px] font-semibold text-[#111111] bg-[#F4F6FA] px-3 py-2 rounded-xl flex-1 truncate">
+                          openstatus.co/{business.slug}
+                        </code>
+                        <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                          className="px-4 py-2 rounded-full bg-[#111111] text-white text-[12px] font-bold hover:bg-[#333333] transition-colors whitespace-nowrap">
+                          Open ↗
+                        </a>
+                      </div>
+                    ):(
+                      <p className="text-[13px] text-[#667085]">No link set yet.</p>
+                    )}
+                  </div>
+                </div>
+                {/* Account */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Account</p>
+                  <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
+                    <a href="/setup?step=1" className="flex items-center justify-between text-[13px] font-semibold text-[#111111] hover:text-[#667085] transition-colors">
+                      <span>Business name & category</span>
+                      <LucideChevronRight size={15} color="#98A2B3"/>
+                    </a>
+                    <div className="border-t border-[#F4F6FA]"/>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-semibold text-[#111111]">Analytics</span>
+                      <span className="text-[11px] text-[#98A2B3] bg-[#F4F6FA] px-2 py-1 rounded-full">Coming soon</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             {sidebarTab==='integrations'&&(
@@ -2809,40 +3042,25 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>
 
       {/* ── MOBILE BOTTOM NAV ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-black/6 flex items-stretch"
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-[#E8EBF0] flex items-stretch"
         style={{ paddingBottom:'env(safe-area-inset-bottom)' }}>
-        {SIDEBAR_NAV.slice(0,4).map(({key,label,icon})=>(
+        {SIDEBAR_NAV.map(({key,label,icon})=>(
           <button key={key} onClick={()=>setSidebarTab(key)}
             className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
-              sidebarTab===key ? 'text-[#0A0A0A]' : 'text-[#B0B0B0]'
+              sidebarTab===key ? 'text-[#111111]' : 'text-[#98A2B3]'
             }`}>
             <span className={`transition-all ${sidebarTab===key?'scale-110':''}`}
-              style={{color:sidebarTab===key?'#0A0A0A':'#C0C0C0'}}>
+              style={{color:sidebarTab===key?'#111111':'#98A2B3'}}>
               {icon}
             </span>
-            <span className={`text-[9px] font-semibold leading-none ${sidebarTab===key?'text-[#0A0A0A]':'text-[#C0C0C0]'}`}>
+            <span className={`text-[9px] font-semibold leading-none ${sidebarTab===key?'text-[#111111]':'text-[#98A2B3]'}`}>
               {label.split(' ')[0]}
             </span>
             {sidebarTab===key&&(
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#0A0A0A]"/>
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#111111]"/>
             )}
           </button>
         ))}
-        {/* Preview tab */}
-        <button onClick={()=>setSidebarTab('preview')}
-          className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors ${
-            sidebarTab===('preview') ? 'text-[#0A0A0A]' : 'text-[#B0B0B0]'
-          }`}>
-          <span style={{color:sidebarTab===('preview')?'#0A0A0A':'#C0C0C0'}}>
-            <IconSmartphone size={15}/>
-          </span>
-          <span className={`text-[9px] font-semibold leading-none ${sidebarTab===('preview')?'text-[#0A0A0A]':'text-[#C0C0C0]'}`}>
-            Preview
-          </span>
-          {sidebarTab===('preview')&&(
-            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#0A0A0A]"/>
-          )}
-        </button>
       </nav>
 
       {/* ── MOBILE PREVIEW SHEET ── */}
