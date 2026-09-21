@@ -1678,6 +1678,42 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
 type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'|'settings'|'preview';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
+// ── Google Business hours sync card ────────────────────────────────────────────
+function GoogleHoursSync({initialPlaceId,onSync}:{initialPlaceId:string;onSync:(hours:WeeklyHours,pid:string)=>void}){
+  const [placeInput,setPlaceInput]=useState(initialPlaceId??'');
+  const [syncing,setSyncing]=useState(false);
+  const [syncMsg,setSyncMsg]=useState('');
+  async function syncFromGoogle(){
+    const raw=placeInput.trim();
+    if(!raw){setSyncMsg('Enter a Place ID or Google Maps URL');return;}
+    const match=raw.match(/place_id=([^&]+)/)||raw.match(/ChIJ[A-Za-z0-9_-]+/);
+    const pid=match?match[match.length===2?1:0]:raw;
+    setSyncing(true);setSyncMsg('');
+    try{
+      const r=await fetch(`/api/google-place?placeId=${encodeURIComponent(pid)}`);
+      const d=await r.json() as {weeklyHours?:WeeklyHours;error?:string};
+      if(d.error){setSyncMsg('Error: '+d.error);return;}
+      if(d.weeklyHours){onSync(d.weeklyHours,pid);setSyncMsg('✓ Hours synced from Google!');}
+      else{setSyncMsg('No hours found for that place.');}
+    }catch(e){setSyncMsg('Failed to reach API.');}
+    finally{setSyncing(false);}
+  }
+  return(
+    <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>
+        <p className="text-[13px] font-bold text-[#0A0A0A]">Sync from Google Business</p>
+      </div>
+      <p className="text-[11px] text-[#858585]">Paste your Place ID (starts with ChIJ…) or a Google Maps link to pull in your hours automatically.</p>
+      <div className="flex gap-2">
+        <input value={placeInput} onChange={e=>setPlaceInput(e.target.value)} placeholder="ChIJ... or Google Maps URL" className="flex-1 text-[12px] border border-[#DEDEDC] rounded-xl px-3 py-2 outline-none focus:border-[#0A0A0A] bg-[#FAFAFA]"/>
+        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#333] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
+      </div>
+      {syncMsg&&<p className={`text-[11px] font-medium ${syncMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{syncMsg}</p>}
+    </div>
+  );
+}
+
 // ── main export ────────────────────────────────────────────────────────────────
 export default function BuilderClient({ business,initialConfig,isFirstRun=false,onboardedAt }: {
   business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null;
@@ -1976,53 +2012,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {hoursSubTab==='regular'&&(
                   <div className="space-y-8">
                     {/* ── Google Business sync ── */}
-                    {(()=>{
-                      const [placeInput,setPlaceInput]=React.useState(config.placeId??'');
-                      const [syncing,setSyncing]=React.useState(false);
-                      const [syncMsg,setSyncMsg]=React.useState('');
-                      async function syncFromGoogle(){
-                        const raw=placeInput.trim();
-                        if(!raw){setSyncMsg('Enter a Place ID or Google Maps URL');return;}
-                        // Extract Place ID from URL if pasted
-                        const match=raw.match(/place_id=([^&]+)/)||raw.match(/ChIJ[A-Za-z0-9_-]+/);
-                        const pid=match?match[match.length===2?1:0]:raw;
-                        setSyncing(true);setSyncMsg('');
-                        try{
-                          const r=await fetch(`/api/google-place?placeId=${encodeURIComponent(pid)}`);
-                          const d=await r.json() as {weeklyHours?:WeeklyHours;error?:string};
-                          if(d.error){setSyncMsg('Error: '+d.error);return;}
-                          if(d.weeklyHours){
-                            setConfig(c=>({...c,weeklyHours:d.weeklyHours as WeeklyHours,placeId:pid}));
-                            setSyncMsg('✓ Hours synced from Google!');
-                          } else {setSyncMsg('No hours found for that place.');}
-                        }catch(e){setSyncMsg('Failed to reach API.');}
-                        finally{setSyncing(false);}
-                      }
-                      return(
-                        <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>
-                            <p className="text-[13px] font-bold text-[#0A0A0A]">Sync from Google Business</p>
-                          </div>
-                          <p className="text-[11px] text-[#858585]">Paste your Place ID (starts with ChIJ…) or a Google Maps link to pull in your hours automatically.</p>
-                          <div className="flex gap-2">
-                            <input
-                              value={placeInput}
-                              onChange={e=>setPlaceInput(e.target.value)}
-                              placeholder="ChIJ... or Google Maps URL"
-                              className="flex-1 text-[12px] border border-[#DEDEDC] rounded-xl px-3 py-2 outline-none focus:border-[#0A0A0A] bg-[#FAFAFA]"
-                            />
-                            <button
-                              onClick={syncFromGoogle}
-                              disabled={syncing}
-                              className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#333] transition-colors">
-                              {syncing?'Syncing…':'Sync hours'}
-                            </button>
-                          </div>
-                          {syncMsg&&<p className={`text-[11px] font-medium ${syncMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{syncMsg}</p>}
-                        </div>
-                      );
-                    })()}
+                    <GoogleHoursSync
+                      initialPlaceId={config.placeId??''}
+                      onSync={(hours,pid)=>setConfig(c=>({...c,weeklyHours:hours,placeId:pid}))}
+                    />
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-[14px] font-bold text-[#0A0A0A]">Weekly hours</p>
