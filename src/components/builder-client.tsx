@@ -2092,15 +2092,26 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <div>
                       <p className="text-[14px] font-bold text-[#0A0A0A] mb-4">Quick Actions</p>
                       <div className="grid grid-cols-2 gap-3">
+                        {/* Open today — only show if today is marked closed */}
+                        {hours[(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()]]?.closed&&(
+                          <button onClick={()=>{setQuickAction('open-today');setQuickMsg('');}}
+                            className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] hover:border-[#166534] hover:bg-[#DCFCE7] transition-all text-left col-span-2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <div>
+                              <p className="text-[13px] font-bold text-[#166534]">Open Today</p>
+                              <p className="text-[11px] text-[#4ade80] mt-0.5 leading-snug" style={{color:'#15803d'}}>Restore your regular hours for today</p>
+                            </div>
+                          </button>
+                        )}
                         {[
-                          {key:'close-early',  emoji:'⏰', label:'Close Early',       desc:'Close before your regular time today'},
-                          {key:'close-today',  emoji:'🔒', label:'Close Today',       desc:'Mark as fully closed for the day'},
-                          {key:'special-hours',emoji:'📅', label:'Add Special Hours', desc:'Holiday, event, or seasonal hours'},
-                          {key:'out-of-office',emoji:'✈️', label:'Out of Office',     desc:'Set away dates and a message'},
-                        ].map(({key,emoji,label,desc})=>(
+                          {key:'close-early',  icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, label:'Close Early',       desc:'Close before your regular time today'},
+                          {key:'close-today',  icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, label:'Close Today',       desc:'Mark as fully closed for the day'},
+                          {key:'special-hours',icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label:'Add Special Hours', desc:'Holiday, event, or seasonal hours'},
+                          {key:'out-of-office',icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>, label:'Out of Office',     desc:'Set away dates and a message'},
+                        ].map(({key,icon,label,desc})=>(
                           <button key={key} onClick={()=>{setQuickAction(key);setQuickMsg('');setCloseEarlyTime('15:00');}}
                             className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all text-left group">
-                            <span className="text-[22px] leading-none">{emoji}</span>
+                            <span className="text-[#858585] group-hover:text-[#0A0A0A] transition-colors">{icon}</span>
                             <div>
                               <p className="text-[13px] font-bold text-[#111]">{label}</p>
                               <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">{desc}</p>
@@ -2160,7 +2171,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           disabled={statusPosting}
                           className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#EF4444] hover:bg-red-50/60 transition-all text-left group disabled:opacity-40"
                         >
-                          <span className="text-[22px] leading-none">🔒</span>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-[#858585] group-hover:text-[#EF4444] transition-colors"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                           <div>
                             <p className="text-[13px] font-bold text-[#111]">Closed today</p>
                             <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">Mark as fully closed all day</p>
@@ -2168,7 +2179,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         </button>
                         {/* Close early */}
                         <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                          <span className="text-[22px] leading-none">⏰</span>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                           <p className="text-[13px] font-bold text-[#111]">Close early at</p>
                           <div className="flex items-center gap-2">
                             <div className="relative flex-1">
@@ -2195,7 +2206,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       {/* Custom note */}
                       <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white space-y-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-[20px] leading-none">💬</span>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                           <p className="text-[13px] font-bold text-[#111]">Leave a note</p>
                         </div>
                         <textarea
@@ -2806,6 +2817,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <p className="text-[15px] font-bold text-[#111]">
                 {quickAction==='close-early'?'Close Early'
                 :quickAction==='close-today'?'Close Today'
+                :quickAction==='open-today'?'Open Today'
                 :quickAction==='special-hours'?'Special Hours'
                 :'Out of Office'}
               </p>
@@ -2842,6 +2854,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <p className="text-[13px] font-semibold text-[#92400E]">This will mark you as closed for the entire day, overriding your regular hours.</p>
                 </div>
               )}
+              {quickAction==='open-today'&&(
+                <div className="rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3">
+                  <p className="text-[13px] font-semibold text-[#166534]">This will restore your regular hours for today and mark you as open.</p>
+                </div>
+              )}
               {(quickAction==='special-hours'||quickAction==='out-of-office')&&(
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <p className="text-[13px] text-[#858585]">Coming soon!</p>
@@ -2862,6 +2879,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     updatedHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],close:closeEarlyTime}};
                   } else if(quickAction==='close-today'){
                     updatedHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],closed:true}};
+                  } else if(quickAction==='open-today'){
+                    // Restore regular hours — use default 9-5 if no previous hours set
+                    updatedHours={...(hours??DEFAULT_WEEK_HOURS),[todayKey]:{...hours[todayKey],closed:false}};
                   }
                   setQuickAction(null);
                   if(!updatedHours) return;
@@ -2887,7 +2907,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   }
                 }}
                 className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-white text-[13px] font-bold hover:bg-[#292929] transition-colors">
-                {googleConnected?'Update & Sync to Google':'Update Hours'}
+                {quickAction==='open-today'?'Open & Sync to Google'
+                :googleConnected?'Update & Sync to Google'
+                :'Update Hours'}
               </button>
             </div>
           </div>
