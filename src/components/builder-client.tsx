@@ -1677,7 +1677,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'photos';
+type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'photos'|'links'|'analytics'|'integrations';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
@@ -3057,8 +3057,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            ══════════════════════════════════════════════════════════ */}
 
       {/* Mobile dark top bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D] flex items-center justify-between px-4 gap-3" style={{display:isMobile?"flex":"none"}}
-        style={{height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)'}}>
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D] flex items-center justify-between px-4 gap-3"
+        style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)'}}>
         <span className="text-white font-bold text-[17px] tracking-[-0.03em]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
         <div className="flex items-center gap-2">
           {business?.slug&&(
@@ -3076,8 +3076,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>
 
       {/* Mobile canvas — phone IS the editing surface, Canva-style */}
-      <div className="fixed left-0 right-0 bg-[#ECEEF2] overflow-y-auto" style={{display:isMobile?"block":"none"}}
+      <div className="fixed left-0 right-0 bg-[#ECEEF2] overflow-y-auto"
         style={{
+          display:isMobile?"block":"none",
           top:'calc(52px + env(safe-area-inset-top))',
           bottom: mobileSheetOpen
             ? 'calc(52vh + 56px + env(safe-area-inset-bottom))'
@@ -3097,8 +3098,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>
 
       {/* Mobile bottom sheet */}
-      <div className="fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden" style={{display:isMobile?"flex":"none"}}
-        style={{bottom:'calc(56px + env(safe-area-inset-bottom))',height:'48vh'}}>
+      <div className="fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
+        style={{display:isMobile?"flex":"none",bottom:'calc(56px + env(safe-area-inset-bottom))',height:'48vh'}}>
 
         {/* Drag handle */}
         <div className="flex-shrink-0 flex justify-center pt-2.5 pb-1">
@@ -3381,8 +3382,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>{/* end bottom sheet */}
 
       {/* ── MOBILE BOTTOM NAV ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch" style={{display:isMobile?"flex":"none"}}
-        style={{ paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))' }}>
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch"
+        style={{display:isMobile?"flex":"none", paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))' }}>
         {SIDEBAR_NAV.map(({key,label,icon})=>(
           <button key={key} onClick={()=>setSidebarTab(key)}
             className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors`}>
