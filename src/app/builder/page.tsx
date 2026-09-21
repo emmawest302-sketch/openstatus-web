@@ -64,6 +64,7 @@ function BuilderPageInner() {
   const [loadError, setLoadError] = useState('');
   const [business, setBusiness] = useState<BusinessData | null>(null);
   const [initialConfig, setInitialConfig] = useState<OpenStatusPageConfig | null>(null);
+  const [googleConnected, setGoogleConnected] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -73,7 +74,7 @@ function BuilderPageInner() {
 
       const { data: biz, error: bizError } = await supabase
         .from('businesses')
-        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, onboarded_at')
+        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, onboarded_at, google_location_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -121,6 +122,7 @@ function BuilderPageInner() {
         }
       }
 
+      setGoogleConnected(!!biz.google_location_id);
       setBusiness({ ...biz, slug: biz.slug ?? '', _businessId: biz.id, onboarded_at: biz.onboarded_at ?? null });
       setInitialConfig(config);
       setReady(true);
@@ -140,7 +142,7 @@ function BuilderPageInner() {
 
   if (!ready) return <LoadingScreen />;
 
-  return <BuilderClient business={business} initialConfig={initialConfig!} isFirstRun={isNew} onboardedAt={business?.onboarded_at ?? null} />;
+  return <BuilderClient business={business} initialConfig={initialConfig!} isFirstRun={isNew} onboardedAt={business?.onboarded_at ?? null} googleConnected={googleConnected} />;
 }
 
 export default function BuilderPage() {

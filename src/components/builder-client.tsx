@@ -1679,10 +1679,37 @@ type SidebarTab = 'design'|'links'|'business'|'hours'|'integrations'|'analytics'
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
-function GoogleHoursSync({initialPlaceId,onSync}:{initialPlaceId:string;onSync:(hours:WeeklyHours,pid:string)=>void}){
+function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:{
+  initialPlaceId:string;
+  googleConnected:boolean;
+  onSync:(hours:WeeklyHours,pid:string)=>void;
+  getWeeklyHours:()=>WeeklyHours|undefined;
+}){
   const [placeInput,setPlaceInput]=useState(initialPlaceId??'');
   const [syncing,setSyncing]=useState(false);
   const [syncMsg,setSyncMsg]=useState('');
+  const [pushing,setPushing]=useState(false);
+  const [pushMsg,setPushMsg]=useState('');
+
+  async function pushToGoogle(){
+    const hours=getWeeklyHours();
+    if(!hours){setPushMsg('Save your hours first.');return;}
+    setPushing(true);setPushMsg('');
+    try{
+      const {supabase:sb}=await import('@/lib/supabase');
+      const {data:{session}}=await sb.auth.getSession();
+      if(!session?.access_token){setPushMsg('Sign in again to push to Google.');return;}
+      const r=await fetch('/api/google/hours',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+        body:JSON.stringify({weeklyHours:hours}),
+      });
+      const d=await r.json() as {ok?:boolean;error?:string};
+      if(d.ok){setPushMsg('✓ Hours updated on Google!');}
+      else{setPushMsg('Error: '+(d.error??'Unknown error'));}
+    }catch(e){setPushMsg('Failed to reach API.');}
+    finally{setPushing(false);}
+  }
   async function syncFromGoogle(){
     const raw=placeInput.trim();
     if(!raw){setSyncMsg('Enter a Place ID or Google Maps URL');return;}
@@ -1710,13 +1737,29 @@ function GoogleHoursSync({initialPlaceId,onSync}:{initialPlaceId:string;onSync:(
         <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#333] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
       </div>
       {syncMsg&&<p className={`text-[11px] font-medium ${syncMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{syncMsg}</p>}
+      <div className="border-t border-[#EBEBEB] pt-3 mt-1">
+        {googleConnected?(
+          <div className="space-y-2">
+            <button onClick={pushToGoogle} disabled={pushing} className="w-full px-4 py-2 rounded-xl border border-[#0A0A0A] text-[#0A0A0A] text-[12px] font-semibold disabled:opacity-50 hover:bg-[#F5F5F5] transition-colors flex items-center justify-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12l8-8 8 8M12 4v16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              {pushing?'Pushing…':'Push hours to Google'}
+            </button>
+            {pushMsg&&<p className={`text-[11px] font-medium ${pushMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{pushMsg}</p>}
+          </div>
+        ):(
+          <a href="/connect/google" className="flex items-center gap-1.5 text-[12px] text-[#4285F4] font-medium hover:underline">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+            Connect Google Business to push hours
+          </a>
+        )}
+      </div>
     </div>
   );
 }
 
 // ── main export ────────────────────────────────────────────────────────────────
-export default function BuilderClient({ business,initialConfig,isFirstRun=false,onboardedAt }: {
-  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null;
+export default function BuilderClient({ business,initialConfig,isFirstRun=false,onboardedAt,googleConnected=false }: {
+  business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null; googleConnected?:boolean;
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('design');
@@ -2014,7 +2057,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {/* ── Google Business sync ── */}
                     <GoogleHoursSync
                       initialPlaceId={config.placeId??''}
+                      googleConnected={googleConnected}
                       onSync={(hours,pid)=>setConfig(c=>({...c,weeklyHours:hours,placeId:pid}))}
+                      getWeeklyHours={()=>config.weeklyHours}
                     />
                     <div>
                       <div className="flex items-center justify-between mb-3">
