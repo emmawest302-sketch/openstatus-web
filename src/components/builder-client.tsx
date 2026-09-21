@@ -3065,7 +3065,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <div className="flex items-center gap-2">
           {business?.slug&&(
             <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-              className="px-3 py-1 rounded-full border border-white/25 text-white text-[12px] font-semibold flex items-center gap-1">
+              className="px-3 py-1 rounded-full border border-white/25 text-white text-[12px] font-semibold flex items-center gap-1" style={{color:"white"}}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               Preview
             </a>
@@ -3109,7 +3109,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           onTouchEnd={e=>{
             if(!sheetDragRef.current)return;
             const delta=e.changedTouches[0].clientY-sheetDragRef.current.startY;
-            if(delta>44)setMobileSheetOpen(false);
+            if(delta>30)setMobileSheetOpen(false);
             sheetDragRef.current=null;
           }}
           onMouseDown={e=>{ sheetDragRef.current={startY:e.clientY,open:mobileSheetOpen}; }}
@@ -3401,7 +3401,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch"
         style={{display:isMobile?"flex":"none", paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))' }}>
         {SIDEBAR_NAV.map(({key,label,icon})=>(
-          <button key={key} onClick={()=>setSidebarTab(key)}
+          <button key={key} onClick={()=>{if(sidebarTab===key&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab(key);setMobileSheetOpen(true);}}}
             className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors`}>
             {/* Active tab background bubble */}
             {sidebarTab===key&&(
