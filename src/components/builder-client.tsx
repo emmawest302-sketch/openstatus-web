@@ -2096,10 +2096,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         {hours[(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()]]?.closed&&(
                           <button onClick={()=>{setQuickAction('open-today');setQuickMsg('');}}
                             className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] hover:border-[#166534] hover:bg-[#DCFCE7] transition-all text-left col-span-2">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <div className="flex items-center justify-between w-full">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                              {googleConnected&&<span className="flex items-center gap-1 text-[10px] font-semibold text-[#4285F4]"><svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>Syncs to Google</span>}
+                            </div>
                             <div>
                               <p className="text-[13px] font-bold text-[#166534]">Open Today</p>
-                              <p className="text-[11px] text-[#4ade80] mt-0.5 leading-snug" style={{color:'#15803d'}}>Restore your regular hours for today</p>
+                              <p className="text-[11px] mt-0.5 leading-snug" style={{color:'#15803d'}}>Restore your regular hours for today</p>
                             </div>
                           </button>
                         )}
@@ -2111,7 +2114,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         ].map(({key,icon,label,desc})=>(
                           <button key={key} onClick={()=>{setQuickAction(key);setQuickMsg('');setCloseEarlyTime('15:00');}}
                             className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all text-left group">
-                            <span className="text-[#858585] group-hover:text-[#0A0A0A] transition-colors">{icon}</span>
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-[#858585] group-hover:text-[#0A0A0A] transition-colors">{icon}</span>
+                              {googleConnected&&(key==='close-early'||key==='close-today')&&(
+                                <span className="flex items-center gap-1 text-[10px] font-semibold text-[#4285F4]">
+                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>
+                                  Syncs to Google
+                                </span>
+                              )}
+                            </div>
                             <div>
                               <p className="text-[13px] font-bold text-[#111]">{label}</p>
                               <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">{desc}</p>
