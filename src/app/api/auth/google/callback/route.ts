@@ -8,7 +8,7 @@ function redirectUri(): string {
 }
 
 function back(req: NextRequest, params: Record<string, string>) {
-  const url = new URL('/dashboard', req.nextUrl.origin);
+  const url = new URL('/connect/google', req.nextUrl.origin);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = NextResponse.redirect(url);
   res.cookies.delete('os_google_state');
