@@ -1795,8 +1795,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [googleFetchDone,setGoogleFetchDone]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
   const [mobileBlockCat,setMobileBlockCat]=useState<string>('All');
-  const [mobileSheetOpen,setMobileSheetOpen]=useState<boolean>(true);
+  const [mobileSheetOpen,setMobileSheetOpen]=useState<boolean>(false);
   const [isMobile,setIsMobile]=useState<boolean>(false);
+  const sheetDragRef=useRef<{startY:number,open:boolean}|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   const [previewWidth,setPreviewWidth]=useState(420);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
@@ -2004,7 +2005,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 sidebarTab===key
                   ?'bg-[#111111] text-white'
                   :'text-[#667085] hover:bg-[#F4F6FA] hover:text-[#111111]'
-              }`}>
+              }`}
+              style={{color:sidebarTab===key?'#ffffff':undefined}}>
               <span className={sidebarTab===key?'text-white':'text-[#98A2B3]'}>{icon}</span>
               {label}
             </button>
@@ -3101,9 +3103,23 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
         style={{display:isMobile?"flex":"none",bottom:'calc(56px + env(safe-area-inset-bottom))',height:'48vh'}}>
 
-        {/* Drag handle */}
-        <div className="flex-shrink-0 flex justify-center pt-2.5 pb-1">
-          <div className="w-10 h-1 rounded-full bg-[#E2E8F0]"/>
+        {/* Drag handle — swipe down to close */}
+        <div className="flex-shrink-0 flex justify-center pt-2.5 pb-3 cursor-grab active:cursor-grabbing select-none"
+          onTouchStart={e=>{ sheetDragRef.current={startY:e.touches[0].clientY,open:mobileSheetOpen}; }}
+          onTouchEnd={e=>{
+            if(!sheetDragRef.current)return;
+            const delta=e.changedTouches[0].clientY-sheetDragRef.current.startY;
+            if(delta>44)setMobileSheetOpen(false);
+            sheetDragRef.current=null;
+          }}
+          onMouseDown={e=>{ sheetDragRef.current={startY:e.clientY,open:mobileSheetOpen}; }}
+          onMouseUp={e=>{
+            if(!sheetDragRef.current)return;
+            const delta=e.clientY-sheetDragRef.current.startY;
+            if(delta>44)setMobileSheetOpen(false);
+            sheetDragRef.current=null;
+          }}>
+          <div className="w-10 h-1 rounded-full bg-[#D0D5DD]"/>
         </div>
 
         {/* ── BLOCKS tab content ── */}
