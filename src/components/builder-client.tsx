@@ -1795,6 +1795,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [googleFetchDone,setGoogleFetchDone]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
   const [mobileBlockCat,setMobileBlockCat]=useState<string>('All');
+  const [mobileSheetOpen,setMobileSheetOpen]=useState<boolean>(true);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   const [previewWidth,setPreviewWidth]=useState(420);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
@@ -1991,7 +1992,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {/* Nav */}
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
           {SIDEBAR_NAV.map(({key,label,icon})=>(
-            <button key={key} onClick={()=>setSidebarTab(key)}
+            <button key={key} onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
                 sidebarTab===key
                   ?'bg-[#111111] text-white'
@@ -3049,8 +3050,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            ══════════════════════════════════════════════════════════ */}
 
       {/* Mobile dark top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-[52px] bg-[#0D0D0D] flex items-center justify-between px-4 gap-3"
-        style={{paddingTop:'env(safe-area-inset-top)'}}>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D] flex items-center justify-between px-4 gap-3"
+        style={{height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)'}}>
         <span className="text-white font-bold text-[17px] tracking-[-0.03em]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
         <div className="flex items-center gap-2">
           {business?.slug&&(
@@ -3067,12 +3068,24 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </div>
 
-      {/* Mobile phone preview (always visible behind bottom sheet) */}
-      <div className="md:hidden fixed left-0 right-0 bg-[#F0F2F5] flex items-center justify-center overflow-hidden"
-        style={{top:'calc(52px + env(safe-area-inset-top))',bottom:'calc(48vh + 56px + env(safe-area-inset-bottom))'}}>
-        <div className="transform scale-[0.72] origin-center" style={{marginTop:'-5%'}}>
-          <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
-            onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
+      {/* Mobile canvas — phone IS the editing surface, Canva-style */}
+      <div className="md:hidden fixed left-0 right-0 bg-[#ECEEF2] overflow-y-auto"
+        style={{
+          top:'calc(52px + env(safe-area-inset-top))',
+          bottom: mobileSheetOpen
+            ? 'calc(52vh + 56px + env(safe-area-inset-bottom))'
+            : 'calc(56px + env(safe-area-inset-bottom))',
+          transition:'bottom 0.3s cubic-bezier(0.32,0.72,0,1)',
+        }}>
+        {/* Dotted background like Canva */}
+        <div className="min-h-full flex items-start justify-center py-6 px-4"
+          style={{backgroundImage:'radial-gradient(circle,#C8CBD2 1px,transparent 1px)',backgroundSize:'20px 20px'}}>
+          {/* Phone page — no phone frame, just the scrollable content card */}
+          <div className="w-full max-w-[390px] rounded-[32px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+            onClick={()=>{ if(mobileSheetOpen) setMobileSheetOpen(false); }}>
+            <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
+              onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');setMobileSheetOpen(true);}}/>
+          </div>
         </div>
       </div>
 
