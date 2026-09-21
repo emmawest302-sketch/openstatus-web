@@ -3101,7 +3101,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {/* Mobile bottom sheet */}
       <div className="fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
-        style={{display:isMobile?"flex":"none",bottom:'calc(56px + env(safe-area-inset-bottom))',height:'48vh'}}>
+        style={{display:isMobile?"flex":"none",bottom:'calc(56px + env(safe-area-inset-bottom))',height:'52vh',transform:mobileSheetOpen?'translateY(0)':'translateY(110%)',transition:'transform 0.3s cubic-bezier(0.32,0.72,0,1)'}}>
 
         {/* Drag handle — swipe down to close */}
         <div className="flex-shrink-0 flex justify-center pt-2.5 pb-3 cursor-grab active:cursor-grabbing select-none"
