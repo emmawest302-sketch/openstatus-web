@@ -1982,7 +1982,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {/* ── FIRST-RUN BANNER ── */}
       {showFirstRun&&(
-        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:'#0A0A0A',color:'#F7F7F5',padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+        <div style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:'#0A0A0A',color:'#F7F7F5',padding:'12px 20px',display:isMobile?'none':'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
           <div>
             <span style={{fontSize:10,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.45)'}}>YOUR PAGE IS READY TO BUILD</span>
             <p style={{fontSize:13,marginTop:2,color:'rgba(255,255,255,0.75)'}}>Add your logo, cover photo, and links. You can change anything below.</p>
@@ -3088,7 +3088,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           transition:'bottom 0.3s cubic-bezier(0.32,0.72,0,1)',
         }}>
         {/* Dotted background like Canva */}
-        <div className="min-h-full flex items-start justify-center py-6 px-4"
+        <div className="min-h-full flex items-start justify-center py-3 px-2"
           style={{backgroundImage:'radial-gradient(circle,#C8CBD2 1px,transparent 1px)',backgroundSize:'20px 20px'}}>
           {/* Phone page — no phone frame, just the scrollable content card */}
           <div className="w-full rounded-[24px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.16)]"
@@ -3173,24 +3173,26 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   return DEFAULT_BLOCKS.filter(b=>showIds.includes(b.id)).map(def=>{
                     const isOn = allBlocks.find(b=>b.id===def.id)?.on;
                     return (
-                      <button key={def.id}
-                        onClick={()=>{ if(!isOn) enableBlock(def.id); else { setOpenId(def.id); } }}
+                      <div key={def.id}
                         className="flex items-center gap-2.5 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-left active:bg-[#F0F2F5] transition-colors">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                           style={{backgroundColor:`${def.color}18`,border:`1px solid ${def.color}30`}}>
                           <BlockIcon id={def.id} size={18} color={def.color}/>
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <button className="flex-1 min-w-0 text-left"
+                          onClick={()=>{ if(!isOn){enableBlock(def.id);}else{setOpenId(def.id);} }}>
                           <p className="text-[11px] font-semibold text-[#111] leading-tight truncate">{def.title}</p>
-                          <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{def.sub}</p>
-                        </div>
-                        <div className={`w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0 ${isOn?'bg-[#111] border-[#111]':'border-[#D0D5DD]'}`}>
+                          <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{isOn?'Tap to edit':'Tap to add'}</p>
+                        </button>
+                        <button
+                          onClick={e=>{e.stopPropagation();if(isOn){updateBlock(def.id,{on:false});}else{enableBlock(def.id);}}}
+                          className={`w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${isOn?'bg-[#111] border-[#111]':'border-[#D0D5DD]'}`}>
                           {isOn
                             ?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                             :<span className="text-[14px] leading-none text-[#98A2B3]">+</span>
                           }
-                        </div>
-                      </button>
+                        </button>
+                      </div>
                     );
                   });
                 })()}
