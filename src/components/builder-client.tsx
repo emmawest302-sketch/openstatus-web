@@ -1796,6 +1796,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [dragId,setDragId]=useState<string|null>(null);
   const [mobileBlockCat,setMobileBlockCat]=useState<string>('All');
   const [mobileSheetOpen,setMobileSheetOpen]=useState<boolean>(true);
+  const [isMobile,setIsMobile]=useState<boolean>(false);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   const [previewWidth,setPreviewWidth]=useState(420);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
@@ -1965,6 +1966,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(sidebarTab==='hours'&&hoursSubTab==='status') loadStatusUpdates(); },[sidebarTab,hoursSubTab]);
+  useEffect(()=>{
+    const check=()=>setIsMobile(window.innerWidth<768);
+    check();
+    window.addEventListener('resize',check);
+    return ()=>window.removeEventListener('resize',check);
+  },[]);
 
   const closeEarlyTimes: string[] = [];
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
@@ -1984,7 +1991,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       )}
 
       {/* ── LEFT SIDEBAR (desktop) ── */}
-      <aside className="hidden md:flex w-[220px] flex-shrink-0 flex-col bg-white/80 backdrop-blur border-r border-[#E8EBF0]">
+      <aside className="w-[220px] flex-shrink-0 flex-col bg-white/80 backdrop-blur border-r border-[#E8EBF0]" style={{display:isMobile?"none":"flex"}}>
         {/* Wordmark */}
         <div className="px-5 h-14 flex items-center flex-shrink-0">
           <span className="font-bold text-[18px] tracking-[-0.04em] text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
@@ -2015,7 +2022,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
 
         {/* ── TOP NAV BAR ── */}
-        <header className="hidden md:flex h-14 border-b border-[#E8EBF0] items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm">
+        <header className="h-14 border-b border-[#E8EBF0] items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm" style={{display:isMobile?"none":"flex"}}>
           <span className="text-[13px] font-semibold text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>{sidebarLabel}</span>
           <div className="flex items-center gap-3">
             {business?.slug&&(
@@ -2046,7 +2053,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </header>
 
         {/* ── CONTENT + RIGHT PREVIEW ── */}
-        <div className="hidden md:flex flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden" style={{display:isMobile?"none":"flex"}}>
 
           {/* ── MAIN CONTENT ── */}
           <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white/72 backdrop-blur-md rounded-tl-2xl">
@@ -3050,7 +3057,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            ══════════════════════════════════════════════════════════ */}
 
       {/* Mobile dark top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D] flex items-center justify-between px-4 gap-3"
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D] flex items-center justify-between px-4 gap-3" style={{display:isMobile?"flex":"none"}}
         style={{height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)'}}>
         <span className="text-white font-bold text-[17px] tracking-[-0.03em]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
         <div className="flex items-center gap-2">
@@ -3069,7 +3076,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>
 
       {/* Mobile canvas — phone IS the editing surface, Canva-style */}
-      <div className="md:hidden fixed left-0 right-0 bg-[#ECEEF2] overflow-y-auto"
+      <div className="fixed left-0 right-0 bg-[#ECEEF2] overflow-y-auto" style={{display:isMobile?"block":"none"}}
         style={{
           top:'calc(52px + env(safe-area-inset-top))',
           bottom: mobileSheetOpen
@@ -3090,7 +3097,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>
 
       {/* Mobile bottom sheet */}
-      <div className="md:hidden fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
+      <div className="fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden" style={{display:isMobile?"flex":"none"}}
         style={{bottom:'calc(56px + env(safe-area-inset-bottom))',height:'48vh'}}>
 
         {/* Drag handle */}
@@ -3374,7 +3381,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>{/* end bottom sheet */}
 
       {/* ── MOBILE BOTTOM NAV ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch"
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch" style={{display:isMobile?"flex":"none"}}
         style={{ paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))' }}>
         {SIDEBAR_NAV.map(({key,label,icon})=>(
           <button key={key} onClick={()=>setSidebarTab(key)}
