@@ -6,6 +6,7 @@ import PublishedBusinessBlocks from '@/components/published-business-blocks';
 import PublicSocialLinks from '@/components/public-social-links';
 import PublicRatingRow from '@/components/public-rating-row';
 import AnalyticsTracker from '@/components/analytics-tracker';
+import PublicShareButton from '@/components/public-share-button';
 import PublicLocationBlock from '@/components/public-location-block';
 import { loadPublishedPageConfig } from '@/lib/published-page-config';
 
@@ -191,7 +192,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             <img
               src={coverPhoto}
               alt={`${business.name} cover`}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 60%', display: 'block' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: enrichedConfig.bgImagePosition ?? '50% 60%', display: 'block' }}
             />
             {/* Editorial gradient fade into page bg */}
             <div style={{
@@ -255,6 +256,10 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
               {business.tagline}
             </p>
           )}
+          {/* Share button */}
+          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}>
+            <PublicShareButton businessName={business.name} url={`https://openstatus.co/${slug}`}/>
+          </div>
         </div>
 
         {/* ── Rating row ── */}

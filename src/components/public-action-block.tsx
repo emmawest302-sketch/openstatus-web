@@ -58,8 +58,97 @@ function BlockIcon({ id, color }: { id: string; color: string }) {
 export default function PublicActionBlock({ block, businessId }: Props) {
   const href = safeUrl(block.url);
   const [hovered, setHovered] = useState(false);
+  const hasCoverPhoto = !!block.coverPhoto;
 
-  // Icon: very subtle tint if block has a color, neutral otherwise
+  // ── Photo card (square tile with background image) ──────────────
+  if (hasCoverPhoto) {
+    const photoCard = (
+      <div
+        style={{
+          position: 'relative',
+          aspectRatio: '1 / 1',
+          borderRadius: 18,
+          overflow: 'hidden',
+          boxShadow: hovered
+            ? '0 12px 36px rgba(0,0,0,0.18)'
+            : '0 8px 30px rgba(0,0,0,0.10)',
+          transform: hovered ? 'translateY(-2px) scale(1.01)' : 'translateY(0) scale(1)',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          cursor: href ? 'pointer' : 'default',
+        }}
+      >
+        {/* Background photo */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={block.coverPhoto}
+          alt={block.title || ''}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+          }}
+        />
+        {/* Gradient overlay so text is readable */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 55%, rgba(0,0,0,0) 100%)',
+        }}/>
+        {/* Text at bottom */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          padding: '10px 12px',
+        }}>
+          <div style={{
+            fontSize: 13, fontWeight: 700, color: '#fff',
+            lineHeight: 1.2, letterSpacing: '-0.01em',
+          }}>
+            {block.title}
+          </div>
+          {block.sub && (
+            <div style={{
+              fontSize: 10, color: 'rgba(255,255,255,0.78)',
+              marginTop: 2, lineHeight: 1.3,
+            }}>
+              {block.sub}
+            </div>
+          )}
+        </div>
+        {/* Arrow icon top-right if has link */}
+        {href && (
+          <div style={{
+            position: 'absolute', top: 8, right: 8,
+            width: 24, height: 24, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.22)',
+            backdropFilter: 'blur(8px)',
+            display: 'grid', placeItems: 'center',
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+              stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+        )}
+      </div>
+    );
+
+    if (!href) return photoCard;
+
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        style={{ display: 'block', textDecoration: 'none' }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
+      >
+        {photoCard}
+      </a>
+    );
+  }
+
+  // ── Standard card (no photo) ─────────────────────────────────────
   const iconColor = '#111111';
   const iconBg = 'rgba(0,0,0,0.05)';
 

@@ -34,6 +34,7 @@ export type OpenStatusPageConfig = {
   blocks: OpenStatusBlock[];
   bg: string;
   bgImage?: string;
+  bgImagePosition?: string;
   themeColor?: string;
   socials: OpenStatusSocial[];
   location?: string;
@@ -84,6 +85,7 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
     blocks,
     bg: typeof raw.bg === 'string' ? raw.bg : '#FFFFFF',
     bgImage: typeof raw.bgImage === 'string' ? raw.bgImage : undefined,
+    bgImagePosition: typeof raw.bgImagePosition === 'string' ? raw.bgImagePosition : undefined,
     themeColor: typeof raw.themeColor === 'string' ? raw.themeColor : undefined,
     socials,
     location: typeof raw.location === 'string' ? raw.location : '',

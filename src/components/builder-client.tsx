@@ -25,7 +25,7 @@ interface OpenStatusBlock {
   _googleFetching?: boolean; _googleError?: string;
 }
 export interface OpenStatusPageConfig {
-  blocks: OpenStatusBlock[]; bg: string; bgImage?: string;
+  blocks: OpenStatusBlock[]; bg: string; bgImage?: string; bgImagePosition?: string;
   socials: Record<string, string>;
   location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
   likeCount?: number; dislikeCount?: number;
@@ -149,6 +149,7 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     blocks:       defaultBlocks,
     bg:           typeof r.bg==='string'?r.bg:(isEmpty?'#FFAB40':'#f8f5f0'),
     bgImage:      typeof r.bgImage==='string'?r.bgImage:undefined,
+    bgImagePosition: typeof r.bgImagePosition==='string'?r.bgImagePosition:undefined,
     socials:      (r.socials&&typeof r.socials==='object')?r.socials as Record<string,string>:{},
     location:     typeof r.location==='string'?r.location:undefined,
     tags:         Array.isArray(r.tags)?r.tags as string[]:[],
@@ -792,7 +793,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
         {/* Photo header — constrained 148px, fades into page bg */}
         {config.bgImage && (
           <div style={{ position:'relative', height:148, overflow:'hidden' }}>
-            <img src={config.bgImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%', display:'block' }}/>
+            <img src={config.bgImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:config.bgImagePosition??'center 60%', display:'block' }}/>
             <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${config.bg||'#F7F7F5'} 100%)` }}/>
           </div>
         )}
@@ -1124,7 +1125,7 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
         {/* Cover photo */}
         {coverPhoto ? (
           <div style={{ position:'relative', height:200, overflow:'hidden' }}>
-            <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:'center 60%', display:'block' }}/>
+            <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:config.bgImagePosition??'center 60%', display:'block' }}/>
             <div style={{ position:'absolute', inset:0, background:fadeGradient }}/>
           </div>
         ) : (
@@ -1787,6 +1788,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>(
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'desktop' : 'mobile'
   );
+  const [previewKey,setPreviewKey]=useState(0);
   const [quickAction,setQuickAction]=useState<string|null>(null);
   const [closeEarlyTime,setCloseEarlyTime]=useState('15:00');
   const [quickMsg,setQuickMsg]=useState('');
@@ -1820,6 +1822,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [bgUploading,setBgUploading]=useState(false);
   const [bgUploadError,setBgUploadError]=useState('');
   const [googlePhotos,setGooglePhotos]=useState<string[]>([]);
+  const [analyticsData,setAnalyticsData]=useState<null|{metrics:{views:number;uniqueVisitors:number;directions:number;menu:number;orders:number;clicks:number};topActions:{id:string;count:number}[];trafficSources:{source:string;count:number}[]}>(null);
+  const [analyticsLoading,setAnalyticsLoading]=useState(false);
+  const [analyticsDays,setAnalyticsDays]=useState(30);
   const isResizing=useRef(false);
   const resizeStartX=useRef(0);
   const resizeStartW=useRef(0);
@@ -1934,6 +1939,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
     { key:'photos',   label:'Photos',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
     { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg> },
+    { key:'analytics', label:'Analytics', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg> },
     { key:'settings', label:'Settings', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
   ];
 
@@ -1981,6 +1987,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(sidebarTab==='hours'&&hoursSubTab==='status') loadStatusUpdates(); },[sidebarTab,hoursSubTab]);
+  useEffect(()=>{
+    if(sidebarTab!=='analytics') return;
+    setAnalyticsLoading(true);
+    supabase.auth.getSession().then(async({data:{session}})=>{
+      if(!session?.access_token){setAnalyticsLoading(false);return;}
+      try{
+        const r=await fetch(`/api/analytics?days=${analyticsDays}`,{headers:{Authorization:'Bearer '+session.access_token}});
+        const d=await r.json().catch(()=>({}));
+        if(r.ok) setAnalyticsData(d);
+      }finally{setAnalyticsLoading(false);}
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[sidebarTab,analyticsDays]);
   useEffect(()=>{
     const check=()=>setIsMobile(window.innerWidth<768);
     check();
@@ -2442,7 +2461,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <div className="space-y-8 border-t border-[#F0F0F0] pt-8">
                       <div>
                         <p className="text-[14px] font-bold text-[#0A0A0A] mb-1">Style</p>
-                        <p className="text-[#858585] text-[13px] mb-5">Logo, page color, and social links.</p>
+                        <p className="text-[#858585] text-[13px] mb-5">Logo, page color, and fonts.</p>
                         {/* Logo upload */}
                         <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
                         <div className="flex items-center gap-4 mb-3">
@@ -2519,12 +2538,43 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <div>
                         <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Background photo</p>
                         {config.bgImage&&(
-                          <div className="relative mb-3 rounded-xl overflow-hidden">
-                            <img src={config.bgImage} className="w-full h-20 object-cover" alt="Background"/>
-                            <button onClick={()=>setConfig(c=>({...c,bgImage:undefined}))}
-                              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
-                              <LucideX size={10} color="white"/>
-                            </button>
+                          <div className="mb-3">
+                            {/* Focal point picker — click to set crop position */}
+                            <div className="relative rounded-xl overflow-hidden cursor-crosshair" style={{height:80}}
+                              title="Click to set where to focus the photo"
+                              onClick={(e)=>{
+                                const rect=e.currentTarget.getBoundingClientRect();
+                                const x=Math.round(((e.clientX-rect.left)/rect.width)*100);
+                                const y=Math.round(((e.clientY-rect.top)/rect.height)*100);
+                                setConfig(c=>({...c,bgImagePosition:`${x}% ${y}%`}));
+                              }}
+                            >
+                              <img src={config.bgImage} className="w-full h-full object-cover" alt="Background"
+                                style={{objectPosition:config.bgImagePosition??'center 60%'}}/>
+                              {/* Crosshair dot at focal point */}
+                              {config.bgImagePosition&&(()=>{
+                                const [px,py]=(config.bgImagePosition||'50% 60%').split(' ');
+                                return (
+                                  <div style={{
+                                    position:'absolute',
+                                    left:`calc(${px} - 6px)`,
+                                    top:`calc(${py} - 6px)`,
+                                    width:12,height:12,
+                                    borderRadius:'50%',
+                                    border:'2px solid white',
+                                    background:'rgba(255,255,255,0.6)',
+                                    boxShadow:'0 0 0 1px rgba(0,0,0,0.4)',
+                                    pointerEvents:'none',
+                                  }}/>
+                                );
+                              })()}
+                              {/* Remove button */}
+                              <button onClick={e=>{e.stopPropagation();setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}));}}
+                                className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
+                                <LucideX size={10} color="white"/>
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-[#858585] mt-1.5">Click the photo to set the crop focal point</p>
                           </div>
                         )}
                         <div className="flex items-center gap-2 flex-wrap">
@@ -2555,19 +2605,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         </div>
                         {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
                         {googlePhotos.length>0&&<p className="text-[10px] text-[#858585] mt-1.5">Tap a thumbnail to use your Google Business photo.</p>}
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Social profiles</p>
-                        <div className="space-y-2.5">
-                          {SOCIAL_PLATFORMS.map(({key,label})=>(
-                            <div key={key} className="flex items-center gap-3">
-                              <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
-                              <input value={config.socials[key]??''} onChange={e=>setConfig(c=>({...c,socials:{...c.socials,[key]:e.target.value}}))}
-                                placeholder={`${label} URL…`}
-                                className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </>
@@ -2778,12 +2815,40 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <div>
                     <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Background photo</p>
                     {config.bgImage&&(
-                      <div className="relative mb-3 rounded-xl overflow-hidden">
-                        <img src={config.bgImage} className="w-full h-20 object-cover" alt="Background"/>
-                        <button onClick={()=>setConfig(c=>({...c,bgImage:undefined}))}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
-                          <LucideX size={10} color="white"/>
-                        </button>
+                      <div className="mb-3">
+                        <div className="relative rounded-xl overflow-hidden cursor-crosshair" style={{height:80}}
+                          title="Click to set focal point"
+                          onClick={(e)=>{
+                            const rect=e.currentTarget.getBoundingClientRect();
+                            const x=Math.round(((e.clientX-rect.left)/rect.width)*100);
+                            const y=Math.round(((e.clientY-rect.top)/rect.height)*100);
+                            setConfig(c=>({...c,bgImagePosition:`${x}% ${y}%`}));
+                          }}
+                        >
+                          <img src={config.bgImage} className="w-full h-full object-cover" alt="Background"
+                            style={{objectPosition:config.bgImagePosition??'center 60%'}}/>
+                          {config.bgImagePosition&&(()=>{
+                            const [px,py]=(config.bgImagePosition||'50% 60%').split(' ');
+                            return (
+                              <div style={{
+                                position:'absolute',
+                                left:`calc(${px} - 6px)`,
+                                top:`calc(${py} - 6px)`,
+                                width:12,height:12,
+                                borderRadius:'50%',
+                                border:'2px solid white',
+                                background:'rgba(255,255,255,0.6)',
+                                boxShadow:'0 0 0 1px rgba(0,0,0,0.4)',
+                                pointerEvents:'none',
+                              }}/>
+                            );
+                          })()}
+                          <button onClick={e=>{e.stopPropagation();setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}));}}
+                            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
+                            <LucideX size={10} color="white"/>
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-[#98A2B3] mt-1.5">Tap the photo to set where to crop it</p>
                       </div>
                     )}
                     <div className="flex items-center gap-2 flex-wrap">
@@ -3042,12 +3107,21 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <IconMonitor size={11}/> Desktop
                 </button>
               </div>
-              {business?.slug&&(
-                <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                  className="text-[11px] text-[#858585] hover:text-[#111] transition-colors font-medium whitespace-nowrap">
-                  Open ↗
-                </a>
-              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={()=>setPreviewKey(k=>k+1)}
+                  title="Refresh preview"
+                  className="flex items-center justify-center w-7 h-7 rounded-full bg-black/5 hover:bg-black/10 transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+                {business?.slug&&(
+                  <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+                    className="text-[11px] text-[#858585] hover:text-[#111] transition-colors font-medium whitespace-nowrap">
+                    Open ↗
+                  </a>
+                )}
+              </div>
             </div>
             {/* Phone / Desktop preview */}
             <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-6 overflow-y-auto">
@@ -3066,11 +3140,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                   {/* Live desktop preview */}
                   <div className="flex-1 overflow-y-auto">
-                    <LiveDesktopPreview business={localBusiness} config={config}/>
+                    <LiveDesktopPreview key={previewKey} business={localBusiness} config={config}/>
                   </div>
                 </div>
               ):(
                 <LivePhonePreview
+                  key={previewKey}
                   business={localBusiness} config={config}
                   selectedId={openId}
                   onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
@@ -3116,11 +3191,29 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         }}>
         {/* Dotted background like Canva */}
         <div className="min-h-full flex items-start justify-center py-3 px-2"
-          style={{backgroundImage:'radial-gradient(circle,#C8CBD2 1px,transparent 1px)',backgroundSize:'20px 20px'}}>
+          style={{backgroundImage:'radial-gradient(circle,#C8CBD2 1px,transparent 1px)',backgroundSize:'20px 20px',position:'relative'}}>
+          {/* Refresh button — top right of canvas */}
+          <div style={{position:'absolute',top:12,right:12,zIndex:10}}>
+            <button
+              onClick={e=>{e.stopPropagation();setPreviewKey(k=>k+1);}}
+              title="Refresh preview"
+              style={{
+                display:'flex',alignItems:'center',justifyContent:'center',
+                width:32,height:32,borderRadius:'50%',
+                background:'rgba(255,255,255,0.85)',
+                backdropFilter:'blur(8px)',
+                border:'1px solid rgba(0,0,0,0.08)',
+                boxShadow:'0 2px 8px rgba(0,0,0,0.12)',
+                cursor:'pointer',
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#292929" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+          </div>
           {/* Phone page — no phone frame, just the scrollable content card */}
           <div className="w-full rounded-[24px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.16)]"
             onClick={()=>{ if(mobileSheetOpen) setMobileSheetOpen(false); }}>
-            <LivePhonePreview business={localBusiness} config={config} selectedId={openId}
+            <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
               onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');setMobileSheetOpen(true);}}/>
           </div>
         </div>
@@ -3541,6 +3634,82 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           </div>
         )}
 
+
+        {/* ── ANALYTICS mobile tab ── */}
+        {sidebarTab==='analytics'&&(
+          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+            <div className="flex items-center justify-between pt-1 pb-3">
+              <h2 className="text-[20px] font-bold text-[#111]">Analytics</h2>
+              <div className="flex gap-1.5">
+                {[7,30,90].map(d=>(
+                  <button key={d} onClick={()=>setAnalyticsDays(d)}
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#111] text-white':'bg-[#F4F6FA] text-[#667085]'}`}>
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+            {analyticsLoading&&<div className="text-center py-10 text-[13px] text-[#98A2B3]">Loading…</div>}
+            {!analyticsLoading&&analyticsData&&(
+              <div className="space-y-3">
+                {/* Key metrics */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {[
+                    {label:'Page views',value:analyticsData.metrics.views},
+                    {label:'Unique visitors',value:analyticsData.metrics.uniqueVisitors},
+                    {label:'Block taps',value:analyticsData.metrics.clicks},
+                    {label:'Directions',value:analyticsData.metrics.directions},
+                  ].map(({label,value})=>(
+                    <div key={label} className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
+                      <p className="text-[22px] font-bold text-[#111] leading-none">{value.toLocaleString()}</p>
+                      <p className="text-[10px] text-[#98A2B3] font-medium mt-1">{label}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Top blocks */}
+                {analyticsData.topActions.length>0&&(
+                  <div className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2.5">Top blocks</p>
+                    <div className="space-y-2">
+                      {analyticsData.topActions.slice(0,6).map(({id,count})=>{
+                        const max=analyticsData.topActions[0]?.count||1;
+                        return (
+                          <div key={id} className="flex items-center gap-2">
+                            <span className="text-[12px] text-[#111] font-medium w-20 truncate capitalize">{id}</span>
+                            <div className="flex-1 h-2 bg-[#E8EBF0] rounded-full overflow-hidden">
+                              <div className="h-full bg-[#111] rounded-full" style={{width:`${Math.round(count/max*100)}%`}}/>
+                            </div>
+                            <span className="text-[11px] text-[#667085] w-6 text-right">{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* Traffic sources */}
+                {analyticsData.trafficSources.length>0&&(
+                  <div className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2.5">Traffic sources</p>
+                    <div className="space-y-1.5">
+                      {analyticsData.trafficSources.slice(0,5).map(({source,count})=>(
+                        <div key={source} className="flex items-center justify-between">
+                          <span className="text-[12px] text-[#111] font-medium">{source}</span>
+                          <span className="text-[11px] text-[#667085]">{count} visits</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {!analyticsLoading&&!analyticsData&&(
+              <div className="text-center py-10">
+                <p className="text-[13px] text-[#98A2B3]">No data yet — share your link to start tracking.</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── SETTINGS tab ── */}
         {sidebarTab==='settings'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
@@ -3559,26 +3728,57 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
             {/* Google Business */}
-            {googleConnected&&(
-              <div className="mb-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-                <div className="flex items-center gap-2 mb-1">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                  <p className="text-[12px] font-bold text-[#111]">Google Business Connected</p>
+            <div className={`mb-4 p-4 rounded-2xl border ${googleConnected?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#F9FAFB] border-[#E8EBF0]'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                <p className="text-[12px] font-bold text-[#111]">{googleConnected?'Google Business Connected':'Google Business'}</p>
+                {googleConnected&&<span className="ml-auto text-[10px] font-bold text-[#166534] bg-[#BBF7D0] px-2 py-0.5 rounded-full">Connected</span>}
+              </div>
+              <p className="text-[11px] text-[#667085] mb-2">{googleConnected?'Your hours sync to Google when you save.':'Connect to sync hours to your Google listing.'}</p>
+              {!googleConnected&&(
+                <a href="/connect/google" className="inline-flex items-center justify-center w-full py-2 rounded-xl bg-[#111] text-white text-[12px] font-semibold">
+                  Connect Google Business
+                </a>
+              )}
+            </div>
+            {/* Settings menu */}
+            <div className="space-y-2">
+              <a href="/setup?step=1" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+                <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 </div>
-                <p className="text-[11px] text-[#667085]">Hours sync to your Google profile when you save.</p>
-              </div>
-            )}
-            {/* Account */}
-            <a href="/setup?step=1" className="flex items-center gap-3 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-              <div className="w-10 h-10 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-              </div>
-              <div className="flex-1">
-                <p className="text-[13px] font-semibold text-[#111]">Account Settings</p>
-                <p className="text-[11px] text-[#667085]">Manage your profile and preferences</p>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
+                <span className="text-[13px] font-semibold text-[#111] flex-1">Edit business info</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </a>
+              <a href="/subscription" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+                <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" x2="23" y1="10" y2="10"/></svg>
+                </div>
+                <span className="text-[13px] font-semibold text-[#111] flex-1">Subscription</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </a>
+              <a href="mailto:hello@openstatus.co?subject=Help" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+                <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                </div>
+                <span className="text-[13px] font-semibold text-[#111] flex-1">Help & Support</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </a>
+              <button onClick={async()=>{await supabase.auth.signOut();window.location.href='/login';}}
+                className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] w-full text-left">
+                <div className="w-9 h-9 rounded-xl bg-[#FFF0F0] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E53935" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                </div>
+                <span className="text-[13px] font-semibold text-[#E53935] flex-1">Log out</span>
+              </button>
+              <button onClick={()=>{if(confirm('Delete your account? This cannot be undone.')) window.location.href='/delete-account';}}
+                className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#FFD6D6] bg-[#FFF8F8] w-full text-left">
+                <div className="w-9 h-9 rounded-xl bg-[#FFE8E8] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </div>
+                <span className="text-[13px] font-semibold text-[#B91C1C] flex-1">Delete account</span>
+              </button>
+            </div>
           </div>
         )}
 
