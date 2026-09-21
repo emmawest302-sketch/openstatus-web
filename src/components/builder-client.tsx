@@ -30,6 +30,7 @@ export interface OpenStatusPageConfig {
   location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
   likeCount?: number; dislikeCount?: number;
   themeColor?: string; placeId?: string;
+  font?: string;
 }
 interface Business {
   id: string; name: string; slug: string;
@@ -40,6 +41,18 @@ interface Business {
 const BG_PRESETS = [
   '#ffffff','#1B5E20','#388E3C','#A5D6A7','#FFAB40',
   '#0a0a0a','#FF7043','#f8f5f0','#fafafa','#1c1c1c',
+];
+const FONT_OPTIONS: { label:string; family:string; google?:string }[] = [
+  { label:'Default',          family:'Inter, system-ui, sans-serif' },
+  { label:'Playfair',         family:'"Playfair Display", Georgia, serif',      google:'Playfair+Display:wght@700;800' },
+  { label:'Poppins',          family:'"Poppins", system-ui, sans-serif',        google:'Poppins:wght@700;800' },
+  { label:'DM Serif',         family:'"DM Serif Display", Georgia, serif',      google:'DM+Serif+Display' },
+  { label:'Space Grotesk',    family:'"Space Grotesk", system-ui, sans-serif',  google:'Space+Grotesk:wght@600;700' },
+  { label:'Bebas',            family:'"Bebas Neue", Impact, sans-serif',        google:'Bebas+Neue' },
+  { label:'Cormorant',        family:'"Cormorant Garamond", Georgia, serif',    google:'Cormorant+Garamond:wght@600;700' },
+  { label:'Pacifico',         family:'"Pacifico", cursive',                     google:'Pacifico' },
+  { label:'Oswald',           family:'"Oswald", Impact, sans-serif',            google:'Oswald:wght@600;700' },
+  { label:'Lobster',          family:'"Lobster", cursive',                      google:'Lobster' },
 ];
 const BLOCK_COLORS = ['#1B5E20','#388E3C','#FF7043','#FFAB40','#A5D6A7','#0a0a0a','#2563eb','#dc2626'];
 const ORDER_PROVIDERS = [
@@ -144,6 +157,7 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     dislikeCount: typeof r.dislikeCount==='number'?r.dislikeCount:0,
     themeColor:   typeof r.themeColor==='string'?r.themeColor:undefined,
     placeId:      typeof r.placeId==='string'?r.placeId:undefined,
+    font:         typeof r.font==='string'?r.font:undefined,
   };
 }
 
@@ -791,7 +805,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
               {(business?.name??'B').slice(0,1).toUpperCase()}
             </div>
           }
-          <p className={`font-bold text-[13px] ${tx}`}>{business?.name??'Your Business'}</p>
+          <p className={`font-bold text-[13px] ${tx}`} style={{fontFamily:config.font??'Inter, system-ui, sans-serif'}}>{business?.name??'Your Business'}</p>
           {config.location && <p className={`text-[9px] truncate px-2 mt-0.5 ${sx}`}>{config.location}</p>}
           <div className="flex items-center justify-center gap-3 mt-2">
             {reviewPct && (
@@ -1130,7 +1144,7 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
 
         {/* Business name */}
         <div style={{ textAlign:'center', padding:'8px 20px 4px' }}>
-          <h1 style={{ fontSize:32, fontWeight:800, letterSpacing:'-0.03em', color:tx, lineHeight:1, margin:0, fontFamily:'Georgia, "Times New Roman", serif' }}>
+          <h1 style={{ fontSize:32, fontWeight:800, letterSpacing:'-0.03em', color:tx, lineHeight:1, margin:0, fontFamily:config.font??'Georgia, "Times New Roman", serif' }}>
             {business?.name ?? 'Your Business'}
           </h1>
           {business?.tagline && (
@@ -1973,6 +1987,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     window.addEventListener('resize',check);
     return ()=>window.removeEventListener('resize',check);
   },[]);
+
+  // Load Google Font whenever selected font changes
+  useEffect(()=>{
+    const opt = FONT_OPTIONS.find(f=>f.family===config.font);
+    if(!opt?.google) return;
+    const id = `gfont-${opt.google}`;
+    if(document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${opt.google}&display=swap`;
+    document.head.appendChild(link);
+  },[config.font]);
 
   const closeEarlyTimes: string[] = [];
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
@@ -3462,6 +3489,24 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {sidebarTab==='style'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
             <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Style</h2>
+
+            {/* Font picker */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Business Name Font</p>
+            <div className="grid grid-cols-2 gap-2 mb-5">
+              {FONT_OPTIONS.map(opt=>{
+                const isActive = (config.font??FONT_OPTIONS[0].family)===opt.family;
+                return (
+                  <button key={opt.family}
+                    onClick={()=>setConfig(c=>({...c,font:opt.family}))}
+                    className={`flex flex-col items-start px-3 py-2.5 rounded-2xl border transition-all text-left active:scale-95 ${isActive?'border-[#111] bg-[#111]':'border-[#E8EBF0] bg-[#F9FAFB]'}`}>
+                    <span className={`text-[16px] leading-tight ${isActive?'text-white':'text-[#111]'}`}
+                      style={{fontFamily:opt.family}}>Aa</span>
+                    <span className={`text-[10px] font-semibold mt-0.5 ${isActive?'text-white/70':'text-[#98A2B3]'}`}>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Page color */}
             <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Page Color</p>
             <div className="flex items-center gap-2 mb-4">

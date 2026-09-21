@@ -161,6 +161,23 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   } as React.CSSProperties;
 
   return (
+    <>
+      {enrichedConfig.font && (() => {
+        const GOOGLE_FONTS: Record<string,string> = {
+          '"Playfair Display", Georgia, serif':      'Playfair+Display:wght@700;800',
+          '"Poppins", system-ui, sans-serif':        'Poppins:wght@700;800',
+          '"DM Serif Display", Georgia, serif':      'DM+Serif+Display',
+          '"Space Grotesk", system-ui, sans-serif':  'Space+Grotesk:wght@600;700',
+          '"Bebas Neue", Impact, sans-serif':        'Bebas+Neue',
+          '"Cormorant Garamond", Georgia, serif':    'Cormorant+Garamond:wght@600;700',
+          '"Pacifico", cursive':                     'Pacifico',
+          '"Oswald", Impact, sans-serif':            'Oswald:wght@600;700',
+          '"Lobster", cursive':                      'Lobster',
+        };
+        const gf = GOOGLE_FONTS[enrichedConfig.font ?? ''];
+        if (!gf) return null;
+        return <link rel="stylesheet" href={`https://fonts.googleapis.com/css2?family=${gf}&display=swap`}/>;
+      })()}
     <div style={{ minHeight: '100dvh', background: bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
       <AnalyticsTracker businessId={business.id}/>
 
@@ -169,7 +186,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
         {/* ── Cover photo ── */}
         {coverPhoto ? (
-          <div style={{ position: 'relative', height: 360, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
+          <div style={{ position: 'relative', height: 220, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverPhoto}
@@ -189,7 +206,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         {/* ── Logo ── */}
         <div style={{
           display: 'flex', justifyContent: 'center',
-          marginTop: coverPhoto ? -64 : 0,
+          marginTop: coverPhoto ? -52 : 0,
           position: 'relative', zIndex: 10,
         }}>
           {avatar ? (
@@ -226,7 +243,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           <h1 style={{
             fontSize: 48, fontWeight: 800, letterSpacing: '-0.035em',
             color: '#151515', lineHeight: 1, margin: 0,
-            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontFamily: enrichedConfig.font ?? 'Georgia, "Times New Roman", serif',
           }}>
             {business.name}
           </h1>
@@ -362,5 +379,6 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
       <OwnerQuickStatus businessId={business.id} businessName={business.name}/>
     </div>
+    </>
   );
 }
