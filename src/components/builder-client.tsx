@@ -1780,7 +1780,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt);
-  const [sidebarTab,setSidebarTab]=useState<SidebarTab>(isFirstRun?'hours':'design');
+  const [sidebarTab,setSidebarTab]=useState<SidebarTab>(isFirstRun?'business':'design');
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('regular');
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>(
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'desktop' : 'mobile'
