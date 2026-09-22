@@ -1975,7 +1975,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
     { key:'photos',   label:'Photos',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
     { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg> },
-    { key:'analytics', label:'Analytics', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg> },
+
     { key:'settings', label:'Settings', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
   ];
 
@@ -2645,6 +2645,55 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <p className="text-[13px] text-[#98A2B3]">Loading analytics…</p>
                   </div>
                 )}
+                {/* ── Live page link ── */}
+                {localBusiness?.slug&&(
+                  <div className="mb-5 flex items-center gap-3 p-4 rounded-2xl border border-[#DEDEDC] bg-[#F9FAFB]">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider mb-0.5">Your page</p>
+                      <p className="text-[13px] font-semibold text-[#111] truncate">forothers.co/{localBusiness.slug}</p>
+                    </div>
+                    <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      View
+                    </a>
+                  </div>
+                )}
+                {/* ── Google connect ── */}
+                {!googleConnected&&(
+                  <div className="mb-5 p-4 rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB]">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-full bg-white border border-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                        <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#111]">Connect Google Business</p>
+                        <p className="text-[11px] text-[#98A2B3]">Sync your hours, photos & reviews</p>
+                      </div>
+                    </div>
+                    <a href="/connect/google"
+                      className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
+                      Connect Google
+                    </a>
+                  </div>
+                )}
+                {/* ── Quick tips ── */}
+                <div className="mb-5">
+                  <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider mb-3">Quick tips</p>
+                  <div className="space-y-2">
+                    {[
+                      {icon:'🕐', tip:'Set your hours so customers always know when you're open', tab:'hours'},
+                      {icon:'📷', tip:'Add a cover photo to make your page stand out', tab:'photos'},
+                      {icon:'🧱', tip:'Turn on blocks to show your menu, links, and more', tab:'design'},
+                    ].map(({icon,tip,tab})=>(
+                      <button key={tab} onClick={()=>setSidebarTab(tab as SidebarTab)}
+                        className="flex items-start gap-3 w-full p-3 rounded-2xl border border-[#E8EBF0] hover:border-[#0A0A0A] hover:bg-[#F9FAFB] transition-all text-left">
+                        <span className="text-[18px] leading-none mt-0.5">{icon}</span>
+                        <p className="text-[12px] text-[#667085] leading-relaxed">{tip}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="mb-7">
                   <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Business Info</h2>
                   <p className="text-[#858585] text-[13px] mt-1">Your name, location, and category.</p>
@@ -2734,6 +2783,94 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
 
             {/* ══ LINKS ══ */}
+            {sidebarTab==='photos'&&(
+              <div className="px-8 py-8 max-w-[600px]">
+                <div className="mb-7">
+                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Photos</h2>
+                  <p className="text-[#858585] text-[13px] mt-1">Upload photos for your page header and logo.</p>
+                </div>
+                {/* Logo */}
+                <div className="mb-5">
+                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
+                  <div className="flex items-center gap-4">
+                    {localBusiness?.avatar_url
+                      ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                          className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
+                      :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+                    }
+                    <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
+                      <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                        const file=e.target.files?.[0];if(!file)return;
+                        setLogoUploading(true);setLogoUploadError('');
+                        try{
+                          const ref=await uploadAsset(file,'avatar');
+                          if(localBusiness?.id){
+                            await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                            setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                          }
+                        }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                        finally{setLogoUploading(false);e.target.value='';}
+                      }}/>
+                      <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
+                        {logoUploading?'Uploading…':'Upload logo'}
+                      </span>
+                    </label>
+                  </div>
+                  {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
+                </div>
+                {/* Cover photo */}
+                <div className="mb-5">
+                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Cover Photo</p>
+                  {config.bgImage&&(
+                    <div className="relative mb-3 rounded-2xl overflow-hidden border border-[#DEDEDC]" style={{height:140}}>
+                      <img src={config.bgImage.startsWith('storage:')&&localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:config.bgImage}
+                        className="w-full h-full object-cover" alt="Cover"/>
+                      <button onClick={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
+                        className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
+                        <LucideX size={12} color="white"/>
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
+                      <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                        const file=e.target.files?.[0];if(!file)return;
+                        setBgUploading(true);setBgUploadError('');
+                        try{
+                          const ref=await uploadAsset(file,'header');
+                          const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
+                          setConfig(c=>({...c,bgImage:bgUrl}));
+                        }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+                        finally{setBgUploading(false);e.target.value='';}
+                      }}/>
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-semibold text-[#111] hover:bg-[#E8EBF0] transition-colors">
+                        <LucideImage size={13} color="#667085"/>
+                        {bgUploading?'Uploading…':'Upload cover photo'}
+                      </span>
+                    </label>
+                    {googlePhotos.map((url,i)=>(
+                      <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+                        className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#111111]':'border-[#E8EBF0] hover:border-[#111111]'}`}>
+                        <img src={url} className="w-full h-full object-cover" alt=""/>
+                      </button>
+                    ))}
+                  </div>
+                  {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
+                </div>
+                {/* Google connect on business page only */}
+                {!googleConnected&&(
+                  <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB]">
+                    <p className="text-[12px] font-semibold text-[#111] mb-1">Connect Google Business</p>
+                    <p className="text-[11px] text-[#98A2B3] mb-3">Import your Google photos automatically</p>
+                    <a href="/connect/google"
+                      className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
+                      Connect Google Business
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
             {sidebarTab==='links'&&(
               <div className="px-8 py-8 max-w-[600px]">
                 <div className="mb-7">
@@ -3099,6 +3236,23 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
           </div>
 
+          {/* ── Right: Phone Preview ── */}
+          {!['hours','settings','integrations'].includes(sidebarTab)&&(
+            <div className="w-[340px] flex-shrink-0 flex flex-col items-center justify-start pt-8 pb-6 border-l border-[#E8EBF0] bg-[#F7F7F5] overflow-y-auto gap-4" style={{scrollbarWidth:'none'}}>
+              <p className="text-[10px] font-bold text-[#98A2B3] uppercase tracking-wider">Live Preview</p>
+              <div className="rounded-[28px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.14)]" style={{width:280}}>
+                <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
+                  onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
+              </div>
+              {localBusiness?.slug&&(
+                <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-[#667085] hover:text-[#111] transition-colors underline underline-offset-2">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  View live page
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
