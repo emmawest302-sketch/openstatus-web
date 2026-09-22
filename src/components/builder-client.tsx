@@ -2125,9 +2125,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 View your link <span className="text-[#858585]">↗</span>
               </a>
             )}
-            <button className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E0E0E0] text-[12px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
-              <IconEye size={13} color="currentColor"/> Preview
-            </button>
+
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
                 className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':hasPublished?'bg-[#E8EBF0] text-[#667085] hover:bg-[#DEDEDC]':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
@@ -2140,9 +2138,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <p className="text-[10px] text-[#C4453F] max-w-[160px] text-right leading-tight" title={googleSyncStatus.error}>Google sync failed — check Integrations tab</p>
               )}
             </div>
-            <div className="w-8 h-8 rounded-full bg-white/30 flex items-center justify-center text-[#111] text-[12px] font-bold flex-shrink-0 cursor-pointer select-none">
-              {(business?.name??'E').charAt(0).toUpperCase()}
-            </div>
+
           </div>
         </header>
 
@@ -3066,76 +3062,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
           </div>
 
-          {/* ── RIGHT PREVIEW PANEL (desktop only) ── */}
-          {/* Drag-to-resize handle */}
-          <div
-            onMouseDown={onResizeStart}
-            className="hidden md:flex w-1.5 flex-shrink-0 cursor-col-resize hover:bg-white/10 active:bg-white/20 transition-colors border-l border-[#DEDEDC] group"
-            title="Drag to resize preview"
-          >
-            <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="w-0.5 h-10 rounded-full bg-white/30" />
-            </div>
-          </div>
-          <div className="hidden md:flex flex-shrink-0 flex-col bg-[#F7F7F5]" style={{width:previewWidth}}>
-            {/* Toggle bar */}
-            <div className="h-14 border-b border-black/6 flex items-center justify-between px-4 flex-shrink-0 bg-white/80 backdrop-blur-sm">
-              <div className="flex items-center gap-0.5 bg-black/5 rounded-full p-0.5">
-                <button onClick={()=>setPreviewMode('mobile')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='mobile'?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
-                  <IconSmartphone size={11}/> Mobile
-                </button>
-                <button onClick={()=>setPreviewMode('desktop')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${previewMode==='desktop'?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
-                  <IconMonitor size={11}/> Desktop
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={()=>setPreviewKey(k=>k+1)}
-                  title="Refresh preview"
-                  className="flex items-center justify-center w-7 h-7 rounded-full bg-black/5 hover:bg-black/10 transition-colors"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                </button>
-                {business?.slug&&(
-                  <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] text-[#858585] hover:text-[#111] transition-colors font-medium whitespace-nowrap">
-                    Open ↗
-                  </a>
-                )}
-              </div>
-            </div>
-            {/* Phone / Desktop preview */}
-            <div data-tut="tut-preview" className="flex-1 flex items-start justify-center py-6 overflow-y-auto">
-              {previewMode==='desktop'?(
-                <div className="w-full h-full flex flex-col">
-                  {/* Browser chrome */}
-                  <div className="flex-shrink-0 bg-[#F0F0F0] border-b border-[#DEDEDE] px-3 py-2 flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-[#FF5F57]"/>
-                      <div className="w-3 h-3 rounded-full bg-[#FFBD2E]"/>
-                      <div className="w-3 h-3 rounded-full bg-[#28CA41]"/>
-                    </div>
-                    <div className="flex-1 bg-white rounded-md px-3 py-1 text-[11px] text-[#888] font-medium border border-[#DEDEDE] truncate">
-                      openstatus.co/{business?.slug||'your-page'}
-                    </div>
-                  </div>
-                  {/* Live desktop preview */}
-                  <div className="flex-1 overflow-y-auto">
-                    <LiveDesktopPreview key={previewKey} business={localBusiness} config={config}/>
-                  </div>
-                </div>
-              ):(
-                <LivePhonePreview
-                  key={previewKey}
-                  business={localBusiness} config={config}
-                  selectedId={openId}
-                  onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}
-                />
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -3148,13 +3074,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)'}}>
         <span className="text-white font-bold text-[17px] tracking-[-0.03em]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
         <div className="flex items-center gap-2">
-          {business?.slug&&(
-            <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-              className="px-3 py-1 rounded-full border border-white/25 text-white text-[12px] font-semibold flex items-center gap-1" style={{color:"white"}}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Preview
-            </a>
-          )}
+
           <button onClick={save} disabled={saving}
             className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':hasPublished?'bg-white/20 text-white':'bg-white text-[#0D0D0D]'}`}>
             {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
