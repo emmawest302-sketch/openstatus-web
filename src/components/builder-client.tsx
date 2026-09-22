@@ -39,10 +39,36 @@ export interface Business {
 }
 
 // ── constants ──────────────────────────────────────────────────────────────────
-const BG_PRESETS = [
-  '#ffffff','#1B5E20','#388E3C','#A5D6A7','#FFAB40',
-  '#0a0a0a','#FF7043','#f8f5f0','#fafafa','#1c1c1c',
+// Full-spectrum swatch row — the "rainbow palette"
+const BG_RAINBOW = [
+  '#FFFFFF','#F7F7F5','#E7E5E4','#9CA3AF','#3F3F46','#0A0A0A',
+  '#FECACA','#FDBA74','#FDE68A','#BBF7D0','#A5F3FC','#BFDBFE','#DDD6FE','#FBCFE8',
+  '#EF4444','#F97316','#F59E0B','#22C55E','#06B6D4','#3B82F6','#8B5CF6','#EC4899',
 ];
+// Designed backgrounds — any CSS `background` value works, incl. multi-layer
+const BG_DESIGNS: { label:string; css:string }[] = [
+  { label:'Sunset',   css:'linear-gradient(160deg,#FF9A5A 0%,#FF5F6D 55%,#C13584 100%)' },
+  { label:'Peach',    css:'linear-gradient(160deg,#FFE9D6 0%,#FFC3A0 100%)' },
+  { label:'Lagoon',   css:'linear-gradient(160deg,#43C6AC 0%,#191654 100%)' },
+  { label:'Sky',      css:'linear-gradient(160deg,#E3F2FF 0%,#A8D8FF 100%)' },
+  { label:'Mint',     css:'linear-gradient(160deg,#E8F9F1 0%,#B8E9D0 100%)' },
+  { label:'Lilac',    css:'linear-gradient(160deg,#F3E7FF 0%,#C4A5FF 100%)' },
+  { label:'Ember',    css:'linear-gradient(160deg,#2B1B17 0%,#7A2E1E 100%)' },
+  { label:'Midnight', css:'linear-gradient(160deg,#0F172A 0%,#334155 100%)' },
+  { label:'Starry',   css:'radial-gradient(1.5px 1.5px at 12% 18%,#fff,transparent),radial-gradient(1.5px 1.5px at 62% 12%,#fff,transparent),radial-gradient(1.5px 1.5px at 32% 46%,#fff,transparent),radial-gradient(2px 2px at 82% 38%,#fff,transparent),radial-gradient(1.5px 1.5px at 48% 72%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 82%,#fff,transparent),radial-gradient(1.5px 1.5px at 18% 88%,#fff,transparent),linear-gradient(160deg,#0B1026 0%,#1B2455 100%)' },
+  { label:'Confetti', css:'radial-gradient(4px 4px at 20% 25%,#FCA5A5,transparent),radial-gradient(4px 4px at 70% 15%,#FDE68A,transparent),radial-gradient(4px 4px at 40% 60%,#A7F3D0,transparent),radial-gradient(4px 4px at 85% 55%,#BFDBFE,transparent),radial-gradient(4px 4px at 15% 80%,#DDD6FE,transparent),linear-gradient(#FFFDF8,#FFFDF8)' },
+  { label:'Dots',     css:'radial-gradient(#D6D3D1 1px,transparent 1px) 0 0/16px 16px,linear-gradient(#FAFAF9,#FAFAF9)' },
+  { label:'Grid',     css:'linear-gradient(#EAEAE8 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,#EAEAE8 1px,transparent 1px) 0 0/22px 22px,linear-gradient(#FBFBFA,#FBFBFA)' },
+];
+// config.bg may be a gradient/pattern. Anywhere we need a SOLID colour (e.g. to
+// fade a photo into the page) interpolating a gradient produces invalid CSS, so
+// pull out the last hex it contains and fall back to the default page colour.
+function solidBg(bg?: string): string {
+  const v = (bg ?? '').trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
+  const hexes = v.match(/#[0-9a-fA-F]{6}/g);
+  return hexes ? hexes[hexes.length - 1] : '#F7F7F5';
+}
 const FONT_OPTIONS: { label:string; family:string; google?:string }[] = [
   { label:'Default',          family:'Inter, system-ui, sans-serif' },
   { label:'Playfair',         family:'"Playfair Display", Georgia, serif',      google:'Playfair+Display:wght@700;800' },
@@ -55,7 +81,6 @@ const FONT_OPTIONS: { label:string; family:string; google?:string }[] = [
   { label:'Oswald',           family:'"Oswald", Impact, sans-serif',            google:'Oswald:wght@600;700' },
   { label:'Lobster',          family:'"Lobster", cursive',                      google:'Lobster' },
 ];
-const BLOCK_COLORS = ['#1B5E20','#388E3C','#FF7043','#FFAB40','#A5D6A7','#0a0a0a','#2563eb','#dc2626'];
 const ORDER_PROVIDERS = [
   { key:'doordash',  label:'DoorDash'  },
   { key:'ubereats',  label:'Uber Eats' },
@@ -613,34 +638,69 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
   );
 }
 
-// Accent color picker with hex input
-function AccentColorPicker({ value, onChange }: { value?: string; onChange:(v:string)=>void }) {
-  const colorRef = useRef<HTMLInputElement>(null);
-  const [hex, setHex] = useState(value??'#2563eb');
-  function commit(v: string) { setHex(v); if(/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v); }
+// ── Page background picker: rainbow swatches, colour wheel, designed presets ──
+function PageBackgroundPicker({ value, onChange, dark=false }: {
+  value: string; onChange:(v:string)=>void; dark?:boolean;
+}) {
+  const wheelRef = useRef<HTMLInputElement>(null);
+  const border = dark ? '#E8EBF0' : '#DEDEDC';
+  const accent = dark ? '#111111' : '#0A0A0A';
+  const [tab,setTab] = useState<'color'|'design'>('color');
   return (
     <div>
-      <div className="flex gap-2 flex-wrap mb-3">
-        {BLOCK_COLORS.map((c,i)=>(
-          <button key={i} onClick={()=>{ commit(c); }}
-            className="w-7 h-7 rounded-full transition-all"
-            style={{ background:c, outline:(value??'')=== c?`2px solid ${c}`:'none', outlineOffset:2 }}
-          />
+      {/* tabs */}
+      <div className="flex gap-1.5 mb-3">
+        {([['color','Color'],['design','Designs']] as const).map(([k,label])=>(
+          <button key={k} onClick={()=>setTab(k)}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors ${tab===k?'bg-[#111] text-[#4ADE80]':'bg-[#F4F6FA] text-[#667085] hover:text-[#111]'}`}>
+            {label}
+          </button>
         ))}
-        {/* custom swatch */}
-        <button
-          onClick={()=>colorRef.current?.click()}
-          className="w-7 h-7 rounded-full border-2 border-dashed border-[#D4D4D4] flex items-center justify-center hover:border-[#0A0A0A] transition-colors"
-          title="Custom color">
-          <span className="text-[10px] text-[#858585]">+</span>
-        </button>
-        <input ref={colorRef} type="color" value={value??'#2563eb'} onChange={e=>{commit(e.target.value);}} className="opacity-0 absolute w-0 h-0"/>
       </div>
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg border border-[#DEDEDC] flex-shrink-0" style={{ background:value??'#2563eb' }}/>
-        <input value={hex} onChange={e=>commit(e.target.value)} placeholder="#000000"
-          className="flex-1 bg-white border border-[#DEDEDC] rounded-lg px-3 py-1.5 text-xs text-[#0A0A0A] font-mono focus:outline-none focus:border-[#0A0A0A] transition-colors"
-        />
+
+      {tab==='color'&&(
+        <>
+          <div className="grid grid-cols-8 gap-2 mb-3">
+            {BG_RAINBOW.map(c=>(
+              <button key={c} onClick={()=>onChange(c)} title={c}
+                className="aspect-square rounded-lg border-2 transition-all hover:scale-110"
+                style={{background:c,borderColor:value===c?accent:border}}/>
+            ))}
+          </div>
+          {/* colour wheel */}
+          <button onClick={()=>wheelRef.current?.click()}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors hover:border-[#111]"
+            style={{borderColor:border}}>
+            <span className="w-6 h-6 rounded-full flex-shrink-0" style={{background:'conic-gradient(#ef4444,#f59e0b,#eab308,#22c55e,#06b6d4,#3b82f6,#8b5cf6,#ec4899,#ef4444)'}}/>
+            <span className="text-[12px] font-semibold text-[#111]">Pick any color</span>
+          </button>
+          <input ref={wheelRef} type="color"
+            value={/^#[0-9a-fA-F]{6}$/.test(value)?value:'#ffffff'}
+            onChange={e=>onChange(e.target.value)}
+            className="sr-only" aria-label="Custom background color"/>
+        </>
+      )}
+
+      {tab==='design'&&(
+        <div className="grid grid-cols-4 gap-2.5">
+          {BG_DESIGNS.map(d=>(
+            <button key={d.label} onClick={()=>onChange(d.css)} title={d.label}
+              className="group flex flex-col items-center gap-1">
+              <span className="w-full aspect-square rounded-xl border-2 transition-all group-hover:scale-105"
+                style={{background:d.css,borderColor:value===d.css?accent:border}}/>
+              <span className={`text-[9px] font-semibold ${value===d.css?'text-[#111]':'text-[#98A2B3]'}`}>{d.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* raw value */}
+      <div className="flex items-center gap-2.5 mt-3">
+        <div className="w-8 h-8 rounded-lg border flex-shrink-0" style={{background:value,borderColor:border}}/>
+        <input value={value} onChange={e=>onChange(e.target.value)}
+          placeholder="#ffffff or any CSS background"
+          className="flex-1 min-w-0 bg-white border rounded-xl px-3 py-2 text-[12px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#111] transition-colors"
+          style={{borderColor:border}}/>
       </div>
     </div>
   );
@@ -794,7 +854,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
         {config.bgImage && (
           <div style={{ position:'relative', height:148, overflow:'hidden' }}>
             <img src={config.bgImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:config.bgImagePosition??'center 60%', display:'block' }}/>
-            <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${config.bg||'#F7F7F5'} 100%)` }}/>
+            <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${solidBg(config.bg)} 100%)` }}/>
           </div>
         )}
 
@@ -1504,10 +1564,10 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             </div>
           )}
 
-          {/* Widget width */}
+          {/* Widget size */}
           {block.id!=='hours' && (
             <div className="pt-5 border-t border-[#F0F0F0]">
-              <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Width</p>
+              <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Size</p>
               <div className="flex gap-2">
                 <button onClick={()=>onUpdateBlock({size:'full'})}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${(!block.size||block.size==='full')?'border-[#0A0A0A] bg-[#EEEEEC] text-[#0A0A0A]':'border-[#DEDEDC] text-[#858585] hover:border-[#0A0A0A]'}`}>
@@ -1520,12 +1580,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
               </div>
             </div>
           )}
-
-          {/* Accent color */}
-          <div className="pt-5 border-t border-[#F0F0F0]">
-            <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Color</p>
-            <AccentColorPicker value={block.color} onChange={v=>onUpdateBlock({color:v})}/>
-          </div>
 
         </div>
       </div>
@@ -2070,6 +2124,34 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     return ()=>window.removeEventListener('resize',check);
   },[]);
 
+  // ── Backfill the Google rating for accounts created before we pulled it ──
+  // New signups seed reviewStars during setup, but existing businesses have a
+  // place_id and no rating. Fetch it once on load so the header stars appear
+  // without the owner having to paste a profile URL and hit Fetch by hand.
+  const ratingBackfilled=useRef(false);
+  useEffect(()=>{
+    if(ratingBackfilled.current) return;
+    const placeId=config.placeId;
+    if(!placeId) return;
+    const loc=config.blocks.find(b=>b.id==='location');
+    if(loc?.reviewStars&&loc.reviewStars>0) return; // already has one
+    ratingBackfilled.current=true;
+    void (async()=>{
+      try{
+        const r=await fetch(`/api/places/details?placeId=${encodeURIComponent(placeId)}`);
+        if(!r.ok) return;
+        const d=await r.json() as {rating?:number;reviewCount?:number};
+        if(!d.rating||d.rating<=0) return;
+        setConfig(c=>({
+          ...c,
+          blocks:c.blocks.map(b=>b.id==='location'
+            ?{...b,reviewStars:d.rating,...(d.reviewCount?{reviewCount:d.reviewCount}:{})}
+            :b),
+        }));
+      }catch{/* non-fatal — owner can still set it manually in Business */}
+    })();
+  },[config.placeId,config.blocks]);
+
   // Load Google Font whenever selected font changes
   useEffect(()=>{
     const opt = FONT_OPTIONS.find(f=>f.family===config.font);
@@ -2539,20 +2621,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             </div>
                           </div>
                         )}
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Page color</p>
-                        <div className="grid grid-cols-5 gap-3 mb-4">
-                          {BG_PRESETS.map(c=>(
-                            <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
-                              className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
-                              style={{background:c,borderColor:config.bg===c?'#0A0A0A':'#DEDEDC'}}/>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg border border-[#DEDEDC]" style={{background:config.bg}}/>
-                          <input value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
-                            placeholder="#ffffff or gradient"
-                            className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                        </div>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Page background</p>
+                        <PageBackgroundPicker value={config.bg} onChange={v=>setConfig(p=>({...p,bg:v}))}/>
                       </div>
 
 
@@ -2675,7 +2745,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <p className="text-[13px] font-semibold text-[#111] truncate">forothers.co/{localBusiness.slug}</p>
                     </div>
                     <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors">
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-semibold hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       View
                     </a>
@@ -2700,7 +2770,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                   {!googleConnected&&(
                     <a href="/connect/google"
-                      className="mt-3 inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors">
+                      className="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-semibold hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                       Connect Google Business
                     </a>
                   )}
@@ -3038,20 +3109,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                   {/* Page color */}
                   <div>
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Page color</p>
-                    <div className="grid grid-cols-5 gap-3 mb-4">
-                      {BG_PRESETS.map(c=>(
-                        <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
-                          className="aspect-square rounded-xl border-2 transition-all hover:scale-105"
-                          style={{background:c,borderColor:config.bg===c?'#111111':'#E8EBF0'}}/>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg border border-[#E8EBF0]" style={{background:config.bg}}/>
-                      <input value={config.bg} onChange={e=>setConfig(c=>({...c,bg:e.target.value}))}
-                        placeholder="#ffffff or gradient"
-                        className="flex-1 bg-white border border-[#E8EBF0] rounded-xl px-3 py-2 text-[13px] font-mono placeholder:text-[#98A2B3] focus:outline-none focus:border-[#111111] transition-colors"/>
-                    </div>
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Page background</p>
+                    <PageBackgroundPicker value={config.bg} onChange={v=>setConfig(p=>({...p,bg:v}))} dark/>
                   </div>
                   {/* Background photo */}
                   <div>
@@ -3232,7 +3291,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </>
                     ):(
                       <a href="/connect/google"
-                        className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors">
+                        className="inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-semibold hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                         Connect Google Business
                       </a>
                     )}
@@ -3766,17 +3826,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
 
             {/* Page color */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Page Color</p>
-            <div className="flex items-center gap-2 mb-4">
-              {['#FFAB40','#f8f5f0','#E8F5E9','#E3F2FD','#FCE4EC','#F3E5F5','#FFF8E1','#ECEFF1'].map(c=>(
-                <button key={c} onClick={()=>setConfig(p=>({...p,bg:c}))}
-                  className={`w-8 h-8 rounded-full border-2 transition-all flex-shrink-0 ${config.bg===c?'border-[#111] scale-110':'border-transparent'}`}
-                  style={{backgroundColor:c}}/>
-              ))}
-              <input type="color" value={config.bg} onChange={e=>setConfig(p=>({...p,bg:e.target.value}))}
-                className="w-8 h-8 rounded-full cursor-pointer border border-[#E8EBF0] overflow-hidden p-0 flex-shrink-0"
-                title="Custom color"/>
-            </div>
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Page background</p>
+            <div className="mb-4"><PageBackgroundPicker value={config.bg} onChange={v=>setConfig(p=>({...p,bg:v}))} dark/></div>
           </div>
         )}
 
