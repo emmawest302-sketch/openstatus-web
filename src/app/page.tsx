@@ -166,7 +166,7 @@ export default function HomePage() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box',
-    padding: '13px 15px', borderRadius: 14,
+    padding: '14px 16px', borderRadius: 15,
     border: `1px solid ${LINE}`, background: '#FFFFFF',
     fontSize: 14, color: INK, outline: 'none', fontFamily: 'inherit',
   };
@@ -203,8 +203,18 @@ export default function HomePage() {
       </header>
 
       {/* ── Hero ── */}
-      <section style={{ padding: isMobile ? '56px 0 12px' : '96px 0 24px' }}>
-        <div style={{ ...shell, padding: pad, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.15fr 380px', gap: isMobile ? 40 : 64, alignItems: 'start' }}>
+      {/* Soft purple→green wash. Kept very low opacity so it reads as light in
+          the room rather than a coloured panel, and the page stays white. */}
+      <section style={{ position: 'relative', padding: isMobile ? '56px 0 12px' : '96px 0 24px', overflow: 'hidden' }}>
+        <div aria-hidden="true" style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background:
+            'radial-gradient(900px 520px at 12% -10%, rgba(124,58,237,0.16), transparent 62%),' +
+            'radial-gradient(760px 460px at 88% 6%, rgba(16,185,129,0.14), transparent 60%),' +
+            'radial-gradient(620px 380px at 50% 105%, rgba(124,58,237,0.07), transparent 65%)',
+        }}/>
+        <div style={{ position: 'relative' }}>
+        <div style={{ ...shell, padding: pad, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 430px', gap: isMobile ? 40 : 56, alignItems: 'start' }}>
           <div>
             <p style={kicker}>One link for your business</p>
             <h1 style={{
@@ -243,14 +253,14 @@ export default function HomePage() {
           </div>
 
           {/* Sign in card */}
-          <div style={{ border: `1px solid ${LINE}`, borderRadius: 22, padding: 24, background: '#FFFFFF', boxShadow: '0 12px 40px rgba(17,17,17,0.05)' }}>
-            <p style={{ fontSize: 15, fontWeight: 600, margin: '0 0 4px' }}>Sign in</p>
-            <p style={{ fontSize: 13, color: MUTED, margin: '0 0 18px' }}>Already have a page? Pick up where you left off.</p>
+          <div style={{ border: `1px solid ${LINE}`, borderRadius: 26, padding: 30, background: '#FFFFFF', boxShadow: '0 18px 50px rgba(17,17,17,0.07)' }}>
+            <p style={{ fontSize: 17, fontWeight: 600, margin: '0 0 5px' }}>Sign in</p>
+            <p style={{ fontSize: 13.5, color: MUTED, margin: '0 0 20px' }}>Already have a page? Pick up where you left off.</p>
             <form onSubmit={handleLogin} style={{ display: 'grid', gap: 10 }}>
               <input type="email" required placeholder="you@business.com" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} aria-label="Email"/>
               <input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} aria-label="Password"/>
               <button type="submit" disabled={busy} style={{
-                padding: '13px 16px', borderRadius: 14, border: 0, cursor: busy ? 'not-allowed' : 'pointer',
+                padding: '14px 16px', borderRadius: 15, border: 0, cursor: busy ? 'not-allowed' : 'pointer',
                 background: INK, color: '#FFFFFF', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', opacity: busy ? 0.5 : 1,
               }}>
                 {loading ? 'Signing in…' : 'Sign in'}
@@ -264,7 +274,7 @@ export default function HomePage() {
             <div style={{ display: 'grid', gap: 8 }}>
               <button onClick={() => void handleOAuth('google')} disabled={busy} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-                padding: '12px 16px', borderRadius: 14, border: `1px solid ${LINE}`,
+                padding: '13px 16px', borderRadius: 15, border: `1px solid ${LINE}`,
                 background: '#FFFFFF', fontSize: 14, fontWeight: 500, color: INK,
                 cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
               }}>
@@ -284,6 +294,7 @@ export default function HomePage() {
               New here? <Link href="/signup" style={{ color: PURPLE_DEEP, fontWeight: 600, textDecoration: 'none' }}>Create an account</Link>
             </p>
           </div>
+        </div>
         </div>
       </section>
 

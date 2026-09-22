@@ -102,7 +102,8 @@ export default function PublicActionBlock({ block, businessId }: Props) {
           padding: '10px 12px',
         }}>
           <div style={{
-            fontSize: 13, fontWeight: 700, color: '#fff',
+            fontSize: 13, fontWeight: block.titleBold ? 800 : 700,
+            fontStyle: block.titleItalic ? 'italic' : 'normal', color: '#fff',
             lineHeight: 1.2, letterSpacing: '-0.01em',
           }}>
             {block.title}
@@ -182,11 +183,20 @@ export default function PublicActionBlock({ block, businessId }: Props) {
 
       {/* Text */}
       <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#151515', lineHeight: 1.35 }}>
+        <div style={{
+          fontSize: 13, color: '#151515', lineHeight: 1.35,
+          fontWeight: block.titleBold ? 800 : 600,
+          fontStyle: block.titleItalic ? 'italic' : 'normal',
+        }}>
           {block.title}
         </div>
         {block.sub && (
-          <div style={{ fontSize: 11, color: '#8A8A86', marginTop: 2, lineHeight: 1.35, overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const }}>
+          <div style={{
+            fontSize: 11, color: '#8A8A86', marginTop: 2, lineHeight: 1.35,
+            fontWeight: block.subBold ? 700 : 400,
+            fontStyle: block.subItalic ? 'italic' : 'normal',
+            overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const,
+          }}>
             {block.sub}
           </div>
         )}

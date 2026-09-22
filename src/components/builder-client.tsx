@@ -45,6 +45,8 @@ interface OpenStatusBlock {
   provider?: string;
   yelpUrl?: string; googleUrl?: string; tripAdvisorUrl?: string;
   blockStyle?: string;
+  titleBold?: boolean; titleItalic?: boolean;
+  subBold?: boolean; subItalic?: boolean;
   address?: string;
   lat?: number;
   lng?: number;
@@ -224,9 +226,20 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
   const isEmpty = !raw || (typeof raw==='object' && Object.keys(raw as object).length===0);
   const saved = Array.isArray(r.blocks) ? r.blocks as OpenStatusBlock[] : [];
   // When nothing has been configured yet, default to orange bg + all blocks on
+  // Built-ins are merged onto their defaults. Custom links (id "custom-…") have
+  // no default to merge with, and the old map dropped them entirely — they have
+  // to be carried through or they vanish on reload. Their saved order is kept.
+  const merged = DEFAULT_BLOCKS.map(def => { const f=saved.find(b=>b.id===def.id); return f?{...def,...f}:{...def}; });
+  const customs = saved.filter(b=>typeof b.id==='string' && b.id.startsWith('custom-'));
+  const byId = new Map<string,OpenStatusBlock>([...merged,...customs].map(b=>[b.id,b]));
+  const savedOrder = saved.map(b=>b.id).filter(id=>byId.has(id));
+  const ordered = [
+    ...savedOrder.map(id=>byId.get(id)!),
+    ...merged.filter(b=>!savedOrder.includes(b.id)),
+  ];
   const defaultBlocks = isEmpty
     ? DEFAULT_BLOCKS.map(b=>({...b,on:true}))
-    : DEFAULT_BLOCKS.map(def => { const f=saved.find(b=>b.id===def.id); return f?{...def,...f}:{...def}; });
+    : ordered;
   return {
     blocks:       defaultBlocks,
     bg:           typeof r.bg==='string'?r.bg:(isEmpty?'#FFAB40':'#f8f5f0'),
@@ -1097,8 +1110,10 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                     <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
                       <BlockIcon id={b.id} size={10} color={b.color}/>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
-                        {!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>}
+                        <p className={`text-[10px] ${tx} truncate`}
+                          style={{fontWeight:b.titleBold?800:600,fontStyle:b.titleItalic?'italic':'normal'}}>{b.title}</p>
+                        {!isHalf&&<p className={`text-[8px] ${sx} truncate`}
+                          style={{fontWeight:b.subBold?700:400,fontStyle:b.subItalic?'italic':'normal'}}>{b.sub}</p>}
                       </div>
                       <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
                     </div>
@@ -1397,6 +1412,24 @@ function CoverPhotoCrop({ src, position, onChange, onRemove }: {
 }
 
 // ── Collapsible "More options" disclosure ─────────────────────────────────────
+// B / I toggles for a block's title and subtitle.
+function TextStylePicker({ bold, italic, onToggle }: {
+  bold:boolean; italic:boolean; onToggle:(k:'bold'|'italic')=>void;
+}) {
+  const btn = (on:boolean) =>
+    `w-6 h-6 rounded-md text-[11px] leading-none flex items-center justify-center border transition-colors ${
+      on ? 'bg-[#F5F3FF] border-[#DDD6FE] text-[#6D28D9]' : 'bg-white border-[#EBEBEA] text-[#98A2B3] hover:border-[#111]'
+    }`;
+  return (
+    <div className="flex items-center gap-1 mb-1.5">
+      <button type="button" aria-pressed={bold} title="Bold" onClick={()=>onToggle('bold')}
+        className={btn(bold)} style={{fontWeight:700}}>B</button>
+      <button type="button" aria-pressed={italic} title="Italic" onClick={()=>onToggle('italic')}
+        className={btn(italic)} style={{fontStyle:'italic',fontFamily:'Georgia,serif'}}>I</button>
+    </div>
+  );
+}
+
 function MoreOptions({ label='More options', children }: { label?:string; children:React.ReactNode }) {
   const [open,setOpen]=useState(false);
   return (
@@ -1546,10 +1579,26 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
         <div className="pb-5 mb-5 border-b border-[#F0F0F0]">
           <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3">Content</p>
           <div className="space-y-3">
-            <div><FieldLabel>Title</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
+            <div>
+              <div className="flex items-center justify-between">
+                <FieldLabel>Title</FieldLabel>
+                <TextStylePicker
+                  bold={!!block.titleBold} italic={!!block.titleItalic}
+                  onToggle={(k)=>onUpdateBlock(k==='bold'?{titleBold:!block.titleBold}:{titleItalic:!block.titleItalic})}/>
+              </div>
+              <Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/>
+            </div>
             {/* location's subtitle IS its address — edited once, below, not twice */}
             {block.id!=='location'&&(
-              <div><FieldLabel>Subtitle</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
+              <div>
+                <div className="flex items-center justify-between">
+                  <FieldLabel>Subtitle</FieldLabel>
+                  <TextStylePicker
+                    bold={!!block.subBold} italic={!!block.subItalic}
+                    onToggle={(k)=>onUpdateBlock(k==='bold'?{subBold:!block.subBold}:{subItalic:!block.subItalic})}/>
+                </div>
+                <Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/>
+              </div>
             )}
           </div>
         </div>
@@ -1575,6 +1624,19 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
               <p className="text-[11px] text-[#98A2B3] leading-relaxed">
                 Reviews and your star rating moved to the <strong className="text-[#667085] font-semibold">Business</strong> tab — they show in your page header, not on this card.
               </p>
+            </div>
+          )}
+
+          {/* ── CUSTOM LINK ── */}
+          {block.id.startsWith('custom-') && (
+            <div className="space-y-5">
+              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock}
+                hint="Optional photo shown behind the link."/>
+              <div>
+                <FieldLabel>Where it goes</FieldLabel>
+                <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/>
+                <p className="mt-1 text-[10px] text-black/35">Opens in a new tab. Without a link this block won&apos;t publish.</p>
+              </div>
             </div>
           )}
 
@@ -1725,7 +1787,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
 
 
           {/* ── WEBSITE / generic ── */}
-          {(block.id==='website'||!['location','hours','menu','order','book','socials'].includes(block.id)) && (
+          {(block.id==='website'||(!block.id.startsWith('custom-')&&!['location','hours','menu','order','book','socials'].includes(block.id))) && (
             <div className="space-y-5">
               {block.id==='website'&&(
                 <>
@@ -2193,6 +2255,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
     setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));
   }
+  /** A link to anything — the thing a link-in-bio product is actually for. */
+  function addCustomLink() {
+    const id = `custom-${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`;
+    setConfig(c=>({
+      ...c,
+      blocks:[...c.blocks,{
+        id, title:'New link', sub:'', icon:'', on:true, tone:'default',
+        url:'', size:'full', color:'#7C3AED',
+      }],
+    }));
+    setOpenId(id);
+    setSidebarTab('design');
+  }
+
   // Adding a block used to leave it wherever DEFAULT_BLOCKS put it, so a new
   // block appeared in the middle of the page (usually above Website). Append it.
   function enableBlock(id:string) {
@@ -2209,7 +2285,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // be instant and irreversible; an undo window is friendlier than a confirm.
   function removeBlock(id:string) {
     const snapshot=config.blocks.find(b=>b.id===id) ?? null;
-    updateBlock(id,{on:false});
+    if(id.startsWith('custom-')) setConfig(c=>({...c,blocks:c.blocks.filter(b=>b.id!==id)}));
+    else updateBlock(id,{on:false});
     setUndoBlock(snapshot);
     if(undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current=setTimeout(()=>setUndoBlock(null),8000);
@@ -2217,7 +2294,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   function undoRemove() {
     if(!undoBlock) return;
     const snap=undoBlock;
-    setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===snap.id?{...snap,on:true}:b)}));
+    setConfig(c=>c.blocks.some(b=>b.id===snap.id)
+      ? {...c,blocks:c.blocks.map(b=>b.id===snap.id?{...snap,on:true}:b)}
+      : {...c,blocks:[...c.blocks,{...snap,on:true}]});
     setUndoBlock(null);
     if(undoTimer.current) clearTimeout(undoTimer.current);
   }
@@ -3107,13 +3186,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       ))}
                     </div>
 
-                    <button data-tut="tut-add" onClick={()=>setShowPicker(true)}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#858585] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-all group mb-10">
-                      <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
-                        <span className="text-[14px] leading-none">+</span>
-                      </div>
-                      <span className="text-[13px] font-medium">Add block</span>
-                    </button>
+                    <div className="flex gap-2 mb-10">
+                      <button data-tut="tut-add" onClick={()=>setShowPicker(true)}
+                        className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#D8D8D8] text-[#858585] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-all">
+                        <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
+                          <span className="text-[14px] leading-none">+</span>
+                        </div>
+                        <span className="text-[13px] font-medium">Add block</span>
+                      </button>
+                      <button onClick={addCustomLink}
+                        className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#DDD6FE] text-[#6D28D9] hover:border-[#7C3AED] hover:bg-[#FAFAFF] transition-all">
+                        <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
+                          <span className="text-[14px] leading-none">+</span>
+                        </div>
+                        <span className="text-[13px] font-medium">Add link</span>
+                      </button>
+                    </div>
 
                     {/* Style: logo + background + socials */}
                     <div className="space-y-8 border-t border-[#F0F0F0] pt-8">

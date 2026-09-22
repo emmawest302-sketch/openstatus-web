@@ -9,6 +9,8 @@ export type OpenStatusBlock = {
   size?: 'half' | 'square' | 'full' | 'third';
   color?: string;
   menuType?: 'url' | 'photo' | 'pdf';
+  titleBold?: boolean; titleItalic?: boolean;
+  subBold?: boolean; subItalic?: boolean;
   menuFile?: string;
   appleMapsUrl?: string;
   googleUrl?: string;
