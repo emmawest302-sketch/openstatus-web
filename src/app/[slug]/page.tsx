@@ -44,11 +44,11 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const admin = getAdminClient();
   // Try full query; fall back gracefully if optional columns (timezone, place_id) don't exist yet
-  type BizRow = { id: string; user_id: string; name: string; tagline: string | null; avatar_url: string | null; header_url: string | null; timezone: string | null; place_id: string | null };
+  type BizRow = { id: string; user_id: string; name: string; tagline: string | null; avatar_url: string | null; header_url: string | null; timezone: string | null; place_id: string | null; address: string | null };
   let business: BizRow | null = null;
   const { data: fullData, error: fullError } = await admin
     .from('businesses')
-    .select('id,user_id,name,tagline,avatar_url,header_url,timezone,place_id')
+    .select('id,user_id,name,tagline,avatar_url,header_url,timezone,place_id,address')
     .eq('slug', slug.toLowerCase())
     .maybeSingle();
   if (fullError) {
@@ -59,7 +59,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
       .eq('slug', slug.toLowerCase())
       .maybeSingle();
     if (!basicData) notFound();
-    business = { ...(basicData as Omit<BizRow, 'timezone'|'place_id'>), timezone: null, place_id: null };
+    business = { ...(basicData as Omit<BizRow, 'timezone'|'place_id'|'address'>), timezone: null, place_id: null, address: null };
   } else {
     business = fullData as BizRow | null;
   }

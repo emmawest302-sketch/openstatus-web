@@ -1993,11 +1993,38 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const sheetDragRef=useRef<{startY:number,open:boolean}|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   // contentMaxWidth: how wide the editor panel can grow. Drag handle shrinks it to give more room to preview.
+  // SIDEBAR_W + PREVIEW_MIN must always fit, or the panels overflow the viewport
+  // and the sidebar appears to sit on top of the content.
+  const SIDEBAR_W = 220, PREVIEW_MIN = 300;
+  const idealContentWidth = useCallback((vw:number)=>
+    Math.max(320, Math.min(780, Math.min(
+      Math.round((vw - SIDEBAR_W) * 0.55),     // preferred split
+      vw - SIDEBAR_W - PREVIEW_MIN,            // never starve the preview
+    ))), []);
   const [contentMaxWidth,setContentMaxWidth]=useState(()=>{
     if(typeof window==='undefined') return 680;
-    // Default: give ~55% to content, rest to preview
-    return Math.max(380,Math.min(780,Math.round((window.innerWidth-220)*0.55)));
+    return Math.max(320, Math.min(780, Math.min(
+      Math.round((window.innerWidth - 220) * 0.55),
+      window.innerWidth - 220 - 300,
+    )));
   });
+  // Was computed once at mount only, so resizing the window left a stale width:
+  // at ~1100-1300px the editor kept its wide value, pushed the preview below its
+  // minimum, and forced a horizontal scrollbar with clipped headings.
+  const contentWidthTouched = useRef(false);
+  useEffect(()=>{
+    const onResize=()=>{
+      const vw=window.innerWidth;
+      setContentMaxWidth(prev=>{
+        if(!contentWidthTouched.current) return idealContentWidth(vw);
+        // respect a manual drag, but never at the cost of overflowing
+        return Math.max(320, Math.min(prev, vw - SIDEBAR_W - PREVIEW_MIN));
+      });
+    };
+    onResize();
+    window.addEventListener('resize',onResize);
+    return ()=>window.removeEventListener('resize',onResize);
+  },[idealContentWidth]);
   const [previewWidth,setPreviewWidth]=useState(0); // unused for layout now, kept for compat
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
   const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:business?.category??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
@@ -2031,7 +2058,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     resizeStartW.current=contentMaxWidth;
     document.body.style.userSelect='none';
     document.body.style.cursor='col-resize';
-    const onMove=(ev:MouseEvent)=>{ if(!isResizing.current)return; const delta=ev.clientX-resizeStartX.current; setContentMaxWidth(Math.max(320,Math.min(840,resizeStartW.current+delta))); };
+    contentWidthTouched.current=true;
+    const onMove=(ev:MouseEvent)=>{ if(!isResizing.current)return; const delta=ev.clientX-resizeStartX.current; const cap=window.innerWidth-SIDEBAR_W-PREVIEW_MIN; setContentMaxWidth(Math.max(320,Math.min(Math.min(840,cap),resizeStartW.current+delta))); };
     const onUp=()=>{ isResizing.current=false; document.body.style.userSelect=''; document.body.style.cursor=''; window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
     window.addEventListener('mousemove',onMove);
     window.addEventListener('mouseup',onUp);
