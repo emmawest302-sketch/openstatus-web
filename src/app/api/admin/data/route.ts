@@ -5,22 +5,25 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'emeline@forothers.com,emmawes
   .split(',')
   .map(e => e.trim().toLowerCase());
 
+const ADMIN_PASSCODE = '6869959799';
+
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization') ?? '';
-  const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!jwt) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
-
   const admin = getAdminClient();
 
-  // Validate the JWT and check admin status
-  const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-  if (userErr || !userData.user) {
-    return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-  }
-
-  const userEmail = (userData.user.email ?? '').toLowerCase();
-  if (!ADMIN_EMAILS.includes(userEmail)) {
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  // Accept passcode auth
+  if (auth !== `Passcode ${ADMIN_PASSCODE}`) {
+    // Fall back to JWT email check
+    const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!jwt) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
+    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+    if (userErr || !userData.user) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
+    const userEmail = (userData.user.email ?? '').toLowerCase();
+    if (!ADMIN_EMAILS.includes(userEmail)) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
   }
 
   // Fetch all businesses with user info

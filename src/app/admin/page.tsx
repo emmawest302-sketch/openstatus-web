@@ -42,6 +42,21 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
+  const [passcode, setPasscode] = useState('');
+  const [passcodeEntry, setPasscodeEntry] = useState('');
+  const [passcodeError, setPasscodeError] = useState(false);
+
+  const ADMIN_CODE = '6869959799';
+
+  const submitPasscode = () => {
+    if (passcodeEntry === ADMIN_CODE) {
+      setPasscode(passcodeEntry);
+      setPasscodeError(false);
+    } else {
+      setPasscodeError(true);
+      setPasscodeEntry('');
+    }
+  };
 
   // Edit modal state
   const [editRow, setEditRow] = useState<EditState | null>(null);
@@ -54,7 +69,7 @@ export default function AdminPage() {
 
   const load = useCallback(async (tok: string) => {
     const res = await fetch('/api/admin/data', {
-      headers: { Authorization: `Bearer ${tok}` },
+      headers: { Authorization: `Passcode ${ADMIN_CODE}` },
     });
     const body = await res.json();
     if (!res.ok) { setError(body.error ?? 'Failed'); setLoading(false); return; }
@@ -68,9 +83,17 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setError('Not signed in'); setLoading(false); return; }
       setToken(session.access_token);
-      await load(session.access_token);
+      if (passcode === ADMIN_CODE) await load(session.access_token);
     })();
-  }, [load]);
+  }, [load, passcode]);
+
+  useEffect(() => {
+    if (passcode === ADMIN_CODE) {
+      setLoading(true);
+      setError('');
+      void load(token);
+    }
+  }, [passcode]);
 
   useEffect(() => {
     const q = search.toLowerCase();
@@ -100,7 +123,7 @@ export default function AdminPage() {
     setSaveError('');
     const res = await fetch('/api/admin/business', {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Passcode ${ADMIN_CODE}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(editRow),
     });
     const body = await res.json();
@@ -124,7 +147,7 @@ export default function AdminPage() {
     setDeleting(true);
     const res = await fetch(`/api/admin/business?id=${deleteId}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Passcode ${ADMIN_CODE}` },
     });
     if (res.ok) {
       setRows(prev => prev.filter(r => r.id !== deleteId));
@@ -137,6 +160,40 @@ export default function AdminPage() {
   const withSlug = rows.filter(r => r.slug).length;
   const withHours = rows.filter(r => r.has_hours).length;
   const avgCompletion = total ? Math.round(rows.reduce((s, r) => s + r.completion, 0) / total) : 0;
+
+  // Passcode gate
+  if (passcode !== ADMIN_CODE) return (
+    <main className="grid min-h-screen place-items-center bg-[#0A0A0A]">
+      <div className="w-full max-w-xs text-center">
+        <div className="mb-8 flex justify-center">
+          <svg viewBox="0 0 100 100" width="36" height="36">
+            <circle cx="50" cy="50" r="48" fill="#C8FF62"/>
+            <circle cx="50" cy="50" r="21" fill="#0A0A0A"/>
+            <circle cx="50" cy="44" r="7.4" fill="#C8FF62"/>
+            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#C8FF62"/>
+          </svg>
+        </div>
+        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-white/30">Admin Access</p>
+        <p className="mb-6 text-lg font-bold text-white">Enter passcode</p>
+        <input
+          type="password"
+          value={passcodeEntry}
+          onChange={e => { setPasscodeEntry(e.target.value); setPasscodeError(false); }}
+          onKeyDown={e => e.key === 'Enter' && submitPasscode()}
+          placeholder="••••••••••"
+          className="mb-3 w-full rounded-[14px] border border-white/10 bg-white/6 px-4 py-3 text-center text-lg tracking-[0.3em] text-white outline-none placeholder:text-white/15 focus:border-white/25"
+          autoFocus
+        />
+        {passcodeError && <p className="mb-3 text-xs text-red-400">Incorrect passcode</p>}
+        <button
+          onClick={submitPasscode}
+          className="w-full rounded-[14px] bg-[#C8FF62] py-3 text-sm font-bold text-black hover:bg-[#d4ff7a]"
+        >
+          Unlock
+        </button>
+      </div>
+    </main>
+  );
 
   if (loading) return (
     <main className="grid min-h-screen place-items-center bg-[#0A0A0A]">
