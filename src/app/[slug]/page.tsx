@@ -10,6 +10,7 @@ import PublicShareButton from '@/components/public-share-button';
 import PublicLocationBlock from '@/components/public-location-block';
 import { loadPublishedPageConfig } from '@/lib/published-page-config';
 import { SITE_URL, pageUrl } from '@/lib/site';
+import { bgAnimationStyle, BG_KEYFRAMES } from '@/lib/page-theme';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -268,7 +269,16 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         if (!gf) return null;
         return <link rel="stylesheet" href={`https://fonts.googleapis.com/css2?family=${gf}&display=swap`}/>;
       })()}
-    <div style={{ minHeight: '100dvh', background: bg, fontFamily: pageFont }}>
+    <div
+      data-os-bg-anim={enrichedConfig.bgAnim ? '' : undefined}
+      style={{
+        minHeight: '100dvh',
+        background: bg,
+        fontFamily: pageFont,
+        animation: bgAnimationStyle(enrichedConfig.bgAnim, enrichedConfig.bgAnimSpeed),
+      }}
+    >
+      <style>{BG_KEYFRAMES}</style>
       {/* Structured data — this is what surfaces hours directly in Google results. */}
       <script
         type="application/ld+json"

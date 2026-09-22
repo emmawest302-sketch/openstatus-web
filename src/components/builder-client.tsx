@@ -4,6 +4,7 @@ import Link from 'next/link';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
+import { BG_KEYFRAMES, bgAnimationStyle } from '@/lib/page-theme';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
@@ -56,6 +57,7 @@ export interface OpenStatusPageConfig {
   location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
   likeCount?: number; dislikeCount?: number;
   themeColor?: string; placeId?: string; nameColor?: string;
+  bgAnim?: string; bgAnimSpeed?: number;
   font?: string;
 }
 export interface Business {
@@ -71,8 +73,12 @@ const BG_RAINBOW = [
   '#FECACA','#FDBA74','#FDE68A','#BBF7D0','#A5F3FC','#BFDBFE','#DDD6FE','#FBCFE8',
   '#EF4444','#F97316','#F59E0B','#22C55E','#06B6D4','#3B82F6','#8B5CF6','#EC4899',
 ];
-// Designed backgrounds — any CSS `background` value works, incl. multi-layer
-const BG_DESIGNS: { label:string; css:string }[] = [
+// Designed backgrounds. Any CSS `background` value works, including multi-layer
+// patterns. `anim` names a keyframe from BG_KEYFRAMES below; animated designs
+// keep a FLAT base (linear-gradient(c,c)) so scrolling the layers doesn't drag
+// a visible gradient around with them.
+const BG_DESIGNS: { label:string; css:string; anim?:'drift'|'fall'|'rise'; speed?:number }[] = [
+  // ── gradients ──
   { label:'Sunset',   css:'linear-gradient(160deg,#FF9A5A 0%,#FF5F6D 55%,#C13584 100%)' },
   { label:'Peach',    css:'linear-gradient(160deg,#FFE9D6 0%,#FFC3A0 100%)' },
   { label:'Lagoon',   css:'linear-gradient(160deg,#43C6AC 0%,#191654 100%)' },
@@ -81,11 +87,28 @@ const BG_DESIGNS: { label:string; css:string }[] = [
   { label:'Lilac',    css:'linear-gradient(160deg,#F3E7FF 0%,#C4A5FF 100%)' },
   { label:'Ember',    css:'linear-gradient(160deg,#2B1B17 0%,#7A2E1E 100%)' },
   { label:'Midnight', css:'linear-gradient(160deg,#0F172A 0%,#334155 100%)' },
-  { label:'Starry',   css:'radial-gradient(1.5px 1.5px at 12% 18%,#fff,transparent),radial-gradient(1.5px 1.5px at 62% 12%,#fff,transparent),radial-gradient(1.5px 1.5px at 32% 46%,#fff,transparent),radial-gradient(2px 2px at 82% 38%,#fff,transparent),radial-gradient(1.5px 1.5px at 48% 72%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 82%,#fff,transparent),radial-gradient(1.5px 1.5px at 18% 88%,#fff,transparent),linear-gradient(160deg,#0B1026 0%,#1B2455 100%)' },
-  { label:'Confetti', css:'radial-gradient(4px 4px at 20% 25%,#FCA5A5,transparent),radial-gradient(4px 4px at 70% 15%,#FDE68A,transparent),radial-gradient(4px 4px at 40% 60%,#A7F3D0,transparent),radial-gradient(4px 4px at 85% 55%,#BFDBFE,transparent),radial-gradient(4px 4px at 15% 80%,#DDD6FE,transparent),linear-gradient(#FFFDF8,#FFFDF8)' },
+
+  // ── patterns ──
   { label:'Dots',     css:'radial-gradient(#D6D3D1 1px,transparent 1px) 0 0/16px 16px,linear-gradient(#FAFAF9,#FAFAF9)' },
   { label:'Grid',     css:'linear-gradient(#EAEAE8 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,#EAEAE8 1px,transparent 1px) 0 0/22px 22px,linear-gradient(#FBFBFA,#FBFBFA)' },
+  { label:'Confetti', css:'radial-gradient(4px 4px at 20% 25%,#FCA5A5,transparent),radial-gradient(4px 4px at 70% 15%,#FDE68A,transparent),radial-gradient(4px 4px at 40% 60%,#A7F3D0,transparent),radial-gradient(4px 4px at 85% 55%,#BFDBFE,transparent),radial-gradient(4px 4px at 15% 80%,#DDD6FE,transparent),linear-gradient(#FFFDF8,#FFFDF8)' },
+  { label:'Waves',    css:'repeating-radial-gradient(circle at 50% 120%,rgba(255,255,255,0.5) 0 12px,transparent 12px 26px),linear-gradient(160deg,#BFE7FF 0%,#7FC5F5 100%)' },
+
+  // ── animated ──
+  { label:'Starry',   anim:'drift', speed:90,
+    css:'radial-gradient(1.5px 1.5px at 12% 18%,#fff,transparent),radial-gradient(1.5px 1.5px at 62% 12%,#fff,transparent),radial-gradient(1.5px 1.5px at 32% 46%,#fff,transparent),radial-gradient(2px 2px at 82% 38%,#fff,transparent),radial-gradient(1.5px 1.5px at 48% 72%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 82%,#fff,transparent),radial-gradient(1.5px 1.5px at 18% 88%,#fff,transparent),linear-gradient(160deg,#0B1026,#1B2455)' },
+  { label:'Snowfall', anim:'fall', speed:26,
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Ccircle cx='15' cy='20' r='2.2' fill='white' opacity='.9'/%3E%3Ccircle cx='62' cy='44' r='1.7' fill='white' opacity='.75'/%3E%3Ccircle cx='38' cy='72' r='2' fill='white' opacity='.85'/%3E%3Ccircle cx='80' cy='12' r='1.4' fill='white' opacity='.7'/%3E%3C/svg%3E\") 0 0/90px 90px,linear-gradient(#3F5E8C,#3F5E8C)" },
+  { label:'Coffee',   anim:'drift', speed:60,
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ctext x='8' y='34' font-size='26'%3E%E2%98%95%3C/text%3E%3Ctext x='46' y='70' font-size='20' opacity='.75'%3E%E2%98%95%3C/text%3E%3C/svg%3E\") 0 0/80px 80px,linear-gradient(%23F5EADA,%23F5EADA)" },
+  { label:'Sparkle',  anim:'rise', speed:34,
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70'%3E%3Ctext x='6' y='26' font-size='16' opacity='.85'%3E%E2%9C%A6%3C/text%3E%3Ctext x='44' y='58' font-size='12' opacity='.6'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E\") 0 0/70px 70px,linear-gradient(%232E1065,%232E1065)" },
+  { label:'Hearts',   anim:'rise', speed:40,
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='76' height='76'%3E%3Ctext x='8' y='30' font-size='20' opacity='.8'%3E%F0%9F%A4%8D%3C/text%3E%3Ctext x='46' y='64' font-size='15' opacity='.6'%3E%F0%9F%A4%8D%3C/text%3E%3C/svg%3E\") 0 0/76px 76px,linear-gradient(%23FFE9EF,%23FFE9EF)" },
+  { label:'Bubbles',  anim:'rise', speed:30,
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Ccircle cx='18' cy='24' r='7' fill='none' stroke='white' stroke-opacity='.45' stroke-width='1.5'/%3E%3Ccircle cx='58' cy='56' r='4.5' fill='none' stroke='white' stroke-opacity='.4' stroke-width='1.3'/%3E%3Ccircle cx='70' cy='18' r='3' fill='none' stroke='white' stroke-opacity='.35' stroke-width='1.2'/%3E%3C/svg%3E\") 0 0/84px 84px,linear-gradient(%230E7490,%230E7490)" },
 ];
+
 // config.bg may be a gradient/pattern. Anywhere we need a SOLID colour (e.g. to
 // fade a photo into the page) interpolating a gradient produces invalid CSS, so
 // pull out the last hex it contains and fall back to the default page colour.
@@ -218,6 +241,8 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     themeColor:   typeof r.themeColor==='string'?r.themeColor:undefined,
     placeId:      typeof r.placeId==='string'?r.placeId:undefined,
     nameColor:    typeof r.nameColor==='string'?r.nameColor:undefined,
+    bgAnim:       typeof r.bgAnim==='string'?r.bgAnim:undefined,
+    bgAnimSpeed:  typeof r.bgAnimSpeed==='number'?r.bgAnimSpeed:undefined,
     font:         typeof r.font==='string'?r.font:undefined,
   };
 }
@@ -653,7 +678,7 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
 
 // ── Page background picker: rainbow swatches, colour wheel, designed presets ──
 function PageBackgroundPicker({ value, onChange, dark=false }: {
-  value: string; onChange:(v:string)=>void; dark?:boolean;
+  value: string; onChange:(v:string, anim?:string, speed?:number)=>void; dark?:boolean;
 }) {
   const wheelRef = useRef<HTMLInputElement>(null);
   const border = dark ? '#E8EBF0' : '#DEDEDC';
@@ -661,6 +686,7 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
   const [tab,setTab] = useState<'color'|'design'>('color');
   return (
     <div>
+      <style>{BG_KEYFRAMES}</style>
       {/* tabs */}
       <div className="flex gap-1.5 mb-3">
         {([['color','Color'],['design','Designs']] as const).map(([k,label])=>(
@@ -697,11 +723,13 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
       {tab==='design'&&(
         <div className="grid grid-cols-4 gap-2.5">
           {BG_DESIGNS.map(d=>(
-            <button key={d.label} onClick={()=>onChange(d.css)} title={d.label}
+            <button key={d.label} onClick={()=>onChange(d.css,d.anim,d.speed)} title={d.label}
               className="group flex flex-col items-center gap-1">
               <span className="w-full aspect-square rounded-xl border-2 transition-all group-hover:scale-105"
-                style={{background:d.css,borderColor:value===d.css?accent:border}}/>
-              <span className={`text-[9px] font-semibold ${value===d.css?'text-[#111]':'text-[#98A2B3]'}`}>{d.label}</span>
+                data-os-bg-anim={d.anim?'':undefined}
+                style={{background:d.css,borderColor:value===d.css?accent:border,
+                  animation:bgAnimationStyle(d.anim,(d.speed??60)/3)}}/>
+              <span className={`text-[9px] font-semibold ${value===d.css?'text-[#111]':'text-[#98A2B3]'}`}>{d.label}{d.anim?" ✦":""}</span>
             </button>
           ))}
         </div>
@@ -847,13 +875,16 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
 
   return (
     <div style={{ width:'100%' }}>
+      <style>{BG_KEYFRAMES}</style>
       <div
         className="relative rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/8"
+        data-os-bg-anim={config.bgAnim?'':undefined}
         style={{
           background: config.bg || '#F7F7F5',
           minHeight: 560,
           width: '100%',
           fontFamily: config.font ?? 'Inter, system-ui, sans-serif',
+          animation: bgAnimationStyle(config.bgAnim, config.bgAnimSpeed),
         }}
       >
         {/* Photo header — constrained 148px, fades into page bg */}
@@ -3135,7 +3166,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           </div>
                         )}
                         <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3 mt-6">Page background</p>
-                        <PageBackgroundPicker value={config.bg} onChange={v=>setConfig(p=>({...p,bg:v}))}/>
+                        <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
                       </div>
 
 
@@ -3328,7 +3359,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 <div>
                   <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Page background</p>
-                  <PageBackgroundPicker value={config.bg} onChange={v=>setConfig(pc=>({...pc,bg:v}))}/>
+                  <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(pc=>({...pc,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
                 </div>
 
                 <div>
@@ -4117,7 +4148,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             {/* Page color */}
             <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Page background</p>
-            <div className="mb-4"><PageBackgroundPicker value={config.bg} onChange={v=>setConfig(p=>({...p,bg:v}))} dark/></div>
+            <div className="mb-4"><PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))} dark/></div>
           </div>
         )}
 
