@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BuilderClient from '@/components/builder-client';
-import { normalizeOpenStatusPageConfig, type OpenStatusPageConfig } from '@/components/builder-client';
+import { normalizeOpenStatusPageConfig, type OpenStatusPageConfig, type Business } from '@/components/builder-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,19 +15,11 @@ interface DbHoursRow {
   is_closed: boolean;
 }
 
-interface BusinessData {
-  id: string;
-  name: string;
-  slug: string;
-  avatar_url?: string;
+// BusinessData extends the shared Business type with page-internal fields
+interface BusinessData extends Business {
   header_url?: string;
-  tagline?: string;
   instagram_handle?: string;
   onboarded_at?: string | null;
-  category?: string | null;
-  phone?: string | null;
-  website?: string | null;
-  address?: string | null;
   _businessId: string;
 }
 
@@ -78,7 +70,7 @@ function BuilderPageInner() {
 
       const { data: biz, error: bizError } = await supabase
         .from('businesses')
-        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, onboarded_at, google_location_id, category, phone, website, address')
+        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, onboarded_at, google_location_id, category, phone, website, address, place_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -113,6 +105,11 @@ function BuilderPageInner() {
       // Reconstruct bgImage from businesses.header_url if not already set
       if (!config.bgImage && biz.header_url) {
         config.bgImage = `/api/assets?businessId=${biz.id}&kind=header`;
+      }
+
+      // Backfill placeId from the businesses table if not already in user metadata
+      if (!config.placeId && biz.place_id) {
+        config.placeId = biz.place_id as string;
       }
 
       const hasMetaHours = raw && raw.weeklyHours && typeof raw.weeklyHours === 'object';

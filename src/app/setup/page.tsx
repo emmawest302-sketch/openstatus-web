@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import type { OpenStatusBlock, OpenStatusPageConfig, OpenStatusSocial } from '@/lib/openstatus-page-config';
+import type { OpenStatusBlock, OpenStatusPageConfig, OpenStatusSocial, WeeklyHours } from '@/lib/openstatus-page-config';
 
 // ─── SLUG UTILS ───────────────────────────────────────────────────────────────
 
@@ -380,7 +380,7 @@ export default function SetupPage() {
       // Store imported contact info in page config so builder can use it
       ...(placeDetails?.phone ? { phone: placeDetails.phone } : {}),
       ...(placeDetails?.website ? { website: placeDetails.website } : {}),
-      ...(placeDetails?.hours ? { weeklyHours: placeDetails.hours } : {}),
+      ...(placeDetails?.hours ? { weeklyHours: placeDetails.hours as WeeklyHours } : {}),
     };
 
     const { error: metaErr } = await supabase.auth.updateUser({

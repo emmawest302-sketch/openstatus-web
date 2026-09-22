@@ -32,7 +32,7 @@ export interface OpenStatusPageConfig {
   themeColor?: string; placeId?: string;
   font?: string;
 }
-interface Business {
+export interface Business {
   id: string; name: string; slug: string;
   avatar_url?: string; tagline?: string; category?: string | null;
   phone?: string | null; website?: string | null; address?: string | null;
