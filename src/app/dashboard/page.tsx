@@ -131,6 +131,8 @@ export default function BusinessDashboard() {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [analytics, setAnalytics] = useState<AnalyticsSummary>({ pageViews: 0, directions: 0, menuTaps: 0, linkClicks: 0, followers: 0 });
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [activeNav, setActiveNav] = useState<'business'|'analytics'|'edit'|'settings'>('business');
 
   // Load data
@@ -155,6 +157,24 @@ export default function BusinessDashboard() {
       if (!b) { router.replace('/setup'); return; }
       setBiz(b);
       setGoogleConnected(!!b.google_location_id);
+
+      // Fetch real analytics
+      setAnalyticsLoading(true);
+      fetch('/api/analytics?days=30', { headers: { Authorization: `Bearer ${session.access_token}` } })
+        .then(r => r.json())
+        .then((data: { metrics?: { views: number; directions: number; menu: number; clicks: number } }) => {
+          if (data.metrics) {
+            setAnalytics({
+              pageViews: data.metrics.views,
+              directions: data.metrics.directions,
+              menuTaps: data.metrics.menu,
+              linkClicks: data.metrics.clicks,
+              followers: 0,
+            });
+          }
+        })
+        .catch(() => {})
+        .finally(() => setAnalyticsLoading(false));
 
       // Load hours from user metadata first, then DB
       const meta = session.user.user_metadata?.openstatus_page;
@@ -210,7 +230,7 @@ export default function BusinessDashboard() {
     : 'Closed today';
 
   // Mock analytics (replace with real fetch)
-  const analytics: AnalyticsSummary = { pageViews: 1284, directions: 347, menuTaps: 196, linkClicks: 421, followers: 89 };
+  // analytics state is loaded from /api/analytics
   const activity: ActivityRow[] = [
     { id:'1', type:'hours', label:'Hours updated', detail:`Changed hours to ${fmt12('07:00')} – ${fmt12('17:00')}`, time:'2 hours ago' },
     { id:'2', type:'google', label:'Google Business synced', detail:'Your business info and photos are up to date', time:'3 hours ago' },
@@ -436,11 +456,10 @@ export default function BusinessDashboard() {
   // ─── ANALYTICS SUMMARY ───────────────────────────────────────────────────
   const AnalyticsSummary = () => {
     const metrics = [
-      { label: 'Page views', value: analytics.pageViews.toLocaleString(), pct: '+12%', color: '#10B981', spark: 'up' as const },
-      { label: 'Directions', value: analytics.directions.toLocaleString(), pct: '+28%', color: '#3B82F6', spark: 'up' as const },
-      { label: 'Menu taps', value: analytics.menuTaps.toLocaleString(), pct: '+6%', color: '#8B5CF6', spark: 'up' as const },
-      { label: 'Link clicks', value: analytics.linkClicks.toLocaleString(), pct: '+18%', color: '#F59E0B', spark: 'up' as const },
-      { label: 'Followers', value: analytics.followers.toLocaleString(), pct: '+32%', color: '#EC4899', spark: 'up' as const },
+      { label: 'Page views', value: analyticsLoading ? '—' : analytics.pageViews.toLocaleString(), color: '#10B981' },
+      { label: 'Directions', value: analyticsLoading ? '—' : analytics.directions.toLocaleString(), color: '#3B82F6' },
+      { label: 'Menu taps', value: analyticsLoading ? '—' : analytics.menuTaps.toLocaleString(), color: '#8B5CF6' },
+      { label: 'Link clicks', value: analyticsLoading ? '—' : analytics.linkClicks.toLocaleString(), color: '#F59E0B' },
     ];
     return (
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '20px 22px' }}>
@@ -453,14 +472,11 @@ export default function BusinessDashboard() {
           <a href="/analytics" style={{ fontSize: 12, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>View full analytics →</a>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-          {metrics.map(({ label, value, pct, color, spark }) => (
+          {metrics.map(({ label, value, color }) => (
             <div key={label} style={{ padding: '14px', background: BG, borderRadius: 12 }}>
               <div style={{ fontSize: 11, color: TEXT3, marginBottom: 6 }}>{label}</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>{value}</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color }}>{pct}</span>
-                <Sparkline color={color} trend={spark}/>
-              </div>
+
             </div>
           ))}
         </div>
@@ -471,10 +487,10 @@ export default function BusinessDashboard() {
   // ─── MOBILE ANALYTICS ────────────────────────────────────────────────────
   const MobileAnalytics = () => {
     const metrics = [
-      { label: 'Page views', value: analytics.pageViews.toLocaleString(), pct: '+12%', color: '#10B981' },
-      { label: 'Directions', value: analytics.directions.toLocaleString(), pct: '+28%', color: '#3B82F6' },
-      { label: 'Menu', value: analytics.menuTaps.toLocaleString(), pct: '+6%', color: '#8B5CF6' },
-      { label: 'Links', value: analytics.linkClicks.toLocaleString(), pct: '+18%', color: '#F59E0B' },
+      { label: 'Page views', value: analyticsLoading ? '—' : analytics.pageViews.toLocaleString(), color: '#10B981' },
+      { label: 'Directions', value: analyticsLoading ? '—' : analytics.directions.toLocaleString(), color: '#3B82F6' },
+      { label: 'Menu', value: analyticsLoading ? '—' : analytics.menuTaps.toLocaleString(), color: '#8B5CF6' },
+      { label: 'Links', value: analyticsLoading ? '—' : analytics.linkClicks.toLocaleString(), color: '#F59E0B' },
     ];
     return (
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '16px' }}>
@@ -487,11 +503,11 @@ export default function BusinessDashboard() {
           <a href="/analytics" style={{ fontSize: 11, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>View all →</a>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-          {metrics.map(({ label, value, pct, color }) => (
+          {metrics.map(({ label, value, color }) => (
             <div key={label} style={{ padding: '10px 8px', background: BG, borderRadius: 10, textAlign: 'center' }}>
               <div style={{ fontSize: 10, color: TEXT3, marginBottom: 4 }}>{label}</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: TEXT, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
-              <div style={{ fontSize: 10, fontWeight: 600, color, marginTop: 3 }}>{pct}</div>
+              
             </div>
           ))}
         </div>
