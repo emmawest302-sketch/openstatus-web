@@ -1172,7 +1172,17 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
   const sx = isDark ? 'rgba(255,255,255,0.5)' : '#8A8A86';
 
   return (
-    <div style={{ minHeight: '100%', background: bg, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 14 }}>
+    <div
+      data-os-bg-anim={config.bgAnim?'':undefined}
+      style={{
+        minHeight: '100%',
+        background: bg,
+        fontFamily: config.font ?? 'Inter, system-ui, sans-serif',
+        fontSize: 14,
+        animation: bgAnimationStyle(config.bgAnim, config.bgAnimSpeed),
+      }}
+    >
+      <style>{BG_KEYFRAMES}</style>
       <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>
 
         {/* Cover photo */}
@@ -3769,7 +3779,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
 
                 {/* Centered preview */}
-                <div className="flex flex-col items-center gap-3" style={{padding:'0 24px',maxWidth:'100%'}}>
+                <div className="flex flex-col items-center gap-3 w-full" style={{padding:'0 24px',maxWidth:previewMode==='desktop'?'100%':undefined}}>
                   {previewMode==='mobile'
                     ?(
                       <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:300,maxWidth:'calc(100% - 48px)'}}>
@@ -3779,7 +3789,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     )
                     :(
                       <div className="rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-[#DEDEDC] bg-white"
-                        style={{width:'100%',maxWidth:560}}>
+                        style={{width:'100%'}}>
                         {/* browser chrome, so "Web" reads as a real page */}
                         <div className="flex items-center gap-1.5 px-3 py-2 bg-[#F4F6FA] border-b border-[#E8EBF0]">
                           <span className="w-2 h-2 rounded-full bg-[#FF5F57]"/>
