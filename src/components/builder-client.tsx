@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
@@ -15,6 +16,14 @@ type BlockSize = 'half' | 'square' | 'full' | 'third';
 // Photos only look right in the bigger blocks — a cover image in a compact row
 // is an unreadable sliver, so we gate the control rather than let it look broken.
 function blockAllowsPhoto(size?: BlockSize) { return size !== 'half' && size !== 'third'; }
+// These blocks are their own content — they don't need a link to be useful.
+const SELF_CONTAINED_BLOCKS = new Set(['hours','location','updates','gallery','socials']);
+// A block with no destination is excluded from the published page, so the
+// builder has to say so rather than letting the owner think it went live.
+function blockNeedsSetup(b: OpenStatusBlock) {
+  if (SELF_CONTAINED_BLOCKS.has(b.id)) return false;
+  return !(b.url && b.url.trim()) && !(b.menuFile && b.menuFile.trim());
+}
 type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 interface DayHours { open: string; close: string; closed: boolean; }
 type WeeklyHours = Record<WeekDay, DayHours>;
@@ -1094,7 +1103,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
           ))}
         </div>
       )}
-      <p className="text-center text-[11px] text-[#858585] mt-4 font-medium">openstatus.co/…</p>
+      <p className="text-center text-[11px] text-[#858585] mt-4 font-medium">{SITE_DOMAIN}/…</p>
     </div>
   );
 }
@@ -2037,6 +2046,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [deleteConfirm,setDeleteConfirm]=useState('');
   const [deleting,setDeleting]=useState(false);
   const [deleteMsg,setDeleteMsg]=useState('');
+  const [helpOpen,setHelpOpen]=useState(false);
   const [bizSaving,setBizSaving]=useState(false);
   const [bizSaved,setBizSaved]=useState(false);
   const [bizSaveError,setBizSaveError]=useState('');
@@ -2405,6 +2415,32 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#F0F2F5] text-[#111111]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
 
+      {/* ── Help ── */}
+      {helpOpen&&(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{background:'rgba(17,17,17,0.35)',backdropFilter:'blur(3px)'}}
+          onClick={()=>setHelpOpen(false)}>
+          <div className="w-full max-w-[380px] rounded-2xl bg-white border border-[#EBEBEA] shadow-[0_20px_60px_rgba(0,0,0,0.18)] p-6"
+            onClick={e=>e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h3 className="text-[16px] font-semibold text-[#111]">Need a hand?</h3>
+              <button onClick={()=>setHelpOpen(false)} aria-label="Close"
+                className="w-7 h-7 rounded-full bg-[#F4F6FA] flex items-center justify-center text-[#667085] hover:text-[#111] transition-colors flex-shrink-0">
+                <LucideX size={12} color="currentColor"/>
+              </button>
+            </div>
+            <p className="text-[13px] text-[#667085] leading-relaxed mb-5">
+              Email us and a real person will get back to you. Tell us what you were trying to do and we&apos;ll sort it out.
+            </p>
+            <a href="mailto:info@openstatus.co?subject=OpenStatus%20help"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[13px] font-semibold hover:bg-[#6D28D9] transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
+              Email info@openstatus.co
+            </a>
+          </div>
+        </div>
+      )}
+
 
 
       {/* ── LEFT SIDEBAR (desktop) ── */}
@@ -2433,8 +2469,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </nav>
         {/* Bottom CTAs */}
         <div className="px-4 py-4 border-t border-[#EBEBEA] flex-shrink-0">
-          <button onClick={()=>setSidebarTab('settings')} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#667085] hover:text-[#6D28D9] transition-colors">
-            ⚙ Account settings
+          <button onClick={()=>setHelpOpen(true)} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#667085] hover:text-[#6D28D9] transition-colors">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Help
           </button>
         </div>
       </aside>
@@ -2687,7 +2724,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                   {liveStatus==='open'?'● open':'● closed'}
                                 </span>
                               )}
-                              {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#EEEEEC] text-[#858585] flex-shrink-0">½</span>}
+                              {block.size==='half'&&<span className="text-[9px] px-1.5 py-0.5 rounded bg-[#EEEEEC] text-[#858585] flex-shrink-0" title="Half width">Half</span>}
+                              {blockNeedsSetup(block)&&(
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 bg-[#FEF0C7] text-[#B54708]"
+                                  title="This block has no link yet, so it won't appear on your live page">
+                                  Needs setup
+                                </span>
+                              )}
                             </div>
                             <p className="text-[12px] text-[#858585] leading-tight mt-0.5 truncate">
                               {block.id==='hours'?todayLabel:block.sub}
@@ -2863,7 +2906,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <div className="mb-5 flex items-center gap-3 p-4 rounded-2xl border border-[#DEDEDC] bg-[#F9FAFB]">
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-0.5">Your page</p>
-                      <p className="text-[13px] font-medium text-[#111] truncate">forothers.co/{localBusiness.slug}</p>
+                      <p className="text-[13px] font-medium text-[#111] truncate">{SITE_DOMAIN}/{localBusiness.slug}</p>
                     </div>
                     <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
                       className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
@@ -2935,9 +2978,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {localBusiness?.slug
                   ?(
                     <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#DEDEDC] bg-[#F9FAFB]">
-                      <p className="flex-1 min-w-0 text-[13px] font-medium text-[#111] truncate">forothers.co/{localBusiness.slug}</p>
+                      <p className="flex-1 min-w-0 text-[13px] font-medium text-[#111] truncate">{SITE_DOMAIN}/{localBusiness.slug}</p>
                       <button
-                        onClick={()=>{ void navigator.clipboard?.writeText(`https://forothers.co/${localBusiness.slug}`); }}
+                        onClick={()=>{ void navigator.clipboard?.writeText(`${SITE_URL}/${localBusiness.slug}`); }}
                         className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
                         Copy
                       </button>
@@ -3120,7 +3163,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Your link</p>
                   <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
                     <div className="flex items-stretch gap-0">
-                      <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-[#DEDEDC] bg-[#F9FAFB] text-[12px] text-[#98A2B3] whitespace-nowrap">openstatus.co/</span>
+                      <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-[#DEDEDC] bg-[#F9FAFB] text-[12px] text-[#98A2B3] whitespace-nowrap">{SITE_DOMAIN}/</span>
                       <input value={slugEdit} onChange={e=>{setSlugEdit(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,48));setSlugMsg('');}}
                         placeholder="your-business"
                         className="flex-1 min-w-0 bg-white border border-[#DEDEDC] rounded-r-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#111] transition-colors"/>
@@ -3771,7 +3814,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <div className="mb-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
                 <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-1">Your Link</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-[14px] font-semibold text-[#111] flex-1 truncate">openstatus.co/{business.slug}</p>
+                  <p className="text-[14px] font-semibold text-[#111] flex-1 truncate">{SITE_DOMAIN}/{business.slug}</p>
                   <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
                     className="text-[11px] font-normal text-[#667085] hover:text-[#111] flex items-center gap-1">
                     Open ↗
@@ -3789,7 +3832,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <span className="text-[13px] font-semibold text-[#111] flex-1">Edit business info</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
-              <a href="mailto:hello@forothers.co?subject=Help" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <a href="mailto:info@openstatus.co?subject=Help" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
                 <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
                 </div>
@@ -3803,7 +3846,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
                 <span className="text-[13px] font-semibold text-[#E53935] flex-1">Log out</span>
               </button>
-              <a href="mailto:hello@forothers.co?subject=Delete%20my%20account" className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#FFD6D6] bg-[#FFF8F8]">
+              <a href="mailto:info@openstatus.co?subject=Delete%20my%20account" className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#FFD6D6] bg-[#FFF8F8]">
                 <div className="w-9 h-9 rounded-xl bg-[#FFE8E8] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </div>

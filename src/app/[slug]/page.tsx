@@ -9,8 +9,63 @@ import AnalyticsTracker from '@/components/analytics-tracker';
 import PublicShareButton from '@/components/public-share-button';
 import PublicLocationBlock from '@/components/public-location-block';
 import { loadPublishedPageConfig } from '@/lib/published-page-config';
+import { SITE_URL, pageUrl } from '@/lib/site';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Per-business metadata. Without this every page inherited the app's own title
+ * and description, so pasting a business link into iMessage, WhatsApp or Slack
+ * produced a bare URL with no name, photo or description — for a link-in-bio
+ * product that is a core-feature failure, not an SEO nicety.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const admin = getAdminClient();
+    const { data: biz } = await admin
+      .from('businesses')
+      .select('id,name,tagline,address,avatar_url,header_url')
+      .eq('slug', slug.toLowerCase())
+      .maybeSingle();
+
+    if (!biz) return { title: 'Page not found — OpenStatus' };
+
+    const b = biz as { id: string; name: string; tagline: string | null; address: string | null; avatar_url: string | null; header_url: string | null };
+    const place = (b.address ?? '').split(',').slice(1, 3).join(',').trim();
+    const title = place ? `${b.name} — ${place}` : b.name;
+    const description = b.tagline?.trim()
+      || (b.address ? `${b.name} · ${b.address}. Live hours and status.` : `${b.name} — live hours, status and links.`);
+
+    const img = b.header_url || b.avatar_url;
+    const ogImage = img
+      ? (img.startsWith('http') ? img : `${SITE_URL}/api/assets?businessId=${b.id}&kind=${b.header_url ? 'header' : 'avatar'}`)
+      : undefined;
+
+    return {
+      title,
+      description,
+      alternates: { canonical: pageUrl(slug) },
+      openGraph: {
+        type: 'website',
+        url: pageUrl(slug),
+        title,
+        description,
+        siteName: 'OpenStatus',
+        ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      },
+      twitter: {
+        card: ogImage ? 'summary_large_image' : 'summary',
+        title,
+        description,
+        ...(ogImage ? { images: [ogImage] } : {}),
+      },
+    };
+  } catch {
+    return {};
+  }
+}
 
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 type Hours = { day_of_week: number; opens_at: string | null; closes_at: string | null; is_closed: boolean };
@@ -93,7 +148,9 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const enrichedConfig = {
     ...pageConfig,
     blocks: pageConfig.blocks.map(b => {
-      if (b.id === 'menu' && !b.url && placeWebsite) return { ...b, url: placeWebsite };
+      // A Menu block must never fall back to the website: tapping "Menu" then
+      // silently lands the customer on the homepage with no menu and no
+      // explanation. A block with no destination is filtered out instead.
       if (b.id === 'reviews' && !b.url && googleMapsReviewUrl) return { ...b, url: googleMapsReviewUrl };
       if (b.id === 'website' && !b.url && placeWebsite) return { ...b, url: placeWebsite };
       return b;
@@ -201,6 +258,29 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         return <link rel="stylesheet" href={`https://fonts.googleapis.com/css2?family=${gf}&display=swap`}/>;
       })()}
     <div style={{ minHeight: '100dvh', background: bg, fontFamily: pageFont }}>
+      {/* Structured data — this is what surfaces hours directly in Google results. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'LocalBusiness',
+          name: business.name,
+          url: pageUrl(slug),
+          ...(business.address ? { address: business.address } : {}),
+          ...(business.tagline ? { description: business.tagline } : {}),
+          ...(avatar ? { image: avatar.startsWith('http') ? avatar : `${SITE_URL}${avatar}` } : {}),
+          ...(hours.length > 0 ? {
+            openingHoursSpecification: hours
+              .filter(h => !h.is_closed && h.opens_at && h.closes_at)
+              .map(h => ({
+                '@type': 'OpeningHoursSpecification',
+                dayOfWeek: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][h.day_of_week],
+                opens: h.opens_at,
+                closes: h.closes_at,
+              })),
+          } : {}),
+        }) }}
+      />
       <AnalyticsTracker businessId={business.id}/>
 
       {/* ── Outer page centering wrapper ── */}
@@ -269,6 +349,14 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           }}>
             {business.name}
           </h1>
+          {(locationBlock?.address || business.address) && (
+            <p style={{
+              fontSize: 12, color: bgIsDark ? 'rgba(255,255,255,0.72)' : '#4B4B4B',
+              marginTop: 6, lineHeight: 1.4,
+            }}>
+              {locationBlock?.address || business.address}
+            </p>
+          )}
           {business.tagline && (
             <p style={{
               fontSize: 10, fontWeight: 500, letterSpacing: '0.16em',
