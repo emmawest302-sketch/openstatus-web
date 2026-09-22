@@ -651,7 +651,7 @@ export default function BusinessDashboard() {
       {/* Mobile header */}
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT3, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: 10 }}>OpenStatus</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT3, letterSpacing: '0.06em', textTransform: 'uppercase' }}>OpenStatus</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{biz.name}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT3} strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
