@@ -34,7 +34,8 @@ export interface OpenStatusPageConfig {
 }
 interface Business {
   id: string; name: string; slug: string;
-  avatar_url?: string; tagline?: string; category?: string;
+  avatar_url?: string; tagline?: string; category?: string | null;
+  phone?: string | null; website?: string | null; address?: string | null;
 }
 
 // ── constants ──────────────────────────────────────────────────────────────────
@@ -1778,6 +1779,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null; googleConnected?:boolean;
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
+  const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt);
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('design');
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('regular');
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>(
@@ -1812,6 +1814,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [dragOverId,setDragOverId]=useState<string|null>(null);
   const [previewWidth,setPreviewWidth]=useState(420);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
+  const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:business?.category??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
+  const [bizSaving,setBizSaving]=useState(false);
+  const [bizSaved,setBizSaved]=useState(false);
+  const [bizSaveError,setBizSaveError]=useState('');
   const [logoUploading,setLogoUploading]=useState(false);
   const [logoUploadError,setLogoUploadError]=useState('');
   const [bgUploading,setBgUploading]=useState(false);
@@ -1877,6 +1883,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   async function save() {
     setSaving(true);setSaveError('');
     const {error}=await supabase.auth.updateUser({data:{openstatus_page:config}});
+    // On first publish, stamp onboarded_at in the businesses table
+    if(!hasPublished&&business?.id&&!error){
+      await supabase.from('businesses').update({onboarded_at:new Date().toISOString()}).eq('id',business.id);
+      setHasPublished(true);
+    }
     setSaving(false);
     if(error){setSaveError(error.message);return;}
     setSaved(true);setTimeout(()=>setSaved(false),2500);
@@ -1903,6 +1914,23 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         }
       }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
     }
+  }
+
+  async function saveBizInfo() {
+    if(!business?.id)return;
+    setBizSaving(true);setBizSaveError('');setBizSaved(false);
+    const update:Record<string,string|null>={
+      name:bizEdit.name.trim()||null,
+      category:bizEdit.category||null,
+      phone:bizEdit.phone.trim()||null,
+      website:bizEdit.website.trim()||null,
+      address:bizEdit.address.trim()||null,
+    };
+    const {error}=await supabase.from('businesses').update(update).eq('id',business.id);
+    setBizSaving(false);
+    if(error){setBizSaveError(error.message);return;}
+    setLocalBusiness(b=>b?{...b,...update,name:update.name??b.name}:b);
+    setBizSaved(true);setTimeout(()=>setBizSaved(false),2500);
   }
 
   // Hours table row
@@ -2015,6 +2043,25 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     document.head.appendChild(link);
   },[config.font]);
 
+  // Auto-save after publish: debounce config changes and silently save
+  const autosaveTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const isInitialMount=useRef(true);
+  useEffect(()=>{
+    if(isInitialMount.current){isInitialMount.current=false;return;}
+    if(!hasPublished)return; // only autosave once published
+    if(autosaveTimer.current)clearTimeout(autosaveTimer.current);
+    autosaveTimer.current=setTimeout(()=>{
+      setSaving(true);setSaveError('');
+      supabase.auth.updateUser({data:{openstatus_page:config}}).then(({error})=>{
+        setSaving(false);
+        if(!error){setSaved(true);setTimeout(()=>setSaved(false),2000);}
+        else{setSaveError(error.message);}
+      });
+    },1500);
+    return ()=>{if(autosaveTimer.current)clearTimeout(autosaveTimer.current);};
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[config,hasPublished]);
+
   const closeEarlyTimes: string[] = [];
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
@@ -2079,8 +2126,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </button>
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
-                {saving?'Saving…':saved?'✓ Saved':saveError?'Error':'Publish'}
+                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':hasPublished?'bg-[#E8EBF0] text-[#667085] hover:bg-[#DEDEDC]':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
+                {saving?'Saving…':saved?'✓ Saved':saveError?'Error':hasPublished?'Save':'Publish'}
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
               {googleConnected&&googleSyncStatus==='syncing'&&<p className="text-[10px] text-[#4285F4] text-right">Syncing to Google…</p>}
@@ -2620,7 +2667,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                   <div>
                     <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Category</p>
-                    <p className="text-[15px] font-semibold text-[#111]">{business?.category??'Not set'}</p>
+                    <p className="text-[15px] font-semibold text-[#111]">{([{id:'restaurant',label:'Restaurant'},{id:'cafe',label:'Café'},{id:'salon',label:'Salon / Beauty'},{id:'retail',label:'Retail Shop'},{id:'online',label:'Online Business'},{id:'fitness',label:'Fitness / Gym'},{id:'wellness',label:'Wellness / Spa'},{id:'services',label:'Professional Services'},{id:'food_truck',label:'Food Truck'},{id:'bar',label:'Bar / Nightlife'}].find(c=>c.id===(localBusiness?.category??business?.category))?.label)??(localBusiness?.category??business?.category??'Not set')}</p>
                   </div>
                   <div>
                     <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Description</p>
@@ -3153,8 +3200,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </a>
           )}
           <button onClick={save} disabled={saving}
-            className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':'bg-white text-[#0D0D0D]'}`}>
-            {saving?'Saving…':saved?'✓ Saved':'Publish'}
+            className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':hasPublished?'bg-white/20 text-white':'bg-white text-[#0D0D0D]'}`}>
+            {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
           </button>
         </div>
       </div>
@@ -3382,17 +3429,60 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               ))}
             </div>
 
-            {/* Account link */}
-            <button onClick={()=>setSidebarTab('business')} className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] w-full text-left">
-              <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            {/* ── Business Profile inline editor ── */}
+            <div className="mb-3">
+              <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Business Profile</p>
+              <div className="rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB] overflow-hidden divide-y divide-[#E8EBF0]">
+                {/* Name */}
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Name</span>
+                  <input value={bizEdit.name} onChange={e=>setBizEdit(b=>({...b,name:e.target.value}))}
+                    placeholder="Business name"
+                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                </div>
+                {/* Category */}
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Category</span>
+                  <select value={bizEdit.category} onChange={e=>setBizEdit(b=>({...b,category:e.target.value}))}
+                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none appearance-none cursor-pointer">
+                    <option value="">— Select —</option>
+                    {[{id:'restaurant',label:'Restaurant'},{id:'cafe',label:'Café'},{id:'salon',label:'Salon / Beauty'},{id:'retail',label:'Retail Shop'},{id:'online',label:'Online Business'},{id:'fitness',label:'Fitness / Gym'},{id:'wellness',label:'Wellness / Spa'},{id:'services',label:'Professional Services'},{id:'food_truck',label:'Food Truck'},{id:'bar',label:'Bar / Nightlife'}].map(c=>(
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Phone */}
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Phone</span>
+                  <input value={bizEdit.phone} onChange={e=>setBizEdit(b=>({...b,phone:e.target.value}))}
+                    placeholder="+1 (555) 000-0000" type="tel"
+                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                </div>
+                {/* Website */}
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Website</span>
+                  <input value={bizEdit.website} onChange={e=>setBizEdit(b=>({...b,website:e.target.value}))}
+                    placeholder="https://yoursite.com" type="url"
+                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                </div>
+                {/* Address */}
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Address</span>
+                  <input value={bizEdit.address} onChange={e=>setBizEdit(b=>({...b,address:e.target.value}))}
+                    placeholder="123 Main St, City, State"
+                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-[12px] font-semibold text-[#111]">Business Profile</p>
-                <p className="text-[10px] text-[#667085]">Name, address, phone & category</p>
+              <div className="flex items-center justify-between mt-2">
+                {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
+                {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">✓ Saved</p>}
+                {!bizSaveError&&!bizSaved&&<span/>}
+                <button onClick={saveBizInfo} disabled={bizSaving}
+                  className="ml-auto rounded-xl bg-[#0A0A0A] text-white text-[11px] font-bold px-4 py-2 hover:bg-[#292929] transition-colors disabled:opacity-40">
+                  {bizSaving?'Saving…':'Save'}
+                </button>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
+            </div>
           </div>
         )}
 
