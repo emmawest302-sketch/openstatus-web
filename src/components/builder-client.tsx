@@ -2223,6 +2223,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const dragTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
   const dragStart = useRef<{x:number;y:number}|null>(null);
   const dragging  = useRef(false);
+  const suppressTap = useRef(false);
 
   const cancelLongPress = useCallback(()=>{
     if(dragTimer.current){ clearTimeout(dragTimer.current); dragTimer.current=null; }
@@ -2231,6 +2232,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   const endDrag = useCallback(()=>{
     cancelLongPress();
+    if(dragging.current){
+      suppressTap.current=true;
+      setTimeout(()=>{ suppressTap.current=false; },350);
+    }
     dragging.current=false;
     setMDragId(null);
   },[cancelLongPress]);
@@ -4366,7 +4371,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
 {/* ── BUSINESS tab content ── */}
         {sidebarTab==='business'&&(
-          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+          <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
             <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Business</h2>
             {/* Analytics snapshot - mobile */}
             {analyticsData&&(
@@ -4640,7 +4645,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
 {/* ── ANALYTICS mobile tab ── */}
         {sidebarTab==='analytics'&&(
-          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+          <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
             <div className="flex items-center justify-between pt-1 pb-3">
               <h2 className="text-[20px] font-semibold text-[#111]">Analytics</h2>
               <div className="flex gap-1.5">
@@ -4718,7 +4723,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
 {/* ── SETTINGS tab ── */}
         {sidebarTab==='settings'&&(
-          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
+          <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
             <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Settings</h2>
             {/* Your link */}
             {business?.slug&&(
@@ -4793,7 +4798,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             style={{maxWidth:340,marginLeft:'auto',marginRight:'auto'}}>
             <LivePhonePreview key={previewKey} business={localBusiness} config={config}
               selectedId={mSheet==='block'?openId:null}
-              onSelectBlock={id=>{ if(dragging.current) return; setOpenId(id); setSidebarTab('design'); setMSheet('block'); }}
+              onSelectBlock={id=>{ if(dragging.current||suppressTap.current) return; setOpenId(id); setSidebarTab('design'); setMSheet('block'); }}
               blockProps={mobileBlockProps}/>
           </div>
         </div>
