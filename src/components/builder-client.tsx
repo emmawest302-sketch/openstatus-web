@@ -2205,7 +2205,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [googleFetchDone,setGoogleFetchDone]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
   const [mobileBlockCat,setMobileBlockCat]=useState<string>('All');
-  const [mobileSheetOpen,setMobileSheetOpen]=useState<boolean>(false);
+  // Retained only because the desktop sidebar still sets it. The 52vh mobile
+  // sheet it used to drive is gone — the phone uses full pages and small sheets.
+  const [,setMobileSheetOpen]=useState<boolean>(false);
 
   // ─────────────────────────────────────────────────────────────────────────
   //  MOBILE SHELL STATE  (phone only — nothing below is read by the desktop
@@ -2785,8 +2787,21 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     setStatusPosting(false);
     setTimeout(()=>setReopenMsg(''),8000);
   };
+  /**
+   * A change to today's hours is a change to today's hours everywhere.
+   *
+   * The point of OpenStatus is that the owner edits in one place and every
+   * linked surface follows, so closing today or closing early writes BOTH the
+   * OpenStatus page and — when connected — Google, as a dated specialHours
+   * period. Dated is the important part: it expires by itself, so this can
+   * never strand a listing the way openInfo.status did.
+   *
+   * A note is the one exception. Google has nowhere to put free text, so it
+   * stays on the OpenStatus page and the UI says so.
+   */
   const postStatus=async(preset:string)=>{
-    setStatusPosting(true);
+    setStatusPosting(true);setGMsg('');
+    let pageOk=false; let firstError='';
     try{
       const {data:s}=await supabase.auth.getSession();
       const token=s?.session?.access_token;
@@ -2794,15 +2809,72 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       const body:Record<string,string>={action:'publish',preset};
       if(preset==='early_close') body.closesAt=statusCloseTime;
       if(preset==='note_today') body.note=statusNote;
-      await fetch('/api/status',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
-      await loadStatusUpdates();
-      setStatusNote('');
-    }catch{}
+      const r=await fetch('/api/status',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(r.ok) pageOk=true;
+      else {
+        const b=await r.json().catch(()=>({}));
+        firstError=b?.error ?? 'Could not update your page';
+      }
+    }catch(e){ firstError=e instanceof Error?e.message:'Could not update your page'; }
+
+    // Mirror to Google as a dated exception for today.
+    let googleOk=false;
+    const syncsToGoogle = googleConnected && preset!=='note_today';
+    if(pageOk && syncsToGoogle){
+      try{
+        const now=new Date();
+        const d={year:now.getFullYear(),month:now.getMonth()+1,day:now.getDate()};
+        const period = preset==='closed_today'
+          ? { startDate:d, endDate:d, closed:true }
+          : (()=>{
+              const day = config.weeklyHours?.[(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[now.getDay()]];
+              const [oh,om] = (day?.open ?? '09:00').split(':').map(Number);
+              const [ch,cm] = statusCloseTime.split(':').map(Number);
+              return { startDate:d, endDate:d, openTime:{hours:oh,minutes:om}, closeTime:{hours:ch,minutes:cm} };
+            })();
+        await googleStatusRequest({action:'special_hours',periods:[period]});
+        googleOk=true;
+      }catch(e){ if(!firstError) firstError=e instanceof Error?e.message:'Could not update Google'; }
+    }
+
+    if(pageOk && (googleOk || !syncsToGoogle)){
+      setGMsg(preset==='note_today'
+        ? '✓ Note added to your page'
+        : googleConnected
+          ? '✓ Updated on your page and Google'
+          : '✓ Updated on your page');
+    } else if(pageOk){
+      setGMsg(`✓ Your page updated, but Google failed: ${firstError}`);
+    } else {
+      setGMsg(firstError||'Could not post that update');
+    }
+
+    await loadStatusUpdates();
+    if(pageOk) setStatusNote('');
+    setStatusPosting(false);
+  };
+
+  /**
+   * Undo today's change in both places: clear the OpenStatus update and wipe
+   * today's Google specialHours period so the listing falls back to the
+   * regular week immediately rather than at midnight.
+   */
+  const clearStatusEverywhere=async()=>{
+    setStatusPosting(true);setGMsg('');
+    await clearStatus();
+    if(googleConnected){
+      try{
+        await googleStatusRequest({action:'special_hours',periods:[]});
+        setGMsg('✓ Back to your regular hours on your page and Google');
+      }catch(e){ setGMsg(e instanceof Error?e.message:'Cleared your page, but Google failed'); }
+    } else {
+      setGMsg('✓ Back to your regular hours');
+    }
     setStatusPosting(false);
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(()=>{ if(sidebarTab==='hours'&&hoursSubTab==='status') loadStatusUpdates(); },[sidebarTab,hoursSubTab]);
+  useEffect(()=>{ if(sidebarTab==='hours') loadStatusUpdates(); },[sidebarTab,hoursSubTab]);
   useEffect(()=>{
     if(sidebarTab!=='analytics'&&sidebarTab!=='business') return;
     setAnalyticsLoading(true);
@@ -3097,7 +3169,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {/* Active status banner */}
                     <div>
                       <p className="text-[14px] font-semibold text-[#0A0A0A]">What your page says right now</p>
-                      <p className="text-[12px] text-[#858585] mt-1 mb-3">This is exactly what a customer sees when they tap your link.</p>
+                      <p className="text-[12px] text-[#858585] mt-1 mb-3">
+                        {googleConnected
+                          ? 'What a customer sees on your link and on Google.'
+                          : 'What a customer sees when they tap your link.'}
+                      </p>
                       {statusLoading?(
                         <div className="rounded-2xl border border-[#DEDEDC] bg-white px-4 py-3">
                           <p className="text-[13px] text-[#858585]">Loading…</p>
@@ -3114,11 +3190,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                 </div>
                               </div>
                               <button
-                                onClick={clearStatus}
+                                onClick={clearStatusEverywhere}
                                 disabled={statusPosting}
                                 className="flex-shrink-0 text-[12px] font-semibold text-[#EF4444] hover:text-red-700 transition-colors disabled:opacity-40"
                               >
-                                {statusPosting?'…':'Undo — back to regular hours'}
+                                {statusPosting?'…':googleConnected?'Undo — everywhere':'Undo — back to regular hours'}
                               </button>
                             </div>
                           ))}
@@ -3151,11 +3227,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                     {/* Quick post presets */}
                     <div>
-                      <p className="text-[14px] font-semibold text-[#0A0A0A]">Just for today</p>
+                      <p className="text-[14px] font-semibold text-[#0A0A0A]">Change today&apos;s hours</p>
                       <p className="text-[12px] text-[#858585] mt-1 mb-4 leading-relaxed">
-                        These change what your OpenStatus page says <strong className="font-semibold text-[#111]">today only</strong> —
-                        your regular hours come back by themselves tomorrow morning. Your Google listing is not touched.
-                        To close for a specific date or a whole week, use <strong className="font-semibold text-[#111]">Special hours</strong>.
+                        {googleConnected
+                          ? <>Updates your page <strong className="font-semibold text-[#111]">and your Google listing</strong> together — that&apos;s the whole point. </>
+                          : <>Updates your page. Connect Google Business and it&apos;ll update your listing at the same time. </>}
+                        Applies to <strong className="font-semibold text-[#111]">today only</strong> and expires by itself overnight.
+                        For a future date or a longer stretch, use <strong className="font-semibold text-[#111]">Special hours</strong>.
                       </p>
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         {/* Closed today */}
@@ -3168,7 +3246,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           <div>
                             <p className="text-[13px] font-semibold text-[#111]">Closed for the rest of today</p>
                             <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">
-                              Your page will say &ldquo;Closed today&rdquo;. Reopens on its own tomorrow.
+                              {googleConnected?'Your page and Google both say closed today.':'Your page says closed today.'} Reopens on its own tomorrow.
                             </p>
                           </div>
                         </button>
@@ -3177,7 +3255,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                           <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
                           <p className="text-[11px] text-[#858585] leading-snug">
-                            Your page shows your new closing time for today only.
+                            {googleConnected?'Your page and Google show the earlier closing time, today only.':'Your page shows the earlier closing time, today only.'}
                           </p>
                           <div className="flex items-center gap-2">
                             <div className="relative flex-1">
@@ -3209,6 +3287,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         </div>
                         <p className="text-[11px] text-[#858585] leading-snug -mt-1">
                           Shows on your page alongside your hours. Doesn&apos;t mark you closed.
+                          Google has nowhere to put free text, so a note stays on your page only.
                         </p>
                         <textarea
                           value={statusNote}
@@ -4435,7 +4514,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
 
             {/* What the page says right now */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-4 mb-2">What customers see</p>
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-4 mb-2">
+              {googleConnected?'What customers see — link + Google':'What customers see'}
+            </p>
             {statusUpdates.filter(u=>u.status!=='needs_review').length>0?(
               statusUpdates.filter(u=>u.status!=='needs_review').map(u=>(
                 <div key={u.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8EBF0] bg-white px-4 py-3 mb-2">
@@ -4443,7 +4524,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"/>
                     <p className="text-[13px] font-semibold text-[#111] truncate">{u.headline}</p>
                   </div>
-                  <button onClick={clearStatus} disabled={statusPosting}
+                  <button onClick={clearStatusEverywhere} disabled={statusPosting}
                     className="flex-shrink-0 text-[12px] font-semibold text-[#EF4444] disabled:opacity-40">
                     {statusPosting?'…':'Undo'}
                   </button>
@@ -4464,9 +4545,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </p>
 
             {/* Today only */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-6 mb-1">Just for today</p>
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-6 mb-1">Change today&apos;s hours</p>
             <p className="text-[11.5px] text-[#667085] mb-3 leading-relaxed">
-              Expires tonight on its own. Doesn&apos;t touch your Google listing.
+              {googleConnected
+                ? 'Updates your page and your Google listing together. Today only — expires overnight.'
+                : 'Updates your page. Today only — expires overnight.'}
             </p>
 
             <button onClick={()=>postStatus('closed_today')} disabled={statusPosting}
@@ -4476,13 +4559,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
               <div className="text-left min-w-0">
                 <p className="text-[13px] font-semibold text-[#111] leading-tight">Closed for the rest of today</p>
-                <p className="text-[11px] text-[#667085] leading-tight mt-0.5">Reopens by itself tomorrow</p>
+                <p className="text-[11px] text-[#667085] leading-tight mt-0.5">{googleConnected?'Page + Google · reopens by itself':'Reopens by itself tomorrow'}</p>
               </div>
             </button>
 
             <div className="p-3.5 rounded-2xl border border-[#E8EBF0] bg-white mb-2">
               <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
-              <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">Shows a new closing time, today only.</p>
+              <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
               <div className="flex items-center gap-2">
                 <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
                   className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
@@ -4497,7 +4580,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             <div className="p-3.5 rounded-2xl border border-[#E8EBF0] bg-white">
               <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
-              <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">Shows beside your hours. Doesn&apos;t mark you closed.</p>
+              <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">Shows beside your hours. Your page only — Google has nowhere to put free text.</p>
               <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
                 placeholder="Running about 20 minutes behind today…" rows={2}
                 className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
