@@ -30,6 +30,23 @@ function localDateParts(timeZone: string) {
   return { year: Number(value('year')), month: Number(value('month')), day: Number(value('day')) };
 }
 
+/** End of an arbitrary local date, so a closure can cover a range or a future day. */
+function zonedEndOfDate(timeZone: string, y: number, m: number, d: number) {
+  const desired = Date.UTC(y, m - 1, d, 23, 59, 59);
+  let guess = desired;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    }).formatToParts(new Date(guess));
+    const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+    const represented = Date.UTC(value('year'), value('month') - 1, value('day'), value('hour'), value('minute'), value('second'));
+    guess += desired - represented;
+  }
+  return new Date(guess).toISOString();
+}
+
 function zonedEndOfDay(timeZone: string) {
   const { year, month, day } = localDateParts(timeZone);
   const desired = Date.UTC(year, month - 1, day, 23, 59, 59);
@@ -101,6 +118,50 @@ export async function POST(req: NextRequest) {
       .eq('status', 'active');
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
+  }
+
+  // Mirrors a Google specialHours closure into OpenStatus, so the business's own
+  // page goes closed too instead of only the Google listing.
+  if (action === 'closed_dates') {
+    const DATE = /^\d{4}-\d{2}-\d{2}$/;
+    const startDate = typeof body?.startDate === 'string' && DATE.test(body.startDate) ? body.startDate : null;
+    const endDate = typeof body?.endDate === 'string' && DATE.test(body.endDate) ? body.endDate : startDate;
+    if (!startDate || !endDate) return NextResponse.json({ error: 'Need a start and end date' }, { status: 400 });
+    if (endDate < startDate) return NextResponse.json({ error: 'End date is before the start date' }, { status: 400 });
+
+    const headline = typeof body?.headline === 'string' && body.headline.trim()
+      ? body.headline.trim().slice(0, 80)
+      : 'Closed';
+
+    const timezone = actor.timezone || 'America/Chicago';
+    const [ey, em, ed] = endDate.split('-').map(Number);
+
+    await actor.admin
+      .from('status_updates')
+      .delete()
+      .eq('business_id', actor.businessId)
+      .eq('source', 'owner')
+      .eq('status', 'active');
+
+    const { data, error } = await actor.admin
+      .from('status_updates')
+      .insert({
+        business_id: actor.businessId,
+        kind: 'closed',
+        headline,
+        detail: startDate === endDate ? null : `Closed ${startDate} to ${endDate}`,
+        closes_at: null,
+        reason: null,
+        effective_date: startDate,
+        expires_at: zonedEndOfDate(timezone, ey, em, ed),
+        confidence: 1,
+        status: 'active',
+        source: 'owner',
+      })
+      .select('id')
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, id: data.id });
   }
 
   if (action === 'publish') {

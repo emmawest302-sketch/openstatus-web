@@ -2062,6 +2062,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [deleting,setDeleting]=useState(false);
   const [deleteMsg,setDeleteMsg]=useState('');
   const [helpOpen,setHelpOpen]=useState(false);
+  // Live open-state read back from Google. `status` is Google's own enum string,
+  // which is also how we learn the vocabulary this account actually uses.
+  const [gStatus,setGStatus]=useState<{status:string|null;canReopen:boolean|null;isClosed:boolean}|null>(null);
+  const [gBusy,setGBusy]=useState(false);
+  const [gMsg,setGMsg]=useState('');
+
   const [undoBlock,setUndoBlock]=useState<OpenStatusBlock|null>(null);
   const undoTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [bizSaving,setBizSaving]=useState(false);
@@ -2222,6 +2228,88 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         }
       }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
     }
+  }
+
+  async function googleStatusRequest(payload: Record<string, unknown>, verb: 'GET'|'POST'='POST') {
+    const {data:{session}}=await supabase.auth.getSession();
+    const token=session?.access_token;
+    if(!token) throw new Error('Session expired — sign in again.');
+    const res=await fetch('/api/google/status', verb==='GET'
+      ? { headers:{Authorization:`Bearer ${token}`} }
+      : { method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const body=await res.json().catch(()=>({}));
+    if(!res.ok&&res.status!==202) throw new Error(body?.error ?? 'Google request failed');
+    return body as Record<string, unknown>;
+  }
+
+  const loadGoogleStatus=useCallback(async()=>{
+    if(!googleConnected) return;
+    try{
+      const {data:{session}}=await supabase.auth.getSession();
+      const token=session?.access_token;
+      if(!token) return;
+      const res=await fetch('/api/google/status',{headers:{Authorization:`Bearer ${token}`}});
+      if(!res.ok) return;
+      const b=await res.json() as {status:string|null;canReopen:boolean|null;isClosed:boolean};
+      setGStatus(b);
+    }catch{/* non-fatal — the local status controls still work */}
+  },[googleConnected]);
+
+  useEffect(()=>{ if(sidebarTab==='hours') void loadGoogleStatus(); },[sidebarTab,loadGoogleStatus]);
+
+  /**
+   * Dated exception. Written to BOTH Google's specialHours and our own
+   * status_updates — otherwise the Google listing says closed while the
+   * business's own OpenStatus page still says open.
+   * It carries dates, so it expires on its own and there is nothing to undo.
+   */
+  async function googleCloseDates(from: Date, to: Date, label: string) {
+    setGBusy(true);setGMsg('');
+    const d=(x:Date)=>({year:x.getFullYear(),month:x.getMonth()+1,day:x.getDate()});
+    const iso=(x:Date)=>`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+    let googleOk=false, localOk=false, firstError='';
+    try{
+      const {data:{session}}=await supabase.auth.getSession();
+      const token=session?.access_token;
+      if(!token) throw new Error('Session expired — sign in again.');
+
+      // our own page
+      try{
+        const r=await fetch('/api/status',{
+          method:'POST',
+          headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+          body:JSON.stringify({action:'closed_dates',startDate:iso(from),endDate:iso(to),headline:label}),
+        });
+        const b=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(b?.error ?? 'Could not update your page');
+        localOk=true;
+      }catch(e){ firstError=e instanceof Error?e.message:'Could not update your page'; }
+
+      // google listing
+      if(googleConnected){
+        try{
+          await googleStatusRequest({action:'special_hours',periods:[{startDate:d(from),endDate:d(to),closed:true}]});
+          googleOk=true;
+        }catch(e){ if(!firstError) firstError=e instanceof Error?e.message:'Could not update Google'; }
+      }
+
+      if(localOk&&(googleOk||!googleConnected)) setGMsg(`✓ ${label}${googleConnected?' — your page and Google updated':' — your page updated'}`);
+      else if(localOk) setGMsg(`✓ ${label} — your page updated, but Google failed: ${firstError}`);
+      else setGMsg(firstError||'Could not apply that closure');
+
+      await loadStatusUpdates();
+    }catch(e){ setGMsg(e instanceof Error?e.message:'Could not apply that closure'); }
+    finally{ setGBusy(false); }
+  }
+
+  async function googleSetOpenState(action:'close_temporarily'|'reopen') {
+    setGBusy(true);setGMsg('');
+    try{
+      await googleStatusRequest({action});
+      setGMsg(action==='reopen'?'✓ Marked open on Google':'✓ Marked temporarily closed on Google');
+      await loadGoogleStatus();
+    }catch(e){ setGMsg(e instanceof Error?e.message:'Could not update Google'); }
+    finally{ setGBusy(false); }
   }
 
   async function saveSlug() {
@@ -2608,7 +2696,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   {([
                     {key:'status', label:'Status controls'},
                     {key:'special',label:'Special hours'},
-                    {key:'auto',   label:'Auto-updates'},
+                    {key:'auto',   label:'Temporarily closed'},
                   ] as const).map(({key,label})=>(
                     <button key={key} onClick={()=>setHoursSubTab(key)}
                       className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap ${hoursSubTab===key?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
@@ -2725,15 +2813,125 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 )}
 
                 {/* ── SPECIAL HOURS & AUTO — placeholders ── */}
-                {(hoursSubTab==='special'||hoursSubTab==='auto')&&(
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-4">
-                      <LucideClock size={20} color="#C0C0C0"/>
+                {/* ══ SPECIAL HOURS — dated exceptions, mapped to Google specialHours ══ */}
+                {hoursSubTab==='special'&&(
+                  <div className="space-y-5">
+                    <div>
+                      <p className="text-[15px] font-semibold text-[#0A0A0A]">Special hours</p>
+                      <p className="text-[13px] text-[#858585] mt-1 leading-relaxed">
+                        A one-off closure for a holiday or an event. These carry dates, so your
+                        normal hours come back on their own — there&apos;s nothing to undo later.
+                      </p>
                     </div>
-                    <p className="text-[15px] font-semibold text-[#0A0A0A] mb-1">
-                      {hoursSubTab==='special'?'Special Hours':'Auto-Updates'}
+
+                    {!googleConnected&&(
+                      <div className="rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB] p-4">
+                        <p className="text-[12px] text-[#667085]">
+                          These update your OpenStatus page now. Connect Google Business in the Business tab
+                          to push them to your Google listing as well.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {([
+                        {label:'Closed today',       days:0, hint:'Just today'},
+                        {label:'Closed tomorrow',    days:1, hint:'Tomorrow only'},
+                        {label:'Closed this weekend',days:-1,hint:'Sat and Sun'},
+                      ]).map(({label,days,hint})=>(
+                        <button key={label} disabled={gBusy}
+                          onClick={()=>{
+                            const now=new Date();
+                            let from=new Date(now), to=new Date(now);
+                            if(days===1){ from.setDate(now.getDate()+1); to=new Date(from); }
+                            if(days===-1){
+                              const dow=now.getDay();
+                              from=new Date(now); from.setDate(now.getDate()+((6-dow+7)%7));
+                              to=new Date(from);  to.setDate(from.getDate()+1);
+                            }
+                            void googleCloseDates(from,to,label);
+                          }}
+                          className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#E8EBF0] bg-white hover:border-[#7C3AED] hover:bg-[#FAFAFF] transition-all text-left disabled:opacity-40 disabled:hover:border-[#E8EBF0]">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{background:'#F5F3FF',color:'#7C3AED'}}>
+                            <LucideCalendar size={14} color="currentColor"/>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[12px] font-semibold text-[#111] leading-tight">{label}</p>
+                            <p className="text-[11px] text-[#98A2B3] leading-tight mt-0.5">{hint}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {gMsg&&<p className={`text-[12px] ${gMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{gMsg}</p>}
+                  </div>
+                )}
+
+                {/* ══ EXTENDED CLOSURE — maps to Google openInfo.status ══ */}
+                {hoursSubTab==='auto'&&(
+                  <div className="space-y-5">
+                    <div>
+                      <p className="text-[15px] font-semibold text-[#0A0A0A]">Temporarily closed</p>
+                      <p className="text-[13px] text-[#858585] mt-1 leading-relaxed">
+                        For a longer break — renovation, a season off. This marks your Google listing
+                        as temporarily closed, and you can reopen it from right here.
+                      </p>
+                    </div>
+
+                    {!googleConnected
+                      ?(
+                        <div className="rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB] p-4">
+                          <p className="text-[12px] text-[#667085]">Connect Google Business in the Business tab to use this.</p>
+                        </div>
+                      )
+                      :(
+                        <div className={`rounded-2xl border p-4 ${gStatus?.isClosed?'border-[#FEC84B] bg-[#FFFCF5]':'border-[#BBF7D0] bg-[#F0FDF4]'}`}>
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background:gStatus?.isClosed?'#F79009':'#16A34A'}}/>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-semibold text-[#111]">
+                                {gStatus===null?'Checking Google…':gStatus.isClosed?'Temporarily closed on Google':'Open on Google'}
+                              </p>
+                              {gStatus?.status&&(
+                                <p className="text-[11px] text-[#98A2B3] mt-0.5">Google reports: {gStatus.status}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {gStatus?.isClosed
+                            ?(
+                              <>
+                                <button disabled={gBusy||gStatus.canReopen===false}
+                                  onClick={()=>void googleSetOpenState('reopen')}
+                                  className="w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                                  {gBusy?'Working…':'Reopen my business'}
+                                </button>
+                                {gStatus.canReopen===false&&(
+                                  <p className="text-[11px] text-[#B54708] mt-2 leading-relaxed">
+                                    Google says this profile isn&apos;t currently eligible to reopen. That usually means it was
+                                    marked permanently closed, which has to be sorted out with Google support.
+                                  </p>
+                                )}
+                              </>
+                            )
+                            :(
+                              <button disabled={gBusy}
+                                onClick={()=>void googleSetOpenState('close_temporarily')}
+                                className="w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-semibold hover:border-[#111] transition-colors disabled:opacity-40">
+                                {gBusy?'Working…':'Mark temporarily closed'}
+                              </button>
+                            )
+                          }
+                        </div>
+                      )
+                    }
+
+                    {gMsg&&<p className={`text-[12px] ${gMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{gMsg}</p>}
+
+                    <p className="text-[11px] text-[#98A2B3] leading-relaxed">
+                      Closing permanently isn&apos;t offered here on purpose — Google can&apos;t reliably undo it,
+                      and their guidance is to create a new profile instead. Contact them directly if you need that.
                     </p>
-                    <p className="text-[13px] text-[#858585]">Coming soon — stay tuned!</p>
                   </div>
                 )}
               </div>

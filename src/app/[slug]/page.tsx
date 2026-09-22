@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 type Hours = { day_of_week: number; opens_at: string | null; closes_at: string | null; is_closed: boolean };
-type Update = { kind: string; headline: string; detail: string | null; reason: string | null; closes_at: string | null; created_at: string; source: string | null };
+type Update = { kind: string; headline: string; detail: string | null; reason: string | null; closes_at: string | null; created_at: string; source: string | null; effective_date?: string | null };
 
 function pretty(t: string | null) {
   if (!t) return '';
@@ -136,7 +136,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
   const [{ data: hoursRows }, { data: updateRows }, pageConfig, placeWebsite] = await Promise.all([
     admin.from('business_hours').select('day_of_week,opens_at,closes_at,is_closed').eq('business_id', business.id),
-    admin.from('status_updates').select('kind,headline,detail,reason,closes_at,created_at,source').eq('business_id', business.id).eq('status', 'active').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(4),
+    admin.from('status_updates').select('kind,headline,detail,reason,closes_at,created_at,source,effective_date').eq('business_id', business.id).eq('status', 'active').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(4),
     loadPublishedPageConfig(business.user_id),
     business.place_id ? fetchPlaceWebsite(business.place_id as string) : Promise.resolve(null),
   ]);
@@ -158,7 +158,10 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   };
 
   const hours: Hours[] = hoursRows ?? [];
-  const updates: Update[] = updateRows ?? [];
+  // A dated closure (a holiday booked in advance) has a future effective_date and
+  // a far-future expires_at. Without this check it would read as "closed" the
+  // moment it was created, days before the business actually shuts.
+  const allUpdates: Update[] = updateRows ?? [];
 
   // Image URLs
   const avatar = typeof business.avatar_url === 'string' && business.avatar_url.startsWith('storage:')
@@ -199,6 +202,14 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const today = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday);
   const todayRow = hours.find((h) => h.day_of_week === today) ?? null;
   const nowMins = Number(parts.find((p) => p.type === 'hour')?.value ?? 0) * 60 + Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
+  // Only apply closures that have actually started in the business's timezone.
+  const localToday = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  const updates: Update[] = allUpdates.filter(
+    (u) => !u.effective_date || u.effective_date <= localToday
+  );
+
   const lead = updates[0] ?? null;
   const effectiveClose = updates.find((u) => u.closes_at)?.closes_at ?? todayRow?.closes_at ?? null;
   const closedAllDay = !todayRow || todayRow.is_closed || updates.some((u) => u.kind === 'closed');
