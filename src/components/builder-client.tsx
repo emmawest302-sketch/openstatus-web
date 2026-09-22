@@ -2307,25 +2307,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // builder keeps them in user metadata. Without this mirror the live page sees
   // zero rows, evaluates every day as closed, and tells customers the business
   // is "Closed today" while the builder shows "Open now".
-  async function syncHoursToDb(businessId: string, wh: WeeklyHours) {
-    const KEYS: WeekDay[] = ['sun','mon','tue','wed','thu','fri','sat']; // index = day_of_week
-    const rows = KEYS.map((k,i)=>{
-      const d = wh[k];
-      return {
-        business_id: businessId,
-        day_of_week: i,
-        opens_at: d?.closed ? null : `${(d?.open ?? '09:00')}:00`,
-        closes_at: d?.closed ? null : `${(d?.close ?? '17:00')}:00`,
-        is_closed: !!d?.closed,
-      };
+  // Goes through the server route, not the browser client: row level security on
+  // business_hours can silently block a delete or update, which is what produced
+  // "duplicate key value violates unique constraint business_hours_business_id_day_of_week_key".
+  async function syncHoursToDb(_businessId: string, wh: WeeklyHours) {
+    const { data: s } = await supabase.auth.getSession();
+    const token = s?.session?.access_token;
+    if (!token) throw new Error('Hours did not save to your live page: your session expired, sign in again.');
+    const r = await fetch('/api/business/hours', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ weeklyHours: wh }),
     });
-    // Upsert (not delete+insert): two saves can overlap, and a delete that has not
-    // landed yet makes the insert collide on business_id+day_of_week. Upsert is also
-    // atomic per row, so the public page never sees a moment with zero hours rows.
-    const { error } = await supabase
-      .from('business_hours')
-      .upsert(rows, { onConflict: 'business_id,day_of_week' });
-    if (error) throw new Error('Hours did not save to your live page: ' + error.message);
+    if (!r.ok) {
+      const b = await r.json().catch(() => ({}));
+      throw new Error(b?.error ?? `Hours did not save to your live page (${r.status})`);
+    }
   }
 
   async function save() {
@@ -2931,7 +2928,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           disabled={statusPosting}
                           className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
                         >
-                          {statusPosting?'Working…':'Reopen &amp; republish my hours'}
+                          {statusPosting?'Working…':'Reopen and republish my hours'}
                         </button>
                         <p className="text-[11px] text-[#858585]">
                           Clears every closure and pushes your weekly hours to your live page.
