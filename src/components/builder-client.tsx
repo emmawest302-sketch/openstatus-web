@@ -1796,7 +1796,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [isMobile,setIsMobile]=useState<boolean>(false);
   const sheetDragRef=useRef<{startY:number,open:boolean}|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
-  const [previewWidth,setPreviewWidth]=useState(420);
+  const [previewWidth,setPreviewWidth]=useState(360);
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
   const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:business?.category??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
   const [bizSaving,setBizSaving]=useState(false);
@@ -1814,11 +1814,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const resizeStartX=useRef(0);
   const resizeStartW=useRef(0);
   const onResizeStart=useCallback((e:React.MouseEvent)=>{
+    e.preventDefault();
     isResizing.current=true;
     resizeStartX.current=e.clientX;
     resizeStartW.current=previewWidth;
-    const onMove=(ev:MouseEvent)=>{ if(!isResizing.current)return; const delta=resizeStartX.current-ev.clientX; setPreviewWidth(Math.max(320,Math.min(900,resizeStartW.current+delta))); };
-    const onUp=()=>{ isResizing.current=false; window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
+    document.body.style.userSelect='none';
+    document.body.style.cursor='col-resize';
+    const onMove=(ev:MouseEvent)=>{ if(!isResizing.current)return; const delta=resizeStartX.current-ev.clientX; setPreviewWidth(Math.max(280,Math.min(900,resizeStartW.current+delta))); };
+    const onUp=()=>{ isResizing.current=false; document.body.style.userSelect=''; document.body.style.cursor=''; window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
     window.addEventListener('mousemove',onMove);
     window.addEventListener('mouseup',onUp);
   },[previewWidth]);
@@ -2118,7 +2121,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </header>
 
         {/* ── CONTENT + RIGHT PREVIEW ── */}
-        <div className="flex-1 overflow-hidden" style={{display:isMobile?"none":"flex"}}>
+        <div className="flex-1 overflow-hidden select-none" style={{display:isMobile?"none":"flex"}}>
 
           {/* ── MAIN CONTENT ── */}
           <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white/72 backdrop-blur-md rounded-tl-2xl">
@@ -3262,22 +3265,27 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               {/* Drag-resize handle */}
               <div
                 onMouseDown={onResizeStart}
-                className="w-1.5 flex-shrink-0 cursor-col-resize hover:bg-[#a78bfa]/40 transition-colors"
+                className="w-2 flex-shrink-0 cursor-col-resize group flex items-center justify-center transition-colors hover:bg-[#a78bfa]/20 active:bg-[#a78bfa]/40"
                 style={{background:'transparent'}}
-              />
+                title="Drag to resize"
+              >
+                <div className="w-0.5 h-10 rounded-full bg-[#C0C0C0] group-hover:bg-[#a78bfa] transition-colors"/>
+              </div>
               {/* Preview panel */}
               <div
-                className="flex-shrink-0 flex flex-col items-center justify-center overflow-hidden relative"
+                className="flex-shrink-0 flex flex-col items-center justify-center relative"
                 style={{
                   width: previewWidth,
+                  minWidth: 0,
+                  overflow: 'hidden',
                   backgroundImage:'linear-gradient(rgba(139,92,246,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.12) 1px,transparent 1px)',
                   backgroundSize:'24px 24px',
                   backgroundColor:'#f5f3ff',
                 }}
               >
                 {/* Centered phone */}
-                <div className="flex flex-col items-center gap-3">
-                  <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:Math.min(300,previewWidth-60)}}>
+                <div className="flex flex-col items-center gap-3" style={{padding:'0 24px',maxWidth:'100%'}}>
+                  <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:Math.min(300,previewWidth-80),maxWidth:'100%'}}>
                     <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
                       onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
                   </div>
@@ -3321,7 +3329,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>
 
       {/* Mobile canvas — phone IS the editing surface, Canva-style */}
-      <div className="fixed left-0 right-0 bg-[#ECEEF2] overflow-y-auto"
+      <div className="fixed left-0 right-0 bg-[#f5f3ff] overflow-y-auto"
         style={{
           display:isMobile?"block":"none",
           top:'calc(52px + env(safe-area-inset-top))',
@@ -3332,9 +3340,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               : 'calc(56px + env(safe-area-inset-bottom))',
           transition:'bottom 0.3s cubic-bezier(0.32,0.72,0,1)',
         }}>
-        {/* Dotted background like Canva */}
+        {/* Purple grid canvas background */}
         <div className="min-h-full flex items-start justify-center py-3 px-2"
-          style={{backgroundImage:'radial-gradient(circle,#C8CBD2 1px,transparent 1px)',backgroundSize:'20px 20px',position:'relative'}}>
+          style={{backgroundImage:'linear-gradient(rgba(139,92,246,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.12) 1px,transparent 1px)',backgroundSize:'24px 24px',backgroundColor:'#f5f3ff',position:'relative'}}>
           {/* Refresh button — top right of canvas */}
           <div style={{position:'absolute',top:12,right:12,zIndex:10}}>
             <button
