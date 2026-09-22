@@ -470,7 +470,7 @@ function PillSelect({ options,selected,onSelect }: { options:string[]; selected:
     <div className="flex flex-wrap gap-1.5">
       {options.map(o=>(
         <button key={o} onClick={()=>onSelect(o)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#0A0A0A] text-white border-[#0A0A0A]':'border-[#DEDEDC] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#0A0A0A] text-[#4ADE80] font-bold border-[#0A0A0A]':'border-[#DEDEDC] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
           {o}
         </button>
       ))}
@@ -1273,7 +1273,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                               onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
                             }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
                           }}
-                          className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#0A0A0A] text-white text-[11px] font-bold hover:bg-[#292929] transition-colors whitespace-nowrap disabled:opacity-50"
+                          className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-bold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap disabled:opacity-50"
                           disabled={block._googleFetching}
                         >{block._googleFetching?'…':'Fetch'}</button>
                       )}
@@ -1609,7 +1609,7 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
           <button onClick={onDone} className="text-[12px] text-[#858585] hover:text-[#111] font-medium transition-colors">Skip</button>
           <div className="flex items-center gap-2">
             {step>0&&<button onClick={()=>setStep(s=>s-1)} className="px-4 py-1.5 text-[12px] font-semibold rounded-full border border-[#E0E0E0] text-[#6B6B6B] hover:border-[#111] transition-colors">Back</button>}
-            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#0A0A0A] text-white hover:bg-[#292929] transition-colors">{isLast?'Done':'Next →'}</button>
+            <button onClick={next} className="px-4 py-1.5 text-[12px] font-bold rounded-full bg-[#0A0A0A] text-[#4ADE80] hover:bg-[#1a1a1a] transition-colors">{isLast?'Done':'Next →'}</button>
           </div>
         </div>
       </div>
@@ -1722,7 +1722,7 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
       <p className="text-[11px] text-[#858585]">Paste your Place ID (starts with ChIJ…) or a Google Maps link to pull in your hours automatically.</p>
       <div className="flex gap-2">
         <input value={placeInput} onChange={e=>setPlaceInput(e.target.value)} placeholder="ChIJ... or Google Maps URL" className="flex-1 text-[12px] border border-[#DEDEDC] rounded-xl px-3 py-2 outline-none focus:border-[#0A0A0A] bg-[#FAFAFA]"/>
-        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#333] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
+        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold disabled:opacity-50 whitespace-nowrap hover:bg-[#1a1a1a] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
       </div>
       {syncMsg&&<p className={`text-[11px] font-medium ${syncMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{syncMsg}</p>}
       <div className="border-t border-[#EBEBEB] pt-3 mt-1">
@@ -2113,7 +2113,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':hasPublished?'bg-[#E8EBF0] text-[#667085] hover:bg-[#DEDEDC]':'bg-[#0A0A0A] text-white hover:bg-[#292929]'}`}>
+                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':hasPublished?'bg-[#E8EBF0] text-[#667085] hover:bg-[#DEDEDC]':'bg-[#0A0A0A] text-[#4ADE80] font-bold hover:bg-[#1a1a1a]'}`}>
                 {saving?'Saving…':saved?'✓ Saved':saveError?'Error':hasPublished?'Save':'Publish'}
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
@@ -3302,6 +3302,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           </div>
           {/* Phone page — no phone frame, just the scrollable content card */}
           <div className="w-full rounded-[24px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.16)]"
+            style={{maxWidth:340,marginLeft:'auto',marginRight:'auto'}}
             onClick={()=>{ if(mobileSheetOpen) setMobileSheetOpen(false); }}>
             <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
               onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');setMobileSheetOpen(true);}}/>
@@ -3360,7 +3361,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <div className="flex gap-2 px-4 pb-3 overflow-x-auto flex-shrink-0" style={{scrollbarWidth:'none',msOverflowStyle:'none'}}>
               {['All','Essential','Food & Beverage','Engagement','Contact','Social','More'].map(cat=>(
                 <button key={cat} onClick={()=>setMobileBlockCat(cat)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${mobileBlockCat===cat?'bg-[#111] text-white':'bg-[#F4F6FA] text-[#667085]'}`}>
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${mobileBlockCat===cat?'bg-[#111] text-[#4ADE80] font-bold':'bg-[#F4F6FA] text-[#667085]'}`}>
                   {cat}
                 </button>
               ))}
@@ -3740,7 +3741,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <div className="flex gap-1.5">
                 {[7,30,90].map(d=>(
                   <button key={d} onClick={()=>setAnalyticsDays(d)}
-                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#111] text-white':'bg-[#F4F6FA] text-[#667085]'}`}>
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#111] text-[#4ADE80]':'bg-[#F4F6FA] text-[#667085]'}`}>
                     {d}d
                   </button>
                 ))}

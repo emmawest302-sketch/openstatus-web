@@ -18,6 +18,10 @@ export type PlaceDetails = {
   phone?: string;
   website?: string;
   hours?: Record<WeekDay, { open: string; close: string; closed: boolean }> | null;
+  /** Google star rating, 0–5 (e.g. 4.7) */
+  rating?: number;
+  /** Total number of Google reviews */
+  reviewCount?: number;
 };
 
 export async function GET(req: NextRequest) {
@@ -34,7 +38,7 @@ export async function GET(req: NextRequest) {
         headers: {
           'X-Goog-Api-Key': key,
           'X-Goog-FieldMask':
-            'displayName,formattedAddress,nationalPhoneNumber,websiteUri,regularOpeningHours',
+            'displayName,formattedAddress,nationalPhoneNumber,websiteUri,regularOpeningHours,rating,userRatingCount',
         },
         next: { revalidate: 3600 },
       }
@@ -53,6 +57,8 @@ export async function GET(req: NextRequest) {
       formattedAddress?: string;
       nationalPhoneNumber?: string;
       websiteUri?: string;
+      rating?: number;
+      userRatingCount?: number;
       regularOpeningHours?: {
         periods?: Array<{
           open: { day: number; hour: number; minute: number };
@@ -88,6 +94,8 @@ export async function GET(req: NextRequest) {
       phone: data.nationalPhoneNumber ?? undefined,
       website: data.websiteUri ?? undefined,
       hours,
+      rating: typeof data.rating === 'number' ? data.rating : undefined,
+      reviewCount: typeof data.userRatingCount === 'number' ? data.userRatingCount : undefined,
     };
 
     return NextResponse.json(details);

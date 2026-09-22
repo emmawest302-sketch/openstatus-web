@@ -182,6 +182,8 @@ type PlaceDetails = {
   phone?: string;
   website?: string;
   hours?: Record<string, { open: string; close: string; closed: boolean }> | null;
+  rating?: number;
+  reviewCount?: number;
 };
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
@@ -370,6 +372,33 @@ export default function SetupPage() {
 
     const category = CATEGORIES.find(c => c.id === categoryId);
     const blocks = buildBlocks(category?.blockIds ?? ['website', 'call', 'email']);
+
+    // ── Carry the Google rating we pulled during search onto the location block ──
+    // The star rating in the page header reads from the location block's
+    // reviewStars / reviewCount, so seed them here at signup instead of making
+    // the user fetch it manually in the builder later.
+    if (placeDetails?.rating && placeDetails.rating > 0) {
+      const locIdx = blocks.findIndex(b => b.id === 'location');
+      const review = {
+        reviewStars: placeDetails.rating,
+        ...(placeDetails.reviewCount ? { reviewCount: placeDetails.reviewCount } : {}),
+      };
+      if (locIdx >= 0) {
+        blocks[locIdx] = { ...blocks[locIdx], ...review };
+      } else {
+        blocks.push({
+          id: 'location',
+          title: ALL_BLOCKS.location.title,
+          sub: ALL_BLOCKS.location.sub,
+          icon: '',
+          on: true,
+          tone: 'glass',
+          url: '',
+          size: ALL_BLOCKS.location.size,
+          ...review,
+        } as OpenStatusBlock);
+      }
+    }
 
     const pageConfig: OpenStatusPageConfig = {
       blocks,
@@ -606,6 +635,12 @@ export default function SetupPage() {
                   {placeDetails?.hours && (
                     <span style={{ fontSize: 11, color: '#555', background: '#F0F0EE', borderRadius: 99, padding: '4px 10px' }}>
                       🕐 Hours imported
+                    </span>
+                  )}
+                  {placeDetails?.rating && placeDetails.rating > 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#B45309', background: 'rgba(245,158,11,0.12)', borderRadius: 99, padding: '4px 10px' }}>
+                      ⭐ {placeDetails.rating}
+                      {placeDetails.reviewCount ? ` · ${placeDetails.reviewCount.toLocaleString()} reviews` : ''}
                     </span>
                   )}
                 </div>
