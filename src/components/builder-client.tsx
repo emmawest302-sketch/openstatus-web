@@ -2193,30 +2193,32 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
 
       {/* ── LEFT SIDEBAR (desktop) ── */}
-      <aside className="w-[220px] flex-shrink-0 flex-col bg-white/80 backdrop-blur border-r border-[#E8EBF0]" style={{display:isMobile?"none":"flex"}}>
+      <aside className="w-[220px] flex-shrink-0 flex-col bg-[#0D0D0D] border-r border-black/40" style={{display:isMobile?"none":"flex"}}>
         {/* Wordmark */}
         <div className="px-5 h-14 flex items-center flex-shrink-0">
-          <span className="font-bold text-[18px] tracking-[-0.04em] text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
+          <span className="font-bold text-[18px] tracking-[-0.04em] text-white" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
         </div>
         {/* Nav */}
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
           {SIDEBAR_NAV.map(({key,label,icon,badge})=>(
             <button key={key} onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
-                sidebarTab===key
-                  ?'bg-[#111111] text-[#4ADE80] font-bold'
-                  :'text-[#667085] hover:bg-[#F4F6FA] hover:text-[#111111]'
+              className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
+                sidebarTab===key ? 'bg-white/8 font-bold' : 'hover:bg-white/5'
               }`}
-              style={{color:sidebarTab===key?'#4ADE80':undefined}}>
-              <span style={{color:sidebarTab===key?'#4ADE80':'#98A2B3'}}>{icon}</span>
+              style={{color:sidebarTab===key?'#4ADE80':'#9AA3AF'}}>
+              {/* neon left-edge marker on the active item */}
+              {sidebarTab===key&&(
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full" style={{background:'#4ADE80'}}/>
+              )}
+              <span style={{color:sidebarTab===key?'#4ADE80':'#6B7280'}}>{icon}</span>
               {label}
               {badge}
             </button>
           ))}
         </nav>
         {/* Bottom CTAs */}
-        <div className="px-4 py-4 border-t border-[#E8EBF0] flex-shrink-0">
-          <button onClick={()=>setSidebarTab('settings')} className="w-full flex items-center gap-2 text-[11px] font-semibold text-[#98A2B3] hover:text-[#111111] transition-colors">
+        <div className="px-4 py-4 border-t border-white/10 flex-shrink-0">
+          <button onClick={()=>setSidebarTab('settings')} className="w-full flex items-center gap-2 text-[11px] font-semibold text-[#6B7280] hover:text-white transition-colors">
             ⚙ Account settings
           </button>
         </div>
@@ -2226,19 +2228,21 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
 
         {/* ── TOP NAV BAR ── */}
-        <header className="h-14 border-b border-[#E8EBF0] items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm" style={{display:isMobile?"none":"flex"}}>
-          <span className="text-[13px] font-semibold text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>{sidebarLabel}</span>
+        <header className="relative h-14 items-center justify-between px-4 md:px-6 flex-shrink-0 bg-[#0D0D0D]" style={{display:isMobile?"none":"flex"}}>
+          {/* neon rule — the brand signal, 3px instead of a whole green bar */}
+          <span className="absolute left-0 right-0 bottom-0 h-[3px]" style={{background:'#4ADE80'}}/>
+          <span className="text-[13px] font-semibold text-white" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>{sidebarLabel}</span>
           <div className="flex items-center gap-3">
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#6B6B6B] hover:text-[#111] transition-colors">
-                View your link <span className="text-[#858585]">↗</span>
+                className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#9AA3AF] hover:text-white transition-colors">
+                View your link <span className="text-[#6B7280]">↗</span>
               </a>
             )}
 
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-[#EEEEEC] text-[#858585]':saveError?'bg-red-100 text-red-600':hasPublished?'bg-[#E8EBF0] text-[#667085] hover:bg-[#DEDEDC]':'bg-[#0A0A0A] text-[#4ADE80] font-bold hover:bg-[#1a1a1a]'}`}>
+                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-white/15 text-white/60':saveError?'bg-red-100 text-red-600':hasPublished?'bg-white/12 text-white hover:bg-white/20':'bg-[#4ADE80] text-[#052E16] font-bold hover:bg-[#3ecf72]'}`}>
                 {saving?'Saving…':saved?'✓ Saved':saveError?'Error':hasPublished?'Save':'Publish'}
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
@@ -3361,12 +3365,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {/* Mobile dark top bar */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D] flex items-center justify-between px-4 gap-3"
-        style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)'}}>
+        style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)',boxShadow:'inset 0 -3px 0 #4ADE80'}}>
         <span className="text-white font-bold text-[17px] tracking-[-0.03em]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
         <div className="flex items-center gap-2">
 
           <button onClick={save} disabled={saving}
-            className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':hasPublished?'bg-white/20 text-white':'bg-white text-[#0D0D0D]'}`}>
+            className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':hasPublished?'bg-white/15 text-white':'bg-[#4ADE80] text-[#052E16]'}`}>
             {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
           </button>
         </div>
