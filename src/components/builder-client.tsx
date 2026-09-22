@@ -118,7 +118,6 @@ const DEFAULT_BLOCKS: OpenStatusBlock[] = [
   { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'half' },
   { id:'socials', title:'Follow us',             sub:'Social media links',         icon:'share',  on:false,tone:'default',color:'#db2777',size:'full' },
   { id:'website', title:'Website',               sub:'Link to your site',          icon:'globe',  on:false,tone:'default',color:'#0891b2',size:'full' },
-  { id:'updates', title:'Instagram updates',     sub:'Latest posts from Instagram',icon:'updates',on:false,tone:'default',color:'#E1306C',size:'full' },
 ];
 
 // ── helpers ────────────────────────────────────────────────────────────────────
@@ -224,7 +223,6 @@ function BlockIcon({ id, size=16, color='currentColor' }: { id:string; size?:num
     case 'order':    return <LucideShoppingBag size={size} color={color}/>;
     case 'book':     return <LucideCalendar size={size} color={color}/>;
     case 'socials':  return <LucideShare size={size} color={color}/>;
-    case 'updates':  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>;
     default:         return <LucideGlobe size={size} color={color}/>;
   }
 }
@@ -1017,24 +1015,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                       </div>}
                     </div>
                   );
-                  // ── UPDATES (Instagram) ──
-                  if(b.id==='updates') return (
-                    <div className="rounded-2xl border overflow-hidden col-span-2" style={{ borderColor:bdr, background:cardBg }}>
-                      <div className="flex items-center gap-2 px-3 py-2.5 border-b" style={{ borderColor:bdr }}>
-                        <BlockIcon id="updates" size={10} color="#E1306C"/>
-                        <p className={`text-[10px] font-semibold ${tx}`}>Latest updates</p>
-                      </div>
-                      {[1,2,3].map(i=>(
-                        <div key={i} className="flex items-center gap-2 px-3 py-2 border-b last:border-0" style={{ borderColor:bdr }}>
-                          <div className="w-6 h-6 rounded flex-shrink-0" style={{ background:`${b.color??'#E1306C'}20` }}/>
-                          <div className="min-w-0 flex-1">
-                            <div className={`h-1.5 rounded-full mb-1 ${isDark?'bg-white/15':'bg-black/10'}`} style={{ width:`${[80,65,72][i-1]}%` }}/>
-                            <div className={`h-1 rounded-full ${isDark?'bg-white/8':'bg-black/6'}`} style={{ width:`${[55,40,60][i-1]}%` }}/>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
+
 
                   return (
                     <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
@@ -1464,17 +1445,10 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           )}
 
           {/* ── UPDATES ── */}
-          {block.id==='updates' && (
-            <div className="space-y-4">
-              <div className="rounded-xl bg-[#FFF0F5] border border-[#F9A8D4] p-4">
-                <p className="text-[12px] font-semibold text-[#BE185D] flex items-center gap-1.5"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg> Instagram updates</p>
-                <p className="text-[11px] text-[#858585] mt-1 leading-snug">Shows your 3 most recent Instagram posts as updates on your page. Make sure Meta is connected in your setup.</p>
-              </div>
-            </div>
-          )}
+
 
           {/* ── WEBSITE / generic ── */}
-          {(block.id==='website'||!['location','hours','menu','order','book','socials','updates'].includes(block.id)) && (
+          {(block.id==='website'||!['location','hours','menu','order','book','socials'].includes(block.id)) && (
             <div className="space-y-5">
               {block.id==='website'&&(
                 <>
@@ -1519,7 +1493,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
 const PICKER_CATEGORIES = [
   { label:'Essential',      ids:['hours','location'] },
   { label:'Food & Beverage',ids:['menu','order'] },
-  { label:'Engagement',     ids:['book','updates'] },
+  { label:'Engagement',     ids:['book'] },
   { label:'Contact',        ids:['website'] },
   { label:'Social',         ids:['socials'] },
 ];
@@ -3451,7 +3425,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   const catMap: Record<string,string[]> = {
                     'Essential':['hours','location'],
                     'Food & Beverage':['menu','order'],
-                    'Engagement':['book','updates'],
+                    'Engagement':['book'],
                     'Contact':['website'],
                     'More':[],
                   };
