@@ -2682,7 +2682,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider mb-3">Quick tips</p>
                   <div className="space-y-2">
                     {[
-                      {icon:'🕐', tip:'Set your hours so customers always know when you're open', tab:'hours'},
+                      {icon:'🕐', tip:"Set your hours so customers always know when you're open", tab:'hours'},
                       {icon:'📷', tip:'Add a cover photo to make your page stand out', tab:'photos'},
                       {icon:'🧱', tip:'Turn on blocks to show your menu, links, and more', tab:'design'},
                     ].map(({icon,tip,tab})=>(
