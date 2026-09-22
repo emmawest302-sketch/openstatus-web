@@ -111,7 +111,26 @@ export default function PublicRatingRow({ businessId, placeId }: Props) {
           borderRight: '1px solid rgba(0,0,0,0.07)',
           height: '100%',
         }}>
-          <span style={{ fontSize: 17, lineHeight: 1 }}>★</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 1 }} aria-label={`${rating.toFixed(1)} out of 5`}>
+            {[0, 1, 2, 3, 4].map((i) => {
+              const fill = Math.max(0, Math.min(1, rating - i)); // partial star for e.g. 4.5
+              return (
+                <span key={i} style={{ position: 'relative', width: 14, height: 14, display: 'inline-block' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" style={{ position: 'absolute', inset: 0 }}
+                    fill="#E4E4E7" aria-hidden="true">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
+                  </svg>
+                  {fill > 0 && (
+                    <span style={{ position: 'absolute', inset: 0, width: `${fill * 100}%`, overflow: 'hidden' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#FBBC04" aria-hidden="true">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
+                      </svg>
+                    </span>
+                  )}
+                </span>
+              );
+            })}
+          </span>
           <span style={{ fontSize: 15, fontWeight: 700, color: '#151515', letterSpacing: '-0.02em' }}>
             {rating.toFixed(1)}
           </span>

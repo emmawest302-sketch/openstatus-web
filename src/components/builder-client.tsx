@@ -141,7 +141,7 @@ const SOCIAL_PLATFORMS = [
 ];
 const BLOCK_STYLES: Record<string, { key:string; label:string }[]> = {
   hours:    [{ key:'minimal', label:'Minimal' }, { key:'clock',  label:'Clock'   }, { key:'hero',    label:'Hero'    }],
-  location: [{ key:'photo',   label:'Photo'   }, { key:'place',  label:'Place'   }, { key:'minimal', label:'Minimal' }],
+  location: [{ key:'place',   label:'Map'     }, { key:'minimal', label:'Minimal' }],
   menu:     [{ key:'photo',   label:'Photo'   }, { key:'card',   label:'Card'    }, { key:'dark',    label:'Dark'    }],
   order:    [{ key:'brand',   label:'Brand'   }, { key:'hero',   label:'Hero'    }, { key:'cta',     label:'CTA'     }],
   book:     [{ key:'brand',   label:'Brand'   }, { key:'cal',    label:'Calendar'}, { key:'cta',     label:'CTA'     }],
@@ -343,33 +343,39 @@ function SocialIcon({ platform, size=22 }: { platform:string; size?:number }) {
 }
 
 // ── Brand provider icons ──────────────────────────────────────────────────────
+// NOTE: these are simplified, brand-accurate-coloured marks, not the official
+// logo artwork. For production, drop in each brand's official SVG from their
+// press/brand kit — hand-traced logos drift from the real mark over time.
 function IconDoorDash({ size=32 }: { size?: number }) {
+  // DoorDash Red #FF3008; current mark is the chevron "swoosh", not a letter D.
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-label="DoorDash">
       <rect width="32" height="32" rx="7" fill="#FF3008"/>
-      {/* D letterform — door shape */}
-      <path d="M9 9h7.5C20.1 9 23 11.9 23 16s-2.9 7-6.5 7H9V9z" fill="white" opacity="0.95"/>
-      <path d="M12 12.5h4.2c1.8 0 3.3 1.6 3.3 3.5s-1.5 3.5-3.3 3.5H12v-7z" fill="#FF3008"/>
+      <path d="M7 12.4h11.3c2.1 0 3.6 1.3 3.6 3.2 0 2.4-1.9 4.4-4.6 4.4H7l2.6-3h7.5c.7 0 1.2-.5 1.2-1.1 0-.5-.35-.9-1-.9H7z" fill="#fff"/>
     </svg>
   );
 }
 function IconUberEats({ size=32 }: { size?: number }) {
+  // Uber Eats green #06C167 on black.
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#09091A"/>
-      {/* fork left */}
-      <path d="M11 8v5.5M11 13.5a2.5 2.5 0 0 0 0 5V24" stroke="white" strokeWidth="1.9" strokeLinecap="round" fill="none"/>
-      {/* circle right */}
-      <circle cx="20" cy="16" r="5" stroke="#06C167" strokeWidth="2" fill="none"/>
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-label="Uber Eats">
+      <rect width="32" height="32" rx="7" fill="#06C167"/>
+      <rect x="6.5" y="13" width="19" height="3.1" rx="1.55" fill="#0B0B0B"/>
+      <rect x="6.5" y="18.4" width="12.5" height="3.1" rx="1.55" fill="#0B0B0B"/>
+      <circle cx="23" cy="20" r="2.6" fill="#0B0B0B"/>
     </svg>
   );
 }
 function IconGrubhub({ size=32 }: { size?: number }) {
+  // Grubhub went orange in the 2021 Wolff Olins rebrand; the mark is a house
+  // with a chimney and cutlery in the negative space.
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#F63440"/>
-      {/* G mark */}
-      <path d="M20.5 13.5C19.4 11.6 17.4 10.5 15 10.5 11.4 10.5 8.5 13.4 8.5 17s2.9 6.5 6.5 6.5c3.3 0 6-2.4 6.4-5.5H15v-2h8.5v1.5c0 4.7-3.8 8.5-8.5 8.5C10.1 26 6 21.9 6 17S10.1 8 15 8c3 0 5.7 1.5 7.3 3.8l-1.8 1.7z" fill="white"/>
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-label="Grubhub">
+      <rect width="32" height="32" rx="7" fill="#FF8000"/>
+      <path d="M16 7.2 25 14v10.8h-6.2v-6H13.2v6H7V14z" fill="#fff"/>
+      <rect x="20.4" y="8.2" width="2.6" height="3.6" fill="#fff"/>
+      <rect x="13.6" y="14.2" width="1.5" height="3.4" rx="0.6" fill="#FF8000"/>
+      <rect x="16.9" y="14.2" width="1.5" height="3.4" rx="0.6" fill="#FF8000"/>
     </svg>
   );
 }
@@ -749,14 +755,6 @@ function PhotoField({ label, value, onChange, placeholder, hint }: {
               <p className="text-[12px] text-[#858585]">Click to upload</p>
             </div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile}/>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex-1 h-px bg-[#DEDEDC]"/>
-              <span className="text-[10px] text-[#C0C0C0]">or paste URL</span>
-              <div className="flex-1 h-px bg-[#DEDEDC]"/>
-            </div>
-            <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder??'https://…'}
-              className="mt-2 w-full bg-white border border-[#DEDEDC] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
-            />
           </div>
         )
       }
@@ -907,7 +905,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                 const cardBg = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.72)';
                 const bdr = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.82)';
 
-                const bStyle = b.blockStyle ?? (b.id==='hours'?'minimal':b.id==='location'?'photo':'brand');
+                const bStyle = b.blockStyle ?? (b.id==='hours'?'minimal':b.id==='location'?'place':'brand');
                 const inner = (() => {
 
                   // ── HOURS ──
@@ -946,18 +944,6 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                     const addr = (b.address || b.sub || '').trim();
                     const hasAddr = !!addr && !/^(get|tap for) directions$/i.test(addr);
                     const mapsHref = hasAddr ? `https://maps.google.com/?q=${encodeURIComponent(addr)}` : '#';
-
-                    // Photo layout — the block's own cover photo
-                    if(bStyle==='photo' && b.coverPhoto) return (
-                      <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio: isSquare ? '1/1' : '16/10' }}>
-                        <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
-                        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
-                        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
-                          <p className="text-[9px] font-bold truncate" style={{ color:'#fff' }}>{b.title}</p>
-                          {hasAddr&&<p className="text-[7px] truncate" style={{ color:'rgba(255,255,255,0.75)' }}>{addr}</p>}
-                        </div>
-                      </div>
-                    );
 
                     // Minimal layout — compact row
                     if(bStyle==='minimal') return (
@@ -1388,53 +1374,98 @@ function MoreOptions({ label='More options', children }: { label?:string; childr
 // ── Reviews & rating (Business tab) ───────────────────────────────────────────
 // The star rating renders in the PAGE HEADER, under the business name — not on
 // the location card — so it is edited here rather than inside the location block.
-function ReviewsCard({ block,onUpdateBlock }: {
+// Five amber stars with a partial fill — what people expect a rating to look like.
+// One icon per metric, so the analytics tiles are scannable rather than four
+// identical boxes of numbers.
+const METRIC_ICONS: Record<string, React.ReactNode> = {
+  'Page views': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
+  'Unique visitors': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>,
+  'Directions': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
+  'Menu taps': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+  'Link clicks': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+  'Block taps': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11.5V6a2 2 0 1 1 4 0v5"/><path d="M13 11V4a2 2 0 1 1 4 0v7"/><path d="M17 11.5V8a2 2 0 1 1 4 0v8a6 6 0 0 1-6 6h-2a7 7 0 0 1-7-7v-1a2 2 0 1 1 4 0"/></svg>,
+  'Shares': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+  'Likes': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>,
+};
+
+function StarRating({ value, size=14 }: { value:number; size?:number }) {
+  return (
+    <span style={{display:'flex',alignItems:'center',gap:1}} aria-label={`${value.toFixed(1)} out of 5`}>
+      {[0,1,2,3,4].map(i=>{
+        const fill=Math.max(0,Math.min(1,value-i));
+        return (
+          <span key={i} style={{position:'relative',width:size,height:size,display:'inline-block'}}>
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="#E4E4E7" style={{position:'absolute',inset:0}} aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
+            </svg>
+            {fill>0&&(
+              <span style={{position:'absolute',inset:0,width:`${fill*100}%`,overflow:'hidden'}}>
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="#FBBC04" aria-hidden="true">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
+                </svg>
+              </span>
+            )}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function ReviewsCard({ block,placeId,onUpdateBlock }: {
   block:OpenStatusBlock|undefined;
+  placeId?:string;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
 }) {
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState('');
   if(!block) return null;
   const stars = block.reviewStars ?? 0;
   const hasRating = stars>0;
+
+  // Pulled straight from the connected Google place. There is deliberately no
+  // URL to paste: people paste Google *search* URLs, which carry no place id,
+  // and the parse fails through no fault of theirs.
+  async function refresh() {
+    if(!placeId){ setErr('No Google place linked yet — reconnect Google Business.'); return; }
+    setBusy(true); setErr('');
+    try{
+      const r=await fetch(`/api/places/details?placeId=${encodeURIComponent(placeId)}`);
+      const d=await r.json() as {rating?:number;reviewCount?:number;error?:string};
+      if(!r.ok||d.error) throw new Error(d.error??'Could not reach Google');
+      if(!d.rating) throw new Error('Google has no rating for this place yet.');
+      onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount});
+    }catch(e){ setErr(e instanceof Error?e.message:'Could not refresh'); }
+    finally{ setBusy(false); }
+  }
+
   return (
     <div className="mb-5 rounded-2xl border border-[#EBEBEA] bg-white p-4">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-start justify-between gap-3 mb-1">
         <p className="text-[12px] font-semibold text-[#111]">Reviews &amp; rating</p>
-        {hasRating&&(
-          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FEF3C7] text-[#B45309] text-[10px] font-semibold">
-            <LucideStar size={9} color="#B45309" filled/>
-            {stars} · {starsToPercent(stars)}%
-          </span>
-        )}
+        <button onClick={()=>void refresh()} disabled={busy}
+          className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[11px] font-semibold hover:border-[#111] transition-colors disabled:opacity-40">
+          {busy?'Refreshing…':'Refresh from Google'}
+        </button>
       </div>
-      <p className="text-[11px] text-[#98A2B3] mb-3.5">Pulled from Google. Shows in your page header, under your business name.</p>
 
-      <div className="flex items-center gap-3">
-        <div className="flex-shrink-0"><IconGoogle size={26}/></div>
-        <div className="flex-1 flex gap-2 min-w-0">
-          <Input value={block.googleUrl??''} onChange={v=>onUpdateBlock({googleUrl:v})} placeholder="Paste your Google Business profile URL…"/>
-          {block.googleUrl&&(
-            <button
-              onClick={async()=>{
-                onUpdateBlock({_googleFetching:true,_googleError:''});
-                try{
-                  const r=await fetch(`/api/google/rating?url=${encodeURIComponent(block.googleUrl??'')}`);
-                  const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
-                  if(!r.ok||d.error)throw new Error(d.error??'Failed');
-                  onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
-                }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
-              }}
-              className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#7C3AED] text-white text-[11px] font-semibold hover:bg-[#6D28D9] transition-colors whitespace-nowrap disabled:opacity-50"
-              disabled={block._googleFetching}
-            >{block._googleFetching?'…':hasRating?'Refresh':'Fetch'}</button>
-          )}
-        </div>
-      </div>
-      {block._googleError&&<p className="text-[11px] text-red-500 mt-2">{block._googleError}</p>}
-      {hasRating&&(
-        <p className="text-[10px] text-[#98A2B3] mt-2.5">
-          {stars} stars{block.reviewCount?` from ${block.reviewCount.toLocaleString()} reviews`:''} — your real Google rating, so it can&apos;t be edited by hand.
-        </p>
-      )}
+      {hasRating
+        ?(
+          <div className="flex items-center gap-2 mt-2.5">
+            <StarRating value={stars}/>
+            <span className="text-[15px] font-semibold text-[#111] leading-none">{stars.toFixed(1)}</span>
+            {!!block.reviewCount&&(
+              <span className="text-[12px] text-[#98A2B3]">({block.reviewCount.toLocaleString()})</span>
+            )}
+          </div>
+        )
+        :<p className="text-[12px] text-[#98A2B3] mt-1">No rating yet — hit refresh once your Google listing has reviews.</p>
+      }
+
+      <p className="text-[11px] text-[#98A2B3] mt-2.5 leading-relaxed">
+        This is your real Google rating, so it can&apos;t be typed by hand. It shows in your page header, under your business name.
+      </p>
+      {err&&<p className="text-[11px] text-red-500 mt-2">{err}</p>}
     </div>
   );
 }
@@ -1487,9 +1518,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {/* ── LOCATION ── */}
           {block.id==='location' && (
             <div className="space-y-5">
-              <BlockStylePicker blockId="location" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock}
-                label="Place photo" hint="A photo of your storefront or location."/>
+              <BlockStylePicker blockId="location" selected={block.blockStyle??'place'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <div>
                 <FieldLabel>Address</FieldLabel>
                 <Input value={block.sub??''} onChange={v=>onUpdateBlock({sub:v})} placeholder="123 Main St, Nashville, TN"/>
@@ -1986,9 +2015,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt);
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('business');
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('status');
-  const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>(
-    typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'desktop' : 'mobile'
-  );
+  const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>('mobile');
   const [previewKey,setPreviewKey]=useState(0);
   const [quickAction,setQuickAction]=useState<string|null>(null);
   const [closeEarlyTime,setCloseEarlyTime]=useState('15:00');
@@ -2062,6 +2089,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [deleting,setDeleting]=useState(false);
   const [deleteMsg,setDeleteMsg]=useState('');
   const [helpOpen,setHelpOpen]=useState(false);
+  const [tagDraft,setTagDraft]=useState('');
   // Live open-state read back from Google. `status` is Google's own enum string,
   // which is also how we learn the vocabulary this account actually uses.
   const [gStatus,setGStatus]=useState<{status:string|null;canReopen:boolean|null;isClosed:boolean}|null>(null);
@@ -2310,6 +2338,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       await loadGoogleStatus();
     }catch(e){ setGMsg(e instanceof Error?e.message:'Could not update Google'); }
     finally{ setGBusy(false); }
+  }
+
+  function addCustomTag() {
+    const t=tagDraft.trim();
+    if(!t) return;
+    setConfig(c=>{
+      const cur=c.tags??[];
+      if(cur.includes(t)||cur.length>=3) return c;
+      return {...c,tags:[...cur,t]};
+    });
+    setTagDraft('');
   }
 
   async function saveSlug() {
@@ -2630,7 +2669,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           ))}
         </nav>
         {/* Bottom CTAs */}
-        <div className="px-4 py-4 border-t border-[#EBEBEA] flex-shrink-0">
+        <div className="px-4 py-4 border-t border-[#EBEBEA] flex-shrink-0 space-y-2.5">
+          <button
+            onClick={async()=>{ await supabase.auth.signOut(); window.location.href='/login'; }}
+            className="w-full flex items-center gap-2 text-[11px] font-normal text-[#667085] hover:text-[#6D28D9] transition-colors">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Log out
+          </button>
           <button onClick={()=>setHelpOpen(true)} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#667085] hover:text-[#6D28D9] transition-colors">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Help
@@ -3157,8 +3202,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
                       ].map(({label,value,color,data})=>(
                         <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-3.5">
-                          <div className="flex items-start justify-between mb-1.5">
-                            <p className="text-[11px] font-medium text-[#98A2B3]">{label}</p>
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center"
+                                style={{background:`${color}14`,color}}>
+                                {METRIC_ICONS[label]}
+                              </span>
+                              <p className="text-[11px] font-medium text-[#98A2B3] truncate">{label}</p>
+                            </div>
                             <BuilderSparkline data={data} color={color}/>
                           </div>
                           <p className="text-[22px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
@@ -3215,7 +3266,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
 
                 {/* ── Reviews & rating ── */}
-                <ReviewsCard block={allBlocks.find(b=>b.id==='location')} onUpdateBlock={u=>updateBlock('location',u)}/>
+                <ReviewsCard block={allBlocks.find(b=>b.id==='location')} placeId={config.placeId} onUpdateBlock={u=>updateBlock('location',u)}/>
 
                 {/* ── Tips for success ── */}
                 <div className="mb-5">
@@ -3362,8 +3413,37 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <div>
                   <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-1">Tags</p>
                   <p className="text-[11px] text-[#98A2B3] mb-3">Pick up to 3 — these show under your business name.</p>
+                  {/* custom tag entry */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <input
+                      value={tagDraft}
+                      onChange={e=>setTagDraft(e.target.value.slice(0,24))}
+                      onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); addCustomTag(); } }}
+                      placeholder="Add your own…"
+                      className="flex-1 min-w-0 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-[#7C3AED] transition-colors"/>
+                    <button onClick={addCustomTag}
+                      disabled={!tagDraft.trim()||(config.tags??[]).length>=3||(config.tags??[]).includes(tagDraft.trim())}
+                      className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                      Add
+                    </button>
+                  </div>
+
+                  {/* chosen tags, including custom ones */}
+                  {(config.tags??[]).length>0&&(
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {(config.tags??[]).map(tag=>(
+                        <button key={`sel-${tag}`}
+                          onClick={()=>setConfig(c=>({...c,tags:(c.tags??[]).filter(t=>t!==tag)}))}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium bg-[#7C3AED] text-white">
+                          {tag}
+                          <LucideX size={9} color="currentColor"/>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-1.5">
-                    {FEATURE_TAGS.map(tag=>{
+                    {FEATURE_TAGS.filter(t=>!(config.tags??[]).includes(t)).map(tag=>{
                       const sel=(config.tags??[]).includes(tag);
                       const full=(config.tags??[]).length>=3;
                       return (
@@ -3644,12 +3724,46 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   backgroundColor:'#f5f3ff',
                 }}
               >
-                {/* Centered phone */}
+                {/* Phone / Web toggle */}
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex gap-0.5 p-1 rounded-full bg-white/85 backdrop-blur border border-[#EBEBEA] shadow-sm">
+                  {([
+                    {key:'mobile'  as const, label:'Phone', icon:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>},
+                    {key:'desktop' as const, label:'Web',   icon:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>},
+                  ]).map(({key,label,icon})=>(
+                    <button key={key} onClick={()=>setPreviewMode(key)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${previewMode===key?'bg-[#F5F3FF] text-[#6D28D9]':'text-[#98A2B3] hover:text-[#111]'}`}>
+                      {icon}{label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Centered preview */}
                 <div className="flex flex-col items-center gap-3" style={{padding:'0 24px',maxWidth:'100%'}}>
-                  <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:300,maxWidth:'calc(100% - 48px)'}}>
-                    <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
-                      onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
-                  </div>
+                  {previewMode==='mobile'
+                    ?(
+                      <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:300,maxWidth:'calc(100% - 48px)'}}>
+                        <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
+                          onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
+                      </div>
+                    )
+                    :(
+                      <div className="rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-[#DEDEDC] bg-white"
+                        style={{width:'100%',maxWidth:560}}>
+                        {/* browser chrome, so "Web" reads as a real page */}
+                        <div className="flex items-center gap-1.5 px-3 py-2 bg-[#F4F6FA] border-b border-[#E8EBF0]">
+                          <span className="w-2 h-2 rounded-full bg-[#FF5F57]"/>
+                          <span className="w-2 h-2 rounded-full bg-[#FEBC2E]"/>
+                          <span className="w-2 h-2 rounded-full bg-[#28C840]"/>
+                          <span className="ml-2 flex-1 truncate text-[9px] text-[#98A2B3] bg-white rounded px-2 py-0.5 border border-[#E8EBF0]">
+                            {SITE_DOMAIN}/{localBusiness?.slug??'your-page'}
+                          </span>
+                        </div>
+                        <div className="overflow-y-auto" style={{maxHeight:560}}>
+                          <LiveDesktopPreview key={previewKey} business={localBusiness} config={config}/>
+                        </div>
+                      </div>
+                    )
+                  }
                   {localBusiness?.slug&&(
                     <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-[11px] font-semibold text-[#6d28d9] hover:text-[#4c1d95] transition-colors">
@@ -3851,8 +3965,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
                   ].map(({label,value,color,data})=>(
                     <div key={label} className="rounded-2xl border border-[#E8EBF0] bg-white p-3">
-                      <div className="flex items-start justify-between mb-1">
-                        <p className="text-[10px] font-normal text-[#98A2B3]">{label}</p>
+                      <div className="flex items-start justify-between mb-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center"
+                            style={{background:`${color}14`,color}}>
+                            {METRIC_ICONS[label]}
+                          </span>
+                          <p className="text-[10px] font-normal text-[#98A2B3] truncate">{label}</p>
+                        </div>
                         <BuilderSparkline data={data} color={color}/>
                       </div>
                       <p className="text-[20px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
@@ -3878,7 +3998,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
 
             {/* Reviews & rating */}
-            <ReviewsCard block={allBlocks.find(b=>b.id==='location')} onUpdateBlock={u=>updateBlock('location',u)}/>
+            <ReviewsCard block={allBlocks.find(b=>b.id==='location')} placeId={config.placeId} onUpdateBlock={u=>updateBlock('location',u)}/>
 
             {/* Social Profiles */}
             <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Social Profiles</p>
@@ -4028,6 +4148,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {label:'Directions',value:analyticsData.metrics.directions},
                   ].map(({label,value})=>(
                     <div key={label} className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
+                      <span className="inline-flex w-6 h-6 rounded-lg items-center justify-center mb-2"
+                        style={{background:'#F5F3FF',color:'#7C3AED'}}>
+                        {METRIC_ICONS[label]}
+                      </span>
                       <p className="text-[22px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
                       <p className="text-[10px] text-[#98A2B3] font-medium mt-1">{label}</p>
                     </div>
