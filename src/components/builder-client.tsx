@@ -922,101 +922,64 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
 
                   // ── LOCATION ──
                   if(b.id==='location') {
-                    // All location styles share the same map-button pattern
-                    const mapsHref = b.sub ? `https://maps.google.com/?q=${encodeURIComponent(b.sub)}` : '#';
-                    // Show embedded map preview when google URL or address is set
-                    if(b.googleUrl||b.appleMapsUrl||b.sub) {
-                      const mapQuery = b.googleUrl ? (()=>{ try{ const m=decodeURIComponent(b.googleUrl).match(/\/maps\/place\/([^/@?]+)/); return m?m[1].replace(/\+/g,' '):b.sub||b.title; }catch{return b.sub||b.title;} })() : (b.sub||b.title);
-                      return (
-                        <div className="col-span-2 rounded-2xl overflow-hidden border" style={{borderColor:bdr}}>
-                          <div className="relative w-full overflow-hidden" style={{height:80}}>
-                            <iframe src={(b.lat&&b.lng)?`https://maps.google.com/maps?q=${b.lat},${b.lng}&output=embed&hl=en&z=16`:`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed&hl=en`} className="absolute inset-0 w-full h-full border-0" loading="lazy" title="map"/>
-                          </div>
-                          <div className="flex items-center justify-between gap-2 px-2.5 py-2" style={{background:cardBg}}>
-                            <p className={`text-[9px] font-semibold truncate ${tx}`}>{b.sub||mapQuery}</p>
-                            <span className="flex-shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold text-white" style={{background:b.color||'#1A1A18'}}>Directions →</span>
-                          </div>
+                    // Address comes from the block's own address field, never from
+                    // `sub` — `sub` is the caption ("Get directions") and using it
+                    // made the map query that literal string.
+                    const addr = (b.address || b.sub || '').trim();
+                    const hasAddr = !!addr && !/^(get|tap for) directions$/i.test(addr);
+                    const mapsHref = hasAddr ? `https://maps.google.com/?q=${encodeURIComponent(addr)}` : '#';
+
+                    // Photo layout — the block's own cover photo
+                    if(bStyle==='photo' && b.coverPhoto) return (
+                      <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio: isSquare ? '1/1' : '16/10' }}>
+                        <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
+                        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
+                        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
+                          <p className="text-[9px] font-bold truncate" style={{ color:'#fff' }}>{b.title}</p>
+                          {hasAddr&&<p className="text-[7px] truncate" style={{ color:'rgba(255,255,255,0.75)' }}>{addr}</p>}
                         </div>
-                      );
-                    }
+                      </div>
+                    );
+
+                    // Minimal layout — compact row
                     if(bStyle==='minimal') return (
                       <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
                         <LucidePin size={10} color={b.color}/>
                         <div className="min-w-0 flex-1">
                           <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
-                          {b.sub&&<p className={`text-[8px] truncate ${isDark?'text-white/40':'text-black/40'}`}>{b.sub}</p>}
-                        </div>
-                        <span className={`text-[8px] font-bold ${isDark?'text-white/40':'text-black/35'}`}>Directions ›</span>
-                      </a>
-                    );
-                    if(bStyle==='place') return (
-                      <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
-                        <div className="flex flex-col items-center justify-center py-3" style={{ background:'linear-gradient(135deg,#1e3a5f,#0f172a)',minHeight:60 }}>
-                          <LucidePin size={18} color="white"/>
-                          <p className="text-white text-[9px] font-semibold mt-1 px-2 text-center truncate">{b.sub||b.title}</p>
-                        </div>
-                        <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1 px-2 py-2" style={{ background:cardBg }}>
-                          <LucidePin size={8} color={b.color}/>
-                          <span className={`text-[8px] font-bold ${isDark?'text-white/60':'text-black/55'}`}>Get Directions</span>
-                        </a>
-                      </div>
-                    );
-                    // default photo style
-                    return (
-                      <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
-                        {b.coverPhoto
-                          ?<img src={b.coverPhoto} className="w-full h-[54px] object-cover" alt=""/>
-                          :<div className="h-[54px] flex items-center justify-center" style={{ background:'linear-gradient(135deg,#1e3a5f,#111827)' }}>
-                            <LucidePin size={16} color="white"/>
-                          </div>
-                        }
-                        <div className="px-2.5 py-2" style={{ background:cardBg }}>
-                          {b.sub&&<p className={`text-[9px] truncate mb-1 ${isDark?'text-white/50':'text-black/45'}`}>{b.sub}</p>}
-                          <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[8px] font-bold" style={{ background:b.color,color:'white' }}>
-                            <LucidePin size={7} color="white"/> Get Directions
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // ── ORDER / BOOK ──
-                  if(b.id==='order'||b.id==='book') {
-                    const hasProvider = b.provider && b.provider!=='other';
-                    if(bStyle==='hero' && hasProvider) return (
-                      <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr }}>
-                        <div className="flex flex-col items-center justify-center py-3" style={{ background:cardBg, minHeight:64 }}>
-                          <ProviderIcon providerKey={b.provider!} size={36}/>
-                          <p className={`text-[9px] font-semibold ${tx} mt-1.5`}>{b.title}</p>
-                        </div>
-                      </div>
-                    );
-                    if(bStyle==='cta') return (
-                      <div className="rounded-2xl px-3 py-3 border" style={{ background:b.color?`${b.color}15`:cardBg, borderColor:b.color?`${b.color}40`:bdr }}>
-                        <div className="flex items-center gap-2">
-                          {hasProvider&&<ProviderIcon providerKey={b.provider!} size={20}/>}
-                          <p className={`text-[11px] font-bold flex-1 ${tx}`}>{b.title}</p>
-                          <span style={{ color:b.color??'#0A0A0A' }} className="text-[14px] font-bold">→</span>
-                        </div>
-                      </div>
-                    );
-                    // default brand
-                    return (
-                      <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2 border" style={{ background:cardBg, borderColor:bdr }}>
-                        {hasProvider
-                          ?<div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0"><ProviderIcon providerKey={b.provider!} size={28}/></div>
-                          :<BlockIcon id={b.id} size={10} color={b.color}/>
-                        }
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
-                          {!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>}
+                          {hasAddr&&!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{addr}</p>}
                         </div>
                         <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
+                      </a>
+                    );
+
+                    // Place layout (default) — embedded map, only with a real address
+                    if(hasAddr) return (
+                      <div className="col-span-2 rounded-2xl overflow-hidden border" style={{borderColor:bdr}}>
+                        <div className="relative w-full overflow-hidden" style={{height:120}}>
+                          <iframe
+                            src={(b.lat&&b.lng)
+                              ?`https://maps.google.com/maps?q=${b.lat},${b.lng}&z=15&output=embed&hl=en`
+                              :`https://maps.google.com/maps?q=${encodeURIComponent(addr)}&z=15&output=embed&hl=en`}
+                            className="absolute inset-0 w-full h-full border-0" loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade" title="map"/>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 px-2.5 py-2" style={{background:cardBg}}>
+                          <p className={`text-[9px] font-semibold truncate ${tx}`}>{addr}</p>
+                          <span className="flex-shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold text-white" style={{background:b.color||'#1A1A18'}}>Directions →</span>
+                        </div>
+                      </div>
+                    );
+
+                    // No address yet — prompt in the builder rather than a world map
+                    return (
+                      <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border border-dashed" style={{ borderColor:bdr }}>
+                        <LucidePin size={10} color={b.color}/>
+                        <p className={`text-[9px] ${sx} flex-1`}>Add your address to show a map</p>
                       </div>
                     );
                   }
 
-                  // ── MENU ──
                   if(b.id==='menu') {
                     if(bStyle==='dark') return (
                       <div className="rounded-2xl px-3 py-3 border" style={{ background:'#0A0A0A', borderColor:'#1A1A1A' }}>
@@ -1027,6 +990,31 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                             {!isHalf&&<p className="text-[8px] text-white/40 truncate">{b.sub}</p>}
                           </div>
                           <span className="text-white/20 text-xs">›</span>
+                        </div>
+                      </div>
+                    );
+                    // Photo — cover image fills the card
+                    if(bStyle==='photo' && b.coverPhoto) return (
+                      <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio: isSquare ? '1/1' : '16/10' }}>
+                        <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
+                        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
+                        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
+                          <p className="text-[9px] font-bold truncate" style={{ color:'#fff' }}>{b.title}</p>
+                          {!isHalf&&<p className="text-[7px] truncate" style={{ color:'rgba(255,255,255,0.75)' }}>{b.sub}</p>}
+                        </div>
+                      </div>
+                    );
+                    // Card (default) — banner photo above a titled row
+                    return (
+                      <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr, background:cardBg }}>
+                        {b.coverPhoto&&<img src={b.coverPhoto} className="w-full h-[54px] object-cover" alt=""/>}
+                        <div className="flex items-center gap-2 px-2.5 py-2.5">
+                          <BlockIcon id="menu" size={10} color={b.color}/>
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
+                            {!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>}
+                          </div>
+                          <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
                         </div>
                       </div>
                     );
@@ -2091,9 +2079,35 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     const mon=hours.mon;
     setConfig(c=>({...c,weeklyHours:{...hours,tue:mon,wed:mon,thu:mon,fri:mon}}));
   }
+  // The public page reads hours from the `business_hours` TABLE, while the
+  // builder keeps them in user metadata. Without this mirror the live page sees
+  // zero rows, evaluates every day as closed, and tells customers the business
+  // is "Closed today" while the builder shows "Open now".
+  async function syncHoursToDb(businessId: string, wh: WeeklyHours) {
+    const KEYS: WeekDay[] = ['sun','mon','tue','wed','thu','fri','sat']; // index = day_of_week
+    const rows = KEYS.map((k,i)=>{
+      const d = wh[k];
+      return {
+        business_id: businessId,
+        day_of_week: i,
+        opens_at: d?.closed ? null : `${(d?.open ?? '09:00')}:00`,
+        closes_at: d?.closed ? null : `${(d?.close ?? '17:00')}:00`,
+        is_closed: !!d?.closed,
+      };
+    });
+    await supabase.from('business_hours').delete().eq('business_id', businessId);
+    const { error } = await supabase.from('business_hours').insert(rows);
+    if (error) throw new Error('Hours did not save to your live page: ' + error.message);
+  }
+
   async function save() {
     setSaving(true);setSaveError('');
     const {error}=await supabase.auth.updateUser({data:{openstatus_page:config}});
+    // Mirror hours to the table the public page actually reads
+    if(business?.id&&config.weeklyHours&&!error){
+      try{ await syncHoursToDb(business.id, config.weeklyHours); }
+      catch(e){ setSaveError(e instanceof Error?e.message:'Hours failed to publish'); }
+    }
     // On first publish, stamp onboarded_at in the businesses table
     if(!hasPublished&&business?.id&&!error){
       await supabase.from('businesses').update({onboarded_at:new Date().toISOString()}).eq('id',business.id);
@@ -2343,7 +2357,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     if(autosaveTimer.current)clearTimeout(autosaveTimer.current);
     autosaveTimer.current=setTimeout(()=>{
       setSaving(true);setSaveError('');
-      supabase.auth.updateUser({data:{openstatus_page:config}}).then(({error})=>{
+      supabase.auth.updateUser({data:{openstatus_page:config}}).then(async ({error})=>{
+        if(!error&&business?.id&&config.weeklyHours){
+          try{ await syncHoursToDb(business.id, config.weeklyHours); }
+          catch{/* surfaced on an explicit save */}
+        }
         setSaving(false);
         if(!error){setSaved(true);setTimeout(()=>setSaved(false),2000);}
         else{setSaveError(error.message);}

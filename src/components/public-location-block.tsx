@@ -18,9 +18,19 @@ type Props = { block: OpenStatusBlock; businessId: string; themeColor?: string }
 export default function PublicLocationBlock({ block, businessId, themeColor }: Props) {
   const [hovered, setHovered] = useState(false);
 
+  // `sub` is the block's caption ("Get directions"/"Tap for directions"), not an
+  // address. Preferring it made the embed query that literal string, which
+  // renders a zoom-1 map of the whole world with no marker.
+  const CAPTION = /^(get|tap for)\s+directions$/i;
+  const realAddress = [block.address, block.sub].find(v => !!v && !CAPTION.test(v.trim())) ?? '';
+
   const query = block.googleUrl
-    ? extractMapQuery(block.googleUrl, block.sub || block.title)
-    : block.sub || block.address || block.title;
+    ? extractMapQuery(block.googleUrl, realAddress || block.title)
+    : realAddress;
+
+  // No address and no map link means there is nothing to show. Rendering a
+  // world map with a "Directions" CTA is worse than rendering nothing.
+  if (!query && !block.googleUrl && !block.appleMapsUrl && !(block.lat && block.lng)) return null;
 
   const mapsHref = block.appleMapsUrl || block.googleUrl
     ? (block.appleMapsUrl ?? `https://maps.google.com/?q=${encodeURIComponent(query)}`)
@@ -28,7 +38,7 @@ export default function PublicLocationBlock({ block, businessId, themeColor }: P
 
   const embedSrc = (block.lat && block.lng)
     ? `https://maps.google.com/maps?q=${block.lat},${block.lng}&output=embed&hl=en&z=16`
-    : `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=en`;
+    : `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=en&z=15`;
 
   return (
     <div style={{
@@ -66,7 +76,7 @@ export default function PublicLocationBlock({ block, businessId, themeColor }: P
               fontSize: 14, fontWeight: 600, color: '#151515',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-              {block.address || block.sub || query}
+              {realAddress || query}
             </p>
           </div>
           <p style={{ fontSize: 12, color: '#8A8A86', paddingLeft: 19 }}>Tap for directions</p>

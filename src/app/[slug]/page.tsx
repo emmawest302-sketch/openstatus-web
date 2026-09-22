@@ -147,12 +147,16 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const closedAllDay = !todayRow || todayRow.is_closed || updates.some((u) => u.kind === 'closed');
   const openMins = mins(todayRow?.opens_at ?? null);
   const closeMins = mins(effectiveClose);
-  const isOpen = !closedAllDay && openMins !== null && closeMins !== null && nowMins >= openMins && nowMins < closeMins;
+  const isOpen = hours.length > 0 && !closedAllDay && openMins !== null && closeMins !== null && nowMins >= openMins && nowMins < closeMins;
 
-  // Status
-  const dot = closedAllDay ? '#8A8A86' : isOpen ? '#22C55E' : '#E0921B';
+  // Status. Absence of hours data must never be rendered as a factual claim
+  // that the business is closed — that is how a page tells customers a shop is
+  // shut while it is actually open.
+  const hoursUnknown = hours.length === 0;
+  const dot = hoursUnknown ? '#8A8A86' : closedAllDay ? '#8A8A86' : isOpen ? '#22C55E' : '#E0921B';
   let bigText = 'Closed now', subText = 'Back tomorrow', accentText = '';
-  if (closedAllDay) { bigText = 'Closed today'; subText = lead?.detail ?? 'Not open today'; }
+  if (hoursUnknown) { bigText = 'Hours not set'; subText = 'Check with the business'; }
+  else if (closedAllDay) { bigText = 'Closed today'; subText = lead?.detail ?? 'Not open today'; }
   else if (isOpen) { bigText = 'Open now'; subText = 'Closes at '; accentText = pretty(effectiveClose); }
   else if (openMins !== null && nowMins < openMins) { bigText = 'Opens later'; subText = 'Opens at '; accentText = pretty(todayRow?.opens_at ?? null); }
 
@@ -160,7 +164,11 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const hoursBlock = enrichedConfig.blocks.find((b) => b.id === 'hours');
   const hoursBlockOn = hoursBlock?.on !== false;
   const locationBlock = enrichedConfig.blocks.find((b) => b.id === 'location');
-  const locationBlockOn = locationBlock?.on !== false && locationBlock && (locationBlock.googleUrl || locationBlock.appleMapsUrl || locationBlock.sub || locationBlock.address);
+  // A map is only meaningful with a real address. `sub` is the block's caption
+  // ("Get directions"), never an address — using it made every page render a
+  // zoom-1 map of the whole world.
+  const mapAddress = (locationBlock?.address || business.address || '').trim();
+  const locationBlockOn = locationBlock?.on !== false && !!locationBlock && (!!mapAddress || !!locationBlock.googleUrl || !!locationBlock.appleMapsUrl);
 
   // Initials fallback
   const initials = business.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p: string) => p[0]).join('').toUpperCase();
