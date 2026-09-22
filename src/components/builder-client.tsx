@@ -1775,6 +1775,16 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
 }
 
 // ── main export ────────────────────────────────────────────────────────────────
+
+// ── Inline sparkline for builder business tab ──────────────────────────
+function BuilderSparkline({data,color}:{data:number[];color:string}){
+  if(!data||data.length<2) return <div style={{height:28}}/>;
+  const max=Math.max(...data,1);const min=Math.min(...data);const range=max-min||1;
+  const w=60,h=28;
+  const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${h-((v-min)/range)*(h-6)-3}`).join(' ');
+  return <svg width={w} height={h} style={{display:'block'}}><polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+}
+
 export default function BuilderClient({ business,initialConfig,isFirstRun=false,onboardedAt,googleConnected=false }: {
   business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null; googleConnected?:boolean;
 }) {
@@ -1823,7 +1833,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [bgUploading,setBgUploading]=useState(false);
   const [bgUploadError,setBgUploadError]=useState('');
   const [googlePhotos,setGooglePhotos]=useState<string[]>([]);
-  const [analyticsData,setAnalyticsData]=useState<null|{metrics:{views:number;uniqueVisitors:number;directions:number;menu:number;orders:number;clicks:number};topActions:{id:string;count:number}[];trafficSources:{source:string;count:number}[]}>(null);
+  const [analyticsData,setAnalyticsData]=useState<null|{metrics:{views:number;uniqueVisitors:number;directions:number;menu:number;orders:number;clicks:number};topActions:{id:string;count:number}[];trafficSources:{source:string;count:number}[];trend:{date:string;views:number;clicks:number}[]}>(null);
   const [analyticsLoading,setAnalyticsLoading]=useState(false);
   const [analyticsDays,setAnalyticsDays]=useState(30);
   const isResizing=useRef(false);
@@ -2014,7 +2024,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ if(sidebarTab==='hours'&&hoursSubTab==='status') loadStatusUpdates(); },[sidebarTab,hoursSubTab]);
   useEffect(()=>{
-    if(sidebarTab!=='analytics') return;
+    if(sidebarTab!=='analytics'&&sidebarTab!=='business') return;
     setAnalyticsLoading(true);
     supabase.auth.getSession().then(async({data:{session}})=>{
       if(!session?.access_token){setAnalyticsLoading(false);return;}
@@ -2608,6 +2618,33 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {/* ══ BUSINESS INFO ══ */}
             {sidebarTab==='business'&&(
               <div className="px-8 py-8 max-w-[600px]">
+                {/* ── Analytics snapshot ── */}
+                {analyticsData&&(
+                  <div className="mb-7">
+                    <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider mb-3">Last 30 days</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
+                        {label:'Directions',value:analyticsData.metrics.directions,color:'#2563EB',data:(analyticsData.trend??[]).map(t=>t.clicks)},
+                        {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',data:(analyticsData.trend??[]).map((_,i)=>i%3===0?analyticsData.metrics.menu:0)},
+                        {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
+                      ].map(({label,value,color,data})=>(
+                        <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <p className="text-[11px] font-semibold text-[#98A2B3]">{label}</p>
+                            <BuilderSparkline data={data} color={color}/>
+                          </div>
+                          <p className="text-[24px] font-bold text-[#0A0A0A] leading-none">{value.toLocaleString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {analyticsLoading&&(
+                  <div className="mb-7 rounded-2xl border border-[#EBEBEA] bg-white p-5 text-center">
+                    <p className="text-[13px] text-[#98A2B3]">Loading analytics…</p>
+                  </div>
+                )}
                 <div className="mb-7">
                   <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Business Info</h2>
                   <p className="text-[#858585] text-[13px] mt-1">Your name, location, and category.</p>
@@ -3231,6 +3268,28 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {sidebarTab==='business'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
             <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Business</h2>
+            {/* Analytics snapshot - mobile */}
+            {analyticsData&&(
+              <div className="mb-4">
+                <p className="text-[10px] font-bold text-[#98A2B3] uppercase tracking-wider mb-2">Last 30 days</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
+                    {label:'Directions',value:analyticsData.metrics.directions,color:'#2563EB',data:(analyticsData.trend??[]).map(t=>t.clicks)},
+                    {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',data:(analyticsData.trend??[]).map((_,i)=>i%3===0?analyticsData.metrics.menu:0)},
+                    {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
+                  ].map(({label,value,color,data})=>(
+                    <div key={label} className="rounded-2xl border border-[#E8EBF0] bg-white p-3">
+                      <div className="flex items-start justify-between mb-1">
+                        <p className="text-[10px] font-semibold text-[#98A2B3]">{label}</p>
+                        <BuilderSparkline data={data} color={color}/>
+                      </div>
+                      <p className="text-[20px] font-bold text-[#111] leading-none">{value.toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Hours & Status */}
             <div className="mb-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
