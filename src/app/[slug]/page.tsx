@@ -281,7 +281,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           } : {}),
         }) }}
       />
-      <AnalyticsTracker businessId={business.id}/>
+      <AnalyticsTracker businessId={business.id} ownerUserId={business.user_id}/>
 
       {/* ── Outer page centering wrapper ── */}
       <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>

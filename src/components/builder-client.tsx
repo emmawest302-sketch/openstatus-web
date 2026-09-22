@@ -15,6 +15,15 @@ type Tone = 'default' | 'muted' | 'accent';
 type BlockSize = 'half' | 'square' | 'full' | 'third';
 // Photos only look right in the bigger blocks — a cover image in a compact row
 // is an unreadable sliver, so we gate the control rather than let it look broken.
+// Close-before-open saved silently with a "Saved" confirmation, so a shop could
+// publish 8 AM – 6 AM without any warning. Overnight spans are real (bars, late
+// kitchens), so this flags rather than blocks, and the copy says which is which.
+function hoursRowInvalid(d?: { open:string; close:string; closed:boolean }): boolean {
+  if (!d || d.closed) return false;
+  const toMin = (t:string) => { const [h,m] = (t||'').split(':').map(Number); return (h||0)*60 + (m||0); };
+  return toMin(d.close) <= toMin(d.open);
+}
+
 function blockAllowsPhoto(size?: BlockSize) { return size !== 'half' && size !== 'third'; }
 // These blocks are their own content — they don't need a link to be useful.
 const SELF_CONTAINED_BLOCKS = new Set(['hours','location','updates','gallery','socials']);
@@ -1521,7 +1530,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                   {DAYS.map(({key,label},i)=>{
                     const day=hours[key];
                     return (
-                      <div key={key} className={`flex items-center gap-2 px-4 py-3 ${i<DAYS.length-1?'border-b border-[#F5F5F5]':''}`}>
+                      <div key={key} className={`flex flex-wrap items-center gap-2 px-4 py-3 ${i<DAYS.length-1?'border-b border-[#F5F5F5]':''}`}>
                         <span className="text-[13px] font-medium text-[#0A0A0A] w-10 flex-shrink-0">{label.slice(0,3)}</span>
                         <button
                           onClick={()=>onUpdateConfig({weeklyHours:{...hours,[key]:{...day,closed:!day.closed}}})}
@@ -1535,6 +1544,12 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                             <span className="text-[#C0C0C0] text-xs">–</span>
                             <TimeSelect value={day.close} onChange={v=>onUpdateConfig({weeklyHours:{...hours,[key]:{...day,close:v}}})}/>
                           </div>
+                        )}
+                        {hoursRowInvalid(day)&&(
+                          <p className="w-full text-[11px] text-[#B54708] flex items-center gap-1.5 pl-12">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            Closing time is before opening time — customers will see this as closed all day.
+                          </p>
                         )}
                       </div>
                     );
@@ -2047,6 +2062,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [deleting,setDeleting]=useState(false);
   const [deleteMsg,setDeleteMsg]=useState('');
   const [helpOpen,setHelpOpen]=useState(false);
+  const [undoBlock,setUndoBlock]=useState<OpenStatusBlock|null>(null);
+  const undoTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [bizSaving,setBizSaving]=useState(false);
   const [bizSaved,setBizSaved]=useState(false);
   const [bizSaveError,setBizSaveError]=useState('');
@@ -2101,7 +2118,35 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
     setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));
   }
-  function enableBlock(id:string) { updateBlock(id,{on:true}); }
+  // Adding a block used to leave it wherever DEFAULT_BLOCKS put it, so a new
+  // block appeared in the middle of the page (usually above Website). Append it.
+  function enableBlock(id:string) {
+    setConfig(c=>{
+      const bs=[...c.blocks];
+      const i=bs.findIndex(b=>b.id===id);
+      if(i<0) return c;
+      const [moved]=bs.splice(i,1);
+      bs.push({...moved,on:true});
+      return {...c,blocks:bs};
+    });
+  }
+  // A block can hold a URL, an uploaded menu and a cover photo. Deleting used to
+  // be instant and irreversible; an undo window is friendlier than a confirm.
+  function removeBlock(id:string) {
+    const snapshot=config.blocks.find(b=>b.id===id) ?? null;
+    updateBlock(id,{on:false});
+    setUndoBlock(snapshot);
+    if(undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current=setTimeout(()=>setUndoBlock(null),8000);
+  }
+  function undoRemove() {
+    if(!undoBlock) return;
+    const snap=undoBlock;
+    setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===snap.id?{...snap,on:true}:b)}));
+    setUndoBlock(null);
+    if(undoTimer.current) clearTimeout(undoTimer.current);
+  }
+
   function handleDrop(targetId:string) {
     if(!dragId||dragId===targetId||dragId==='hours'||targetId==='hours'){setDragId(null);setDragOverId(null);return;}
     setConfig(c=>{
@@ -2373,6 +2418,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     })();
   },[config.placeId,config.blocks]);
 
+  // The font swatches each render in their own family, so every face has to be
+  // loaded — not just the selected one. Without this, Playfair, Pacifico and
+  // Lobster all fell back to the same generic serif and the picker was useless.
+  useEffect(()=>{
+    if(sidebarTab!=='style') return;
+    for(const opt of FONT_OPTIONS){
+      if(!opt.google) continue;
+      const id=`gfont-${opt.google}`;
+      if(document.getElementById(id)) continue;
+      const link=document.createElement('link');
+      link.id=id; link.rel='stylesheet';
+      link.href=`https://fonts.googleapis.com/css2?family=${opt.google}&display=swap`;
+      document.head.appendChild(link);
+    }
+  },[sidebarTab]);
+
   // Load Google Font whenever selected font changes
   useEffect(()=>{
     const opt = FONT_OPTIONS.find(f=>f.family===config.font);
@@ -2414,6 +2475,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-[#F0F2F5] text-[#111111]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
+
+      {/* ── Undo block removal ── */}
+      {undoBlock&&(
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-full bg-[#111] shadow-[0_10px_40px_rgba(0,0,0,0.28)]">
+          <span className="text-[12px] text-white/85">
+            <strong className="font-semibold text-white">{undoBlock.title}</strong> removed
+          </span>
+          <button onClick={undoRemove}
+            className="px-3 py-1.5 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors">
+            Undo
+          </button>
+        </div>
+      )}
 
       {/* ── Help ── */}
       {helpOpen&&(
@@ -2739,7 +2813,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           <LucideChevronRight size={13} color="#D0D0D0"/>
                           {block.id!=='hours'&&(
                             <button
-                              onClick={e=>{e.stopPropagation();updateBlock(block.id,{on:false});}}
+                              onClick={e=>{e.stopPropagation();removeBlock(block.id);}}
                               className="w-6 h-6 rounded-full flex items-center justify-center text-[#C0C0C0] hover:text-[#0A0A0A] hover:bg-[#F0F0F0] transition-all flex-shrink-0"
                               title="Remove block">
                               <LucideX size={11} color="currentColor"/>
@@ -3545,7 +3619,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{isOn?'Tap to edit':'Tap to add'}</p>
                         </button>
                         <button
-                          onClick={e=>{e.stopPropagation();if(isOn){updateBlock(def.id,{on:false});}else{enableBlock(def.id);}}}
+                          onClick={e=>{e.stopPropagation();if(isOn){removeBlock(def.id);}else{enableBlock(def.id);}}}
                           className={`w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${isOn?'bg-[#111] border-[#111]':'border-[#D0D5DD]'}`}>
                           {isOn
                             ?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
