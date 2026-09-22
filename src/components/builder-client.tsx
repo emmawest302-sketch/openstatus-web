@@ -781,12 +781,13 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
   const reviewPct = locBlock?.reviewStars&&locBlock.reviewStars>0 ? starsToPercent(locBlock.reviewStars) : null;
 
   return (
-    <div className="mx-auto" style={{ width:310 }}>
+    <div style={{ width:'100%' }}>
       <div
         className="relative rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/8"
         style={{
           background: config.bg || '#F7F7F5',
           minHeight: 560,
+          width: '100%',
         }}
       >
         {/* Photo header — constrained 148px, fades into page bg */}
@@ -2298,7 +2299,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             <button
                               onClick={()=>postStatus('early_close')}
                               disabled={statusPosting}
-                              className="px-3 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors disabled:opacity-40"
+                              className="px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
                             >
                               Set
                             </button>
@@ -2324,7 +2325,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           <button
                             onClick={()=>postStatus('note_today')}
                             disabled={statusPosting||!statusNote.trim()}
-                            className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors disabled:opacity-40"
+                            className="px-4 py-2 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
                           >
                             Post
                           </button>
@@ -2896,7 +2897,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <p className="text-[12px] font-semibold text-[#111] mb-1">Connect Google Business</p>
                     <p className="text-[11px] text-[#98A2B3] mb-3">Import your Google photos automatically</p>
                     <a href="/connect/google"
-                      className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
+                      className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors">
                       Connect Google Business
                     </a>
                   </div>
@@ -2918,7 +2919,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         openstatus.co/{business.slug}
                       </code>
                       <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-bold hover:bg-[#292929] transition-colors whitespace-nowrap">
+                        className="px-4 py-2 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap">
                         Open ↗
                       </a>
                     </div>
@@ -3240,7 +3241,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
                           }}
                           disabled={googleSyncStatus==='syncing'}
-                          className="w-full py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] disabled:opacity-50 transition-colors"
+                          className="w-full py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] disabled:opacity-50 transition-colors"
                         >
                           {googleSyncStatus==='syncing'?'Syncing…':'Sync hours to Google now'}
                         </button>
@@ -3257,7 +3258,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </>
                     ):(
                       <a href="/connect/google"
-                        className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
+                        className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors">
                         Connect Google Business
                       </a>
                     )}
@@ -3593,7 +3594,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">✓ Saved</p>}
                 {!bizSaveError&&!bizSaved&&<span/>}
                 <button onClick={saveBizInfo} disabled={bizSaving}
-                  className="ml-auto rounded-xl bg-[#0A0A0A] text-white text-[11px] font-bold px-4 py-2 hover:bg-[#292929] transition-colors disabled:opacity-40">
+                  className="ml-auto rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-bold px-4 py-2 hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
                   {bizSaving?'Saving…':'Save'}
                 </button>
               </div>
@@ -4115,7 +4116,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
                   }
                 }}
-                className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-white text-[13px] font-bold hover:bg-[#292929] transition-colors">
+                className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[13px] font-bold hover:bg-[#1a1a1a] transition-colors">
                 {quickAction==='open-today'?'Open & Sync to Google'
                 :googleConnected?'Update & Sync to Google'
                 :'Update Hours'}
