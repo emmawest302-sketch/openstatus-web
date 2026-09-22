@@ -583,75 +583,109 @@ export default function BusinessDashboard() {
     </nav>
   );
 
+  // ─── LIVE PAGE PREVIEW PANEL ─────────────────────────────────────────────
+  const LivePagePanel = () => (
+    <aside style={{ width: 290, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', padding: '28px 20px 28px 0' }}>
+      {/* Phone preview card */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Your live page</span>
+          {biz.slug && (
+            <a href={`/${biz.slug}`} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#2563EB', textDecoration: 'none' }}>
+              View live <IconExternalLink/>
+            </a>
+          )}
+        </div>
+        {/* Phone frame */}
+        <div style={{ flex: 1, minHeight: 0, background: '#F0F0EE', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 12px 0', overflow: 'hidden' }}>
+          <div style={{ width: '100%', maxWidth: 200, position: 'relative' }}>
+            <div style={{ background: '#1A1A1A', borderRadius: 28, padding: '10px 6px 0', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+                <div style={{ width: 60, height: 6, background: '#333', borderRadius: 999 }}/>
+              </div>
+              <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', overflow: 'hidden', height: 360 }}>
+                {biz.slug ? (
+                  <iframe
+                    src={`/${biz.slug}`}
+                    style={{ width: '200%', height: '200%', transform: 'scale(0.5)', transformOrigin: '0 0', border: 'none', pointerEvents: 'none' }}
+                    title="Live page preview"
+                  />
+                ) : (
+                  <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: TEXT3, fontSize: 11 }}>No slug set</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Share card */}
+      <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 18, padding: '18px 18px 16px', flexShrink: 0 }}>
+        <div style={{ fontSize: 22, marginBottom: 8 }}>🔗</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 4 }}>Your link works hard for your business.</div>
+        <div style={{ fontSize: 12, color: TEXT2, marginBottom: 14, lineHeight: 1.6 }}>Share it on social media, in your bio, and with customers.</div>
+        <button onClick={copyLink}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', background: copied ? '#BBF7D0' : CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 700, color: copied ? '#166534' : TEXT, cursor: 'pointer' }}>
+          <IconShare/> {copied ? 'Copied!' : 'Copy your link'}
+        </button>
+      </div>
+    </aside>
+  );
+
   // ─── DESKTOP RENDER ──────────────────────────────────────────────────────
   if (!isMobile) {
     return (
       <div style={{ fontFamily: FONT, minHeight: '100vh', background: BG, display: 'flex' }}>
         <Sidebar/>
-        <main style={{ flex: 1, minWidth: 0, padding: '32px 32px 48px', overflowY: 'auto' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
-            <div>
-              <h1 style={{ fontSize: 30, fontWeight: 700, color: TEXT, letterSpacing: '-0.04em', margin: 0, lineHeight: 1.2 }}>{getGreeting(biz.name)}</h1>
-              <p style={{ fontSize: 14, color: TEXT2, marginTop: 6, margin: '6px 0 0' }}>Here&apos;s what&apos;s happening with your business today.</p>
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-              {biz.slug && (
-                <a href={`/${biz.slug}`} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>
-                  <IconExternalLink/> View live
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 0, overflowY: 'auto' }}>
+          <main style={{ flex: 1, minWidth: 0, padding: '32px 20px 48px 32px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+              <div>
+                <h1 style={{ fontSize: 28, fontWeight: 700, color: TEXT, letterSpacing: '-0.04em', margin: 0, lineHeight: 1.2 }}>{getGreeting(biz.name)}</h1>
+                <p style={{ fontSize: 13, color: TEXT2, marginTop: 6, margin: '6px 0 0' }}>Here&apos;s what&apos;s happening with your business today.</p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <button onClick={copyLink}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 600, color: TEXT2, cursor: 'pointer' }}>
+                  <IconShare/> {copied ? 'Copied!' : 'Share'}
+                </button>
+                <a href="/builder"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: TEXT, border: `1px solid ${TEXT}`, borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
+                  Edit Page <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </a>
-              )}
-              <button onClick={copyLink}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 600, color: TEXT2, cursor: 'pointer' }}>
-                <IconShare/> {copied ? 'Copied!' : 'Share'}
-              </button>
-              <a href="/builder"
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: TEXT, border: `1px solid ${TEXT}`, borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
-                Edit Page <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </a>
+              </div>
             </div>
-          </div>
-
-          {/* Row 1: Status + Google */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-            <OpenStatusCard/>
-            <GoogleCard/>
-          </div>
-
-          {/* Row 2: Link + Business details */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-            <LinkCard/>
-            <BusinessDetailsCard/>
-          </div>
-
-          {/* Row 3: Quick actions */}
-          <div style={{ marginBottom: 14 }}>
-            <QuickActions/>
-          </div>
-
-          {/* Row 4: Analytics */}
-          <div style={{ marginBottom: 14 }}>
-            <AnalyticsSummary/>
-          </div>
-
-          {/* Row 5: Activity + Tips */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
-            <RecentActivity/>
-            <TipsCard/>
-          </div>
-        </main>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <OpenStatusCard/>
+              <GoogleCard/>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <LinkCard/>
+              <BusinessDetailsCard/>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <QuickActions/>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <AnalyticsSummary/>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+              <RecentActivity/>
+              <TipsCard/>
+            </div>
+          </main>
+          <LivePagePanel/>
+        </div>
       </div>
     );
   }
-
   // ─── MOBILE RENDER ───────────────────────────────────────────────────────
   return (
     <div style={{ fontFamily: FONT, minHeight: '100vh', background: BG, paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
       {/* Mobile header */}
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT3, letterSpacing: '0.06em', textTransform: 'uppercase' }}>OpenStatus</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT3, letterSpacing: '0.06em', textTransform: 'uppercase', fontSize: 10 }}>OpenStatus</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{biz.name}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT3} strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
