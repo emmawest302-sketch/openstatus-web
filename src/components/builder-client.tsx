@@ -1780,7 +1780,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt);
-  const [sidebarTab,setSidebarTab]=useState<SidebarTab>('design');
+  const [sidebarTab,setSidebarTab]=useState<SidebarTab>(isFirstRun?'hours':'design');
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('regular');
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>(
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'desktop' : 'mobile'
@@ -1957,8 +1957,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     );
   }
 
-  const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode }[] = [
+  const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode; badge?:React.ReactNode }[] = [
     { key:'business', label:'Business', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+    { key:'hours',    label:'Hours',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      badge:<span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#98A2B3]'}`}>{liveStatus==='open'?'Open':'Closed'}</span> },
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
     { key:'photos',   label:'Photos',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
     { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg> },
@@ -2087,7 +2089,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
         {/* Nav */}
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
-          {SIDEBAR_NAV.map(({key,label,icon})=>(
+          {SIDEBAR_NAV.map(({key,label,icon,badge})=>(
             <button key={key} onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
                 sidebarTab===key
@@ -2097,6 +2099,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               style={{color:sidebarTab===key?'#ffffff':undefined}}>
               <span className={sidebarTab===key?'text-white':'text-[#98A2B3]'}>{icon}</span>
               {label}
+              {badge}
             </button>
           ))}
         </nav>
@@ -3831,7 +3834,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       {/* ── MOBILE BOTTOM NAV ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch"
         style={{display:isMobile?"flex":"none", paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))' }}>
-        {SIDEBAR_NAV.map(({key,label,icon})=>(
+        {SIDEBAR_NAV.map(({key,label,icon,badge})=>(
           <button key={key} onClick={()=>{if(sidebarTab===key&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab(key);setMobileSheetOpen(true);}}}
             className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors`}>
             {/* Active tab background bubble */}
@@ -3844,6 +3847,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab===key?'text-[#111111]':'text-[#98A2B3]'}`}>
               {label}
             </span>
+            {badge&&key==='hours'&&sidebarTab!==key&&(
+              <span className={`absolute top-1 right-1 text-[8px] font-bold px-1 py-px rounded-full leading-none ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#98A2B3]'}`}>
+                {liveStatus==='open'?'●':'●'}
+              </span>
+            )}
           </button>
         ))}
       </nav>
