@@ -41,6 +41,7 @@ export type OpenStatusPageConfig = {
   tags?: string[];
   weeklyHours?: WeeklyHours;
   font?: string;
+  nameColor?: string;
 };
 
 export const defaultOpenStatusBlocks: OpenStatusBlock[] = [

@@ -126,6 +126,11 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
     ? bg
     : (bg.match(/#[0-9a-fA-F]{6}/g)?.slice(-1)[0] ?? '#F7F7F5');
   const { r: bgR, g: bgG, b: bgB } = hexToRgb(bgSolid);
+  // Light text when the page background is dark. Without this a dark background
+  // rendered the business name in near-black and it disappeared.
+  const bgIsDark = (0.2126*bgR + 0.7152*bgG + 0.0722*bgB) < 140;
+  const nameColor = enrichedConfig.nameColor ?? (bgIsDark ? '#FFFFFF' : '#151515');
+  const pageFont = enrichedConfig.font ?? 'Inter, system-ui, sans-serif';
   const fadeGradient = `linear-gradient(to bottom, rgba(${bgR},${bgG},${bgB},0) 0%, rgba(${bgR},${bgG},${bgB},0.08) 22%, rgba(${bgR},${bgG},${bgB},0.35) 48%, rgba(${bgR},${bgG},${bgB},0.72) 72%, ${bgSolid} 100%)`;
 
   // Hours / open status
@@ -187,7 +192,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         if (!gf) return null;
         return <link rel="stylesheet" href={`https://fonts.googleapis.com/css2?family=${gf}&display=swap`}/>;
       })()}
-    <div style={{ minHeight: '100dvh', background: bg, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100dvh', background: bg, fontFamily: pageFont }}>
       <AnalyticsTracker businessId={business.id}/>
 
       {/* ── Outer page centering wrapper ── */}
@@ -251,8 +256,8 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         <div style={{ textAlign: 'center', padding: '6px 16px 2px' }}>
           <h1 style={{
             fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em',
-            color: '#151515', lineHeight: 1, margin: 0,
-            fontFamily: enrichedConfig.font ?? 'Georgia, "Times New Roman", serif',
+            color: nameColor, lineHeight: 1, margin: 0,
+            fontFamily: pageFont,
           }}>
             {business.name}
           </h1>

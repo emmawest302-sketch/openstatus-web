@@ -37,7 +37,7 @@ export interface OpenStatusPageConfig {
   socials: Record<string, string>;
   location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
   likeCount?: number; dislikeCount?: number;
-  themeColor?: string; placeId?: string;
+  themeColor?: string; placeId?: string; nameColor?: string;
   font?: string;
 }
 export interface Business {
@@ -71,6 +71,14 @@ const BG_DESIGNS: { label:string; css:string }[] = [
 // config.bg may be a gradient/pattern. Anywhere we need a SOLID colour (e.g. to
 // fade a photo into the page) interpolating a gradient produces invalid CSS, so
 // pull out the last hex it contains and fall back to the default page colour.
+// Is the page background dark enough that light text is needed? Was previously
+// a hardcoded list of 5 hex values, so any gradient or custom colour fell through
+// as "light" and rendered near-black text on a dark page.
+function isDarkBg(bg?: string): boolean {
+  const hex = solidBg(bg);
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return (0.2126*r + 0.7152*g + 0.0722*b) < 140;
+}
 function solidBg(bg?: string): string {
   const v = (bg ?? '').trim();
   if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
@@ -191,6 +199,7 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     dislikeCount: typeof r.dislikeCount==='number'?r.dislikeCount:0,
     themeColor:   typeof r.themeColor==='string'?r.themeColor:undefined,
     placeId:      typeof r.placeId==='string'?r.placeId:undefined,
+    nameColor:    typeof r.nameColor==='string'?r.nameColor:undefined,
     font:         typeof r.font==='string'?r.font:undefined,
   };
 }
@@ -421,15 +430,6 @@ function IconMindbody({ size=32 }: { size?: number }) {
     </svg>
   );
 }
-function IconYelp({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#D32323"/>
-      {/* Yelp star/burst */}
-      <path d="M16 5l2 6.5H24l-5 3.8 2 6.5L16 18l-5 3.8 2-6.5-5-3.8h6z" fill="white"/>
-    </svg>
-  );
-}
 function IconGoogle({ size=32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32">
@@ -442,25 +442,6 @@ function IconGoogle({ size=32 }: { size?: number }) {
     </svg>
   );
 }
-function IconTripAdvisor({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#34E0A1"/>
-      {/* Owl eyes (TripAdvisor's icon) */}
-      <circle cx="11" cy="17" r="4" fill="white"/>
-      <circle cx="21" cy="17" r="4" fill="white"/>
-      <circle cx="11" cy="17" r="2.2" fill="#000"/>
-      <circle cx="21" cy="17" r="2.2" fill="#000"/>
-      <circle cx="11.7" cy="16.3" r="0.7" fill="white"/>
-      <circle cx="21.7" cy="16.3" r="0.7" fill="white"/>
-      {/* Beak */}
-      <path d="M14.5 21c.6.9 1.5 1.4 2 1.4s1.4-.5 2-1.4" stroke="#000" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
-      {/* Eyebrows */}
-      <path d="M7 14c1-2 2.5-3 4-3M25 14c-1-2-2.5-3-4-3" stroke="#000" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-    </svg>
-  );
-}
-
 function ProviderIcon({ providerKey, size=32 }: { providerKey: string; size?: number }) {
   switch(providerKey) {
     case 'doordash':   return <IconDoorDash size={size}/>;
@@ -503,7 +484,7 @@ function PillSelect({ options,selected,onSelect }: { options:string[]; selected:
     <div className="flex flex-wrap gap-1.5">
       {options.map(o=>(
         <button key={o} onClick={()=>onSelect(o)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#0A0A0A] text-[#4ADE80] font-bold border-[#0A0A0A]':'border-[#DEDEDC] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#0A0A0A] text-[#4ADE80] font-semibold border-[#0A0A0A]':'border-[#DEDEDC] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
           {o}
         </button>
       ))}
@@ -589,7 +570,7 @@ function StyleThumb({ blockId, styleKey }: { blockId: string; styleKey: string }
     );
     if (styleKey === 'hero') return (
       <div className="w-[68px] h-[42px] rounded-lg border border-emerald-200 bg-gradient-to-br from-emerald-500 to-emerald-600 flex flex-col items-center justify-center gap-0.5">
-        <span className="text-[9px] font-black text-white tracking-tight leading-none">OPEN</span>
+        <span className="text-[9px] font-semibold text-white tracking-tight leading-none">OPEN</span>
         <div className="h-[4px] bg-white/30 rounded-full w-10"/>
       </div>
     );
@@ -632,7 +613,7 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
   if (!styles) return null;
   return (
     <div>
-      <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-2">Layout</p>
+      <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-2">Layout</p>
       <div className="flex gap-2">
         {styles.map(s => (
           <button key={s.key} onClick={() => onSelect(s.key)}
@@ -660,7 +641,7 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
       <div className="flex gap-1.5 mb-3">
         {([['color','Color'],['design','Designs']] as const).map(([k,label])=>(
           <button key={k} onClick={()=>setTab(k)}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors ${tab===k?'bg-[#111] text-[#4ADE80]':'bg-[#F4F6FA] text-[#667085] hover:text-[#111]'}`}>
+            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${tab===k?'bg-[#111] text-[#4ADE80]':'bg-[#F4F6FA] text-[#667085] hover:text-[#111]'}`}>
             {label}
           </button>
         ))}
@@ -841,7 +822,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
     ...activeBlocks.filter(b=>b.id==='hours'),
     ...activeBlocks.filter(b=>b.id!=='hours'),
   ];
-  const isDark = ['#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c'].includes(config.bg);
+  const isDark = isDarkBg(config.bg);
   const tx = isDark?'text-white':'text-[#0A0A0A]';
   const sx = isDark?'text-white/55':'text-[#6B6B6B]';
   const { status, todayLabel } = getLiveStatus(config.weeklyHours);
@@ -856,11 +837,12 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
           background: config.bg || '#F7F7F5',
           minHeight: 560,
           width: '100%',
+          fontFamily: config.font ?? 'Inter, system-ui, sans-serif',
         }}
       >
         {/* Photo header — constrained 148px, fades into page bg */}
         {config.bgImage && (
-          <div style={{ position:'relative', height:148, overflow:'hidden' }}>
+          <div style={{ position:'relative', height:190, overflow:'hidden' }}>
             <img src={config.bgImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:config.bgImagePosition??'center 60%', display:'block' }}/>
             <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${solidBg(config.bg)} 100%)` }}/>
           </div>
@@ -874,7 +856,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
               {(business?.name??'B').slice(0,1).toUpperCase()}
             </div>
           }
-          <p className={`font-bold text-[13px] ${tx}`} style={{fontFamily:config.font??'Inter, system-ui, sans-serif'}}>{business?.name??'Your Business'}</p>
+          <p className="font-bold text-[13px]" style={{fontFamily:config.font??'Inter, system-ui, sans-serif',color:config.nameColor??(isDark?'#FFFFFF':'#0A0A0A')}}>{business?.name??'Your Business'}</p>
           {config.location && <p className={`text-[9px] truncate px-2 mt-0.5 ${sx}`}>{config.location}</p>}
           <div className="flex items-center justify-center gap-3 mt-2">
             {reviewPct && (
@@ -1131,7 +1113,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
 
 // ── Desktop page preview (matches [slug]/page.tsx layout) ─────────────────────
 function LiveDesktopPreview({ business,config }: { business:Business|null; config:OpenStatusPageConfig }) {
-  const isDark = ['#0a0a0a','#111827','#1a0a2e','#0a1628','#1c1c1c'].includes(config.bg);
+  const isDark = isDarkBg(config.bg);
   const bg = config.bg || '#F7F7F5';
   const { status, todayLabel } = getLiveStatus(config.weeklyHours);
   const activeBlocks = config.blocks.filter(b => b.on);
@@ -1172,7 +1154,7 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
 
         {/* Cover photo */}
         {coverPhoto ? (
-          <div style={{ position:'relative', height:200, overflow:'hidden' }}>
+          <div style={{ position:'relative', height:260, overflow:'hidden' }}>
             <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:config.bgImagePosition??'center 60%', display:'block' }}/>
             <div style={{ position:'absolute', inset:0, background:fadeGradient }}/>
           </div>
@@ -1268,7 +1250,7 @@ function CoverPhotoField({ block, onUpdateBlock, label='Cover photo', hint }: {
   if (!blockAllowsPhoto(block.size)) {
     return (
       <div className="rounded-xl border border-[#EBEBEA] bg-[#FAFAF9] px-3.5 py-3">
-        <p className="text-[11px] font-semibold text-[#667085]">{label} needs a bigger block</p>
+        <p className="text-[11px] font-normal text-[#667085]">{label} needs a bigger block</p>
         <p className="text-[10px] text-[#98A2B3] mt-0.5">
           Set the size below to <strong className="text-[#667085] font-semibold">Square</strong> or <strong className="text-[#667085] font-semibold">Large</strong>.
           {block.coverPhoto ? ' Your photo is saved and comes back when you do.' : ''}
@@ -1277,6 +1259,41 @@ function CoverPhotoField({ block, onUpdateBlock, label='Cover photo', hint }: {
     );
   }
   return <PhotoField label={label} value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint={hint}/>;
+}
+
+// ── Business name colour ─────────────────────────────────────────────────────
+// Defaults to automatic (light text on dark backgrounds) so the name can never
+// disappear; the owner can override with a swatch or any custom colour.
+function NameColorPicker({ value, autoColor, onChange }: {
+  value?: string; autoColor: string; onChange:(v:string|undefined)=>void;
+}) {
+  const wheelRef = useRef<HTMLInputElement>(null);
+  const SWATCHES = ['#FFFFFF','#0A0A0A','#4ADE80','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899'];
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-2.5">
+        <button onClick={()=>onChange(undefined)}
+          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${!value?'bg-[#111] text-[#4ADE80] border-[#111]':'border-[#DEDEDC] text-[#667085] hover:border-[#111]'}`}>
+          Auto
+        </button>
+        {SWATCHES.map(c=>(
+          <button key={c} onClick={()=>onChange(c)} title={c}
+            className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
+            style={{background:c,borderColor:value===c?'#111':'#DEDEDC'}}/>
+        ))}
+        <button onClick={()=>wheelRef.current?.click()} title="Custom color"
+          className="w-7 h-7 rounded-full border-2 border-dashed border-[#D4D4D4] flex items-center justify-center hover:border-[#111] transition-colors">
+          <span className="text-[11px] text-[#98A2B3]">+</span>
+        </button>
+        <input ref={wheelRef} type="color" className="sr-only" aria-label="Custom business name color"
+          value={/^#[0-9a-fA-F]{6}$/.test(value??'')?value:autoColor}
+          onChange={e=>onChange(e.target.value)}/>
+      </div>
+      <p className="text-[10px] text-[#98A2B3]">
+        {value ? 'Custom color.' : `Auto — currently ${autoColor==='#FFFFFF'?'white':'black'}, based on your background.`}
+      </p>
+    </div>
+  );
 }
 
 // ── Cover photo crop ─────────────────────────────────────────────────────────
@@ -1336,11 +1353,11 @@ function CoverPhotoCrop({ src, position, onChange, onRemove }: {
       </div>
       {/* vertical nudge — the axis that actually matters on a wide banner */}
       <div className="flex items-center gap-2.5 mt-2">
-        <span className="text-[10px] font-semibold text-[#98A2B3] w-8 flex-shrink-0">Up</span>
+        <span className="text-[10px] font-normal text-[#98A2B3] w-8 flex-shrink-0">Up</span>
         <input type="range" min={0} max={100} value={py}
           onChange={e=>onChange(`${px}% ${e.target.value}%`)}
           className="flex-1 accent-[#4ADE80]" aria-label="Vertical crop position"/>
-        <span className="text-[10px] font-semibold text-[#98A2B3] w-10 flex-shrink-0 text-right">Down</span>
+        <span className="text-[10px] font-normal text-[#98A2B3] w-10 flex-shrink-0 text-right">Down</span>
       </div>
     </div>
   );
@@ -1377,59 +1394,41 @@ function ReviewsCard({ block,onUpdateBlock }: {
       <div className="flex items-center justify-between mb-1">
         <p className="text-[12px] font-semibold text-[#111]">Reviews &amp; rating</p>
         {hasRating&&(
-          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FEF3C7] text-[#B45309] text-[10px] font-bold">
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FEF3C7] text-[#B45309] text-[10px] font-semibold">
             <LucideStar size={9} color="#B45309" filled/>
             {stars} · {starsToPercent(stars)}%
           </span>
         )}
       </div>
-      <p className="text-[11px] text-[#98A2B3] mb-3.5">Shows in your page header, under your business name.</p>
+      <p className="text-[11px] text-[#98A2B3] mb-3.5">Pulled from Google. Shows in your page header, under your business name.</p>
 
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0"><IconGoogle size={26}/></div>
-          <div className="flex-1 flex gap-2 min-w-0">
-            <Input value={block.googleUrl??''} onChange={v=>onUpdateBlock({googleUrl:v})} placeholder="Paste your Google Business profile URL…"/>
-            {block.googleUrl&&(
-              <button
-                onClick={async()=>{
-                  onUpdateBlock({_googleFetching:true,_googleError:''});
-                  try{
-                    const r=await fetch(`/api/google/rating?url=${encodeURIComponent(block.googleUrl??'')}`);
-                    const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
-                    if(!r.ok||d.error)throw new Error(d.error??'Failed');
-                    onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
-                  }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
-                }}
-                className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-bold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap disabled:opacity-50"
-                disabled={block._googleFetching}
-              >{block._googleFetching?'…':'Fetch'}</button>
-            )}
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="flex-shrink-0"><IconGoogle size={26}/></div>
+        <div className="flex-1 flex gap-2 min-w-0">
+          <Input value={block.googleUrl??''} onChange={v=>onUpdateBlock({googleUrl:v})} placeholder="Paste your Google Business profile URL…"/>
+          {block.googleUrl&&(
+            <button
+              onClick={async()=>{
+                onUpdateBlock({_googleFetching:true,_googleError:''});
+                try{
+                  const r=await fetch(`/api/google/rating?url=${encodeURIComponent(block.googleUrl??'')}`);
+                  const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
+                  if(!r.ok||d.error)throw new Error(d.error??'Failed');
+                  onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
+                }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
+              }}
+              className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-semibold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap disabled:opacity-50"
+              disabled={block._googleFetching}
+            >{block._googleFetching?'…':hasRating?'Refresh':'Fetch'}</button>
+          )}
         </div>
-        {block._googleError&&<p className="text-[11px] text-red-500">{block._googleError}</p>}
       </div>
-
-      <MoreOptions label="Other review sites & manual override">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0"><IconYelp size={26}/></div>
-          <Input value={block.yelpUrl??''} onChange={v=>onUpdateBlock({yelpUrl:v})} placeholder="Paste your Yelp listing URL…"/>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0"><IconTripAdvisor size={26}/></div>
-          <Input value={block.tripAdvisorUrl??''} onChange={v=>onUpdateBlock({tripAdvisorUrl:v})} placeholder="Paste your TripAdvisor listing URL…"/>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <FieldLabel>Star rating (0–5)</FieldLabel>
-            <Input type="number" value={block.reviewStars?.toString()??''} onChange={v=>onUpdateBlock({reviewStars:parseFloat(v)||undefined})} placeholder="e.g. 4.7"/>
-          </div>
-          <div>
-            <FieldLabel>Review count</FieldLabel>
-            <Input type="number" value={block.reviewCount?.toString()??''} onChange={v=>onUpdateBlock({reviewCount:parseInt(v)||undefined})} placeholder="e.g. 312"/>
-          </div>
-        </div>
-      </MoreOptions>
+      {block._googleError&&<p className="text-[11px] text-red-500 mt-2">{block._googleError}</p>}
+      {hasRating&&(
+        <p className="text-[10px] text-[#98A2B3] mt-2.5">
+          {stars} stars{block.reviewCount?` from ${block.reviewCount.toLocaleString()} reviews`:''} — your real Google rating, so it can&apos;t be edited by hand.
+        </p>
+      )}
     </div>
   );
 }
@@ -1467,7 +1466,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
       <div className="overflow-y-auto flex-1 space-y-1">
         {/* Title + subtitle — always shown */}
         <div className="pb-5 mb-5 border-b border-[#F0F0F0]">
-          <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Content</p>
+          <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3">Content</p>
           <div className="space-y-3">
             <div><FieldLabel>Title</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
             {/* location's subtitle IS its address — edited once, below, not twice */}
@@ -1510,7 +1509,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
               <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#F7F7F5] border-[#DEDEDC]'}`}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                 <div>
-                  <p className="text-sm font-bold text-[#0A0A0A]">{status==='open'?'Open now':'Closed right now'}</p>
+                  <p className="text-sm font-semibold text-[#0A0A0A]">{status==='open'?'Open now':'Closed right now'}</p>
                   <p className="text-xs text-[#6B6B6B] mt-0.5">{todayLabel}</p>
                 </div>
               </div>
@@ -1666,7 +1665,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
             ];
             return (
               <div className="pt-5 border-t border-[#F0F0F0]">
-                <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Size</p>
+                <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3">Size</p>
                 <div className="flex items-end gap-2.5">
                   {SIZES.map(sz=>{
                     const on = cur===sz.key;
@@ -1810,14 +1809,14 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
       )}
       {!spotRect&&<div className="absolute inset-0 bg-black/45" style={{zIndex:51}}/>}
       <div className="absolute pointer-events-auto bg-white rounded-2xl shadow-2xl p-6 w-72" style={{...tooltipStyle,zIndex:52}}>
-        <p className="text-[11px] font-bold tracking-[0.12em] text-[#858585] uppercase mb-1">Step {step+1} of {TUT_STEPS.length}</p>
-        <h3 className="text-[16px] font-bold text-[#0A0A0A] mb-2 leading-snug">{current.title}</h3>
+        <p className="text-[11px] font-semibold tracking-[0.12em] text-[#858585] uppercase mb-1">Step {step+1} of {TUT_STEPS.length}</p>
+        <h3 className="text-[16px] font-semibold text-[#0A0A0A] mb-2 leading-snug">{current.title}</h3>
         <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-5">{current.body}</p>
         <div className="flex items-center justify-between">
           <button onClick={onDone} className="text-[12px] text-[#858585] hover:text-[#111] font-medium transition-colors">Skip</button>
           <div className="flex items-center gap-2">
             {step>0&&<button onClick={()=>setStep(s=>s-1)} className="px-4 py-1.5 text-[12px] font-semibold rounded-full border border-[#E0E0E0] text-[#6B6B6B] hover:border-[#111] transition-colors">Back</button>}
-            <button onClick={next} className="px-4 py-1.5 text-[12px] font-bold rounded-full bg-[#0A0A0A] text-[#4ADE80] hover:bg-[#1a1a1a] transition-colors">{isLast?'Done':'Next →'}</button>
+            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#0A0A0A] text-[#4ADE80] hover:bg-[#1a1a1a] transition-colors">{isLast?'Done':'Next →'}</button>
           </div>
         </div>
       </div>
@@ -1872,7 +1871,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
 }
 
 type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'links'|'analytics'|'integrations';
-type HoursSubTab = 'regular'|'special'|'status'|'auto';
+type HoursSubTab = 'special'|'status'|'auto';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
 function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:{
@@ -1925,12 +1924,12 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
     <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4 space-y-3">
       <div className="flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>
-        <p className="text-[13px] font-bold text-[#0A0A0A]">Sync from Google Business</p>
+        <p className="text-[13px] font-semibold text-[#0A0A0A]">Sync from Google Business</p>
       </div>
       <p className="text-[11px] text-[#858585]">Paste your Place ID (starts with ChIJ…) or a Google Maps link to pull in your hours automatically.</p>
       <div className="flex gap-2">
         <input value={placeInput} onChange={e=>setPlaceInput(e.target.value)} placeholder="ChIJ... or Google Maps URL" className="flex-1 text-[12px] border border-[#DEDEDC] rounded-xl px-3 py-2 outline-none focus:border-[#0A0A0A] bg-[#FAFAFA]"/>
-        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold disabled:opacity-50 whitespace-nowrap hover:bg-[#1a1a1a] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
+        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#1a1a1a] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
       </div>
       {syncMsg&&<p className={`text-[11px] font-medium ${syncMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{syncMsg}</p>}
       <div className="border-t border-[#EBEBEB] pt-3 mt-1">
@@ -1974,7 +1973,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
   const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt);
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('business');
-  const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('regular');
+  const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('status');
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>(
     typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'desktop' : 'mobile'
   );
@@ -2014,6 +2013,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [previewWidth,setPreviewWidth]=useState(0); // unused for layout now, kept for compat
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
   const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:business?.category??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
+  const [slugEdit,setSlugEdit]=useState(business?.slug??'');
+  const [slugSaving,setSlugSaving]=useState(false);
+  const [slugMsg,setSlugMsg]=useState('');
+  const [pwSending,setPwSending]=useState(false);
+  const [pwMsg,setPwMsg]=useState('');
+  const [deleteArmed,setDeleteArmed]=useState(false);
+  const [deleteConfirm,setDeleteConfirm]=useState('');
+  const [deleting,setDeleting]=useState(false);
+  const [deleteMsg,setDeleteMsg]=useState('');
   const [bizSaving,setBizSaving]=useState(false);
   const [bizSaved,setBizSaved]=useState(false);
   const [bizSaveError,setBizSaveError]=useState('');
@@ -2119,6 +2127,54 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     }
   }
 
+  async function saveSlug() {
+    if(!localBusiness?.id||!slugEdit) return;
+    setSlugSaving(true);setSlugMsg('');
+    const clean=slugEdit.toLowerCase().replace(/[^a-z0-9-]/g,'').replace(/^-+|-+$/g,'').slice(0,48);
+    if(!clean){setSlugSaving(false);setSlugMsg('Pick a link name.');return;}
+    const {error}=await supabase.from('businesses').update({slug:clean}).eq('id',localBusiness.id);
+    setSlugSaving(false);
+    if(error){
+      setSlugMsg(/duplicate|unique/i.test(error.message)?'That link is already taken — try another.':error.message);
+      return;
+    }
+    setSlugEdit(clean);
+    setLocalBusiness(b=>b?{...b,slug:clean}:b);
+    setSlugMsg('✓ Link updated');
+  }
+
+  async function sendPasswordReset() {
+    setPwSending(true);setPwMsg('');
+    const {data:{session}}=await supabase.auth.getSession();
+    const email=session?.user?.email;
+    if(!email){setPwSending(false);setPwMsg('No email on this account.');return;}
+    const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:`${window.location.origin}/login`});
+    setPwSending(false);
+    setPwMsg(error?error.message:`✓ Reset link sent to ${email}`);
+  }
+
+  async function deleteAccount() {
+    if(deleteConfirm!=='DELETE') return;
+    setDeleting(true);setDeleteMsg('');
+    try{
+      const {data:{session}}=await supabase.auth.getSession();
+      const token=session?.access_token;
+      if(!token) throw new Error('Session expired — sign in again.');
+      const r=await fetch('/api/account/delete',{
+        method:'DELETE',
+        headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+        body:JSON.stringify({confirm:'DELETE'}),
+      });
+      const d=await r.json() as {error?:string};
+      if(!r.ok||d.error) throw new Error(d.error??'Could not delete account');
+      await supabase.auth.signOut();
+      window.location.href='/';
+    }catch(e){
+      setDeleting(false);
+      setDeleteMsg(e instanceof Error?e.message:'Could not delete account');
+    }
+  }
+
   async function saveBizInfo() {
     if(!business?.id)return;
     setBizSaving(true);setBizSaveError('');setBizSaved(false);
@@ -2144,7 +2200,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <span className="text-[13px] font-semibold text-[#0A0A0A] w-28 flex-shrink-0">{label}</span>
         <button
           onClick={()=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,closed:!day.closed}}}))}
-          className={`text-[11px] px-3 py-1.5 rounded-full border font-bold flex-shrink-0 transition-all ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
+          className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold flex-shrink-0 transition-all ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
         >
           {day.closed?'Closed':'● Open'}
         </button>
@@ -2162,8 +2218,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode; badge?:React.ReactNode }[] = [
     { key:'business', label:'Business', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-    { key:'hours',    label:'Hours',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-      badge:<span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#98A2B3]'}`}>{liveStatus==='open'?'Open':'Closed'}</span> },
+    { key:'hours',    label:'Status',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      badge:<span className="ml-auto flex items-center gap-1.5 text-[10px] font-medium leading-none" style={{color:liveStatus==='open'?'#4ADE80':'#6B7280'}}>
+        <span className="w-1.5 h-1.5 rounded-full" style={{background:liveStatus==='open'?'#4ADE80':'#6B7280'}}/>
+        {liveStatus==='open'?'Open':'Closed'}
+      </span> },
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
     { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg> },
 
@@ -2298,7 +2357,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[#F0F2F5] text-[#111111]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>
+    <div className="flex h-[100dvh] overflow-hidden bg-[#F0F2F5] text-[#111111]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
 
 
 
@@ -2306,14 +2365,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <aside className="w-[220px] flex-shrink-0 flex-col bg-[#0D0D0D] border-r border-black/40" style={{display:isMobile?"none":"flex"}}>
         {/* Wordmark */}
         <div className="px-5 h-14 flex items-center flex-shrink-0">
-          <span className="font-bold text-[18px] tracking-[-0.04em] text-white" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
+          <span className="font-semibold text-[18px] tracking-[-0.03em] text-white" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
         </div>
         {/* Nav */}
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
           {SIDEBAR_NAV.map(({key,label,icon,badge})=>(
             <button key={key} onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
-              className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
-                sidebarTab===key ? 'bg-white/8 font-bold' : 'hover:bg-white/5'
+              className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-all ${
+                sidebarTab===key ? 'bg-white/8 font-medium' : 'hover:bg-white/5'
               }`}
               style={{color:sidebarTab===key?'#4ADE80':'#9AA3AF'}}>
               {/* neon left-edge marker on the active item */}
@@ -2328,7 +2387,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </nav>
         {/* Bottom CTAs */}
         <div className="px-4 py-4 border-t border-white/10 flex-shrink-0">
-          <button onClick={()=>setSidebarTab('settings')} className="w-full flex items-center gap-2 text-[11px] font-semibold text-[#6B7280] hover:text-white transition-colors">
+          <button onClick={()=>setSidebarTab('settings')} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#6B7280] hover:text-white transition-colors">
             ⚙ Account settings
           </button>
         </div>
@@ -2341,7 +2400,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <header className="relative h-14 items-center justify-between px-4 md:px-6 flex-shrink-0 bg-[#0D0D0D]" style={{display:isMobile?"none":"flex"}}>
           {/* neon rule — the brand signal, 3px instead of a whole green bar */}
           <span className="absolute left-0 right-0 bottom-0 h-[3px]" style={{background:'#4ADE80'}}/>
-          <span className="text-[13px] font-semibold text-white" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>{sidebarLabel}</span>
+          <span className="text-[13px] font-semibold text-white" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>{sidebarLabel}</span>
           <div className="flex items-center gap-3">
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
@@ -2352,7 +2411,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-white/15 text-white/60':saveError?'bg-red-100 text-red-600':hasPublished?'bg-white/12 text-white hover:bg-white/20':'bg-[#4ADE80] text-[#052E16] font-bold hover:bg-[#3ecf72]'}`}>
+                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-white/15 text-white/60':saveError?'bg-red-100 text-red-600':hasPublished?'bg-white/12 text-white hover:bg-white/20':'bg-[#4ADE80] text-[#052E16] font-semibold hover:bg-[#3ecf72]'}`}>
                 {saving?'Saving…':saved?'✓ Saved':saveError?'Error':hasPublished?'Save':'Publish'}
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
@@ -2377,25 +2436,24 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 {/* Header */}
                 <div className="mb-7">
-                  <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-bold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
+                  <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-semibold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                     {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
                   </div>
-                  <h1 className="text-[26px] font-bold text-[#0A0A0A] leading-tight tracking-[-0.04em]">
-                    Stay up to date, in real time.
+                  <h1 className="text-[26px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.04em]">
+                    Status
                   </h1>
                   <p className="text-[#858585] text-[14px] mt-2 leading-relaxed">
-                    Set your hours once — customers always see the right status.
+                    Close early, post an update, or set special hours. Your weekly hours live in the Hours block.
                   </p>
                 </div>
 
                 {/* Sub-tabs */}
                 <div className="flex items-center gap-1 mb-8 bg-black/5 rounded-full p-1 w-fit">
                   {([
-                    {key:'regular',label:'Regular Hours'},
-                    {key:'special',label:'Special Hours'},
-                    {key:'status', label:'Status Controls'},
-                    {key:'auto',   label:'Auto-Updates'},
+                    {key:'status', label:'Status controls'},
+                    {key:'special',label:'Special hours'},
+                    {key:'auto',   label:'Auto-updates'},
                   ] as const).map(({key,label})=>(
                     <button key={key} onClick={()=>setHoursSubTab(key)}
                       className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap ${hoursSubTab===key?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
@@ -2404,74 +2462,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   ))}
                 </div>
 
-                {/* ── REGULAR HOURS ── */}
-                {hoursSubTab==='regular'&&(
-                  <div className="space-y-8">
-
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-[14px] font-bold text-[#0A0A0A]">Weekly hours</p>
-                        <button onClick={copyMonToWeekdays} className="text-[12px] text-[#858585] hover:text-[#111] font-medium transition-colors">
-                          Copy Mon → weekdays
-                        </button>
-                      </div>
-                      <div className="rounded-2xl border border-[#DEDEDC] overflow-hidden bg-white">
-                        {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
-                      </div>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div>
-                      <p className="text-[14px] font-bold text-[#0A0A0A] mb-4">Quick Actions</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* Open today — only show if today is marked closed */}
-                        {hours[(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[new Date().getDay()]]?.closed&&(
-                          <button onClick={()=>{setQuickAction('open-today');setQuickMsg('');}}
-                            className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] hover:border-[#166534] hover:bg-[#DCFCE7] transition-all text-left col-span-2">
-                            <div className="flex items-center justify-between w-full">
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                              {googleConnected&&<span className="flex items-center gap-1 text-[10px] font-semibold text-[#4285F4]"><svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>Syncs to Google</span>}
-                            </div>
-                            <div>
-                              <p className="text-[13px] font-bold text-[#166534]">Open Today</p>
-                              <p className="text-[11px] mt-0.5 leading-snug" style={{color:'#15803d'}}>Restore your regular hours for today</p>
-                            </div>
-                          </button>
-                        )}
-                        {[
-                          {key:'close-early',  icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, label:'Close Early',       desc:'Close before your regular time today'},
-                          {key:'close-today',  icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>, label:'Close Today',       desc:'Mark as fully closed for the day'},
-                          {key:'special-hours',icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label:'Add Special Hours', desc:'Holiday, event, or seasonal hours'},
-                          {key:'out-of-office',icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>, label:'Out of Office',     desc:'Set away dates and a message'},
-                        ].map(({key,icon,label,desc})=>(
-                          <button key={key} onClick={()=>{setQuickAction(key);setQuickMsg('');setCloseEarlyTime('15:00');}}
-                            className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all text-left group">
-                            <div className="flex items-center justify-between w-full">
-                              <span className="text-[#858585] group-hover:text-[#0A0A0A] transition-colors">{icon}</span>
-                              {googleConnected&&(key==='close-early'||key==='close-today')&&(
-                                <span className="flex items-center gap-1 text-[10px] font-semibold text-[#4285F4]">
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>
-                                  Syncs to Google
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-[13px] font-bold text-[#111]">{label}</p>
-                              <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">{desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── STATUS CONTROLS ── */}
                 {hoursSubTab==='status'&&(
                   <div className="space-y-8">
                     {/* Active status banner */}
                     <div>
-                      <p className="text-[14px] font-bold text-[#0A0A0A] mb-3">Live status</p>
+                      <p className="text-[14px] font-semibold text-[#0A0A0A] mb-3">Live status</p>
                       {statusLoading?(
                         <div className="rounded-2xl border border-[#DEDEDC] bg-white px-4 py-3">
                           <p className="text-[13px] text-[#858585]">Loading…</p>
@@ -2483,7 +2478,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                               <div className="flex items-center gap-3">
                                 <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"/>
                                 <div>
-                                  <p className="text-[14px] font-bold text-[#111]">{u.headline}</p>
+                                  <p className="text-[14px] font-semibold text-[#111]">{u.headline}</p>
                                   {u.detail&&<p className="text-[12px] text-[#858585] mt-0.5">{u.detail}</p>}
                                 </div>
                               </div>
@@ -2506,7 +2501,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                     {/* Quick post presets */}
                     <div>
-                      <p className="text-[14px] font-bold text-[#0A0A0A] mb-4">Post a status update</p>
+                      <p className="text-[14px] font-semibold text-[#0A0A0A] mb-4">Post a status update</p>
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         {/* Closed today */}
                         <button
@@ -2516,14 +2511,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         >
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-[#858585] group-hover:text-[#EF4444] transition-colors"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                           <div>
-                            <p className="text-[13px] font-bold text-[#111]">Closed today</p>
+                            <p className="text-[13px] font-semibold text-[#111]">Closed today</p>
                             <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">Mark as fully closed all day</p>
                           </div>
                         </button>
                         {/* Close early */}
                         <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <p className="text-[13px] font-bold text-[#111]">Close early at</p>
+                          <p className="text-[13px] font-semibold text-[#111]">Close early at</p>
                           <div className="flex items-center gap-2">
                             <div className="relative flex-1">
                               <select
@@ -2538,7 +2533,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             <button
                               onClick={()=>postStatus('early_close')}
                               disabled={statusPosting}
-                              className="px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+                              className="px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
                             >
                               Set
                             </button>
@@ -2550,7 +2545,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white space-y-3">
                         <div className="flex items-center gap-2">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                          <p className="text-[13px] font-bold text-[#111]">Leave a note</p>
+                          <p className="text-[13px] font-semibold text-[#111]">Leave a note</p>
                         </div>
                         <textarea
                           value={statusNote}
@@ -2564,7 +2559,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           <button
                             onClick={()=>postStatus('note_today')}
                             disabled={statusPosting||!statusNote.trim()}
-                            className="px-4 py-2 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+                            className="px-4 py-2 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
                           >
                             Post
                           </button>
@@ -2580,7 +2575,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <div className="w-12 h-12 rounded-2xl bg-[#EEEEEC] flex items-center justify-center mb-4">
                       <LucideClock size={20} color="#C0C0C0"/>
                     </div>
-                    <p className="text-[15px] font-bold text-[#0A0A0A] mb-1">
+                    <p className="text-[15px] font-semibold text-[#0A0A0A] mb-1">
                       {hoursSubTab==='special'?'Special Hours':'Auto-Updates'}
                     </p>
                     <p className="text-[13px] text-[#858585]">Coming soon — stay tuned!</p>
@@ -2603,7 +2598,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 ):(
                   <>
                     <div className="mb-7">
-                      <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Design</h2>
+                      <h2 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight">Design</h2>
                       <p className="text-[#858585] text-[13px] mt-1">Tap any block to edit it. Drag to reorder.</p>
                     </div>
 
@@ -2644,7 +2639,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             <div className="flex items-center gap-2">
                               <p className="text-[13px] font-semibold text-[#0A0A0A] leading-tight">{block.title}</p>
                               {block.id==='hours'&&(
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${liveStatus==='open'?'bg-[#DCFCE7] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
                                   {liveStatus==='open'?'● open':'● closed'}
                                 </span>
                               )}
@@ -2678,10 +2673,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {/* Style: logo + background + socials */}
                     <div className="space-y-8 border-t border-[#F0F0F0] pt-8">
                       <div>
-                        <p className="text-[14px] font-bold text-[#0A0A0A] mb-1">Style</p>
+                        <p className="text-[14px] font-semibold text-[#0A0A0A] mb-1">Style</p>
                         <p className="text-[#858585] text-[13px] mb-5">Logo, page color, and fonts.</p>
                         {/* Logo upload */}
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3">Logo</p>
                         <div className="flex items-center gap-4 mb-3">
                           {localBusiness?.avatar_url
                             ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
@@ -2735,14 +2730,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             </div>
                           </div>
                         )}
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3 mt-6">Page background</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3 mt-6">Page background</p>
                         <PageBackgroundPicker value={config.bg} onChange={v=>setConfig(p=>({...p,bg:v}))}/>
                       </div>
 
 
                       {/* Background photo */}
                       <div>
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Cover photo</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3">Cover photo</p>
                         {config.bgImage&&(
                           <CoverPhotoCrop
                             src={config.bgImage}
@@ -2787,14 +2782,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {sidebarTab==='business'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 <div className="mb-7">
-                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Business</h2>
+                  <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Business</h2>
                   <p className="text-[#667085] text-[13px] mt-1">Your page, your Google connection, and how you&apos;re doing.</p>
                 </div>
 
                 {/* ── Analytics snapshot ── */}
                 {analyticsData&&(
                   <div className="mb-7">
-                    <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Last 30 days</p>
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Last 30 days</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {[
                         {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
@@ -2890,7 +2885,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {sidebarTab==='links'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 <div className="mb-7">
-                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Your link</h2>
+                  <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Your link</h2>
                   <p className="text-[#667085] text-[13px] mt-1">Share this anywhere — it always shows your live status.</p>
                 </div>
                 {localBusiness?.slug
@@ -2917,7 +2912,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {sidebarTab==='style'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px] space-y-8">
                 <div>
-                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Style</h2>
+                  <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Style</h2>
                   <p className="text-[#667085] text-[13px] mt-1">Background, cover photo, and fonts.</p>
                 </div>
 
@@ -2963,8 +2958,77 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
                 </div>
 
+                {/* ── Logo ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Business name font</p>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Logo</p>
+                  <div className="flex items-center gap-4">
+                    {localBusiness?.avatar_url
+                      ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                          className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
+                      :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+                    }
+                    <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
+                      <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                        const file=e.target.files?.[0];if(!file)return;
+                        setLogoUploading(true);setLogoUploadError('');
+                        try{
+                          const ref=await uploadAsset(file,'avatar');
+                          if(localBusiness?.id){
+                            await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                            setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                          }
+                        }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                        finally{setLogoUploading(false);e.target.value='';}
+                      }}/>
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-medium text-[#111111] hover:bg-[#E8EBF0] transition-colors">
+                        <LucideImage size={13} color="#667085"/>
+                        {logoUploading?'Uploading…':'Upload logo'}
+                      </span>
+                    </label>
+                  </div>
+                  {logoUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{logoUploadError}</p>}
+                </div>
+
+                {/* ── Business name colour ── */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Business name color</p>
+                  <NameColorPicker
+                    value={config.nameColor}
+                    autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
+                    onChange={v=>setConfig(c=>({...c,nameColor:v}))}
+                  />
+                </div>
+
+                {/* ── Tags on the link preview ── */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-1">Tags</p>
+                  <p className="text-[11px] text-[#98A2B3] mb-3">Pick up to 3 — these show under your business name.</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FEATURE_TAGS.map(tag=>{
+                      const sel=(config.tags??[]).includes(tag);
+                      const full=(config.tags??[]).length>=3;
+                      return (
+                        <button key={tag}
+                          disabled={!sel&&full}
+                          onClick={()=>setConfig(c=>{
+                            const cur=c.tags??[];
+                            return {...c, tags: cur.includes(tag) ? cur.filter(t=>t!==tag) : (cur.length>=3?cur:[...cur,tag])};
+                          })}
+                          className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
+                            sel ? 'bg-[#111] text-[#4ADE80] border-[#111]'
+                                : full ? 'border-[#EBEBEA] text-[#D0D5DD] cursor-not-allowed'
+                                       : 'border-[#DEDEDC] text-[#667085] hover:border-[#111] hover:text-[#111]'
+                          }`}>
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-1">Font</p>
+                  <p className="text-[11px] text-[#98A2B3] mb-3">Applies to everything on your page.</p>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                     {FONT_OPTIONS.map(opt=>{
                       const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
@@ -2981,53 +3045,148 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
 
-            {/* ══ SETTINGS (incl. integrations + links) ══ */}
-            {(sidebarTab==='analytics'||sidebarTab==='settings'||sidebarTab==='integrations')&&(
-              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[600px] space-y-8">
+            {/* ══ SETTINGS ══ */}
+            {(sidebarTab==='analytics'||sidebarTab==='settings')&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[640px] space-y-8">
                 <div>
-                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Settings</h2>
-                  <p className="text-[#667085] text-[13px] mt-1">Integrations, your link, and more.</p>
+                  <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Settings</h2>
+                  <p className="text-[#667085] text-[13px] mt-1">Your business, your link, your account.</p>
                 </div>
 
-                {/* Your link */}
+                {/* ── Business name ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Your OpenStatus link</p>
-                  <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white">
-                    {business?.slug?(
-                      <div className="flex items-center gap-3">
-                        <code className="text-[13px] font-semibold text-[#111111] bg-[#F4F6FA] px-3 py-2 rounded-xl flex-1 truncate">
-                          openstatus.co/{business.slug}
-                        </code>
-                        <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                          className="px-4 py-2 rounded-full bg-[#111111] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap">
-                          Open ↗
-                        </a>
-                      </div>
-                    ):(
-                      <p className="text-[13px] text-[#667085]">No link set yet.</p>
-                    )}
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Business name</p>
+                  <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
+                    <input value={bizEdit.name} onChange={e=>setBizEdit(bz=>({...bz,name:e.target.value}))}
+                      placeholder="Your business name"
+                      className="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#111] transition-colors"/>
+                    <div className="flex items-center gap-2">
+                      <button onClick={saveBizInfo} disabled={bizSaving||!bizEdit.name.trim()}
+                        className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
+                        {bizSaving?'Saving…':bizSaved?'✓ Saved':'Save name'}
+                      </button>
+                    </div>
+                    {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
+                    <p className="text-[11px] text-[#98A2B3]">This is the name shown at the top of your page.</p>
                   </div>
                 </div>
-                {/* Account */}
+
+                {/* ── Link name (slug) ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Account</p>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Your link</p>
                   <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
-                    <button onClick={()=>setSidebarTab('business')} className="flex items-center justify-between text-[13px] font-semibold text-[#111111] hover:text-[#667085] transition-colors w-full text-left">
-                      <span>Business name & category</span>
-                      <LucideChevronRight size={15} color="#98A2B3"/>
-                    </button>
-                    <div className="border-t border-[#F4F6FA]"/>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-semibold text-[#111111]">Analytics</span>
-                      <span className="text-[11px] text-[#98A2B3] bg-[#F4F6FA] px-2 py-1 rounded-full">Coming soon</span>
+                    <div className="flex items-stretch gap-0">
+                      <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-[#DEDEDC] bg-[#F9FAFB] text-[12px] text-[#98A2B3] whitespace-nowrap">openstatus.co/</span>
+                      <input value={slugEdit} onChange={e=>{setSlugEdit(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,48));setSlugMsg('');}}
+                        placeholder="your-business"
+                        className="flex-1 min-w-0 bg-white border border-[#DEDEDC] rounded-r-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#111] transition-colors"/>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={saveSlug} disabled={slugSaving||!slugEdit||slugEdit===localBusiness?.slug}
+                        className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
+                        {slugSaving?'Saving…':'Update link'}
+                      </button>
+                      {localBusiness?.slug&&(
+                        <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
+                          className="px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
+                          Open ↗
+                        </a>
+                      )}
+                    </div>
+                    {slugMsg&&<p className={`text-[11px] ${slugMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{slugMsg}</p>}
+                    <p className="text-[11px] text-[#98A2B3]">Changing this breaks any link you&apos;ve already shared. Letters, numbers and dashes only.</p>
+                  </div>
+                </div>
+
+                {/* ── Plan ── */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Plan</p>
+                  <div className="rounded-2xl border border-[#E8EBF0] bg-white overflow-hidden">
+                    <div className="p-4 flex items-center gap-3 border-b border-[#F4F6FA]">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-[#111]">Free</p>
+                        <p className="text-[11px] text-[#98A2B3] mt-0.5">Your current plan.</p>
+                      </div>
+                      <span className="flex-shrink-0 px-2.5 py-1 rounded-full bg-[#F4F6FA] text-[#667085] text-[10px] font-semibold">Active</span>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-[13px] font-semibold text-[#111] mb-2">Pro</p>
+                      <div className="space-y-1.5 mb-3">
+                        {['Remove OpenStatus branding from your page','Full visitor analytics'].map(f=>(
+                          <div key={f} className="flex items-center gap-2">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span className="text-[12px] text-[#667085]">{f}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button disabled
+                        className="w-full py-2.5 rounded-xl bg-[#F4F6FA] text-[#98A2B3] text-[12px] font-semibold cursor-not-allowed">
+                        Coming soon
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Account ── */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Account</p>
+                  <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-[#111]">Password</p>
+                        <p className="text-[11px] text-[#98A2B3] mt-0.5">We&apos;ll email you a reset link.</p>
+                      </div>
+                      <button onClick={sendPasswordReset} disabled={pwSending}
+                        className="flex-shrink-0 px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors disabled:opacity-40">
+                        {pwSending?'Sending…':'Reset password'}
+                      </button>
+                    </div>
+                    {pwMsg&&<p className={`text-[11px] ${pwMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{pwMsg}</p>}
+                  </div>
+                </div>
+
+                {/* ── Danger zone ── */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#B42318] uppercase tracking-[0.12em] mb-3">Danger zone</p>
+                  <div className="rounded-2xl border border-[#FECDCA] bg-[#FFFBFA] p-4">
+                    <p className="text-[13px] font-semibold text-[#111]">Delete account</p>
+                    <p className="text-[11px] text-[#667085] mt-1 leading-relaxed">
+                      Permanently deletes your business, your page, your hours and your analytics. Your link stops working immediately. This cannot be undone.
+                    </p>
+                    {!deleteArmed
+                      ?(
+                        <button onClick={()=>setDeleteArmed(true)}
+                          className="mt-3 px-4 py-2 rounded-xl bg-white border border-[#FDA29B] text-[#B42318] text-[12px] font-semibold hover:bg-[#FEF3F2] transition-colors">
+                          Delete my account
+                        </button>
+                      )
+                      :(
+                        <div className="mt-3 space-y-2.5">
+                          <p className="text-[11px] text-[#667085]">Type <strong className="text-[#B42318]">DELETE</strong> to confirm.</p>
+                          <input value={deleteConfirm} onChange={e=>setDeleteConfirm(e.target.value)}
+                            placeholder="DELETE"
+                            className="w-full bg-white border border-[#FDA29B] rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#B42318] transition-colors"/>
+                          <div className="flex items-center gap-2">
+                            <button onClick={deleteAccount} disabled={deleteConfirm!=='DELETE'||deleting}
+                              className="px-4 py-2 rounded-xl bg-[#B42318] text-white text-[12px] font-semibold hover:bg-[#912018] transition-colors disabled:opacity-40">
+                              {deleting?'Deleting…':'Permanently delete'}
+                            </button>
+                            <button onClick={()=>{setDeleteArmed(false);setDeleteConfirm('');setDeleteMsg('');}}
+                              className="px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
+                              Cancel
+                            </button>
+                          </div>
+                          {deleteMsg&&<p className="text-[11px] text-red-500">{deleteMsg}</p>}
+                        </div>
+                      )
+                    }
                   </div>
                 </div>
               </div>
             )}
             {sidebarTab==='integrations'&&(
               <div className="p-5 space-y-4">
-                <p className="text-[13px] font-bold text-[#0A0A0A]">Integrations</p>
+                <p className="text-[13px] font-semibold text-[#0A0A0A]">Integrations</p>
                 {/* Google Business Profile card */}
                 <div className={`rounded-2xl border p-4 ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#DEDEDC] bg-white'}`}>
                   <div className="flex items-start gap-3">
@@ -3038,9 +3197,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-[13px] font-bold text-[#0A0A0A]">Google Business Profile</p>
+                        <p className="text-[13px] font-semibold text-[#0A0A0A]">Google Business Profile</p>
                         {googleConnected&&(
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#BBF7D0] text-[#166534] text-[10px] font-bold">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#BBF7D0] text-[#166534] text-[10px] font-semibold">
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             Connected
                           </span>
@@ -3073,7 +3232,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
                           }}
                           disabled={googleSyncStatus==='syncing'}
-                          className="w-full py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] disabled:opacity-50 transition-colors"
+                          className="w-full py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] disabled:opacity-50 transition-colors"
                         >
                           {googleSyncStatus==='syncing'?'Syncing…':'Sync hours to Google now'}
                         </button>
@@ -3161,11 +3320,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       {/* Mobile dark top bar */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D] flex items-center justify-between px-4 gap-3"
         style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)',boxShadow:'inset 0 -3px 0 #4ADE80'}}>
-        <span className="text-white font-bold text-[17px] tracking-[-0.03em]" style={{fontFamily:"'Poppins',system-ui,sans-serif"}}>OpenStatus</span>
+        <span className="text-white font-semibold text-[17px] tracking-[-0.03em]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
         <div className="flex items-center gap-2">
 
           <button onClick={save} disabled={saving}
-            className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':hasPublished?'bg-white/15 text-white':'bg-[#4ADE80] text-[#052E16]'}`}>
+            className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':hasPublished?'bg-white/15 text-white':'bg-[#4ADE80] text-[#052E16]'}`}>
             {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
           </button>
         </div>
@@ -3224,7 +3383,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           aria-label="Close panel">
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F0F2F5]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            <span className="text-[11px] font-semibold text-[#667085]">Close</span>
+            <span className="text-[11px] font-normal text-[#667085]">Close</span>
           </div>
         </button>
 
@@ -3240,7 +3399,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                     Back
                   </button>
-                  <span className="text-[14px] font-bold text-[#111]">{openBlock.title||'Edit block'}</span>
+                  <span className="text-[14px] font-semibold text-[#111]">{openBlock.title||'Edit block'}</span>
                 </div>
                 <BlockEditPanel
                   block={openBlock} config={config}
@@ -3254,7 +3413,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {/* Header */}
             <div className="flex items-start justify-between px-4 pt-1 pb-2 flex-shrink-0">
               <div>
-                <h2 className="text-[20px] font-bold text-[#111] leading-tight">Add blocks</h2>
+                <h2 className="text-[20px] font-semibold text-[#111] leading-tight">Add blocks</h2>
                 <p className="text-[12px] text-[#667085] mt-0.5">Choose what to show on your page. Drag to reorder.</p>
               </div>
               <button className="w-8 h-8 rounded-full bg-[#F4F6FA] flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -3265,7 +3424,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <div className="flex gap-2 px-4 pb-3 overflow-x-auto flex-shrink-0" style={{scrollbarWidth:'none',msOverflowStyle:'none'}}>
               {['All','Essential','Food & Beverage','Engagement','Contact','Social','More'].map(cat=>(
                 <button key={cat} onClick={()=>setMobileBlockCat(cat)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${mobileBlockCat===cat?'bg-[#111] text-[#4ADE80] font-bold':'bg-[#F4F6FA] text-[#667085]'}`}>
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${mobileBlockCat===cat?'bg-[#111] text-[#4ADE80] font-semibold':'bg-[#F4F6FA] text-[#667085]'}`}>
                   {cat}
                 </button>
               ))}
@@ -3320,11 +3479,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {/* ── BUSINESS tab content ── */}
         {sidebarTab==='business'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Business</h2>
+            <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Business</h2>
             {/* Analytics snapshot - mobile */}
             {analyticsData&&(
               <div className="mb-4">
-                <p className="text-[10px] font-bold text-[#98A2B3] uppercase tracking-wider mb-2">Last 30 days</p>
+                <p className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Last 30 days</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
@@ -3334,10 +3493,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   ].map(({label,value,color,data})=>(
                     <div key={label} className="rounded-2xl border border-[#E8EBF0] bg-white p-3">
                       <div className="flex items-start justify-between mb-1">
-                        <p className="text-[10px] font-semibold text-[#98A2B3]">{label}</p>
+                        <p className="text-[10px] font-normal text-[#98A2B3]">{label}</p>
                         <BuilderSparkline data={data} color={color}/>
                       </div>
-                      <p className="text-[20px] font-bold text-[#111] leading-none">{value.toLocaleString()}</p>
+                      <p className="text-[20px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
@@ -3348,7 +3507,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <div className="mb-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[13px] font-semibold text-[#111]">Hours & Status</p>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#667085]'}`}>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#667085]'}`}>
                   {liveStatus==='open'?'● Open now':'● Closed'}
                 </span>
               </div>
@@ -3363,7 +3522,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <ReviewsCard block={allBlocks.find(b=>b.id==='location')} onUpdateBlock={u=>updateBlock('location',u)}/>
 
             {/* Social Profiles */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Social Profiles</p>
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Social Profiles</p>
             <div className="space-y-2 mb-3">
               {[
                 {key:'instagram', label:'Instagram', placeholder:'@username or full URL'},
@@ -3373,7 +3532,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {key:'youtube',   label:'YouTube',   placeholder:'Channel URL'},
               ].map(({key,label,placeholder})=>(
                 <div key={key} className="flex items-center gap-2 bg-[#F9FAFB] rounded-xl border border-[#E8EBF0] px-3 py-2">
-                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">{label}</span>
+                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">{label}</span>
                   <input value={(config.socials??{})[key]??''}
                     onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
                     placeholder={placeholder}
@@ -3384,18 +3543,18 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             {/* ── Business Profile inline editor ── */}
             <div className="mb-3">
-              <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Business Profile</p>
+              <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Business Profile</p>
               <div className="rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB] overflow-hidden divide-y divide-[#E8EBF0]">
                 {/* Name */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Name</span>
+                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Name</span>
                   <input value={bizEdit.name} onChange={e=>setBizEdit(b=>({...b,name:e.target.value}))}
                     placeholder="Business name"
                     className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
                 {/* Category */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Category</span>
+                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Category</span>
                   <select value={bizEdit.category} onChange={e=>setBizEdit(b=>({...b,category:e.target.value}))}
                     className="flex-1 text-[12px] text-[#111] bg-transparent outline-none appearance-none cursor-pointer">
                     <option value="">— Select —</option>
@@ -3406,21 +3565,21 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
                 {/* Phone */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Phone</span>
+                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Phone</span>
                   <input value={bizEdit.phone} onChange={e=>setBizEdit(b=>({...b,phone:e.target.value}))}
                     placeholder="+1 (555) 000-0000" type="tel"
                     className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
                 {/* Website */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Website</span>
+                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Website</span>
                   <input value={bizEdit.website} onChange={e=>setBizEdit(b=>({...b,website:e.target.value}))}
                     placeholder="https://yoursite.com" type="url"
                     className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
                 {/* Address */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-semibold text-[#667085] w-20 flex-shrink-0">Address</span>
+                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Address</span>
                   <input value={bizEdit.address} onChange={e=>setBizEdit(b=>({...b,address:e.target.value}))}
                     placeholder="123 Main St, City, State"
                     className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
@@ -3431,7 +3590,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">✓ Saved</p>}
                 {!bizSaveError&&!bizSaved&&<span/>}
                 <button onClick={saveBizInfo} disabled={bizSaving}
-                  className="ml-auto rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-bold px-4 py-2 hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
+                  className="ml-auto rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-semibold px-4 py-2 hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
                   {bizSaving?'Saving…':'Save'}
                 </button>
               </div>
@@ -3447,7 +3606,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 className="w-7 h-7 rounded-full bg-[#F4F6FA] flex items-center justify-center">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
-              <h2 className="text-[18px] font-bold text-[#111]">Hours</h2>
+              <h2 className="text-[18px] font-semibold text-[#111]">Hours</h2>
             </div>
             <div className="rounded-2xl border border-[#E8EBF0] overflow-hidden bg-white">
               {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
@@ -3458,10 +3617,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {/* ── PHOTOS tab ── */}
         {sidebarTab==='style'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Style</h2>
+            <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Style</h2>
 
             {/* Font picker */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Business Name Font</p>
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Business Name Font</p>
             <div className="grid grid-cols-2 gap-2 mb-5">
               {FONT_OPTIONS.map(opt=>{
                 const isActive = (config.font??FONT_OPTIONS[0].family)===opt.family;
@@ -3478,7 +3637,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
 
             {/* Page color */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Page background</p>
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Page background</p>
             <div className="mb-4"><PageBackgroundPicker value={config.bg} onChange={v=>setConfig(p=>({...p,bg:v}))} dark/></div>
           </div>
         )}
@@ -3488,11 +3647,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {sidebarTab==='analytics'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
             <div className="flex items-center justify-between pt-1 pb-3">
-              <h2 className="text-[20px] font-bold text-[#111]">Analytics</h2>
+              <h2 className="text-[20px] font-semibold text-[#111]">Analytics</h2>
               <div className="flex gap-1.5">
                 {[7,30,90].map(d=>(
                   <button key={d} onClick={()=>setAnalyticsDays(d)}
-                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#111] text-[#4ADE80]':'bg-[#F4F6FA] text-[#667085]'}`}>
+                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#111] text-[#4ADE80]':'bg-[#F4F6FA] text-[#667085]'}`}>
                     {d}d
                   </button>
                 ))}
@@ -3510,7 +3669,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {label:'Directions',value:analyticsData.metrics.directions},
                   ].map(({label,value})=>(
                     <div key={label} className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
-                      <p className="text-[22px] font-bold text-[#111] leading-none">{value.toLocaleString()}</p>
+                      <p className="text-[22px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
                       <p className="text-[10px] text-[#98A2B3] font-medium mt-1">{label}</p>
                     </div>
                   ))}
@@ -3518,7 +3677,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {/* Top blocks */}
                 {analyticsData.topActions.length>0&&(
                   <div className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2.5">Top blocks</p>
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2.5">Top blocks</p>
                     <div className="space-y-2">
                       {analyticsData.topActions.slice(0,6).map(({id,count})=>{
                         const max=analyticsData.topActions[0]?.count||1;
@@ -3538,7 +3697,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {/* Traffic sources */}
                 {analyticsData.trafficSources.length>0&&(
                   <div className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2.5">Traffic sources</p>
+                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2.5">Traffic sources</p>
                     <div className="space-y-1.5">
                       {analyticsData.trafficSources.slice(0,5).map(({source,count})=>(
                         <div key={source} className="flex items-center justify-between">
@@ -3562,15 +3721,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {/* ── SETTINGS tab ── */}
         {sidebarTab==='settings'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Settings</h2>
+            <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Settings</h2>
             {/* Your link */}
             {business?.slug&&(
               <div className="mb-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-                <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-1">Your Link</p>
+                <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-1">Your Link</p>
                 <div className="flex items-center gap-2">
                   <p className="text-[14px] font-semibold text-[#111] flex-1 truncate">openstatus.co/{business.slug}</p>
                   <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] font-semibold text-[#667085] hover:text-[#111] flex items-center gap-1">
+                    className="text-[11px] font-normal text-[#667085] hover:text-[#111] flex items-center gap-1">
                     Open ↗
                   </a>
                 </div>
@@ -3630,7 +3789,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           ] as {key:SidebarTab;label:string;svg:React.ReactNode}[]).map(({key,label,svg})=>(
             <button key={key}
               onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold transition-all ${sidebarTab===key?'bg-white text-[#0D0D0D]':'text-white/60'}`}>
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-semibold transition-all ${sidebarTab===key?'bg-white text-[#0D0D0D]':'text-white/60'}`}>
               {svg}{label}
             </button>
           ))}
@@ -3647,7 +3806,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           <span className="relative z-10" style={{color:sidebarTab==='business'?'#111111':'#98A2B3'}}>
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </span>
-          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='business'?'text-[#111111]':'text-[#98A2B3]'}`}>Business</span>
+          <span className={`text-[9px] font-medium leading-none relative z-10 ${sidebarTab==='business'?'text-[#111111]':'text-[#98A2B3]'}`}>Business</span>
         </button>
         {/* Analytics */}
         <button onClick={()=>{if(sidebarTab==='analytics'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('analytics');setMobileSheetOpen(true);}}}
@@ -3685,7 +3844,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           <div className="relative ml-auto w-[320px] h-full bg-white shadow-2xl flex flex-col border-l border-[#DEDEDC]" onClick={e=>e.stopPropagation()}>
             {/* Flyout header */}
             <div className="px-5 py-4 border-b border-[#F0F0F0] flex items-center justify-between flex-shrink-0">
-              <p className="text-[15px] font-bold text-[#111]">
+              <p className="text-[15px] font-semibold text-[#111]">
                 {quickAction==='close-early'?'Close Early'
                 :quickAction==='close-today'?'Close Today'
                 :quickAction==='open-today'?'Open Today'
@@ -3783,7 +3942,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
                   }
                 }}
-                className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[13px] font-bold hover:bg-[#1a1a1a] transition-colors">
+                className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[13px] font-semibold hover:bg-[#1a1a1a] transition-colors">
                 {quickAction==='open-today'?'Open & Sync to Google'
                 :googleConnected?'Update & Sync to Google'
                 :'Update Hours'}
