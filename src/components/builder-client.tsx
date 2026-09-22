@@ -484,7 +484,7 @@ function PillSelect({ options,selected,onSelect }: { options:string[]; selected:
     <div className="flex flex-wrap gap-1.5">
       {options.map(o=>(
         <button key={o} onClick={()=>onSelect(o)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#0A0A0A] text-[#4ADE80] font-semibold border-[#0A0A0A]':'border-[#DEDEDC] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#7C3AED] text-white font-semibold border-[#0A0A0A]':'border-[#DEDEDC] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
           {o}
         </button>
       ))}
@@ -641,7 +641,7 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
       <div className="flex gap-1.5 mb-3">
         {([['color','Color'],['design','Designs']] as const).map(([k,label])=>(
           <button key={k} onClick={()=>setTab(k)}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${tab===k?'bg-[#111] text-[#4ADE80]':'bg-[#F4F6FA] text-[#667085] hover:text-[#111]'}`}>
+            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${tab===k?'bg-[#7C3AED] text-white':'bg-[#F4F6FA] text-[#667085] hover:text-[#111]'}`}>
             {label}
           </button>
         ))}
@@ -1256,12 +1256,12 @@ function NameColorPicker({ value, autoColor, onChange }: {
   value?: string; autoColor: string; onChange:(v:string|undefined)=>void;
 }) {
   const wheelRef = useRef<HTMLInputElement>(null);
-  const SWATCHES = ['#FFFFFF','#0A0A0A','#4ADE80','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899'];
+  const SWATCHES = ['#FFFFFF','#0A0A0A','#7C3AED','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899'];
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-2.5">
         <button onClick={()=>onChange(undefined)}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${!value?'bg-[#111] text-[#4ADE80] border-[#111]':'border-[#DEDEDC] text-[#667085] hover:border-[#111]'}`}>
+          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${!value?'bg-[#7C3AED] text-white border-[#111]':'border-[#DEDEDC] text-[#667085] hover:border-[#111]'}`}>
           Auto
         </button>
         {SWATCHES.map(c=>(
@@ -1344,7 +1344,7 @@ function CoverPhotoCrop({ src, position, onChange, onRemove }: {
         <span className="text-[10px] font-normal text-[#98A2B3] w-8 flex-shrink-0">Up</span>
         <input type="range" min={0} max={100} value={py}
           onChange={e=>onChange(`${px}% ${e.target.value}%`)}
-          className="flex-1 accent-[#4ADE80]" aria-label="Vertical crop position"/>
+          className="flex-1 accent-[#7C3AED]" aria-label="Vertical crop position"/>
         <span className="text-[10px] font-normal text-[#98A2B3] w-10 flex-shrink-0 text-right">Down</span>
       </div>
     </div>
@@ -1405,7 +1405,7 @@ function ReviewsCard({ block,onUpdateBlock }: {
                   onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
                 }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
               }}
-              className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-semibold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap disabled:opacity-50"
+              className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#7C3AED] text-white text-[11px] font-semibold hover:bg-[#6D28D9] transition-colors whitespace-nowrap disabled:opacity-50"
               disabled={block._googleFetching}
             >{block._googleFetching?'…':hasRating?'Refresh':'Fetch'}</button>
           )}
@@ -1804,7 +1804,7 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
           <button onClick={onDone} className="text-[12px] text-[#858585] hover:text-[#111] font-medium transition-colors">Skip</button>
           <div className="flex items-center gap-2">
             {step>0&&<button onClick={()=>setStep(s=>s-1)} className="px-4 py-1.5 text-[12px] font-semibold rounded-full border border-[#E0E0E0] text-[#6B6B6B] hover:border-[#111] transition-colors">Back</button>}
-            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#0A0A0A] text-[#4ADE80] hover:bg-[#1a1a1a] transition-colors">{isLast?'Done':'Next →'}</button>
+            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors">{isLast?'Done':'Next →'}</button>
           </div>
         </div>
       </div>
@@ -1917,7 +1917,7 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
       <p className="text-[11px] text-[#858585]">Paste your Place ID (starts with ChIJ…) or a Google Maps link to pull in your hours automatically.</p>
       <div className="flex gap-2">
         <input value={placeInput} onChange={e=>setPlaceInput(e.target.value)} placeholder="ChIJ... or Google Maps URL" className="flex-1 text-[12px] border border-[#DEDEDC] rounded-xl px-3 py-2 outline-none focus:border-[#0A0A0A] bg-[#FAFAFA]"/>
-        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#1a1a1a] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
+        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#6D28D9] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
       </div>
       {syncMsg&&<p className={`text-[11px] font-medium ${syncMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{syncMsg}</p>}
       <div className="border-t border-[#EBEBEB] pt-3 mt-1">
@@ -2233,8 +2233,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode; badge?:React.ReactNode }[] = [
     { key:'business', label:'Business', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
     { key:'hours',    label:'Status',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-      badge:<span className="ml-auto flex items-center gap-1.5 text-[10px] font-medium leading-none" style={{color:liveStatus==='open'?'#4ADE80':'#6B7280'}}>
-        <span className="w-1.5 h-1.5 rounded-full" style={{background:liveStatus==='open'?'#4ADE80':'#6B7280'}}/>
+      badge:<span className="ml-auto flex items-center gap-1.5 text-[10px] font-medium leading-none" style={{color:liveStatus==='open'?'#16A34A':'#98A2B3'}}>
+        <span className="w-1.5 h-1.5 rounded-full" style={{background:liveStatus==='open'?'#16A34A':'#98A2B3'}}/>
         {liveStatus==='open'?'Open':'Closed'}
       </span> },
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
@@ -2380,32 +2380,32 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
 
       {/* ── LEFT SIDEBAR (desktop) ── */}
-      <aside className="w-[220px] flex-shrink-0 flex-col bg-[#0D0D0D] border-r border-black/40" style={{display:isMobile?"none":"flex"}}>
+      <aside className="w-[220px] flex-shrink-0 flex-col bg-white/80 backdrop-blur border-r border-[#EBEBEA]" style={{display:isMobile?"none":"flex"}}>
         {/* Wordmark */}
         <div className="px-5 h-14 flex items-center flex-shrink-0">
-          <span className="font-semibold text-[18px] tracking-[-0.03em] text-white" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
+          <span className="font-semibold text-[18px] tracking-[-0.03em] text-[#111111]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
         </div>
         {/* Nav */}
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
           {SIDEBAR_NAV.map(({key,label,icon,badge})=>(
             <button key={key} onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
               className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-all ${
-                sidebarTab===key ? 'bg-white/8 font-medium' : 'hover:bg-white/5'
+                sidebarTab===key ? 'bg-[#F5F3FF]' : 'hover:bg-[#FAFAF9]'
               }`}
-              style={{color:sidebarTab===key?'#4ADE80':'#9AA3AF'}}>
-              {/* neon left-edge marker on the active item */}
+              style={{color:sidebarTab===key?'#6D28D9':'#667085'}}>
+              {/* purple left-edge marker on the active item */}
               {sidebarTab===key&&(
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full" style={{background:'#4ADE80'}}/>
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full" style={{background:'#7C3AED'}}/>
               )}
-              <span style={{color:sidebarTab===key?'#4ADE80':'#6B7280'}}>{icon}</span>
+              <span style={{color:sidebarTab===key?'#7C3AED':'#98A2B3'}}>{icon}</span>
               {label}
               {badge}
             </button>
           ))}
         </nav>
         {/* Bottom CTAs */}
-        <div className="px-4 py-4 border-t border-white/10 flex-shrink-0">
-          <button onClick={()=>setSidebarTab('settings')} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#6B7280] hover:text-white transition-colors">
+        <div className="px-4 py-4 border-t border-[#EBEBEA] flex-shrink-0">
+          <button onClick={()=>setSidebarTab('settings')} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#667085] hover:text-[#6D28D9] transition-colors">
             ⚙ Account settings
           </button>
         </div>
@@ -2415,21 +2415,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
 
         {/* ── TOP NAV BAR ── */}
-        <header className="relative h-14 items-center justify-between px-4 md:px-6 flex-shrink-0 bg-[#0D0D0D]" style={{display:isMobile?"none":"flex"}}>
-          {/* neon rule — the brand signal, 3px instead of a whole green bar */}
-          <span className="absolute left-0 right-0 bottom-0 h-[3px]" style={{background:'#4ADE80'}}/>
-          <span className="text-[13px] font-semibold text-white" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>{sidebarLabel}</span>
+        <header className="relative h-14 items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm border-b border-[#EBEBEA]" style={{display:isMobile?"none":"flex"}}>
+          <span className="text-[13px] font-medium text-[#111111]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>{sidebarLabel}</span>
           <div className="flex items-center gap-3">
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#9AA3AF] hover:text-white transition-colors">
-                View your link <span className="text-[#6B7280]">↗</span>
+                className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#667085] hover:text-[#6D28D9] transition-colors">
+                View your link <span className="text-[#98A2B3]">↗</span>
               </a>
             )}
 
             <div className="flex flex-col items-end gap-0.5">
               <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#DCFCE7] text-[#166534]':saving?'bg-white/15 text-white/60':saveError?'bg-red-100 text-red-600':hasPublished?'bg-white/12 text-white hover:bg-white/20':'bg-[#4ADE80] text-[#052E16] font-semibold hover:bg-[#3ecf72]'}`}>
+                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#EDE9FE] text-[#5B21B6]':saving?'bg-[#F4F6FA] text-[#98A2B3]':saveError?'bg-red-100 text-red-600':hasPublished?'bg-[#F5F3FF] text-[#6D28D9] hover:bg-[#EDE9FE]':'bg-[#7C3AED] text-white hover:bg-[#6D28D9]'}`}>
                 {saving?'Saving…':saved?'✓ Saved':saveError?'Error':hasPublished?'Save':'Publish'}
               </button>
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
@@ -2551,7 +2549,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             <button
                               onClick={()=>postStatus('early_close')}
                               disabled={statusPosting}
-                              className="px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+                              className="px-3 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
                             >
                               Set
                             </button>
@@ -2577,7 +2575,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           <button
                             onClick={()=>postStatus('note_today')}
                             disabled={statusPosting||!statusNote.trim()}
-                            className="px-4 py-2 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40"
+                            className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
                           >
                             Post
                           </button>
@@ -3033,7 +3031,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             return {...c, tags: cur.includes(tag) ? cur.filter(t=>t!==tag) : (cur.length>=3?cur:[...cur,tag])};
                           })}
                           className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
-                            sel ? 'bg-[#111] text-[#4ADE80] border-[#111]'
+                            sel ? 'bg-[#7C3AED] text-white border-[#111]'
                                 : full ? 'border-[#EBEBEA] text-[#D0D5DD] cursor-not-allowed'
                                        : 'border-[#DEDEDC] text-[#667085] hover:border-[#111] hover:text-[#111]'
                           }`}>
@@ -3080,7 +3078,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       className="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#111] transition-colors"/>
                     <div className="flex items-center gap-2">
                       <button onClick={saveBizInfo} disabled={bizSaving||!bizEdit.name.trim()}
-                        className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
+                        className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
                         {bizSaving?'Saving…':bizSaved?'✓ Saved':'Save name'}
                       </button>
                     </div>
@@ -3101,7 +3099,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                     <div className="flex items-center gap-2">
                       <button onClick={saveSlug} disabled={slugSaving||!slugEdit||slugEdit===localBusiness?.slug}
-                        className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
+                        className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
                         {slugSaving?'Saving…':'Update link'}
                       </button>
                       {localBusiness?.slug&&(
@@ -3250,7 +3248,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
                           }}
                           disabled={googleSyncStatus==='syncing'}
-                          className="w-full py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-semibold hover:bg-[#1a1a1a] disabled:opacity-50 transition-colors"
+                          className="w-full py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] disabled:opacity-50 transition-colors"
                         >
                           {googleSyncStatus==='syncing'?'Syncing…':'Sync hours to Google now'}
                         </button>
@@ -3336,13 +3334,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            ══════════════════════════════════════════════════════════ */}
 
       {/* Mobile dark top bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D0D] flex items-center justify-between px-4 gap-3"
-        style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)',boxShadow:'inset 0 -3px 0 #4ADE80'}}>
-        <span className="text-white font-semibold text-[17px] tracking-[-0.03em]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-[#EBEBEA] flex items-center justify-between px-4 gap-3"
+        style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)'}}>
+        <span className="text-[#111111] font-semibold text-[17px] tracking-[-0.03em]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
         <div className="flex items-center gap-2">
 
           <button onClick={save} disabled={saving}
-            className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-emerald-400 text-white':saving?'bg-white/20 text-white/60':hasPublished?'bg-white/15 text-white':'bg-[#4ADE80] text-[#052E16]'}`}>
+            className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#EDE9FE] text-[#5B21B6]':saving?'bg-[#F4F6FA] text-[#98A2B3]':hasPublished?'bg-[#F5F3FF] text-[#6D28D9]':'bg-[#7C3AED] text-white'}`}>
             {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
           </button>
         </div>
@@ -3442,7 +3440,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <div className="flex gap-2 px-4 pb-3 overflow-x-auto flex-shrink-0" style={{scrollbarWidth:'none',msOverflowStyle:'none'}}>
               {['All','Essential','Food & Beverage','Engagement','Contact','Social','More'].map(cat=>(
                 <button key={cat} onClick={()=>setMobileBlockCat(cat)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${mobileBlockCat===cat?'bg-[#111] text-[#4ADE80] font-semibold':'bg-[#F4F6FA] text-[#667085]'}`}>
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${mobileBlockCat===cat?'bg-[#7C3AED] text-white font-semibold':'bg-[#F4F6FA] text-[#667085]'}`}>
                   {cat}
                 </button>
               ))}
@@ -3608,7 +3606,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">✓ Saved</p>}
                 {!bizSaveError&&!bizSaved&&<span/>}
                 <button onClick={saveBizInfo} disabled={bizSaving}
-                  className="ml-auto rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-semibold px-4 py-2 hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
+                  className="ml-auto rounded-xl bg-[#7C3AED] text-white text-[11px] font-semibold px-4 py-2 hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
                   {bizSaving?'Saving…':'Save'}
                 </button>
               </div>
@@ -3669,7 +3667,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <div className="flex gap-1.5">
                 {[7,30,90].map(d=>(
                   <button key={d} onClick={()=>setAnalyticsDays(d)}
-                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#111] text-[#4ADE80]':'bg-[#F4F6FA] text-[#667085]'}`}>
+                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#7C3AED] text-white':'bg-[#F4F6FA] text-[#667085]'}`}>
                     {d}d
                   </button>
                 ))}
@@ -3800,14 +3798,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           pointerEvents:isEditSubTab?'auto':'none',
           transition:'transform 0.25s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease',
         }}>
-        <div className="flex bg-[#0D0D0D] rounded-full p-1 gap-0.5 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+        <div className="flex bg-white/90 backdrop-blur border border-[#EBEBEA] rounded-full p-1 gap-0.5 shadow-[0_4px_20px_rgba(124,58,237,0.14)]">
           {([
             {key:'design' as SidebarTab,label:'Blocks',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>},
             {key:'style' as SidebarTab,label:'Style',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>},
           ] as {key:SidebarTab;label:string;svg:React.ReactNode}[]).map(({key,label,svg})=>(
             <button key={key}
               onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-semibold transition-all ${sidebarTab===key?'bg-white text-[#0D0D0D]':'text-white/60'}`}>
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-semibold transition-all ${sidebarTab===key?'bg-[#F5F3FF] text-[#6D28D9]':'text-[#98A2B3]'}`}>
               {svg}{label}
             </button>
           ))}
@@ -3820,38 +3818,38 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {/* Business */}
         <button onClick={()=>{if(sidebarTab==='business'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('business');setMobileSheetOpen(true);}}}
           className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
-          {sidebarTab==='business'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>}
-          <span className="relative z-10" style={{color:sidebarTab==='business'?'#111111':'#98A2B3'}}>
+          {sidebarTab==='business'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F5F3FF]"/>}
+          <span className="relative z-10" style={{color:sidebarTab==='business'?'#6D28D9':'#98A2B3'}}>
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </span>
-          <span className={`text-[9px] font-medium leading-none relative z-10 ${sidebarTab==='business'?'text-[#111111]':'text-[#98A2B3]'}`}>Business</span>
+          <span className={`text-[9px] font-medium leading-none relative z-10 ${sidebarTab==='business'?'text-[#6D28D9]':'text-[#98A2B3]'}`}>Business</span>
         </button>
         {/* Analytics */}
         <button onClick={()=>{if(sidebarTab==='analytics'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('analytics');setMobileSheetOpen(true);}}}
           className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
-          {sidebarTab==='analytics'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>}
-          <span className="relative z-10" style={{color:sidebarTab==='analytics'?'#111111':'#98A2B3'}}>
+          {sidebarTab==='analytics'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F5F3FF]"/>}
+          <span className="relative z-10" style={{color:sidebarTab==='analytics'?'#6D28D9':'#98A2B3'}}>
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
           </span>
-          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='analytics'?'text-[#111111]':'text-[#98A2B3]'}`}>Analytics</span>
+          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='analytics'?'text-[#6D28D9]':'text-[#98A2B3]'}`}>Analytics</span>
         </button>
         {/* Edit — meta-tab that activates the Blocks/Photos/Style pill */}
         <button onClick={()=>{if(isEditSubTab&&mobileSheetOpen){setMobileSheetOpen(false);}else{if(!isEditSubTab)setSidebarTab('design');setMobileSheetOpen(true);}}}
           className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
-          {isEditSubTab&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>}
-          <span className="relative z-10" style={{color:isEditSubTab?'#111111':'#98A2B3'}}>
+          {isEditSubTab&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F5F3FF]"/>}
+          <span className="relative z-10" style={{color:isEditSubTab?'#6D28D9':'#98A2B3'}}>
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </span>
-          <span className={`text-[9px] font-semibold leading-none relative z-10 ${isEditSubTab?'text-[#111111]':'text-[#98A2B3]'}`}>Edit</span>
+          <span className={`text-[9px] font-semibold leading-none relative z-10 ${isEditSubTab?'text-[#6D28D9]':'text-[#98A2B3]'}`}>Edit</span>
         </button>
         {/* Settings */}
         <button onClick={()=>{if(sidebarTab==='settings'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('settings');setMobileSheetOpen(true);}}}
           className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
-          {sidebarTab==='settings'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>}
-          <span className="relative z-10" style={{color:sidebarTab==='settings'?'#111111':'#98A2B3'}}>
+          {sidebarTab==='settings'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F5F3FF]"/>}
+          <span className="relative z-10" style={{color:sidebarTab==='settings'?'#6D28D9':'#98A2B3'}}>
             <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </span>
-          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='settings'?'text-[#111111]':'text-[#98A2B3]'}`}>Settings</span>
+          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='settings'?'text-[#6D28D9]':'text-[#98A2B3]'}`}>Settings</span>
         </button>
       </nav>
 
@@ -3960,7 +3958,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
                   }
                 }}
-                className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[13px] font-semibold hover:bg-[#1a1a1a] transition-colors">
+                className="flex-1 py-2.5 rounded-full bg-[#7C3AED] text-white text-[13px] font-semibold hover:bg-[#6D28D9] transition-colors">
                 {quickAction==='open-today'?'Open & Sync to Google'
                 :googleConnected?'Update & Sync to Google'
                 :'Update Hours'}
