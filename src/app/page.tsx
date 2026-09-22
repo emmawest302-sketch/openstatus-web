@@ -294,7 +294,7 @@ export default function HomePage() {
                 <input type="checkbox" style={{ accentColor: '#FFFFFF', width: 14, height: 14 }}/>
                 <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.70)', fontWeight: 500 }}>Keep me signed in</span>
               </label>
-              <a href="/forgot-password" style={{ fontSize: 12, color: 'rgba(255,255,255,0.70)', textDecoration: 'none', fontWeight: 500 }}>
+              <a href="mailto:hello@forothers.co?subject=Password%20reset" style={{ fontSize: 12, color: 'rgba(255,255,255,0.70)', textDecoration: 'none', fontWeight: 500 }}>
                 Forgot password?
               </a>
             </div>

@@ -1859,6 +1859,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours);
   const hours = config.weeklyHours??{...DEFAULT_WEEK_HOURS};
   const showEditPanel = !!openBlock && sidebarTab==='design';
+  const isEditSubTab = ['design','photos','style'].includes(sidebarTab);
   const igHandle = (business as (Business & { instagram_handle?: string })|null)?.instagram_handle??null;
 
   function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
@@ -3216,7 +3217,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           top:'calc(52px + env(safe-area-inset-top))',
           bottom: mobileSheetOpen
             ? 'calc(52vh + 56px + env(safe-area-inset-bottom))'
-            : 'calc(56px + env(safe-area-inset-bottom))',
+            : isEditSubTab
+              ? 'calc(104px + env(safe-area-inset-bottom))'
+              : 'calc(56px + env(safe-area-inset-bottom))',
           transition:'bottom 0.3s cubic-bezier(0.32,0.72,0,1)',
         }}>
         {/* Dotted background like Canva */}
@@ -3251,7 +3254,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {/* Mobile bottom sheet */}
       <div className="fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
-        style={{display:isMobile?"flex":"none",bottom:'calc(56px + env(safe-area-inset-bottom))',height:'52vh',transform:mobileSheetOpen?'translateY(0)':'translateY(110%)',transition:'transform 0.3s cubic-bezier(0.32,0.72,0,1)'}}>
+        style={{display:isMobile?"flex":"none",bottom:isEditSubTab?'calc(104px + env(safe-area-inset-bottom))':'calc(56px + env(safe-area-inset-bottom))',height:'52vh',transform:mobileSheetOpen?'translateY(0)':'translateY(110%)',transition:'transform 0.3s cubic-bezier(0.32,0.72,0,1)'}}>
 
         {/* Close button — tap to dismiss sheet */}
         <button onClick={()=>setMobileSheetOpen(false)}
@@ -3831,29 +3834,71 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       </div>{/* end bottom sheet */}
 
-      {/* ── MOBILE BOTTOM NAV ── */}
+      {/* ── MOBILE EDIT PILL TOOLBAR ── Floats above nav when Edit tab is active */}
+      <div className="fixed left-0 right-0 z-40 flex justify-center"
+        style={{
+          display:isMobile?'flex':'none',
+          bottom:'calc(56px + env(safe-area-inset-bottom))',
+          padding:'0 0 8px 0',
+          transform:isEditSubTab?'translateY(0)':'translateY(calc(100% + 8px))',
+          opacity:isEditSubTab?1:0,
+          pointerEvents:isEditSubTab?'auto':'none',
+          transition:'transform 0.25s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease',
+        }}>
+        <div className="flex bg-[#0D0D0D] rounded-full p-1 gap-0.5 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+          {([
+            {key:'design' as SidebarTab,label:'Blocks',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>},
+            {key:'photos' as SidebarTab,label:'Photos',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>},
+            {key:'style' as SidebarTab,label:'Style',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>},
+          ] as {key:SidebarTab;label:string;svg:React.ReactNode}[]).map(({key,label,svg})=>(
+            <button key={key}
+              onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-bold transition-all ${sidebarTab===key?'bg-white text-[#0D0D0D]':'text-white/60'}`}>
+              {svg}{label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── MOBILE BOTTOM NAV ── 4 items: Business | Analytics | Edit | Settings */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch"
         style={{display:isMobile?"flex":"none", paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))' }}>
-        {SIDEBAR_NAV.map(({key,label,icon,badge})=>(
-          <button key={key} onClick={()=>{if(sidebarTab===key&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab(key);setMobileSheetOpen(true);}}}
-            className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors`}>
-            {/* Active tab background bubble */}
-            {sidebarTab===key&&(
-              <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>
-            )}
-            <span className="relative z-10" style={{color:sidebarTab===key?'#111111':'#98A2B3'}}>
-              {icon}
-            </span>
-            <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab===key?'text-[#111111]':'text-[#98A2B3]'}`}>
-              {label}
-            </span>
-            {badge&&key==='hours'&&sidebarTab!==key&&(
-              <span className={`absolute top-1 right-1 text-[8px] font-bold px-1 py-px rounded-full leading-none ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#98A2B3]'}`}>
-                {liveStatus==='open'?'●':'●'}
-              </span>
-            )}
-          </button>
-        ))}
+        {/* Business */}
+        <button onClick={()=>{if(sidebarTab==='business'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('business');setMobileSheetOpen(true);}}}
+          className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
+          {sidebarTab==='business'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>}
+          <span className="relative z-10" style={{color:sidebarTab==='business'?'#111111':'#98A2B3'}}>
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </span>
+          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='business'?'text-[#111111]':'text-[#98A2B3]'}`}>Business</span>
+        </button>
+        {/* Analytics */}
+        <button onClick={()=>{if(sidebarTab==='analytics'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('analytics');setMobileSheetOpen(true);}}}
+          className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
+          {sidebarTab==='analytics'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>}
+          <span className="relative z-10" style={{color:sidebarTab==='analytics'?'#111111':'#98A2B3'}}>
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+          </span>
+          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='analytics'?'text-[#111111]':'text-[#98A2B3]'}`}>Analytics</span>
+        </button>
+        {/* Edit — meta-tab that activates the Blocks/Photos/Style pill */}
+        <button onClick={()=>{if(isEditSubTab&&mobileSheetOpen){setMobileSheetOpen(false);}else{if(!isEditSubTab)setSidebarTab('design');setMobileSheetOpen(true);}}}
+          className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
+          {isEditSubTab&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>}
+          <span className="relative z-10" style={{color:isEditSubTab?'#111111':'#98A2B3'}}>
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </span>
+          <span className={`text-[9px] font-semibold leading-none relative z-10 ${isEditSubTab?'text-[#111111]':'text-[#98A2B3]'}`}>Edit</span>
+        </button>
+        {/* Settings */}
+        <button onClick={()=>{if(sidebarTab==='settings'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('settings');setMobileSheetOpen(true);}}}
+          className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
+          {sidebarTab==='settings'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F0F2F5]"/>}
+          <span className="relative z-10" style={{color:sidebarTab==='settings'?'#111111':'#98A2B3'}}>
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </span>
+          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='settings'?'text-[#111111]':'text-[#98A2B3]'}`}>Settings</span>
+        </button>
       </nav>
 
       {/* ── QUICK ACTION FLYOUT ── */}
