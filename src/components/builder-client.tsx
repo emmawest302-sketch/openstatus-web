@@ -2055,9 +2055,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </nav>
         {/* Bottom CTAs */}
         <div className="px-4 py-4 border-t border-[#E8EBF0] flex-shrink-0">
-          <a href="/setup?step=1" className="w-full flex items-center gap-2 text-[11px] font-semibold text-[#98A2B3] hover:text-[#111111] transition-colors">
+          <button onClick={()=>setSidebarTab('settings')} className="w-full flex items-center gap-2 text-[11px] font-semibold text-[#98A2B3] hover:text-[#111111] transition-colors">
             ⚙ Account settings
-          </a>
+          </button>
         </div>
       </aside>
 
@@ -2691,7 +2691,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                   )}
                   <p className="text-[12px] text-[#858585]">
-                    To edit your name or category, <a href="/setup?step=1" className="font-semibold text-[#111] underline underline-offset-2">go to Settings →</a>
+                    To edit your name or category, <button onClick={()=>setSidebarTab('business')} className="font-semibold text-[#111] underline underline-offset-2">go to Business →</button>
                   </p>
                 </div>
               </div>
@@ -2973,10 +2973,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <div>
                   <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Account</p>
                   <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
-                    <a href="/setup?step=1" className="flex items-center justify-between text-[13px] font-semibold text-[#111111] hover:text-[#667085] transition-colors">
+                    <button onClick={()=>setSidebarTab('business')} className="flex items-center justify-between text-[13px] font-semibold text-[#111111] hover:text-[#667085] transition-colors w-full text-left">
                       <span>Business name & category</span>
                       <LucideChevronRight size={15} color="#98A2B3"/>
-                    </a>
+                    </button>
                     <div className="border-t border-[#F4F6FA]"/>
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] font-semibold text-[#111111]">Analytics</span>
@@ -3383,7 +3383,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
 
             {/* Account link */}
-            <a href="/setup?step=1" className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+            <button onClick={()=>setSidebarTab('business')} className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] w-full text-left">
               <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               </div>
@@ -3392,7 +3392,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <p className="text-[10px] text-[#667085]">Name, address, phone & category</p>
               </div>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
+            </button>
           </div>
         )}
 
@@ -3705,21 +3705,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
             {/* Settings menu */}
             <div className="space-y-2">
-              <a href="/setup?step=1" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              <button onClick={()=>setSidebarTab('business')} className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] w-full text-left">
                 <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 </div>
                 <span className="text-[13px] font-semibold text-[#111] flex-1">Edit business info</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </a>
-              <a href="/subscription" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-                <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" x2="23" y1="10" y2="10"/></svg>
-                </div>
-                <span className="text-[13px] font-semibold text-[#111] flex-1">Subscription</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </a>
-              <a href="mailto:hello@openstatus.co?subject=Help" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+              </button>
+              <a href="mailto:hello@forothers.co?subject=Help" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
                 <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
                 </div>
@@ -3733,13 +3726,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
                 <span className="text-[13px] font-semibold text-[#E53935] flex-1">Log out</span>
               </button>
-              <button onClick={()=>{if(confirm('Delete your account? This cannot be undone.')) window.location.href='/delete-account';}}
-                className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#FFD6D6] bg-[#FFF8F8] w-full text-left">
+              <a href="mailto:hello@forothers.co?subject=Delete%20my%20account" className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#FFD6D6] bg-[#FFF8F8]">
                 <div className="w-9 h-9 rounded-xl bg-[#FFE8E8] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                 </div>
                 <span className="text-[13px] font-semibold text-[#B91C1C] flex-1">Delete account</span>
-              </button>
+              </a>
             </div>
           </div>
         )}

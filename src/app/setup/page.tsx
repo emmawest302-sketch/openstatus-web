@@ -26,20 +26,16 @@ type Category = {
   blockIds: string[];
 };
 
-// All available block types: id -> default title, subtitle, size
 const ALL_BLOCKS: Record<string, { title: string; sub: string; size: 'half' | 'full' | 'third' }> = {
-  // Shopping & ordering
   order:       { title: 'Order ahead',          sub: 'Order for pickup or delivery', size: 'half' },
   shop:        { title: 'Shop now',             sub: 'Browse our store',             size: 'full' },
   arrivals:    { title: 'New arrivals',         sub: "See what's just landed",       size: 'half' },
   bestsellers: { title: 'Best sellers',         sub: 'Our most popular items',       size: 'half' },
   promo:       { title: 'Current promotion',    sub: "See today's deals",            size: 'full' },
   track:       { title: 'Track my order',       sub: 'Check your order status',      size: 'full' },
-  // Booking & contact
   book:        { title: 'Book an appointment',  sub: 'Schedule online',              size: 'half' },
   call:        { title: 'Call us',              sub: 'Tap to call',                  size: 'half' },
   email:       { title: 'Email us',             sub: 'Send us a message',            size: 'half' },
-  // Discovery
   menu:        { title: 'Menu',                 sub: 'View our full menu',           size: 'half' },
   services:    { title: 'Our services',         sub: 'See what we offer',            size: 'half' },
   classes:     { title: 'Class schedule',       sub: 'Browse and book classes',      size: 'full' },
@@ -47,7 +43,6 @@ const ALL_BLOCKS: Record<string, { title: string; sub: string; size: 'half' | 'f
   team:        { title: 'Meet the team',        sub: 'The people behind the work',   size: 'half' },
   special:     { title: "Today's special",      sub: "See what's on today",          size: 'full' },
   stops:       { title: 'Upcoming stops',       sub: "See where we'll be next",      size: 'half' },
-  // Links & presence
   website:     { title: 'Website',              sub: 'Visit our site',               size: 'full' },
   gallery:     { title: 'Photos',               sub: 'See our work',                 size: 'third' },
   reviews:     { title: 'Reviews',              sub: 'Read what customers say',      size: 'third' },
@@ -181,6 +176,14 @@ function StepBar({ step, total }: { step: number; total: number }) {
 
 type PlaceSuggestion = { id: string; name: string; address: string };
 
+type PlaceDetails = {
+  name: string;
+  address: string;
+  phone?: string;
+  website?: string;
+  hours?: Record<string, { open: string; close: string; closed: boolean }> | null;
+};
+
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 export default function SetupPage() {
@@ -189,39 +192,40 @@ export default function SetupPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [businessId, setBusinessId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
-  // Step state
+  // Step state — 4 steps total
+  // 1: Find on Google, 2: Confirm name+slug, 3: Category, 4: Tags
   const [step, setStep] = useState(1);
   const TOTAL_STEPS = 4;
 
-  // Step 1: Business name + slug
+  // Step 1: Google Places search
+  const [placeQuery, setPlaceQuery] = useState('');
+  const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [placeLoading, setPlaceLoading] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceSuggestion | null>(null);
+  const [placeDetails, setPlaceDetails] = useState<PlaceDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const placeDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Step 2: Business name + slug
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
   const [slugState, setSlugState] = useState<'idle' | 'checking' | 'free' | 'taken'>('idle');
   const [initialSlug, setInitialSlug] = useState('');
 
-  // Step 2: Category
+  // Step 3: Category
   const [categoryId, setCategoryId] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
 
-  // Step 3: Tags
+  // Step 4: Tags
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-
-  // Step 4: Location
-  const [locationQuery, setLocationQuery] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<PlaceSuggestion[]>([]);
-  const [selectedPlace, setSelectedPlace] = useState<PlaceSuggestion | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const locationDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Load existing business on mount ──
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace('/'); return; }
-    setUserId(user.id);
 
     const { data: existing } = await supabase
       .from('businesses')
@@ -236,7 +240,6 @@ export default function SetupPage() {
       setInitialSlug(existing.slug ?? '');
       if (existing.slug) setSlugState('free');
     } else {
-      // Create a placeholder business row immediately
       const newId = crypto.randomUUID();
       const { data: created, error: insertErr } = await supabase
         .from('businesses')
@@ -254,11 +257,9 @@ export default function SetupPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // ── Slug auto-generation from name ──
+  // ── Slug auto-generation ──
   useEffect(() => {
-    if (!slugEdited && name) {
-      setSlug(toSlug(name));
-    }
+    if (!slugEdited && name) setSlug(toSlug(name));
   }, [name, slugEdited]);
 
   // ── Slug availability check ──
@@ -270,7 +271,7 @@ export default function SetupPage() {
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/handle?handle=${encodeURIComponent(normalized)}`);
-        const body = await res.json() as { available: boolean; reason?: string };
+        const body = await res.json() as { available: boolean };
         setSlugState(body.available ? 'free' : 'taken');
       } catch {
         setSlugState('idle');
@@ -279,34 +280,68 @@ export default function SetupPage() {
     return () => clearTimeout(t);
   }, [slug, initialSlug]);
 
-  // ── Location autocomplete ──
-  const onLocationInput = (val: string) => {
-    setLocationQuery(val);
+  // ── Places search ──
+  const onPlaceInput = (val: string) => {
+    setPlaceQuery(val);
     setSelectedPlace(null);
-    if (locationDebounce.current) clearTimeout(locationDebounce.current);
-    if (!val.trim() || val.length < 3) { setLocationSuggestions([]); return; }
-    locationDebounce.current = setTimeout(async () => {
-      setLocationLoading(true);
+    setPlaceDetails(null);
+    if (placeDebounce.current) clearTimeout(placeDebounce.current);
+    if (!val.trim() || val.length < 3) { setPlaceSuggestions([]); return; }
+    placeDebounce.current = setTimeout(async () => {
+      setPlaceLoading(true);
       try {
         const res = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(val)}`);
         const data = await res.json() as { places?: PlaceSuggestion[] };
-        setLocationSuggestions(data.places ?? []);
+        setPlaceSuggestions(data.places ?? []);
       } catch {
-        setLocationSuggestions([]);
+        setPlaceSuggestions([]);
       } finally {
-        setLocationLoading(false);
+        setPlaceLoading(false);
       }
     }, 400);
   };
 
-  const selectPlace = (place: PlaceSuggestion) => {
+  // ── Select a place and fetch its details ──
+  const selectPlace = async (place: PlaceSuggestion) => {
     setSelectedPlace(place);
-    setLocationQuery(place.address);
-    setLocationSuggestions([]);
+    setPlaceQuery(place.name);
+    setPlaceSuggestions([]);
+    setDetailsLoading(true);
+    try {
+      const res = await fetch(`/api/places/details?placeId=${encodeURIComponent(place.id)}`);
+      if (res.ok) {
+        const details = await res.json() as PlaceDetails;
+        setPlaceDetails(details);
+        // Pre-fill name from Google (user can edit in step 2)
+        setName(details.name || place.name);
+        setSlugEdited(false); // let slug re-derive from name
+      } else {
+        // Details failed — still use the suggestion data
+        setName(place.name);
+        setSlugEdited(false);
+      }
+    } catch {
+      setName(place.name);
+      setSlugEdited(false);
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
-  // ── Step 1 save ──
-  const saveStep1 = async () => {
+  // ── Skip Google — go straight to manual name entry ──
+  const skipGoogle = () => {
+    setSelectedPlace(null);
+    setPlaceDetails(null);
+    setStep(2);
+  };
+
+  // ── Step 1 → 2: confirm place or skip ──
+  const confirmPlace = () => {
+    setStep(2);
+  };
+
+  // ── Step 2 save ──
+  const saveStep2 = async () => {
     if (!businessId || slugState !== 'free' || !name.trim()) return;
     setSaving(true);
     const { error: e } = await supabase
@@ -317,22 +352,17 @@ export default function SetupPage() {
     if (e) { setError(e.message); return; }
     setInitialSlug(toSlug(slug));
     setError('');
-    setStep(2);
-  };
-
-  // ── Step 2: select category ──
-  const saveStep2 = () => {
-    if (!categoryId) return;
-    setSelectedTags([]);
     setStep(3);
   };
 
-  // ── Step 3: select tags ──
+  // ── Step 3: category ──
   const saveStep3 = () => {
+    if (!categoryId) return;
+    setSelectedTags([]);
     setStep(4);
   };
 
-  // ── Step 4: save everything and go to builder ──
+  // ── Step 4: finish ──
   const finish = async () => {
     if (!businessId) return;
     setSaving(true);
@@ -345,23 +375,29 @@ export default function SetupPage() {
       blocks,
       bg: '#F7F7F5',
       socials: [] as OpenStatusSocial[],
-      location: selectedPlace?.address ?? locationQuery.trim(),
+      location: placeDetails?.address ?? '',
       tags: selectedTags,
+      // Store imported contact info in page config so builder can use it
+      ...(placeDetails?.phone ? { phone: placeDetails.phone } : {}),
+      ...(placeDetails?.website ? { website: placeDetails.website } : {}),
+      ...(placeDetails?.hours ? { weeklyHours: placeDetails.hours } : {}),
     };
 
-    // Save page config to user metadata (where the builder reads/writes it)
     const { error: metaErr } = await supabase.auth.updateUser({
       data: { openstatus_page: pageConfig },
     });
     if (metaErr) { setError(metaErr.message); setSaving(false); return; }
 
-    // Save place_id to businesses table if we have one
-    if (selectedPlace?.id) {
-      await supabase
-        .from('businesses')
-        .update({ place_id: selectedPlace.id })
-        .eq('id', businessId);
-    }
+    // Save business fields to DB
+    const businessUpdate: Record<string, string | null> = {
+      category: categoryId || null,
+    };
+    if (selectedPlace?.id) businessUpdate.place_id = selectedPlace.id;
+    if (placeDetails?.address) businessUpdate.address = placeDetails.address;
+    if (placeDetails?.phone) businessUpdate.phone = placeDetails.phone;
+    if (placeDetails?.website) businessUpdate.website = placeDetails.website;
+
+    await supabase.from('businesses').update(businessUpdate).eq('id', businessId);
 
     setSaving(false);
     router.push('/builder?new=1');
@@ -372,7 +408,7 @@ export default function SetupPage() {
   const filteredCategories = categorySearch
     ? CATEGORIES.filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()))
     : CATEGORIES;
-  const canGoStep1 = name.trim().length > 0 && slugState === 'free';
+  const canGoStep2 = name.trim().length > 0 && slugState === 'free';
   const slugColor = slugState === 'free' ? '#22C55E' : slugState === 'taken' ? '#EF4444' : '#858585';
 
   // ── STYLES ────────────────────────────────────────────────────────────────
@@ -385,7 +421,6 @@ export default function SetupPage() {
     alignItems: 'center',
     padding: '40px 20px 60px',
   };
-
   const card: React.CSSProperties = {
     width: '100%',
     maxWidth: 480,
@@ -393,7 +428,6 @@ export default function SetupPage() {
     display: 'flex',
     flexDirection: 'column',
   };
-
   const inputStyle: React.CSSProperties = {
     width: '100%',
     border: '1.5px solid #DEDEDC',
@@ -406,7 +440,6 @@ export default function SetupPage() {
     boxSizing: 'border-box',
     fontFamily: "'Inter', system-ui, sans-serif",
   };
-
   const primaryBtn: React.CSSProperties = {
     width: '100%',
     background: '#0A0A0A',
@@ -454,10 +487,9 @@ export default function SetupPage() {
           <span style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', letterSpacing: '-0.02em' }}>OpenStatus</span>
         </div>
 
-        {/* Progress */}
         <StepBar step={step} total={TOTAL_STEPS} />
 
-        {/* ── STEP 1: Business Name ─────────────────────────────────────── */}
+        {/* ── STEP 1: Find on Google ──────────────────────────────────────── */}
         {step === 1 && (
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
@@ -465,21 +497,162 @@ export default function SetupPage() {
             </p>
             <h1 style={{
               fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
-              fontSize: 38,
-              fontWeight: 800,
-              color: '#0A0A0A',
-              letterSpacing: '-0.04em',
-              lineHeight: 1.1,
-              marginBottom: 8,
+              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
+              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
             }}>
-              What&apos;s your<br />business called?
+              Find your<br />business
+            </h1>
+            <p style={{ fontSize: 14, color: '#858585', marginBottom: 28, lineHeight: 1.5 }}>
+              Search Google to auto-fill your name, address, hours, and more.
+            </p>
+
+            {/* Search input */}
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative' }}>
+                <svg
+                  style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                  viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ABABAB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="e.g. Emma's Coffee Franklin TN"
+                  value={placeQuery}
+                  onChange={e => onPlaceInput(e.target.value)}
+                  style={{ ...inputStyle, paddingLeft: 44 }}
+                />
+              </div>
+
+              {/* Suggestions */}
+              {placeSuggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0,
+                  background: '#fff', border: '1.5px solid #DEDEDC',
+                  borderRadius: 16, marginTop: 6, overflow: 'hidden',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.10)', zIndex: 10,
+                }}>
+                  {placeSuggestions.map(place => (
+                    <button
+                      key={place.id}
+                      onClick={() => void selectPlace(place)}
+                      style={{
+                        width: '100%', padding: '12px 16px', border: 'none',
+                        background: 'none', cursor: 'pointer', textAlign: 'left',
+                        display: 'flex', flexDirection: 'column', gap: 2,
+                        borderBottom: '1px solid #EEEEEC',
+                        fontFamily: "'Inter', system-ui, sans-serif",
+                      }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#0A0A0A' }}>{place.name}</span>
+                      <span style={{ fontSize: 12, color: '#858585' }}>{place.address}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {placeLoading && (
+                <p style={{ fontSize: 12, color: '#858585', marginTop: 8 }}>Searching…</p>
+              )}
+              {detailsLoading && (
+                <p style={{ fontSize: 12, color: '#858585', marginTop: 8 }}>Loading business info…</p>
+              )}
+            </div>
+
+            {/* Selected place preview */}
+            {selectedPlace && !detailsLoading && (
+              <div style={{
+                marginTop: 16,
+                padding: '16px',
+                background: '#fff',
+                border: '1.5px solid #0A0A0A',
+                borderRadius: 18,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: '#F0F0EE', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#555" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: '#0A0A0A', margin: 0 }}>{placeDetails?.name || selectedPlace.name}</p>
+                    <p style={{ fontSize: 12, color: '#858585', margin: '2px 0 0' }}>{placeDetails?.address || selectedPlace.address}</p>
+                  </div>
+                  <div style={{
+                    fontSize: 11, fontWeight: 700, color: '#22C55E',
+                    background: 'rgba(34,197,94,0.10)', borderRadius: 99,
+                    padding: '3px 8px', flexShrink: 0,
+                  }}>
+                    ✓ Found
+                  </div>
+                </div>
+
+                {/* Info chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {placeDetails?.phone && (
+                    <span style={{ fontSize: 11, color: '#555', background: '#F0F0EE', borderRadius: 99, padding: '4px 10px' }}>
+                      📞 {placeDetails.phone}
+                    </span>
+                  )}
+                  {placeDetails?.website && (
+                    <span style={{ fontSize: 11, color: '#555', background: '#F0F0EE', borderRadius: 99, padding: '4px 10px' }}>
+                      🌐 Website imported
+                    </span>
+                  )}
+                  {placeDetails?.hours && (
+                    <span style={{ fontSize: 11, color: '#555', background: '#F0F0EE', borderRadius: 99, padding: '4px 10px' }}>
+                      🕐 Hours imported
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                onClick={confirmPlace}
+                disabled={!selectedPlace || detailsLoading}
+                style={{ ...primaryBtn, opacity: (!selectedPlace || detailsLoading) ? 0.35 : 1 }}
+              >
+                <span>Looks good — continue</span>
+                <span>→</span>
+              </button>
+              <button
+                onClick={skipGoogle}
+                style={{
+                  background: 'none', border: 'none', fontSize: 13,
+                  color: '#858585', cursor: 'pointer', padding: '8px 0',
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                }}
+              >
+                My business isn&apos;t on Google Maps →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 2: Confirm name + URL ────────────────────────────────── */}
+        {step === 2 && (
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Step 2 of {TOTAL_STEPS}
+            </p>
+            <h1 style={{
+              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
+              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
+            }}>
+              {selectedPlace ? 'Confirm your\nbusiness name' : "What's your\nbusiness called?"}
             </h1>
             <p style={{ fontSize: 14, color: '#858585', marginBottom: 32, lineHeight: 1.5 }}>
-              This is your public name. You can change it later.
+              {selectedPlace ? 'This is your public name — edit it if needed.' : 'This is your public name. You can change it later.'}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Business name */}
               <input
                 autoFocus
                 type="text"
@@ -487,17 +660,13 @@ export default function SetupPage() {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 style={{ ...inputStyle, fontSize: 18, fontWeight: 600 }}
-                onKeyDown={e => e.key === 'Enter' && canGoStep1 && void saveStep1()}
+                onKeyDown={e => e.key === 'Enter' && canGoStep2 && void saveStep2()}
               />
 
-              {/* URL preview */}
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                border: '1.5px solid #DEDEDC',
-                borderRadius: 16,
-                background: '#fff',
-                overflow: 'hidden',
+                display: 'flex', alignItems: 'center',
+                border: '1.5px solid #DEDEDC', borderRadius: 16,
+                background: '#fff', overflow: 'hidden',
               }}>
                 <span style={{ padding: '14px 4px 14px 16px', fontSize: 14, color: '#858585', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   openstatus.co/
@@ -507,16 +676,10 @@ export default function SetupPage() {
                   value={slug}
                   onChange={e => { setSlugEdited(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 48)); }}
                   style={{
-                    flex: 1,
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: '#0A0A0A',
-                    padding: '14px 8px',
-                    background: 'transparent',
-                    fontFamily: "'Inter', system-ui, sans-serif",
-                    minWidth: 0,
+                    flex: 1, border: 'none', outline: 'none',
+                    fontSize: 14, fontWeight: 600, color: '#0A0A0A',
+                    padding: '14px 8px', background: 'transparent',
+                    fontFamily: "'Inter', system-ui, sans-serif", minWidth: 0,
                   }}
                 />
                 <span style={{ padding: '0 14px', fontSize: 10, fontWeight: 700, color: slugColor, flexShrink: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
@@ -528,9 +691,9 @@ export default function SetupPage() {
             {error && <p style={{ marginTop: 12, fontSize: 13, color: '#EF4444' }}>{error}</p>}
 
             <button
-              onClick={() => void saveStep1()}
-              disabled={saving || !canGoStep1}
-              style={{ ...primaryBtn, marginTop: 32, opacity: (!canGoStep1 || saving) ? 0.35 : 1 }}
+              onClick={() => void saveStep2()}
+              disabled={saving || !canGoStep2}
+              style={{ ...primaryBtn, marginTop: 32, opacity: (!canGoStep2 || saving) ? 0.35 : 1 }}
             >
               <span>Continue</span>
               <span>→</span>
@@ -538,28 +701,23 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* ── STEP 2: Category ──────────────────────────────────────────── */}
-        {step === 2 && (
+        {/* ── STEP 3: Category ──────────────────────────────────────────── */}
+        {step === 3 && (
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Step 2 of {TOTAL_STEPS}
+              Step 3 of {TOTAL_STEPS}
             </p>
             <h1 style={{
               fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
-              fontSize: 38,
-              fontWeight: 800,
-              color: '#0A0A0A',
-              letterSpacing: '-0.04em',
-              lineHeight: 1.1,
-              marginBottom: 8,
+              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
+              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
             }}>
               What type of<br />business is it?
             </h1>
             <p style={{ fontSize: 14, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
-              This helps us set up the right links for you.
+              This sets up the right links and layout for your page.
             </p>
 
-            {/* Search */}
             <input
               type="text"
               placeholder="Search…"
@@ -568,26 +726,19 @@ export default function SetupPage() {
               style={{ ...inputStyle, marginBottom: 16 }}
             />
 
-            {/* Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 32 }}>
               {filteredCategories.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setCategoryId(cat.id)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '12px 14px',
-                    borderRadius: 16,
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '12px 14px', borderRadius: 16,
                     border: `1.5px solid ${categoryId === cat.id ? '#0A0A0A' : '#DEDEDC'}`,
                     background: categoryId === cat.id ? '#0A0A0A' : '#fff',
                     color: categoryId === cat.id ? '#F7F7F5' : '#0A0A0A',
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    textAlign: 'left',
-                    transition: 'all 0.12s ease',
+                    cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    textAlign: 'left', transition: 'all 0.12s ease',
                     fontFamily: "'Inter', system-ui, sans-serif",
                   }}
                 >
@@ -598,7 +749,7 @@ export default function SetupPage() {
             </div>
 
             <button
-              onClick={saveStep2}
+              onClick={saveStep3}
               disabled={!categoryId}
               style={{ ...primaryBtn, opacity: !categoryId ? 0.35 : 1 }}
             >
@@ -608,20 +759,16 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* ── STEP 3: Tags */}
-        {step === 3 && (
+        {/* ── STEP 4: Tags + Finish ──────────────────────────────────────── */}
+        {step === 4 && (
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Step 3 of {TOTAL_STEPS}
+              Step 4 of {TOTAL_STEPS}
             </p>
             <h1 style={{
               fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
-              fontSize: 38,
-              fontWeight: 800,
-              color: '#0A0A0A',
-              letterSpacing: '-0.04em',
-              lineHeight: 1.1,
-              marginBottom: 8,
+              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
+              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
             }}>
               Describe what<br />you offer
             </h1>
@@ -631,15 +778,10 @@ export default function SetupPage() {
 
             {/* Tag input */}
             <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              border: '1.5px solid #DEDEDC',
-              borderRadius: 16,
-              background: '#fff',
-              padding: '4px 8px 4px 16px',
-              marginBottom: 12,
-              flexWrap: 'wrap',
-              gap: 6,
+              display: 'flex', alignItems: 'center',
+              border: '1.5px solid #DEDEDC', borderRadius: 16,
+              background: '#fff', padding: '4px 8px 4px 16px',
+              marginBottom: 12, flexWrap: 'wrap', gap: 6,
             }}>
               {selectedTags.map(tag => (
                 <span key={tag} style={{
@@ -679,13 +821,12 @@ export default function SetupPage() {
                 style={{
                   flex: 1, minWidth: 120, border: 'none', outline: 'none',
                   fontSize: 14, color: '#0A0A0A', padding: '8px 4px',
-                  background: 'transparent',
-                  fontFamily: "'Inter', system-ui, sans-serif",
+                  background: 'transparent', fontFamily: "'Inter', system-ui, sans-serif",
                 }}
               />
             </div>
 
-            {/* Example suggestions */}
+            {/* Suggestions */}
             {selectedCategory && selectedCategory.tags.length > 0 && (
               <div>
                 <p style={{ fontSize: 11, color: '#ABABAB', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -701,15 +842,10 @@ export default function SetupPage() {
                         }
                       }}
                       style={{
-                        padding: '7px 13px',
-                        borderRadius: 99,
-                        border: '1.5px solid #DEDEDC',
-                        background: '#fff',
-                        color: '#555',
-                        fontSize: 12,
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        fontFamily: "'Inter', system-ui, sans-serif",
+                        padding: '7px 13px', borderRadius: 99,
+                        border: '1.5px solid #DEDEDC', background: '#fff',
+                        color: '#555', fontSize: 12, fontWeight: 500,
+                        cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif",
                       }}
                     >
                       + {tag}
@@ -719,112 +855,9 @@ export default function SetupPage() {
               </div>
             )}
 
-            <button onClick={saveStep3} style={{ ...primaryBtn, marginTop: selectedCategory && selectedCategory.tags.length > 0 ? 0 : 32 }}>
-              <span>{selectedTags.length > 0 ? 'Continue' : 'Skip for now'}</span>
-              <span>→</span>
-            </button>
-          </div>
-        )}
-
-        {/* ── STEP 4: Location ──────────────────────────────────────────── */}
-        {step === 4 && (
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Step 4 of {TOTAL_STEPS}
-            </p>
-            <h1 style={{
-              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
-              fontSize: 38,
-              fontWeight: 800,
-              color: '#0A0A0A',
-              letterSpacing: '-0.04em',
-              lineHeight: 1.1,
-              marginBottom: 8,
-            }}>
-              Where are<br />you located?
-            </h1>
-            <p style={{ fontSize: 14, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
-              Optional. Helps customers find you and powers your map block.
-            </p>
-
-            <div style={{ position: 'relative', marginBottom: 32 }}>
-              <input
-                autoFocus
-                type="text"
-                placeholder="123 Main St, Nashville, TN"
-                value={locationQuery}
-                onChange={e => onLocationInput(e.target.value)}
-                style={inputStyle}
-              />
-
-              {/* Suggestions dropdown */}
-              {locationSuggestions.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#fff',
-                  border: '1.5px solid #DEDEDC',
-                  borderRadius: 16,
-                  marginTop: 6,
-                  overflow: 'hidden',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-                  zIndex: 10,
-                }}>
-                  {locationSuggestions.map(place => (
-                    <button
-                      key={place.id}
-                      onClick={() => selectPlace(place)}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: 'none',
-                        background: 'none',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                        borderBottom: '1px solid #EEEEEC',
-                        fontFamily: "'Inter', system-ui, sans-serif",
-                      }}
-                    >
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#0A0A0A' }}>{place.name}</span>
-                      <span style={{ fontSize: 12, color: '#858585' }}>{place.address}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {locationLoading && (
-                <p style={{ fontSize: 12, color: '#858585', marginTop: 8 }}>Searching…</p>
-              )}
-
-              {selectedPlace && (
-                <div style={{
-                  marginTop: 10,
-                  padding: '10px 14px',
-                  background: '#EEEEEC',
-                  borderRadius: 12,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" style={{ flexShrink: 0 }}>
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" stroke="#555" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#0A0A0A' }}>{selectedPlace.name}</div>
-                    <div style={{ fontSize: 12, color: '#858585' }}>{selectedPlace.address}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {error && <p style={{ marginBottom: 16, fontSize: 13, color: '#EF4444' }}>{error}</p>}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: selectedCategory && selectedCategory.tags.length > 0 ? 0 : 32 }}>
               <button
                 onClick={() => void finish()}
                 disabled={saving}
@@ -833,21 +866,19 @@ export default function SetupPage() {
                 <span>{saving ? 'Setting up your page…' : 'Open my builder'}</span>
                 {!saving && <span>→</span>}
               </button>
-              <button
-                onClick={() => void finish()}
-                disabled={saving}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: 13,
-                  color: '#858585',
-                  cursor: 'pointer',
-                  padding: '8px 0',
-                  fontFamily: "'Inter', system-ui, sans-serif",
-                }}
-              >
-                Skip for now
-              </button>
+              {selectedTags.length === 0 && (
+                <button
+                  onClick={() => void finish()}
+                  disabled={saving}
+                  style={{
+                    background: 'none', border: 'none', fontSize: 13,
+                    color: '#858585', cursor: 'pointer', padding: '8px 0',
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                  }}
+                >
+                  Skip for now
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -857,17 +888,15 @@ export default function SetupPage() {
           <button
             onClick={() => setStep(s => s - 1)}
             style={{
-              marginTop: 24,
-              background: 'none',
-              border: 'none',
-              fontSize: 13,
-              color: '#858585',
-              cursor: 'pointer',
+              marginTop: 32,
+              background: 'none', border: 'none',
+              fontSize: 13, color: '#ABABAB',
+              cursor: 'pointer', padding: '8px 0',
+              display: 'flex', alignItems: 'center', gap: 6,
               fontFamily: "'Inter', system-ui, sans-serif",
-              alignSelf: 'center',
             }}
           >
-            ← Back
+            <span>←</span> Back
           </button>
         )}
       </div>
