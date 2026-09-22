@@ -38,13 +38,13 @@ function dbHoursToWeekly(rows: DbHoursRow[]): Record<WeeklyKey, { open:string; c
 }
 
 const LoadingScreen = () => (
-  <main className="grid min-h-screen place-items-center" style={{ background: '#F7F7F5', fontFamily: "'Inter', system-ui, sans-serif" }}>
+  <main className="grid min-h-screen place-items-center" style={{ background: '#F7F7F5', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}>
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
       <svg viewBox="0 0 100 100" width="28" height="28">
-        <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
+        <circle cx="50" cy="50" r="48" fill="#7C3AED"/>
         <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
-        <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
-        <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
+        <circle cx="50" cy="44" r="7.4" fill="#7C3AED"/>
+        <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#7C3AED"/>
       </svg>
       <p style={{ fontSize: 13, color: '#858585' }}>Loading your builder…</p>
     </div>
@@ -132,7 +132,7 @@ function BuilderPageInner() {
 
   if (loadError) {
     return (
-      <main className="grid min-h-screen place-items-center bg-white" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <main className="grid min-h-screen place-items-center bg-white" style={{ fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}>
         <div className="text-center space-y-3">
           <p className="text-sm font-semibold text-red-600">{loadError}</p>
           <button onClick={() => window.location.reload()} className="text-xs underline text-black/50">Try again</button>

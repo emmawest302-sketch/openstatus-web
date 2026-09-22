@@ -15,7 +15,7 @@ export default function Error({
 
   return (
     <main
-      className="grid min-h-screen place-items-center bg-white text-[#232323]"
+      className="grid min-h-screen place-items-center bg-[#7C3AED] text-white"
       style={{ fontFamily: 'var(--font-poppins)' }}
     >
       <div className="text-center px-5">

@@ -89,7 +89,7 @@ export default function ConnectGoogle() {
 
             <a
               href="/builder"
-              className="mt-8 block w-full py-3.5 rounded-full bg-[#0A0A0A] text-white font-semibold text-center hover:bg-[#292929] transition"
+              className="mt-8 block w-full py-3.5 rounded-full bg-[#7C3AED] text-white font-semibold text-center hover:bg-[#292929] transition"
             >
               Go to builder ↗
             </a>

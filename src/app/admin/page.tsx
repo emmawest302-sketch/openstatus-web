@@ -211,7 +211,7 @@ export default function AdminPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] text-white" style={{ fontFamily: 'var(--font-poppins)' }}>
+    <main className="min-h-screen bg-[#7C3AED] text-white" style={{ fontFamily: 'var(--font-poppins)' }}>
 
       {/* Edit modal */}
       {editRow && (
