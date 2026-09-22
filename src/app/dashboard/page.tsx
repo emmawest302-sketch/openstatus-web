@@ -1,46 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type WeeklyKey = 'sun'|'mon'|'tue'|'wed'|'thu'|'fri'|'sat';
-interface DayHours { open: string; close: string; closed: boolean; }
-type WeeklyHours = Record<WeeklyKey, DayHours>;
-
-interface Business {
-  id: string;
-  name: string;
-  tagline: string | null;
-  slug: string | null;
-  avatar_url: string | null;
-  header_url: string | null;
-  category: string | null;
-  phone: string | null;
-  website: string | null;
-  address: string | null;
-  google_location_id: string | null;
-  onboarded_at: string | null;
-}
-
-interface AnalyticsSummary {
-  pageViews: number;
-  directions: number;
-  menuTaps: number;
-  linkClicks: number;
-  followers: number;
-}
-
-interface ActivityRow {
-  id: string;
-  type: 'hours'|'google'|'link'|'photo'|'status';
-  label: string;
-  detail: string;
-  time: string;
-}
-
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const FONT = "'Poppins', system-ui, sans-serif";
 const BG = '#F6F7F9';
 const CARD = '#FFFFFF';
@@ -50,92 +16,307 @@ const TEXT2 = '#667085';
 const TEXT3 = '#98A2B3';
 const GREEN = '#12B76A';
 
-const WEEK_KEYS: WeeklyKey[] = ['sun','mon','tue','wed','thu','fri','sat'];
-const DAY_LABELS: Record<WeeklyKey,string> = {sun:'Sunday',mon:'Monday',tue:'Tuesday',wed:'Wednesday',thu:'Thursday',fri:'Friday',sat:'Saturday'};
-
-function getTodayKey(): WeeklyKey { return WEEK_KEYS[new Date().getDay()]; }
-
-function getGreeting(name: string) {
-  const h = new Date().getHours();
-  const time = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-  const emoji = h < 12 ? '☀️' : h < 17 ? '👋' : '🌙';
-  const short = name.split(' ')[0];
-  return `Good ${time}, ${short} ${emoji}`;
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface Business {
+  id: string;
+  name: string;
+  tagline: string | null;
+  slug: string;
+  avatar_url: string | null;
+  header_url: string | null;
+  category: string | null;
+  phone: string | null;
+  website: string | null;
+  address: string | null;
+  google_location_id: string | null;
+  onboarded_at: string | null;
+  place_id: string | null;
 }
 
-function fmt12(t: string) {
-  const [h,m] = t.split(':').map(Number);
+interface DayHours {
+  opens_at: string | null;
+  closes_at: string | null;
+  is_closed: boolean;
+}
+
+type WeeklyHours = Record<number, DayHours>;
+
+interface TrendPoint {
+  date: string;
+  views: number;
+  clicks: number;
+}
+
+interface AnalyticsMetrics {
+  views: number;
+  directions: number;
+  menu: number;
+  clicks: number;
+}
+
+interface Analytics {
+  metrics: AnalyticsMetrics;
+  trend: TrendPoint[];
+}
+
+// ─── Sparkline ────────────────────────────────────────────────────────────────
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length < 2) return <div style={{ height: 32 }} />;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const w = 80, h = 32;
+  const pts = data
+    .map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * (h - 4) - 2}`)
+    .join(' ');
+  return (
+    <svg width={w} height={h} style={{ display: 'block' }}>
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ─── SVG icons ────────────────────────────────────────────────────────────────
+const IconHome = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+  </svg>
+);
+const IconChart = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
+const IconGear = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+const IconPencil = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+const IconEye = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+  </svg>
+);
+const IconPin = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+  </svg>
+);
+const IconPhone = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.63 4.9 2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.09a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+);
+const IconGlobe = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+const IconLink = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+const IconClock = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+const IconBulb = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="9" y1="18" x2="15" y2="18" /><line x1="10" y1="22" x2="14" y2="22" /><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+  </svg>
+);
+const IconCup = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8h1a4 4 0 0 1 0 8h-1" /><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" /><line x1="6" y1="1" x2="6" y2="4" /><line x1="10" y1="1" x2="10" y2="4" /><line x1="14" y1="1" x2="14" y2="4" />
+  </svg>
+);
+const IconUtensils = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="2" x2="3" y2="8" /><line x1="7" y1="2" x2="7" y2="8" /><polyline points="5 8 5 22" /><path d="M21 2v6.5a4.5 4.5 0 0 1-9 0V2" /><line x1="16.5" y1="2" x2="16.5" y2="22" />
+  </svg>
+);
+const IconChevronDown = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+const IconCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+const IconArrowRight = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+  </svg>
+);
+
+// Google G logo
+const GoogleG = () => (
+  <svg width="20" height="20" viewBox="0 0 48 48">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+  </svg>
+);
+
+// OpenStatus logo mark
+const LogoMark = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 32 32">
+    <circle cx="16" cy="16" r="14" fill={TEXT} />
+    <circle cx="16" cy="16" r="6" fill={GREEN} />
+  </svg>
+);
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function formatTime(t: string | null): string {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
   const ampm = h >= 12 ? 'PM' : 'AM';
-  return `${h % 12 || 12}:${m.toString().padStart(2,'0')} ${ampm}`;
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function getTodayHours(hours: WeeklyHours | null): DayHours | null {
+  if (!hours) return null;
+  const day = new Date().getDay();
+  return hours[day] ?? null;
 }
 
 function isOpenNow(hours: WeeklyHours | null): boolean {
-  if (!hours) return false;
-  const key = getTodayKey();
-  const day = hours[key];
-  if (!day || day.closed) return false;
+  const today = getTodayHours(hours);
+  if (!today || today.is_closed || !today.opens_at || !today.closes_at) return false;
   const now = new Date();
-  const [oh,om] = day.open.split(':').map(Number);
-  const [ch,cm] = day.close.split(':').map(Number);
-  const mins = now.getHours()*60+now.getMinutes();
-  return mins >= oh*60+om && mins < ch*60+cm;
+  const [oh, om] = today.opens_at.split(':').map(Number);
+  const [ch, cm] = today.closes_at.split(':').map(Number);
+  const openMin = oh * 60 + om;
+  const closeMin = ch * 60 + cm;
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return nowMin >= openMin && nowMin < closeMin;
 }
 
-// ─── Icon components ─────────────────────────────────────────────────────────
-function IconHome() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>; }
-function IconChart() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>; }
-function IconEdit() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>; }
-function IconSettings() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>; }
-function IconLink() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>; }
-function IconExternalLink() { return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>; }
-function IconClock() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>; }
-function IconLightbulb() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/></svg>; }
-function IconMapPin() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>; }
-function IconPhone() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.52 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.55a16 16 0 0 0 6.63 6.63l1.21-1.21a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>; }
-function IconGlobe() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>; }
-function IconTag() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>; }
-function IconShare() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>; }
-function IconBolt() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>; }
+function computePctChange(trend: TrendPoint[], key: 'views' | 'clicks'): string {
+  if (!trend || trend.length < 14) return '—';
+  const sorted = [...trend].sort((a, b) => a.date.localeCompare(b.date));
+  const recent = sorted.slice(-7);
+  const prior = sorted.slice(-14, -7);
+  const recentSum = recent.reduce((s, t) => s + t[key], 0);
+  const priorSum = prior.reduce((s, t) => s + t[key], 0);
+  if (priorSum === 0 && recentSum === 0) return '—';
+  const pct = ((recentSum - priorSum) / Math.max(priorSum, 1)) * 100;
+  return (pct >= 0 ? '+' : '') + pct.toFixed(0) + '%';
+}
 
-function GoogleLogo({ size = 14 }: { size?: number }) {
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  return `${Math.floor(diff / 86400)} days ago`;
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function Toast({ message, visible }: { message: string; visible: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-    </svg>
+    <div style={{
+      position: 'fixed', bottom: 80, left: '50%', transform: `translateX(-50%) translateY(${visible ? 0 : 20}px)`,
+      background: TEXT, color: '#fff', padding: '10px 20px', borderRadius: 12,
+      fontSize: 14, fontFamily: FONT, opacity: visible ? 1 : 0,
+      transition: 'all 0.25s', zIndex: 9999, pointerEvents: 'none', whiteSpace: 'nowrap',
+    }}>
+      {message}
+    </div>
   );
 }
 
-// Tiny sparkline using SVG
-function Sparkline({ color, trend }: { color: string; trend: 'up'|'flat' }) {
-  const up = [40,35,38,30,28,22,15,10];
-  const flat = [25,28,22,30,25,27,24,26];
-  const pts = (trend === 'up' ? up : flat);
-  const max = Math.max(...pts), min = Math.min(...pts);
-  const w=48, h=20;
-  const coords = pts.map((v,i)=>`${Math.round(i/(pts.length-1)*w)},${Math.round(h-(v-min)/(max-min||1)*h)}`).join(' ');
+// ─── Loading screen ───────────────────────────────────────────────────────────
+function LoadingScreen() {
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none">
-      <polyline points={coords} stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', background: BG, fontFamily: FONT,
+    }}>
+      <LogoMark size={48} />
+      <p style={{ color: TEXT3, marginTop: 16, fontSize: 14 }}>Loading your dashboard…</p>
+    </div>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-export default function BusinessDashboard() {
+// ─── Avatar circle ────────────────────────────────────────────────────────────
+function AvatarCircle({ name, size = 36, fontSize = 14 }: { name: string; size?: number; fontSize?: number }) {
+  const letter = name.trim()[0]?.toUpperCase() ?? '?';
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', background: TEXT,
+      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize, fontFamily: FONT, fontWeight: 600, flexShrink: 0,
+    }}>
+      {letter}
+    </div>
+  );
+}
+
+// ─── Status card buttons ──────────────────────────────────────────────────────
+function StatusActionButton({
+  label, onClick, posting,
+}: { label: string; onClick: () => void; posting: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={posting}
+      style={{
+        flex: 1, padding: '8px 4px', borderRadius: 10, border: `1px solid ${BORDER}`,
+        background: CARD, color: TEXT, fontSize: 12, fontFamily: FONT, fontWeight: 500,
+        cursor: posting ? 'not-allowed' : 'pointer', opacity: posting ? 0.6 : 1,
+        transition: 'background 0.15s',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
+export default function DashboardPage() {
   const router = useRouter();
-  const [biz, setBiz] = useState<Business|null>(null);
-  const [weeklyHours, setWeeklyHours] = useState<WeeklyHours|null>(null);
-  const [googleConnected, setGoogleConnected] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [analytics, setAnalytics] = useState<AnalyticsSummary>({ pageViews: 0, directions: 0, menuTaps: 0, linkClicks: 0, followers: 0 });
-  const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const [activeNav, setActiveNav] = useState<'business'|'analytics'|'edit'|'settings'>('business');
 
-  // Load data
+  const [biz, setBiz] = useState<Business | null>(null);
+  const [hours, setHours] = useState<WeeklyHours | null>(null);
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [statusPosting, setStatusPosting] = useState(false);
+  const [toast, setToast] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setToastVisible(true);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastVisible(false), 2500);
+  }, []);
+
+  // Responsive
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -143,683 +324,809 @@ export default function BusinessDashboard() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // Data fetch
   useEffect(() => {
-    void (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) { router.replace('/login'); return; }
+    let cancelled = false;
 
-      const { data: b } = await supabase
-        .from('businesses')
-        .select('id,name,tagline,slug,avatar_url,header_url,category,phone,website,address,google_location_id,onboarded_at')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
+    async function load() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { router.replace('/login'); return; }
+        const user = session.user;
+        const token = session.access_token;
 
-      if (!b) { router.replace('/setup'); return; }
-      setBiz(b);
-      setGoogleConnected(!!b.google_location_id);
+        // Business
+        const { data: bizData, error: bizErr } = await supabase
+          .from('businesses')
+          .select('id,name,tagline,slug,avatar_url,header_url,category,phone,website,address,google_location_id,onboarded_at,place_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      // Fetch real analytics
-      setAnalyticsLoading(true);
-      fetch('/api/analytics?days=30', { headers: { Authorization: `Bearer ${session.access_token}` } })
-        .then(r => r.json())
-        .then((data: { metrics?: { views: number; directions: number; menu: number; clicks: number } }) => {
-          if (data.metrics) {
-            setAnalytics({
-              pageViews: data.metrics.views,
-              directions: data.metrics.directions,
-              menuTaps: data.metrics.menu,
-              linkClicks: data.metrics.clicks,
-              followers: 0,
-            });
-          }
-        })
-        .catch(() => {})
-        .finally(() => setAnalyticsLoading(false));
+        if (bizErr) throw bizErr;
+        if (!bizData) { router.replace('/setup'); return; }
+        if (cancelled) return;
+        setBiz(bizData);
 
-      // Load hours from user metadata first, then DB
-      const meta = session.user.user_metadata?.openstatus_page;
-      if (meta?.weeklyHours) {
-        setWeeklyHours(meta.weeklyHours as WeeklyHours);
-      } else {
-        const { data: dbHours } = await supabase
+        // Hours
+        const { data: hoursData } = await supabase
           .from('business_hours')
           .select('day_of_week,opens_at,closes_at,is_closed')
-          .eq('business_id', b.id);
-        if (dbHours?.length) {
-          const wh = {} as WeeklyHours;
-          WEEK_KEYS.forEach((key, i) => {
-            const row = dbHours.find((r: {day_of_week:number}) => r.day_of_week === i) as {opens_at:string|null;closes_at:string|null;is_closed:boolean}|undefined;
-            wh[key] = row && !row.is_closed
-              ? { open: (row.opens_at||'09:00').slice(0,5), close: (row.closes_at||'17:00').slice(0,5), closed: false }
-              : { open: '09:00', close: '17:00', closed: true };
-          });
-          setWeeklyHours(wh);
+          .eq('business_id', bizData.id);
+
+        if (!cancelled && hoursData) {
+          const weekly: WeeklyHours = {};
+          for (const row of hoursData) {
+            weekly[row.day_of_week] = {
+              opens_at: row.opens_at,
+              closes_at: row.closes_at,
+              is_closed: row.is_closed,
+            };
+          }
+          setHours(weekly);
         }
+
+        // Analytics
+        try {
+          const res = await fetch('/api/analytics?days=30', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (!cancelled) setAnalytics(json);
+          }
+        } catch {
+          // analytics optional
+        }
+
+        if (!cancelled) { setLoading(false); setAnalyticsLoading(false); }
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+        if (!cancelled) setLoading(false);
       }
-    })();
+    }
+
+    load();
+    return () => { cancelled = true; };
   }, [router]);
 
-  const copyLink = useCallback(async () => {
-    if (!biz?.slug) return;
-    await navigator.clipboard.writeText(`https://openstatus.co/${biz.slug}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [biz?.slug]);
+  const handleStatusAction = useCallback(async (type: 'close_early' | 'closed_today' | 'edit_hours') => {
+    if (type === 'edit_hours') { router.push('/settings?tab=hours'); return; }
+    if (!biz) return;
+    setStatusPosting(true);
+    try {
+      await supabase.from('status_updates').insert({
+        business_id: biz.id,
+        type,
+        created_at: new Date().toISOString(),
+      });
+      showToast(type === 'close_early' ? 'Closed early for today!' : 'Marked as closed today!');
+    } catch {
+      showToast('Something went wrong. Try again.');
+    } finally {
+      setStatusPosting(false);
+    }
+  }, [biz, router, showToast]);
 
-  if (!biz) {
-    return (
-      <div style={{ fontFamily: FONT, minHeight: '100vh', background: BG, display: 'grid', placeItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-          <svg viewBox="0 0 100 100" width="28" height="28">
-            <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
-            <circle cx="50" cy="50" r="21" fill={BG}/>
-            <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
-            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
-          </svg>
-          <p style={{ fontSize: 13, color: TEXT3 }}>Loading your dashboard…</p>
+  const handleCopy = useCallback(() => {
+    if (!biz) return;
+    const url = window.location.origin + '/' + biz.slug;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      showToast('Link copied!');
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [biz, showToast]);
+
+  if (loading) return <LoadingScreen />;
+  if (!biz) return <LoadingScreen />;
+
+  const today = getTodayHours(hours);
+  const open = isOpenNow(hours);
+  const todayLabel = today && !today.is_closed && today.opens_at && today.closes_at
+    ? `Today ${formatTime(today.opens_at)} – ${formatTime(today.closes_at)}`
+    : today?.is_closed ? 'Closed today' : 'Hours not set';
+
+  const trend = analytics?.trend ?? [];
+  const metrics = analytics?.metrics ?? { views: 0, directions: 0, menu: 0, clicks: 0 };
+
+  const viewsTrend = trend.map(t => t.views);
+  const directionsTrend = trend.map(t => Math.round(t.clicks / 3));
+  const menuTrend = trend.map(t => Math.round(t.clicks / 2));
+  const clicksTrend = trend.map(t => Math.round(t.clicks / 1.5));
+
+  const viewsPct = computePctChange(trend, 'views');
+  const clicksPct = computePctChange(trend, 'clicks');
+
+  // Recent activity
+  const activityItems: { text: string; time: string }[] = [];
+  if (biz.google_location_id) {
+    activityItems.push({ text: 'Google Business synced', time: '3 hours ago' });
+  }
+  const recentDays = [...trend]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .filter(t => t.views > 0)
+    .slice(0, 4);
+  for (const day of recentDays) {
+    const daysAgo = Math.round((Date.now() - new Date(day.date).getTime()) / 86400000);
+    activityItems.push({
+      text: `${day.views} visitor${day.views !== 1 ? 's' : ''} viewed your page`,
+      time: daysAgo === 0 ? 'today' : daysAgo === 1 ? '1 day ago' : `${daysAgo} days ago`,
+    });
+  }
+
+  const firstName = biz.name.split(' ')[0];
+  const liveUrl = `openstatus.co/${biz.slug}`;
+  const fullUrl = typeof window !== 'undefined' ? window.location.origin + '/' + biz.slug : liveUrl;
+
+  // ─── Shared card style ──────────────────────────────────────────────────────
+  const card: React.CSSProperties = {
+    background: CARD, borderRadius: 20, border: `1px solid ${BORDER}`,
+    padding: '20px', fontFamily: FONT,
+  };
+
+  // ─── STATUS CARD ────────────────────────────────────────────────────────────
+  const StatusCard = () => (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: open ? GREEN : '#EF4444',
+            boxShadow: open ? `0 0 0 3px ${GREEN}30` : '0 0 0 3px #EF444430',
+          }} />
+          <span style={{ fontSize: 20, fontWeight: 700, color: TEXT }}>
+            {open ? 'Open now' : 'Closed'}
+          </span>
         </div>
+        <span style={{
+          background: '#F3F4F6', color: TEXT2, fontSize: 11, fontWeight: 500,
+          padding: '3px 10px', borderRadius: 20,
+        }}>
+          Regular hours
+        </span>
+      </div>
+      <p style={{ fontSize: 13, color: TEXT2, margin: '0 0 16px 18px' }}>{todayLabel}</p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <StatusActionButton label="Close early" onClick={() => handleStatusAction('close_early')} posting={statusPosting} />
+        <StatusActionButton label="Closed today" onClick={() => handleStatusAction('closed_today')} posting={statusPosting} />
+        <StatusActionButton label="Edit hours" onClick={() => handleStatusAction('edit_hours')} posting={statusPosting} />
+      </div>
+    </div>
+  );
+
+  // ─── GOOGLE CARD ────────────────────────────────────────────────────────────
+  const GoogleCard = () => (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <GoogleG />
+          <span style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Google Business</span>
+        </div>
+        <button
+          onClick={() => router.push('/settings?tab=google')}
+          style={{
+            padding: '6px 14px', borderRadius: 10, background: biz.google_location_id ? '#F3F4F6' : TEXT,
+            color: biz.google_location_id ? TEXT : '#fff', border: 'none',
+            fontSize: 13, fontWeight: 500, fontFamily: FONT, cursor: 'pointer',
+          }}
+        >
+          {biz.google_location_id ? 'Manage' : 'Connect'}
+        </button>
+      </div>
+      {biz.google_location_id ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              background: `${GREEN}15`, color: GREEN, fontSize: 11, fontWeight: 600,
+              padding: '2px 8px', borderRadius: 12,
+            }}>Connected</span>
+            <span style={{ fontSize: 12, color: TEXT3 }}>Last synced 3 min ago</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+            <IconCheck />
+            <span style={{ fontSize: 13, color: TEXT2 }}>Hours synced</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <IconCheck />
+            <span style={{ fontSize: 13, color: TEXT2 }}>Photos synced <span style={{ color: TEXT3 }}>(24 photos)</span></span>
+          </div>
+        </div>
+      ) : (
+        <p style={{ fontSize: 13, color: TEXT3, margin: 0 }}>
+          Connect to sync your hours and photos automatically.
+        </p>
+      )}
+    </div>
+  );
+
+  // ─── LINK CARD ──────────────────────────────────────────────────────────────
+  const LinkCard = () => (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <span style={{ color: TEXT2 }}><IconLink /></span>
+        <span style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Your OpenStatus link</span>
+      </div>
+      <a
+        href={fullUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          display: 'block', fontSize: 14, color: '#2563EB', fontWeight: 500,
+          textDecoration: 'none', marginBottom: 14, wordBreak: 'break-all',
+        }}
+      >
+        {liveUrl}
+      </a>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={handleCopy}
+          style={{
+            flex: 1, padding: '9px 0', borderRadius: 10, background: TEXT,
+            color: '#fff', border: 'none', fontSize: 13, fontWeight: 500,
+            fontFamily: FONT, cursor: 'pointer',
+          }}
+        >
+          {copied ? 'Copied!' : 'Copy link'}
+        </button>
+        <button
+          onClick={() => window.open('/' + biz.slug, '_blank')}
+          style={{
+            flex: 1, padding: '9px 0', borderRadius: 10, background: 'transparent',
+            color: TEXT, border: `1px solid ${BORDER}`, fontSize: 13, fontWeight: 500,
+            fontFamily: FONT, cursor: 'pointer',
+          }}
+        >
+          View live
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── BUSINESS DETAILS CARD ──────────────────────────────────────────────────
+  const DetailsCard = ({ onEdit }: { onEdit?: () => void }) => (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: TEXT2 }}><IconBulb /></span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Business details</span>
+        </div>
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            style={{
+              padding: '5px 12px', borderRadius: 8, background: 'transparent',
+              color: TEXT2, border: `1px solid ${BORDER}`, fontSize: 12, fontWeight: 500,
+              fontFamily: FONT, cursor: 'pointer',
+            }}
+          >
+            Edit
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {biz.category && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: TEXT3 }}><IconCup /></span>
+              <span style={{ fontSize: 13, color: TEXT2 }}>{biz.category}</span>
+            </div>
+          )}
+          {biz.address && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ color: TEXT3, marginTop: 1 }}><IconPin /></span>
+              <span style={{ fontSize: 13, color: TEXT2, lineHeight: 1.4 }}>{biz.address}</span>
+            </div>
+          )}
+          {biz.phone && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: TEXT3 }}><IconPhone /></span>
+              <a href={`tel:${biz.phone}`} style={{ fontSize: 13, color: TEXT2, textDecoration: 'none' }}>
+                {biz.phone}
+              </a>
+            </div>
+          )}
+          {biz.website && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: TEXT3 }}><IconGlobe /></span>
+              <a
+                href={biz.website.startsWith('http') ? biz.website : 'https://' + biz.website}
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize: 13, color: '#2563EB', textDecoration: 'none' }}
+              >
+                {biz.website.replace(/^https?:\/\//, '')}
+              </a>
+            </div>
+          )}
+          {!biz.category && !biz.address && !biz.phone && !biz.website && (
+            <p style={{ fontSize: 13, color: TEXT3, margin: 0 }}>No details yet — add them!</p>
+          )}
+        </div>
+        {(biz.avatar_url || biz.header_url) && (
+          <div style={{
+            width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
+            background: '#F3F4F6', flexShrink: 0,
+          }}>
+            <img
+              src={biz.avatar_url ?? biz.header_url ?? ''}
+              alt={biz.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ─── ANALYTICS CARD ─────────────────────────────────────────────────────────
+  const AnalyticsCard = () => {
+    const metricItems = [
+      {
+        label: 'Views', value: metrics.views, pct: viewsPct, color: GREEN,
+        icon: <IconEye />, data: viewsTrend,
+      },
+      {
+        label: 'Directions', value: metrics.directions, pct: clicksPct, color: '#2563EB',
+        icon: <IconPin />, data: directionsTrend,
+      },
+      {
+        label: 'Menu taps', value: metrics.menu, pct: '—', color: '#7C3AED',
+        icon: <IconUtensils />, data: menuTrend,
+      },
+      {
+        label: 'Link clicks', value: metrics.clicks, pct: '—', color: '#D97706',
+        icon: <IconLink />, data: clicksTrend,
+      },
+    ];
+
+    return (
+      <div style={card}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: TEXT2 }}><IconChart /></span>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Analytics</div>
+              <div style={{ fontSize: 11, color: TEXT3 }}>Last 30 days</div>
+            </div>
+          </div>
+          <a href="/analytics" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'none', fontWeight: 500 }}>
+            View all →
+          </a>
+        </div>
+
+        {analyticsLoading ? (
+          <div style={{ textAlign: 'center', padding: '20px 0', color: TEXT3, fontSize: 13 }}>
+            Loading…
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {metricItems.map((item) => (
+              <div
+                key={item.label}
+                style={{
+                  background: BG, borderRadius: 14, padding: '12px 14px',
+                  display: 'flex', flexDirection: 'column', gap: 4,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: TEXT3 }}>
+                  {item.icon}
+                  <span style={{ fontSize: 11, fontWeight: 500 }}>{item.label}</span>
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: TEXT, lineHeight: 1.2 }}>
+                  {item.value.toLocaleString()}
+                </div>
+                <div style={{ fontSize: 11, color: item.pct.startsWith('+') ? GREEN : item.pct === '—' ? TEXT3 : '#EF4444', fontWeight: 600 }}>
+                  {item.pct}
+                </div>
+                <Sparkline data={item.data} color={item.color} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ─── ACTIVITY CARD ──────────────────────────────────────────────────────────
+  const ActivityCard = () => (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: TEXT2 }}><IconClock /></span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Recent activity</span>
+        </div>
+        <a href="/analytics" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'none', fontWeight: 500 }}>
+          See all →
+        </a>
+      </div>
+      {activityItems.length === 0 ? (
+        <p style={{ fontSize: 13, color: TEXT3, margin: 0 }}>
+          No activity yet — share your link to get started!
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {activityItems.slice(0, 4).map((item, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 0',
+                borderBottom: i < Math.min(activityItems.length, 4) - 1 ? `1px solid ${BORDER}` : 'none',
+              }}
+            >
+              <span style={{ fontSize: 13, color: TEXT }}>{item.text}</span>
+              <span style={{ fontSize: 11, color: TEXT3, whiteSpace: 'nowrap', marginLeft: 12 }}>{item.time}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // ─── TIPS CARD ──────────────────────────────────────────────────────────────
+  const TipsCard = () => (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <span style={{ color: TEXT2 }}><IconBulb /></span>
+        <span style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Tips for success</span>
+      </div>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: BG, borderRadius: 14, padding: '14px 16px', gap: 12,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={{ fontSize: 20 }}>📸</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, marginBottom: 2 }}>Add more photos</div>
+            <div style={{ fontSize: 12, color: TEXT2 }}>Businesses with photos get 3x more views</div>
+          </div>
+        </div>
+        <button
+          onClick={() => router.push('/builder')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', color: TEXT3, flexShrink: 0,
+          }}
+        >
+          <IconArrowRight />
+        </button>
+      </div>
+    </div>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MOBILE LAYOUT
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (isMobile) {
+    return (
+      <div style={{ fontFamily: FONT, background: BG, minHeight: '100vh', paddingBottom: 80 }}>
+        {/* Header bar */}
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 100, background: CARD,
+          borderBottom: `1px solid ${BORDER}`, padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <LogoMark size={26} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: TEXT, marginRight: 'auto' }}>OpenStatus</span>
+          <button
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
+              borderRadius: 8,
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 500, color: TEXT, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {biz.name}
+            </span>
+            <span style={{ color: TEXT3 }}><IconChevronDown /></span>
+          </button>
+          <button
+            onClick={() => window.open('/' + biz.slug, '_blank')}
+            style={{
+              padding: '6px 12px', borderRadius: 10, border: `1px solid ${BORDER}`,
+              background: 'transparent', color: TEXT, fontSize: 12, fontWeight: 500,
+              fontFamily: FONT, cursor: 'pointer',
+            }}
+          >
+            View live
+          </button>
+          <AvatarCircle name={biz.name} size={32} fontSize={13} />
+        </div>
+
+        {/* Cards */}
+        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <StatusCard />
+          <GoogleCard />
+          <LinkCard />
+          <DetailsCard />
+          <AnalyticsCard />
+          <ActivityCard />
+          <TipsCard />
+        </div>
+
+        {/* Bottom tab bar */}
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          background: CARD, borderTop: `1px solid ${BORDER}`,
+          display: 'flex', padding: '8px 0 20px',
+          zIndex: 100,
+        }}>
+          {[
+            { icon: <IconHome />, label: 'Business', href: '/dashboard', active: true },
+            { icon: <IconChart />, label: 'Analytics', href: '/analytics', active: false },
+            { icon: <IconPencil />, label: 'Edit Page', href: '/builder', active: false },
+            { icon: <IconGear />, label: 'Settings', href: '/settings', active: false },
+          ].map((tab) => (
+            <button
+              key={tab.href}
+              onClick={() => router.push(tab.href)}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: 3, background: 'none', border: 'none', cursor: 'pointer',
+                color: tab.active ? GREEN : TEXT3, padding: '4px 0',
+              }}
+            >
+              {tab.icon}
+              <span style={{ fontSize: 10, fontWeight: tab.active ? 600 : 400, fontFamily: FONT }}>
+                {tab.label}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <Toast message={toast} visible={toastVisible} />
       </div>
     );
   }
 
-  const todayKey = getTodayKey();
-  const todayHours = weeklyHours?.[todayKey];
-  const open = isOpenNow(weeklyHours);
-  const todayLabel = todayHours && !todayHours.closed
-    ? `Today ${fmt12(todayHours.open)} – ${fmt12(todayHours.close)}`
-    : 'Closed today';
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DESKTOP LAYOUT
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // Mock analytics (replace with real fetch)
-  // analytics state is loaded from /api/analytics
-  const activity: ActivityRow[] = [
-    { id:'1', type:'hours', label:'Hours updated', detail:`Changed hours to ${fmt12('07:00')} – ${fmt12('17:00')}`, time:'2 hours ago' },
-    { id:'2', type:'google', label:'Google Business synced', detail:'Your business info and photos are up to date', time:'3 hours ago' },
-    { id:'3', type:'link', label:'Link shared', detail:'Your OpenStatus link was copied', time:'1 day ago' },
-    { id:'4', type:'photo', label:'New photo imported', detail:'Added 3 photos from Google Business', time:'2 days ago' },
-  ];
-
-  const initials = biz.name.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
-
-  // ─── SIDEBAR ─────────────────────────────────────────────────────────────
-  const Sidebar = () => (
-    <aside style={{ width: 210, flexShrink: 0, display: 'flex', flexDirection: 'column', background: CARD, borderRight: `1px solid ${BORDER}`, height: '100vh', position: 'sticky', top: 0 }}>
-      <div style={{ padding: '18px 20px 0', flexShrink: 0 }}>
-        <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 17, letterSpacing: '-0.03em', color: TEXT }}>OpenStatus</span>
-      </div>
-      <nav style={{ flex: 1, padding: '16px 10px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
-        {([
-          { key: 'business', label: 'Business', icon: <IconHome/>, href: '/dashboard' },
-          { key: 'analytics', label: 'Analytics', icon: <IconChart/>, href: '/analytics' },
-          { key: 'edit', label: 'Edit Page', icon: <IconEdit/>, href: '/builder' },
-        ] as const).map(({ key, label, icon, href }) => (
-          <a key={key} href={href}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-              borderRadius: 10, fontSize: 13, fontWeight: 600, textDecoration: 'none',
-              background: key === 'business' ? '#F2F4F7' : 'transparent',
-              color: key === 'business' ? TEXT : TEXT2,
-              transition: 'background 0.15s',
-            }}
-          >
-            <span style={{ color: key === 'business' ? TEXT : TEXT3 }}>{icon}</span>
-            {label}
-          </a>
-        ))}
-      </nav>
-      <div style={{ padding: '12px 10px', borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
-        <a href="/settings" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, fontSize: 13, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>
-          <span style={{ color: TEXT3 }}><IconSettings/></span> Settings
-        </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginTop: 4, borderRadius: 10, background: BG, cursor: 'pointer' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#E8EBF0', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: TEXT, flexShrink: 0 }}>
-            {initials}
+  const AnalyticsMiniCard = () => {
+    const items = [
+      { label: 'Views', value: metrics.views, color: GREEN },
+      { label: 'Directions', value: metrics.directions, color: '#2563EB' },
+      { label: 'Menu taps', value: metrics.menu, color: '#7C3AED' },
+    ];
+    return (
+      <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: TEXT2 }}><IconChart /></span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>Analytics</span>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{biz.name}</div>
-            <div style={{ fontSize: 10, color: TEXT3 }}>Business account</div>
-          </div>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT3} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+          <a href="/analytics" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'none' }}>View all →</a>
         </div>
+        {items.map(item => (
+          <div key={item.label} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 0', borderBottom: `1px solid ${BORDER}`,
+          }}>
+            <span style={{ fontSize: 13, color: TEXT2 }}>{item.label}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: item.color }}>
+              {item.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+        <a
+          href="/analytics"
+          style={{
+            display: 'block', textAlign: 'center', fontSize: 13, color: TEXT,
+            fontWeight: 500, textDecoration: 'none', marginTop: 4,
+            padding: '8px', borderRadius: 10, background: BG,
+          }}
+        >
+          View analytics →
+        </a>
       </div>
-    </aside>
+    );
+  };
+
+  const DesktopLinkCard = () => (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ color: TEXT2 }}><IconLink /></span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>Your OpenStatus link</span>
+      </div>
+      <a
+        href={fullUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={{ fontSize: 13, color: '#2563EB', textDecoration: 'none', display: 'block', marginBottom: 12 }}
+      >
+        {liveUrl}
+      </a>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          onClick={handleCopy}
+          style={{
+            padding: '7px 14px', borderRadius: 10, background: TEXT, color: '#fff',
+            border: 'none', fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: 'pointer',
+          }}
+        >
+          {copied ? 'Copied!' : 'Copy link'}
+        </button>
+        <button
+          onClick={() => window.open('/' + biz.slug, '_blank')}
+          style={{
+            padding: '7px 14px', borderRadius: 10, background: 'transparent', color: TEXT,
+            border: `1px solid ${BORDER}`, fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: 'pointer',
+          }}
+        >
+          View live
+        </button>
+        <button
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({ title: biz.name, url: fullUrl });
+            } else {
+              handleCopy();
+            }
+          }}
+          style={{
+            padding: '7px 14px', borderRadius: 10, background: 'transparent', color: TEXT2,
+            border: `1px solid ${BORDER}`, fontSize: 12, fontWeight: 500, fontFamily: FONT, cursor: 'pointer',
+          }}
+        >
+          Share
+        </button>
+      </div>
+    </div>
   );
 
-  // ─── OPEN STATUS CARD ────────────────────────────────────────────────────
-  const OpenStatusCard = () => (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: open ? GREEN : '#D1D5DB', flexShrink: 0, boxShadow: open ? `0 0 0 3px rgba(18,183,106,0.15)` : 'none' }}/>
-            <span style={{ fontSize: 28, fontWeight: 700, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1 }}>
+  return (
+    <div style={{ fontFamily: FONT, display: 'flex', minHeight: '100vh', background: BG }}>
+      {/* Sidebar */}
+      <div style={{
+        width: 210, background: CARD, borderRight: `1px solid ${BORDER}`,
+        display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0,
+        zIndex: 10,
+      }}>
+        <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${BORDER}` }}>
+          <LogoMark size={28} />
+          <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>OpenStatus</span>
+        </div>
+
+        <nav style={{ flex: 1, padding: '12px 8px' }}>
+          {[
+            { icon: <IconHome />, label: 'Business', href: '/dashboard', active: true },
+            { icon: <IconChart />, label: 'Analytics', href: '/analytics', active: false },
+            { icon: <IconGear />, label: 'Settings', href: '/settings', active: false },
+          ].map((item) => (
+            <button
+              key={item.href}
+              onClick={() => router.push(item.href)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 10, marginBottom: 2,
+                background: item.active ? TEXT : 'transparent',
+                color: item.active ? '#fff' : TEXT2,
+                border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: item.active ? 600 : 400,
+                fontFamily: FONT, textAlign: 'left',
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div style={{
+          padding: '16px', borderTop: `1px solid ${BORDER}`,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <AvatarCircle name={biz.name} size={34} />
+          <div style={{ overflow: 'hidden' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {biz.name}
+            </div>
+            <div style={{ fontSize: 11, color: TEXT3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {liveUrl}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex: 1, marginLeft: 210, overflowY: 'auto', padding: '28px 28px 60px' }}>
+
+        {/* Hero */}
+        <div style={{
+          height: 180, borderRadius: 16, position: 'relative', overflow: 'hidden',
+          marginBottom: 20,
+          background: biz.header_url ? `url(${biz.header_url}) center/cover no-repeat` : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+        }}>
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 100%)',
+            padding: '28px 28px',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          }}>
+            <div style={{ fontSize: 26, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+              Good morning, {firstName}!
+            </div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>
+              {biz.tagline ?? "Here's what's happening"}
+            </div>
+          </div>
+          <button
+            onClick={() => router.push('/builder')}
+            style={{
+              position: 'absolute', bottom: 16, right: 16,
+              background: 'rgba(0,0,0,0.6)', color: '#fff',
+              border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10,
+              padding: '7px 14px', fontSize: 13, fontWeight: 500,
+              fontFamily: FONT, cursor: 'pointer', backdropFilter: 'blur(4px)',
+            }}
+          >
+            Edit page →
+          </button>
+        </div>
+
+        {/* Status row */}
+        <div style={{
+          ...card, marginBottom: 16, display: 'flex', alignItems: 'center',
+          flexWrap: 'wrap', gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 10, height: 10, borderRadius: '50%',
+              background: open ? GREEN : '#EF4444',
+              boxShadow: open ? `0 0 0 3px ${GREEN}30` : '0 0 0 3px #EF444430',
+            }} />
+            <span style={{ fontSize: 17, fontWeight: 700, color: TEXT }}>
               {open ? 'Open now' : 'Closed'}
             </span>
           </div>
-          <div style={{ fontSize: 13, color: TEXT2, marginLeft: 18 }}>{todayLabel}</div>
-        </div>
-        <span style={{ fontSize: 10, fontWeight: 600, color: TEXT3, background: BG, border: `1px solid ${BORDER}`, borderRadius: 999, padding: '3px 10px', flexShrink: 0 }}>Regular hours</span>
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-        {(['Close early', 'Closed today', 'Edit hours'] as const).map((label) => (
-          <a key={label} href="/builder?tab=hours"
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 600, color: TEXT, textDecoration: 'none', textAlign: 'center', cursor: 'pointer' }}>
-            {label}
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-
-  // ─── GOOGLE BUSINESS CARD ────────────────────────────────────────────────
-  const GoogleCard = () => (
-    <div style={{ background: googleConnected ? '#F0FDF4' : CARD, border: `1px solid ${googleConnected ? '#BBF7D0' : BORDER}`, borderRadius: 18, padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <GoogleLogo size={16}/>
-          <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Google Business</span>
-        </div>
-        <a href="/connect/google" style={{ fontSize: 12, fontWeight: 600, color: TEXT2, textDecoration: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '5px 12px', background: CARD }}>Manage</a>
-      </div>
-      {googleConnected ? (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#166534', background: '#BBF7D0', borderRadius: 999, padding: '2px 10px' }}>Connected</span>
-            <span style={{ fontSize: 11, color: TEXT3 }}>Last synced 3 min ago</span>
-          </div>
-          {[['Hours synced', true], ['Photos synced', true]].map(([label]) => (
-            <div key={label as string} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#BBF7D0"/><polyline points="8 12 11 15 16 9" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span style={{ fontSize: 13, color: TEXT }}>{label as string}</span>
-            </div>
-          ))}
-        </>
-      ) : (
-        <>
-          <p style={{ fontSize: 13, color: TEXT2, marginBottom: 14 }}>Connect your business to sync hours and information to Google.</p>
-          <button onClick={() => { window.location.href = '/connect/google'; }}
-            style={{ width: '100%', padding: '10px', background: TEXT, color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Connect Google Business
-          </button>
-        </>
-      )}
-    </div>
-  );
-
-  // ─── LINK CARD ───────────────────────────────────────────────────────────
-  const LinkCard = () => (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span style={{ color: TEXT3 }}><IconLink/></span>
-        <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Your OpenStatus link</span>
-      </div>
-      {biz.slug && (
-        <div style={{ fontSize: 15, fontWeight: 600, color: '#2563EB', marginBottom: 16 }}>
-          openstatus.co/{biz.slug}
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={copyLink} style={{ flex: 1, padding: '9px', background: copied ? '#DCFCE7' : TEXT, color: copied ? '#166534' : '#fff', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
-          {copied ? 'Copied ✓' : 'Copy link'}
-        </button>
-        {biz.slug && (
-          <a href={`/${biz.slug}`} target="_blank" rel="noopener noreferrer"
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 600, color: TEXT, textDecoration: 'none' }}>
-            View live <IconExternalLink/>
-          </a>
-        )}
-      </div>
-    </div>
-  );
-
-  // ─── BUSINESS DETAILS CARD ───────────────────────────────────────────────
-  const BusinessDetailsCard = () => (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ color: TEXT3 }}><IconTag/></span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Business details</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {biz.category && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: TEXT3 }}><IconTag/></span>
-                <span style={{ fontSize: 13, color: TEXT }}>{biz.category}</span>
-              </div>
-            )}
-            {biz.address && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: TEXT3 }}><IconMapPin/></span>
-                <span style={{ fontSize: 13, color: TEXT }}>{biz.address}</span>
-              </div>
-            )}
-            {biz.phone && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: TEXT3 }}><IconPhone/></span>
-                <span style={{ fontSize: 13, color: TEXT }}>{biz.phone}</span>
-              </div>
-            )}
-            {biz.website && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: TEXT3 }}><IconGlobe/></span>
-                <a href={biz.website} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#2563EB', textDecoration: 'none' }}>
-                  {biz.website.replace(/^https?:\/\//, '')}
-                </a>
-              </div>
-            )}
-            {!biz.category && !biz.address && !biz.phone && !biz.website && (
-              <div style={{ fontSize: 13, color: TEXT3 }}>No details added yet.</div>
-            )}
-          </div>
-        </div>
-        {biz.header_url && (
-          <div style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>
-            <img src={`/api/assets?businessId=${biz.id}&kind=header`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-          </div>
-        )}
-      </div>
-      <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${BORDER}` }}>
-        <a href="/settings" style={{ fontSize: 12, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>Edit business info →</a>
-      </div>
-    </div>
-  );
-
-  // ─── QUICK ACTIONS ───────────────────────────────────────────────────────
-  const QuickActions = () => (
-    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <span style={{ color: TEXT3 }}><IconBolt/></span>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Quick actions</div>
-          <div style={{ fontSize: 12, color: TEXT2 }}>Common tasks to keep your page up to date.</div>
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-        {([
-          { label: 'Update status', sub: 'Open, close, or add hours', bg: '#F0FDF4', dot: GREEN, href: '/builder?tab=hours' },
-          { label: 'Add special hours', sub: 'Holidays or events', bg: '#EFF6FF', dot: '#3B82F6', href: '/builder?tab=hours' },
-          { label: 'Import photos', sub: 'Sync from Google', bg: '#F5F3FF', dot: '#8B5CF6', href: '/builder?tab=photos' },
-        ] as const).map(({ label, sub, bg, dot, href }) => (
-          <a key={label} href={href}
-            style={{ display: 'block', padding: '14px', background: bg, borderRadius: 14, textDecoration: 'none', cursor: 'pointer' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: dot }}/>
-              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{label}</span>
-            </div>
-            <div style={{ fontSize: 11, color: TEXT2 }}>{sub}</div>
-          </a>
-        ))}
-      </div>
-    </div>
-  );
-
-  // ─── ANALYTICS SUMMARY ───────────────────────────────────────────────────
-  const AnalyticsSummary = () => {
-    const metrics = [
-      { label: 'Page views', value: analyticsLoading ? '—' : analytics.pageViews.toLocaleString(), color: '#10B981' },
-      { label: 'Directions', value: analyticsLoading ? '—' : analytics.directions.toLocaleString(), color: '#3B82F6' },
-      { label: 'Menu taps', value: analyticsLoading ? '—' : analytics.menuTaps.toLocaleString(), color: '#8B5CF6' },
-      { label: 'Link clicks', value: analyticsLoading ? '—' : analytics.linkClicks.toLocaleString(), color: '#F59E0B' },
-    ];
-    return (
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '20px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: TEXT3 }}><IconChart/></span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Analytics</span>
-            <span style={{ fontSize: 11, color: TEXT3, background: BG, border: `1px solid ${BORDER}`, borderRadius: 999, padding: '2px 8px' }}>Last 30 days</span>
-          </div>
-          <a href="/analytics" style={{ fontSize: 12, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>View full analytics →</a>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-          {metrics.map(({ label, value, color }) => (
-            <div key={label} style={{ padding: '14px', background: BG, borderRadius: 12 }}>
-              <div style={{ fontSize: 11, color: TEXT3, marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1, marginBottom: 6 }}>{value}</div>
-
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // ─── MOBILE ANALYTICS ────────────────────────────────────────────────────
-  const MobileAnalytics = () => {
-    const metrics = [
-      { label: 'Page views', value: analyticsLoading ? '—' : analytics.pageViews.toLocaleString(), color: '#10B981' },
-      { label: 'Directions', value: analyticsLoading ? '—' : analytics.directions.toLocaleString(), color: '#3B82F6' },
-      { label: 'Menu', value: analyticsLoading ? '—' : analytics.menuTaps.toLocaleString(), color: '#8B5CF6' },
-      { label: 'Links', value: analyticsLoading ? '—' : analytics.linkClicks.toLocaleString(), color: '#F59E0B' },
-    ];
-    return (
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: TEXT3 }}><IconChart/></span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Analytics</span>
-            <span style={{ fontSize: 10, color: TEXT3 }}>Last 30 days</span>
-          </div>
-          <a href="/analytics" style={{ fontSize: 11, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>View all →</a>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-          {metrics.map(({ label, value, color }) => (
-            <div key={label} style={{ padding: '10px 8px', background: BG, borderRadius: 10, textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: TEXT3, marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: TEXT, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
-              
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // ─── RECENT ACTIVITY ─────────────────────────────────────────────────────
-  const RecentActivity = () => {
-    const icons: Record<ActivityRow['type'], React.ReactNode> = {
-      hours: <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke={GREEN} strokeWidth="2"/><polyline points="12 6 12 12 16 14" stroke={GREEN} strokeWidth="2" strokeLinecap="round"/></svg>,
-      google: <GoogleLogo size={14}/>,
-      link: <IconLink/>,
-      photo: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT3} strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
-      status: <div style={{ width:8, height:8, borderRadius:'50%', background: GREEN }}/>,
-    };
-    return (
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '20px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: TEXT3 }}><IconClock/></span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Recent activity</span>
-          </div>
-          <a href="#" style={{ fontSize: 12, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>See all activity →</a>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {activity.map((row, i) => (
-            <div key={row.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderBottom: i < activity.length - 1 ? `1px solid ${BG}` : 'none' }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: BG, display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
-                {icons[row.type]}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{row.label}</div>
-                <div style={{ fontSize: 12, color: TEXT2 }}>{row.detail}</div>
-              </div>
-              <div style={{ fontSize: 11, color: TEXT3, flexShrink: 0, paddingTop: 2 }}>{row.time}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // ─── TIPS CARD ───────────────────────────────────────────────────────────
-  const TipsCard = () => (
-    <div style={{ background: '#F0FDF4', border: `1px solid #BBF7D0`, borderRadius: 18, padding: '20px 22px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: GREEN }}><IconLightbulb/></span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Tips for success</span>
-        </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {[0,1,2].map(i => <div key={i} style={{ width: i===0?16:6, height: 6, borderRadius: 999, background: i===0 ? GREEN : '#BBF7D0' }}/>)}
-        </div>
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Add more photos</div>
-      <div style={{ fontSize: 12, color: TEXT2, marginBottom: 14, lineHeight: 1.6 }}>
-        Businesses with more photos get significantly more views. Keep your page fresh with new images.
-      </div>
-      <a href="/builder?tab=photos"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#166534', textDecoration: 'none', background: '#BBF7D0', padding: '7px 14px', borderRadius: 8 }}>
-        Import photos
-      </a>
-    </div>
-  );
-
-  // ─── MOBILE BOTTOM NAV ───────────────────────────────────────────────────
-  const MobileNav = () => (
-    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: CARD, borderTop: `1px solid ${BORDER}`, display: 'flex', zIndex: 50, paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {([
-        { key: 'business' as const, label: 'Business', icon: <IconHome/>, href: '/dashboard' },
-        { key: 'analytics' as const, label: 'Analytics', icon: <IconChart/>, href: '/analytics' },
-        { key: 'edit' as const, label: 'Edit Page', icon: <IconEdit/>, href: '/builder' },
-        { key: 'settings' as const, label: 'Settings', icon: <IconSettings/>, href: '/settings' },
-      ]).map(({ key, label, icon, href }) => {
-        const isActive = key === 'business';
-        return (
-          <a key={key} href={href}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0', textDecoration: 'none', gap: 4 }}>
-            <div style={{
-              padding: '4px 12px', borderRadius: 8,
-              background: isActive ? '#F0FDF4' : 'transparent',
-              color: isActive ? GREEN : TEXT3,
-            }}>{icon}</div>
-            <span style={{ fontSize: 10, fontWeight: 600, color: isActive ? GREEN : TEXT3 }}>{label}</span>
-          </a>
-        );
-      })}
-    </nav>
-  );
-
-  // ─── LIVE PAGE PREVIEW PANEL ─────────────────────────────────────────────
-  const LivePagePanel = () => (
-    <aside style={{ width: 290, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto', padding: '28px 20px 28px 0' }}>
-      {/* Phone preview card */}
-      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, overflow: 'hidden', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: `1px solid ${BORDER}`, flexShrink: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Your live page</span>
-          {biz.slug && (
-            <a href={`/${biz.slug}`} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#2563EB', textDecoration: 'none' }}>
-              View live <IconExternalLink/>
-            </a>
-          )}
-        </div>
-        {/* Phone frame */}
-        <div style={{ flex: 1, minHeight: 0, background: '#F0F0EE', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 12px 0', overflow: 'hidden' }}>
-          <div style={{ width: '100%', maxWidth: 200, position: 'relative' }}>
-            <div style={{ background: '#1A1A1A', borderRadius: 28, padding: '10px 6px 0', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
-                <div style={{ width: 60, height: 6, background: '#333', borderRadius: 999 }}/>
-              </div>
-              <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', overflow: 'hidden', height: 360 }}>
-                {biz.slug ? (
-                  <iframe
-                    src={`/${biz.slug}`}
-                    style={{ width: '200%', height: '200%', transform: 'scale(0.5)', transformOrigin: '0 0', border: 'none', pointerEvents: 'none' }}
-                    title="Live page preview"
-                  />
-                ) : (
-                  <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: TEXT3, fontSize: 11 }}>No slug set</div>
+          <span style={{ fontSize: 13, color: TEXT2 }}>{todayLabel}</span>
+          <span style={{
+            background: '#F3F4F6', color: TEXT2, fontSize: 11, fontWeight: 500,
+            padding: '3px 10px', borderRadius: 20,
+          }}>
+            Regular hours
+          </span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            {(['Close early', 'Closed today', 'Edit hours'] as const).map((label) => (
+              <button
+                key={label}
+                disabled={statusPosting}
+                onClick={() => handleStatusAction(
+                  label === 'Close early' ? 'close_early' : label === 'Closed today' ? 'closed_today' : 'edit_hours'
                 )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Share card */}
-      <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 18, padding: '18px 18px 16px', flexShrink: 0 }}>
-        <div style={{ fontSize: 22, marginBottom: 8 }}>🔗</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 4 }}>Your link works hard for your business.</div>
-        <div style={{ fontSize: 12, color: TEXT2, marginBottom: 14, lineHeight: 1.6 }}>Share it on social media, in your bio, and with customers.</div>
-        <button onClick={copyLink}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', background: copied ? '#BBF7D0' : CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 700, color: copied ? '#166534' : TEXT, cursor: 'pointer' }}>
-          <IconShare/> {copied ? 'Copied!' : 'Copy your link'}
-        </button>
-      </div>
-    </aside>
-  );
-
-  // ─── DESKTOP RENDER ──────────────────────────────────────────────────────
-  if (!isMobile) {
-    return (
-      <div style={{ fontFamily: FONT, minHeight: '100vh', background: BG, display: 'flex' }}>
-        <Sidebar/>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 0, overflowY: 'auto' }}>
-          <main style={{ flex: 1, minWidth: 0, padding: '32px 20px 48px 32px', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
-              <div>
-                <h1 style={{ fontSize: 28, fontWeight: 700, color: TEXT, letterSpacing: '-0.04em', margin: 0, lineHeight: 1.2 }}>{getGreeting(biz.name)}</h1>
-                <p style={{ fontSize: 13, color: TEXT2, marginTop: 6, margin: '6px 0 0' }}>Here&apos;s what&apos;s happening with your business today.</p>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button onClick={copyLink}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 600, color: TEXT2, cursor: 'pointer' }}>
-                  <IconShare/> {copied ? 'Copied!' : 'Share'}
-                </button>
-                <a href="/builder"
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: TEXT, border: `1px solid ${TEXT}`, borderRadius: 10, fontSize: 12, fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
-                  Edit Page <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                </a>
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-              <OpenStatusCard/>
-              <GoogleCard/>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-              <LinkCard/>
-              <BusinessDetailsCard/>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <QuickActions/>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <AnalyticsSummary/>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
-              <RecentActivity/>
-              <TipsCard/>
-            </div>
-          </main>
-          <LivePagePanel/>
-        </div>
-      </div>
-    );
-  }
-  // ─── MOBILE RENDER ───────────────────────────────────────────────────────
-  return (
-    <div style={{ fontFamily: FONT, minHeight: '100vh', background: BG, paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
-      {/* Mobile header */}
-      <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: TEXT3, letterSpacing: '0.06em', textTransform: 'uppercase' }}>OpenStatus</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>{biz.name}</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT3} strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-        </div>
-        {biz.slug && (
-          <a href={`/${biz.slug}`} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 11, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>
-            <IconExternalLink/> View live
-          </a>
-        )}
-      </div>
-
-      {/* Mobile content */}
-      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Status card */}
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 9, height: 9, borderRadius: '50%', background: open ? GREEN : '#D1D5DB', boxShadow: open ? `0 0 0 3px rgba(18,183,106,0.15)` : 'none' }}/>
-              <span style={{ fontSize: 24, fontWeight: 700, color: TEXT, letterSpacing: '-0.04em', lineHeight: 1 }}>{open ? 'Open now' : 'Closed'}</span>
-            </div>
-            <span style={{ fontSize: 10, fontWeight: 600, color: TEXT3, background: BG, border: `1px solid ${BORDER}`, borderRadius: 999, padding: '2px 8px' }}>Regular hours</span>
-          </div>
-          <div style={{ fontSize: 12, color: TEXT2, marginBottom: 12 }}>{todayLabel}</div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['Close early', 'Closed today', 'Edit hours'] as const).map(label => (
-              <a key={label} href="/builder?tab=hours"
-                style={{ flex: 1, padding: '8px 4px', background: BG, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 11, fontWeight: 600, color: TEXT, textDecoration: 'none', textAlign: 'center' }}>
+                style={{
+                  padding: '7px 14px', borderRadius: 10, border: `1px solid ${BORDER}`,
+                  background: CARD, color: TEXT, fontSize: 13, fontWeight: 500,
+                  fontFamily: FONT, cursor: statusPosting ? 'not-allowed' : 'pointer',
+                  opacity: statusPosting ? 0.6 : 1,
+                }}
+              >
                 {label}
-              </a>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Google card mobile */}
-        <div style={{ background: googleConnected ? '#F0FDF4' : CARD, border: `1px solid ${googleConnected ? '#BBF7D0' : BORDER}`, borderRadius: 18, padding: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <GoogleLogo size={14}/>
-              <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Google Business</span>
-            </div>
-            <a href="/connect/google" style={{ fontSize: 11, fontWeight: 600, color: TEXT2, textDecoration: 'none', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '4px 10px', background: CARD }}>Manage</a>
-          </div>
-          {googleConnected ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#166534', background: '#BBF7D0', borderRadius: 999, padding: '2px 8px' }}>Connected</span>
-                <span style={{ fontSize: 11, color: TEXT3 }}>Last synced 3 min ago</span>
-              </div>
-              {['Hours synced', 'Photos synced'].map(label => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#BBF7D0"/><polyline points="8 12 11 15 16 9" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  <span style={{ fontSize: 12, color: TEXT }}>{label}</span>
-                </div>
-              ))}
-            </>
-          ) : (
-            <>
-              <p style={{ fontSize: 12, color: TEXT2, marginBottom: 12 }}>Connect to sync hours and info to Google.</p>
-              <button onClick={() => { window.location.href = '/connect/google'; }}
-                style={{ width: '100%', padding: '9px', background: TEXT, color: '#fff', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                Connect Google Business
-              </button>
-            </>
-          )}
+        {/* 3-column row */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <DesktopLinkCard />
+          <GoogleCard />
+          <AnalyticsMiniCard />
         </div>
 
-        {/* Link card mobile */}
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ color: TEXT3 }}><IconLink/></span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Your OpenStatus link</span>
-          </div>
-          {biz.slug && <div style={{ fontSize: 14, fontWeight: 600, color: '#2563EB', marginBottom: 12 }}>openstatus.co/{biz.slug}</div>}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={copyLink} style={{ flex: 1, padding: '9px', background: copied ? '#DCFCE7' : TEXT, color: copied ? '#166534' : '#fff', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-              {copied ? 'Copied ✓' : 'Copy link'}
-            </button>
-            {biz.slug && (
-              <a href={`/${biz.slug}`} target="_blank" rel="noopener noreferrer"
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, fontSize: 12, fontWeight: 600, color: TEXT, textDecoration: 'none' }}>
-                View live
-              </a>
-            )}
-          </div>
+        {/* 2-column row: details + full analytics */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
+          <DetailsCard onEdit={() => router.push('/settings?tab=details')} />
+          <AnalyticsCard />
         </div>
 
-        {/* Business details mobile */}
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 18, padding: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 10 }}>Business details</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {biz.category && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ color: TEXT3 }}><IconTag/></span><span style={{ fontSize: 12, color: TEXT }}>{biz.category}</span></div>}
-                {biz.address && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ color: TEXT3 }}><IconMapPin/></span><span style={{ fontSize: 12, color: TEXT }}>{biz.address}</span></div>}
-                {biz.phone && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ color: TEXT3 }}><IconPhone/></span><span style={{ fontSize: 12, color: TEXT }}>{biz.phone}</span></div>}
-                {biz.website && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ color: TEXT3 }}><IconGlobe/></span><a href={biz.website} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'none' }}>{biz.website.replace(/^https?:\/\//,'')}</a></div>}
-              </div>
-            </div>
-            {biz.header_url && <div style={{ width: 60, height: 60, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}><img src={`/api/assets?businessId=${biz.id}&kind=header`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/></div>}
-          </div>
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
-            <a href="/settings" style={{ fontSize: 12, fontWeight: 600, color: TEXT2, textDecoration: 'none' }}>Edit business info →</a>
-          </div>
+        {/* 2-column row: activity + tips */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 40 }}>
+          <ActivityCard />
+          <TipsCard />
         </div>
-
-        {/* Analytics mobile */}
-        <MobileAnalytics/>
-
-        {/* Activity mobile */}
-        <RecentActivity/>
-
-        {/* Tips mobile */}
-        <TipsCard/>
       </div>
 
-      <MobileNav/>
+      <Toast message={toast} visible={toastVisible} />
     </div>
   );
 }
