@@ -6,7 +6,15 @@ import { supabase } from '@/lib/supabase';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
-type BlockSize = 'half' | 'full';
+// Block sizes, in the 2-column preview grid:
+//   half   → one column, compact row        (too small for a photo)
+//   square → one column, 1:1                (photo-friendly)
+//   full   → both columns, wide rectangle   (photo-friendly)
+//   third  → legacy value from setup; treated as half
+type BlockSize = 'half' | 'square' | 'full' | 'third';
+// Photos only look right in the bigger blocks — a cover image in a compact row
+// is an unreadable sliver, so we gate the control rather than let it look broken.
+function blockAllowsPhoto(size?: BlockSize) { return size !== 'half' && size !== 'third'; }
 type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 interface DayHours { open: string; close: string; closed: boolean; }
 type WeeklyHours = Record<WeekDay, DayHours>;
@@ -894,7 +902,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
             ?<p className={`text-center text-[10px] py-8 ${sx}`}>Toggle blocks to see them here</p>
             :<div className="grid grid-cols-2 gap-1.5">
               {sortedBlocks.map(b=>{
-                const isHalf = b.size==='half' && b.id!=='hours';
+                const isSquare = b.size==='square' && b.id!=='hours';
+                const isHalf = (b.size==='half'||b.size==='square'||b.size==='third') && b.id!=='hours';
                 const cardBg = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.72)';
                 const bdr = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.82)';
 
@@ -1064,8 +1073,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                   }
 
                   // ── Generic fallback (cover photo or simple row) ──
-                  if(b.coverPhoto) return (
-                    <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio:'1/1' }}>
+                  if(b.coverPhoto && blockAllowsPhoto(b.size)) return (
+                    <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio: isSquare ? '1/1' : '16/10' }}>
                       <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
                       <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
                       <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
@@ -1250,6 +1259,26 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
   );
 }
 
+// Cover-photo field that hides itself when the block is too small to show one.
+function CoverPhotoField({ block, onUpdateBlock, label='Cover photo', hint }: {
+  block: OpenStatusBlock;
+  onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
+  label?: string; hint?: string;
+}) {
+  if (!blockAllowsPhoto(block.size)) {
+    return (
+      <div className="rounded-xl border border-[#EBEBEA] bg-[#FAFAF9] px-3.5 py-3">
+        <p className="text-[11px] font-semibold text-[#667085]">{label} needs a bigger block</p>
+        <p className="text-[10px] text-[#98A2B3] mt-0.5">
+          Set the size below to <strong className="text-[#667085] font-semibold">Square</strong> or <strong className="text-[#667085] font-semibold">Large</strong>.
+          {block.coverPhoto ? ' Your photo is saved and comes back when you do.' : ''}
+        </p>
+      </div>
+    );
+  }
+  return <PhotoField label={label} value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint={hint}/>;
+}
+
 // ── Collapsible "More options" disclosure ─────────────────────────────────────
 function MoreOptions({ label='More options', children }: { label?:string; children:React.ReactNode }) {
   const [open,setOpen]=useState(false);
@@ -1387,12 +1416,8 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {block.id==='location' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="location" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField
-                label="Place photo (optional)"
-                value={block.coverPhoto??''}
-                onChange={v=>onUpdateBlock({coverPhoto:v})}
-                hint="A photo of your storefront or location."
-              />
+              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock}
+                label="Place photo" hint="A photo of your storefront or location."/>
               <div>
                 <FieldLabel>Address</FieldLabel>
                 <Input value={block.sub??''} onChange={v=>onUpdateBlock({sub:v})} placeholder="123 Main St, Nashville, TN"/>
@@ -1460,7 +1485,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {block.id==='menu' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="menu" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional banner photo shown at the top of the menu block."/>
+              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock} hint="Optional banner photo shown at the top of the menu block."/>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={()=>onUpdateBlock({menuType:'pdf'})}
@@ -1501,7 +1526,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {block.id==='order' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="order" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo shown behind the block."/>
+              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock} hint="Optional photo shown behind the block."/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1518,7 +1543,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {block.id==='book' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="book" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
+              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock}/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1535,7 +1560,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           {block.id==='socials' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="socials" selected={block.blockStyle??'icons'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint="Optional photo behind the social links block."/>
+              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock} hint="Optional photo behind the social links block."/>
               <div className="space-y-3">
               <FieldLabel>Your social links</FieldLabel>
               {SOCIAL_PLATFORMS.map(({key,label})=>(
@@ -1557,29 +1582,48 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
               {block.id==='website'&&(
                 <>
                   <BlockStylePicker blockId="website" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-                  <PhotoField label="Cover photo" value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})}/>
+                  <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock}/>
                   <div><FieldLabel>Website URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
                 </>
               )}
             </div>
           )}
 
-          {/* Widget size */}
-          {block.id!=='hours' && (
-            <div className="pt-5 border-t border-[#F0F0F0]">
-              <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Size</p>
-              <div className="flex gap-2">
-                <button onClick={()=>onUpdateBlock({size:'full'})}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${(!block.size||block.size==='full')?'border-[#0A0A0A] bg-[#EEEEEC] text-[#0A0A0A]':'border-[#DEDEDC] text-[#858585] hover:border-[#0A0A0A]'}`}>
-                  <LucideLayoutList size={13} color="currentColor"/> Full
-                </button>
-                <button onClick={()=>onUpdateBlock({size:'half'})}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium transition-all ${block.size==='half'?'border-[#0A0A0A] bg-[#EEEEEC] text-[#0A0A0A]':'border-[#DEDEDC] text-[#858585] hover:border-[#0A0A0A]'}`}>
-                  <LucideLayoutGrid size={13} color="currentColor"/> Half
-                </button>
+          {/* Widget size — shape thumbnails, photo-capable sizes flagged */}
+          {block.id!=='hours' && (()=>{
+            const cur: BlockSize = (block.size==='third'?'half':block.size) ?? 'full';
+            const SIZES: { key:BlockSize; label:string; ratio:string; span:number }[] = [
+              { key:'half',   label:'Small',  ratio:'2/1',  span:1 },
+              { key:'square', label:'Square', ratio:'1/1',  span:1 },
+              { key:'full',   label:'Large',  ratio:'16/10',span:2 },
+            ];
+            return (
+              <div className="pt-5 border-t border-[#F0F0F0]">
+                <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Size</p>
+                <div className="flex items-end gap-2.5">
+                  {SIZES.map(sz=>{
+                    const on = cur===sz.key;
+                    return (
+                      <button key={sz.key} onClick={()=>onUpdateBlock({size:sz.key})}
+                        className="flex flex-col items-center gap-1.5 group"
+                        style={{width:sz.span===2?86:44}}>
+                        <span className="w-full rounded-lg border-2 transition-all group-hover:scale-105 flex items-end justify-start p-1"
+                          style={{aspectRatio:sz.ratio,borderColor:on?'#0A0A0A':'#DEDEDC',background:on?'#EEEEEC':'#FAFAF9'}}>
+                          <span className="block w-1/2 h-[3px] rounded-full" style={{background:on?'#0A0A0A':'#D4D4D4'}}/>
+                        </span>
+                        <span className={`text-[10px] font-semibold ${on?'text-[#0A0A0A]':'text-[#858585]'}`}>{sz.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2.5 text-[10px] text-[#98A2B3]">
+                  {blockAllowsPhoto(cur)
+                    ? 'Square and Large can hold a cover photo.'
+                    : 'Small is text only — switch to Square or Large to add a photo.'}
+                </p>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
         </div>
       </div>

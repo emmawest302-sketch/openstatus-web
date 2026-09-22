@@ -6,7 +6,7 @@ export type OpenStatusBlock = {
   on: boolean;
   tone: string;
   url?: string;
-  size?: 'half' | 'full' | 'third';
+  size?: 'half' | 'square' | 'full' | 'third';
   color?: string;
   menuType?: 'url' | 'photo' | 'pdf';
   menuFile?: string;

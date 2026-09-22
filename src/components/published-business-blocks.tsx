@@ -25,7 +25,7 @@ export default function PublishedBusinessBlocks({
         // Determine column span
         const span =
           block.size === 'third' ? 2
-          : block.size === 'half' ? 3
+          : block.size === 'half' || block.size === 'square' ? 3
           : 6; // 'full' or default
 
         // Special renderers

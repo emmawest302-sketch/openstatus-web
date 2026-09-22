@@ -58,7 +58,10 @@ function BlockIcon({ id, color }: { id: string; color: string }) {
 export default function PublicActionBlock({ block, businessId }: Props) {
   const href = safeUrl(block.url);
   const [hovered, setHovered] = useState(false);
-  const hasCoverPhoto = !!block.coverPhoto;
+  // Photos only render in the bigger sizes — mirrors the builder preview, so a
+  // block the owner set to Small never shows a sliver of a photo on the live page.
+  const photoOk = block.size !== 'half' && block.size !== 'third';
+  const hasCoverPhoto = !!block.coverPhoto && photoOk;
 
   // ── Photo card (square tile with background image) ──────────────
   if (hasCoverPhoto) {
@@ -66,7 +69,7 @@ export default function PublicActionBlock({ block, businessId }: Props) {
       <div
         style={{
           position: 'relative',
-          aspectRatio: '1 / 1',
+          aspectRatio: block.size === 'square' ? '1 / 1' : '16 / 10',
           borderRadius: 18,
           overflow: 'hidden',
           boxShadow: hovered
