@@ -2117,12 +2117,14 @@ function BuilderSparkline({data,color}:{data:number[];color:string}){
  * every editor in a 52vh panel that hid the page you were editing. These sit low,
  * only as tall as their content, so the phone canvas stays visible above them.
  */
-function MobileSheet({ open, title, onClose, children, maxVh = 62 }: {
+function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   maxVh?: number;
+  /** false = no scrim, so you can still see the widget you're editing change. */
+  dim?: boolean;
 }) {
   return (
     <>
@@ -2130,8 +2132,7 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62 }: {
         onClick={onClose}
         style={{
           position:'fixed', inset:0, zIndex:44,
-          background:'rgba(10,10,10,0.28)',
-          backdropFilter:'blur(2px)',
+          background: dim ? 'rgba(10,10,10,0.22)' : 'transparent',
           opacity: open ? 1 : 0,
           pointerEvents: open ? 'auto' : 'none',
           transition:'opacity .22s ease',
@@ -4780,7 +4781,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         style={{
           display: isMobile && isEditSubTab ? 'block' : 'none',
           top:'calc(52px + env(safe-area-inset-top))',
-          bottom:'calc(112px + env(safe-area-inset-bottom))',
+          // The canvas gives way when a sheet opens, so the widget you're editing
+          // stays on screen above it instead of hiding behind it.
+          bottom: mSheet
+            ? 'calc(48vh + 56px + env(safe-area-inset-bottom))'
+            : 'calc(112px + env(safe-area-inset-bottom))',
+          transition:'bottom .3s cubic-bezier(.32,.72,0,1)',
           backgroundColor:'#f5f3ff',
           backgroundImage:'linear-gradient(rgba(139,92,246,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.12) 1px,transparent 1px)',
           backgroundSize:'24px 24px',
@@ -4838,7 +4844,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {/* ══ SMALL SHEETS ══ one per toolbar button, plus the per-widget editor */}
 
-      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={68}>
+      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={46} dim={false}>
         {openBlock&&(
           <BlockEditPanel
             block={openBlock} config={config}
@@ -4849,7 +4855,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={64}>
+      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={56}>
         <div className="flex gap-2 pb-3 overflow-x-auto" style={{scrollbarWidth:'none'}}>
           {['All','Essential','Food & Beverage','Engagement','Contact','Social','More'].map(cat=>(
             <button key={cat} onClick={()=>setMobileBlockCat(cat)}
@@ -4894,7 +4900,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={56}>
+      <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={46} dim={false}>
         <p className="text-[11.5px] text-[#667085] mb-3">Changes every bit of text on your page.</p>
         <div className="grid grid-cols-2 gap-2.5">
           {FONT_OPTIONS.map(opt=>{
@@ -4910,7 +4916,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='color'} title="Business name colour" onClose={()=>setMSheet(null)} maxVh={52}>
+      <MobileSheet open={isMobile&&mSheet==='color'} title="Business name colour" onClose={()=>setMSheet(null)} maxVh={44} dim={false}>
         <p className="text-[11.5px] text-[#667085] mb-3">Pick a colour that reads clearly on your background.</p>
         <NameColorPicker
           value={config.nameColor}
@@ -4919,7 +4925,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         />
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={66}>
+      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={50} dim={false}>
         <p className="text-[11.5px] text-[#667085] mb-3">Your widgets lighten or darken automatically to stay readable.</p>
         <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
       </MobileSheet>
