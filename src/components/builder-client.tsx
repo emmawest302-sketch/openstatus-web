@@ -812,8 +812,9 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
             {reviewPct && (
               <div className="flex items-center gap-1">
                 <LucideStar size={9} color="#f59e0b" filled/>
-                <span className="text-[9px] font-semibold text-[#f59e0b]">{reviewPct}%</span>
-                {locBlock?.reviewCount&&<span className={`text-[8px] ${sx}`}> · {locBlock.reviewCount.toLocaleString()}</span>}
+                <span className="text-[9px] font-semibold text-[#f59e0b]">{locBlock?.reviewStars}</span>
+                <span className="text-[8px] font-medium text-[#f59e0b]/70">({reviewPct}%)</span>
+                {!!locBlock?.reviewCount&&locBlock.reviewCount>0&&<span className={`text-[8px] ${sx}`}>· {locBlock.reviewCount.toLocaleString()}</span>}
               </div>
             )}
             {reviewPct && <span className={`text-[8px] ${sx}`}>·</span>}
@@ -1134,8 +1135,9 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
           {reviewPct && (
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4, marginTop:6 }}>
               <LucideStar size={11} color="#f59e0b" filled/>
-              <span style={{ fontSize:11, fontWeight:700, color:'#f59e0b' }}>{reviewPct}%</span>
-              {locBlock?.reviewCount && <span style={{ fontSize:10, color:sx }}> · {locBlock.reviewCount.toLocaleString()} reviews</span>}
+              <span style={{ fontSize:11, fontWeight:700, color:'#f59e0b' }}>{locBlock?.reviewStars}</span>
+              <span style={{ fontSize:10, fontWeight:600, color:'#f59e0b', opacity:0.7 }}>({reviewPct}%)</span>
+              {!!locBlock?.reviewCount && locBlock.reviewCount>0 && <span style={{ fontSize:10, color:sx }}> · {locBlock.reviewCount.toLocaleString()} reviews</span>}
             </div>
           )}
         </div>
@@ -1188,6 +1190,94 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
   );
 }
 
+// ── Collapsible "More options" disclosure ─────────────────────────────────────
+function MoreOptions({ label='More options', children }: { label?:string; children:React.ReactNode }) {
+  const [open,setOpen]=useState(false);
+  return (
+    <div className="rounded-xl border border-[#EBEBEA] overflow-hidden">
+      <button type="button" onClick={()=>setOpen(v=>!v)}
+        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[#FAFAF9] hover:bg-[#F4F4F2] transition-colors">
+        <span className="text-[12px] font-semibold text-[#667085]">{label}</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          style={{transform:open?'rotate(180deg)':'none',transition:'transform 0.18s ease'}}><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      {open&&<div className="px-3.5 py-4 space-y-4 bg-white">{children}</div>}
+    </div>
+  );
+}
+
+// ── Reviews & rating (Business tab) ───────────────────────────────────────────
+// The star rating renders in the PAGE HEADER, under the business name — not on
+// the location card — so it is edited here rather than inside the location block.
+function ReviewsCard({ block,onUpdateBlock }: {
+  block:OpenStatusBlock|undefined;
+  onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
+}) {
+  if(!block) return null;
+  const stars = block.reviewStars ?? 0;
+  const hasRating = stars>0;
+  return (
+    <div className="mb-5 rounded-2xl border border-[#EBEBEA] bg-white p-4">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[12px] font-semibold text-[#111]">Reviews &amp; rating</p>
+        {hasRating&&(
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FEF3C7] text-[#B45309] text-[10px] font-bold">
+            <LucideStar size={9} color="#B45309" filled/>
+            {stars} · {starsToPercent(stars)}%
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-[#98A2B3] mb-3.5">Shows in your page header, under your business name.</p>
+
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0"><IconGoogle size={26}/></div>
+          <div className="flex-1 flex gap-2 min-w-0">
+            <Input value={block.googleUrl??''} onChange={v=>onUpdateBlock({googleUrl:v})} placeholder="Paste your Google Business profile URL…"/>
+            {block.googleUrl&&(
+              <button
+                onClick={async()=>{
+                  onUpdateBlock({_googleFetching:true,_googleError:''});
+                  try{
+                    const r=await fetch(`/api/google/rating?url=${encodeURIComponent(block.googleUrl??'')}`);
+                    const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
+                    if(!r.ok||d.error)throw new Error(d.error??'Failed');
+                    onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
+                  }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
+                }}
+                className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-bold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap disabled:opacity-50"
+                disabled={block._googleFetching}
+              >{block._googleFetching?'…':'Fetch'}</button>
+            )}
+          </div>
+        </div>
+        {block._googleError&&<p className="text-[11px] text-red-500">{block._googleError}</p>}
+      </div>
+
+      <MoreOptions label="Other review sites & manual override">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0"><IconYelp size={26}/></div>
+          <Input value={block.yelpUrl??''} onChange={v=>onUpdateBlock({yelpUrl:v})} placeholder="Paste your Yelp listing URL…"/>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0"><IconTripAdvisor size={26}/></div>
+          <Input value={block.tripAdvisorUrl??''} onChange={v=>onUpdateBlock({tripAdvisorUrl:v})} placeholder="Paste your TripAdvisor listing URL…"/>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <FieldLabel>Star rating (0–5)</FieldLabel>
+            <Input type="number" value={block.reviewStars?.toString()??''} onChange={v=>onUpdateBlock({reviewStars:parseFloat(v)||undefined})} placeholder="e.g. 4.7"/>
+          </div>
+          <div>
+            <FieldLabel>Review count</FieldLabel>
+            <Input type="number" value={block.reviewCount?.toString()??''} onChange={v=>onUpdateBlock({reviewCount:parseInt(v)||undefined})} placeholder="e.g. 312"/>
+          </div>
+        </div>
+      </MoreOptions>
+    </div>
+  );
+}
+
 // ── Block edit panel (inline right of blocks, no modal) ───────────────────────
 function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
@@ -1224,7 +1314,10 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
           <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Content</p>
           <div className="space-y-3">
             <div><FieldLabel>Title</FieldLabel><Input value={block.title} onChange={v=>onUpdateBlock({title:v})}/></div>
-            <div><FieldLabel>Subtitle</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
+            {/* location's subtitle IS its address — edited once, below, not twice */}
+            {block.id!=='location'&&(
+              <div><FieldLabel>Subtitle</FieldLabel><Input value={block.sub} onChange={v=>onUpdateBlock({sub:v})}/></div>
+            )}
           </div>
         </div>
 
@@ -1245,66 +1338,16 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                 <Input value={block.sub??''} onChange={v=>onUpdateBlock({sub:v})} placeholder="123 Main St, Nashville, TN"/>
                 <p className="mt-1 text-[10px] text-black/35">Visitors tap the button and it opens Maps on their phone.</p>
               </div>
-              <div>
-                <FieldLabel>Apple Maps URL</FieldLabel>
-                <Input value={block.appleMapsUrl??''} onChange={v=>onUpdateBlock({appleMapsUrl:v})} placeholder="Paste from Apple Maps → Share → Copy link"/>
-              </div>
-              {/* Review platforms */}
-              <div>
-                <FieldLabel>Review profiles</FieldLabel>
-                <p className="text-xs text-[#858585] mb-3">Paste your listings — we pull your rating automatically</p>
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0"><IconYelp size={28}/></div>
-                    <Input value={block.yelpUrl??''} onChange={v=>onUpdateBlock({yelpUrl:v})} placeholder="Paste your Yelp listing URL…"/>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0"><IconGoogle size={28}/></div>
-                    <div className="flex-1 flex gap-2">
-                      <Input value={block.googleUrl??''} onChange={v=>onUpdateBlock({googleUrl:v})} placeholder="Paste your Google Business profile URL…"/>
-                      {block.googleUrl&&(
-                        <button
-                          onClick={async()=>{
-                            onUpdateBlock({_googleFetching:true,_googleError:''});
-                            try{
-                              const r=await fetch(`/api/google/rating?url=${encodeURIComponent(block.googleUrl??'')}`); 
-                              const d=await r.json() as {rating?:number;reviewCount?:number;name?:string;error?:string};
-                              if(!r.ok||d.error)throw new Error(d.error??'Failed');
-                              onUpdateBlock({reviewStars:d.rating,reviewCount:d.reviewCount,_googleFetching:false,_googleError:''});
-                            }catch(e){onUpdateBlock({_googleFetching:false,_googleError:e instanceof Error?e.message:'Failed to fetch'});}
-                          }}
-                          className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[11px] font-bold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap disabled:opacity-50"
-                          disabled={block._googleFetching}
-                        >{block._googleFetching?'…':'Fetch'}</button>
-                      )}
-                    </div>
-                  </div>
-                  {block._googleError&&<p className="text-[11px] text-red-500 mt-1">{block._googleError}</p>}
-                  <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0"><IconTripAdvisor size={28}/></div>
-                    <Input value={block.tripAdvisorUrl??''} onChange={v=>onUpdateBlock({tripAdvisorUrl:v})} placeholder="Paste your TripAdvisor listing URL…"/>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              <MoreOptions>
                 <div>
-                  <FieldLabel>Combined star rating (0–5)</FieldLabel>
-                  <Input type="number" value={block.reviewStars?.toString()??''} onChange={v=>onUpdateBlock({reviewStars:parseFloat(v)||undefined})} placeholder="e.g. 4.7"/>
-                  {block.reviewStars&&block.reviewStars>0&&(
-                    <p className="text-[11px] text-[#6B6B6B] mt-1.5 flex items-center gap-1">
-                      <LucideStar size={10} color="#f59e0b" filled/>
-                      {block.reviewStars} stars → <strong>{starsToPercent(block.reviewStars)}% positive</strong>
-                    </p>
-                  )}
+                  <FieldLabel>Apple Maps URL</FieldLabel>
+                  <Input value={block.appleMapsUrl??''} onChange={v=>onUpdateBlock({appleMapsUrl:v})} placeholder="Paste from Apple Maps → Share → Copy link"/>
+                  <p className="mt-1 text-[10px] text-black/35">Optional. Without it, iPhone visitors open Google Maps.</p>
                 </div>
-                <div>
-                  <FieldLabel>Total review count</FieldLabel>
-                  <Input type="number" value={block.reviewCount?.toString()??''} onChange={v=>onUpdateBlock({reviewCount:parseInt(v)||undefined})} placeholder="e.g. 312"/>
-                </div>
-              </div>
-              <div className="rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3">
-                <p className="text-[11px] text-[#166534] font-medium">The star rating and like/dislike buttons appear in the header of your page, under your business name — alongside your OpenStatus community score.</p>
-              </div>
+              </MoreOptions>
+              <p className="text-[11px] text-[#98A2B3] leading-relaxed">
+                Reviews and your star rating moved to the <strong className="text-[#667085] font-semibold">Business</strong> tab — they show in your page header, not on this card.
+              </p>
             </div>
           )}
 
@@ -2079,11 +2122,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <button key={key} onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
                 sidebarTab===key
-                  ?'bg-[#111111] text-white'
+                  ?'bg-[#111111] text-[#4ADE80] font-bold'
                   :'text-[#667085] hover:bg-[#F4F6FA] hover:text-[#111111]'
               }`}
-              style={{color:sidebarTab===key?'#ffffff':undefined}}>
-              <span className={sidebarTab===key?'text-white':'text-[#98A2B3]'}>{icon}</span>
+              style={{color:sidebarTab===key?'#4ADE80':undefined}}>
+              <span style={{color:sidebarTab===key?'#4ADE80':'#98A2B3'}}>{icon}</span>
               {label}
               {badge}
             </button>
@@ -2662,6 +2705,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </a>
                   )}
                 </div>
+                {/* ── Reviews & rating ── */}
+                <ReviewsCard block={allBlocks.find(b=>b.id==='location')} onUpdateBlock={u=>updateBlock('location',u)}/>
                 {/* ── Recent Activity ── */}
                 <div className="mb-5">
                   <div className="flex items-center justify-between mb-3">
@@ -3096,7 +3141,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           openstatus.co/{business.slug}
                         </code>
                         <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                          className="px-4 py-2 rounded-full bg-[#111111] text-white text-[12px] font-bold hover:bg-[#333333] transition-colors whitespace-nowrap">
+                          className="px-4 py-2 rounded-full bg-[#111111] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap">
                           Open ↗
                         </a>
                       </div>
@@ -3454,6 +3499,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 Edit hours →
               </button>
             </div>
+
+            {/* Reviews & rating */}
+            <ReviewsCard block={allBlocks.find(b=>b.id==='location')} onUpdateBlock={u=>updateBlock('location',u)}/>
 
             {/* Social Profiles */}
             <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Social Profiles</p>
