@@ -102,13 +102,13 @@ const BG_DESIGNS: { label:string; css:string; anim?:'drift'|'fall'|'rise'; speed
   { label:'Snowfall', anim:'fall', speed:26,
     css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Ccircle cx='15' cy='20' r='2.2' fill='white' opacity='.9'/%3E%3Ccircle cx='62' cy='44' r='1.7' fill='white' opacity='.75'/%3E%3Ccircle cx='38' cy='72' r='2' fill='white' opacity='.85'/%3E%3Ccircle cx='80' cy='12' r='1.4' fill='white' opacity='.7'/%3E%3C/svg%3E\") 0 0/90px 90px,linear-gradient(#3F5E8C,#3F5E8C)" },
   { label:'Coffee',   anim:'drift', speed:60,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ctext x='8' y='34' font-size='26'%3E%E2%98%95%3C/text%3E%3Ctext x='46' y='70' font-size='20' opacity='.75'%3E%E2%98%95%3C/text%3E%3C/svg%3E\") 0 0/80px 80px,linear-gradient(%23F5EADA,%23F5EADA)" },
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ctext x='8' y='34' font-size='26'%3E%E2%98%95%3C/text%3E%3Ctext x='46' y='70' font-size='20' opacity='.75'%3E%E2%98%95%3C/text%3E%3C/svg%3E\") 0 0/80px 80px,linear-gradient(#F5EADA,#F5EADA)" },
   { label:'Sparkle',  anim:'rise', speed:34,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70'%3E%3Ctext x='6' y='26' font-size='16' opacity='.85'%3E%E2%9C%A6%3C/text%3E%3Ctext x='44' y='58' font-size='12' opacity='.6'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E\") 0 0/70px 70px,linear-gradient(%232E1065,%232E1065)" },
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70'%3E%3Ctext x='6' y='26' font-size='16' opacity='.85'%3E%E2%9C%A6%3C/text%3E%3Ctext x='44' y='58' font-size='12' opacity='.6'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E\") 0 0/70px 70px,linear-gradient(#2E1065,#2E1065)" },
   { label:'Hearts',   anim:'rise', speed:40,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='76' height='76'%3E%3Ctext x='8' y='30' font-size='20' opacity='.8'%3E%F0%9F%A4%8D%3C/text%3E%3Ctext x='46' y='64' font-size='15' opacity='.6'%3E%F0%9F%A4%8D%3C/text%3E%3C/svg%3E\") 0 0/76px 76px,linear-gradient(%23FFE9EF,%23FFE9EF)" },
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='76' height='76'%3E%3Ctext x='8' y='30' font-size='20' opacity='.8'%3E%F0%9F%A4%8D%3C/text%3E%3Ctext x='46' y='64' font-size='15' opacity='.6'%3E%F0%9F%A4%8D%3C/text%3E%3C/svg%3E\") 0 0/76px 76px,linear-gradient(#FFE9EF,#FFE9EF)" },
   { label:'Bubbles',  anim:'rise', speed:30,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Ccircle cx='18' cy='24' r='7' fill='none' stroke='white' stroke-opacity='.45' stroke-width='1.5'/%3E%3Ccircle cx='58' cy='56' r='4.5' fill='none' stroke='white' stroke-opacity='.4' stroke-width='1.3'/%3E%3Ccircle cx='70' cy='18' r='3' fill='none' stroke='white' stroke-opacity='.35' stroke-width='1.2'/%3E%3C/svg%3E\") 0 0/84px 84px,linear-gradient(%230E7490,%230E7490)" },
+    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Ccircle cx='18' cy='24' r='7' fill='none' stroke='white' stroke-opacity='.45' stroke-width='1.5'/%3E%3Ccircle cx='58' cy='56' r='4.5' fill='none' stroke='white' stroke-opacity='.4' stroke-width='1.3'/%3E%3Ccircle cx='70' cy='18' r='3' fill='none' stroke='white' stroke-opacity='.35' stroke-width='1.2'/%3E%3C/svg%3E\") 0 0/84px 84px,linear-gradient(#0E7490,#0E7490)" },
 ];
 
 // config.bg may be a gradient/pattern. Anywhere we need a SOLID colour (e.g. to
@@ -748,14 +748,6 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
         </div>
       )}
 
-      {/* raw value */}
-      <div className="flex items-center gap-2.5 mt-3">
-        <div className="w-8 h-8 rounded-lg border flex-shrink-0" style={{background:value,borderColor:border}}/>
-        <input value={value} onChange={e=>onChange(e.target.value)}
-          placeholder="#ffffff or any CSS background"
-          className="flex-1 min-w-0 bg-white border rounded-xl px-3 py-2 text-[12px] font-mono placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#111] transition-colors"
-          style={{borderColor:border}}/>
-      </div>
     </div>
   );
 }
