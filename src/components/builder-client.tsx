@@ -2777,10 +2777,210 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                     {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
                   </div>
+                </div>
+                  </>
+                )}
+              </div>
+            )}
 
+            {/* ══ BUSINESS ══ */}
+            {sidebarTab==='business'&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
+                <div className="mb-7">
+                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Business</h2>
+                  <p className="text-[#667085] text-[13px] mt-1">Your page, your Google connection, and how you&apos;re doing.</p>
+                </div>
+
+                {/* ── Analytics snapshot ── */}
+                {analyticsData&&(
+                  <div className="mb-7">
+                    <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Last 30 days</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
+                        {label:'Directions',value:analyticsData.metrics.directions,color:'#2563EB',data:(analyticsData.trend??[]).map(t=>t.clicks)},
+                        {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',data:(analyticsData.trend??[]).map(t=>t.views)},
+                        {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
+                      ].map(({label,value,color,data})=>(
+                        <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-3.5">
+                          <div className="flex items-start justify-between mb-1.5">
+                            <p className="text-[11px] font-medium text-[#98A2B3]">{label}</p>
+                            <BuilderSparkline data={data} color={color}/>
+                          </div>
+                          <p className="text-[22px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {analyticsLoading&&(
+                  <div className="mb-7 rounded-2xl border border-[#EBEBEA] bg-white p-5 text-center">
+                    <p className="text-[13px] text-[#98A2B3]">Loading analytics…</p>
+                  </div>
+                )}
+
+                {/* ── Live page link ── */}
+                {localBusiness?.slug&&(
+                  <div className="mb-5 flex items-center gap-3 p-4 rounded-2xl border border-[#DEDEDC] bg-[#F9FAFB]">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-0.5">Your page</p>
+                      <p className="text-[13px] font-medium text-[#111] truncate">forothers.co/{localBusiness.slug}</p>
+                    </div>
+                    <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      View
+                    </a>
+                  </div>
+                )}
+
+                {/* ── Google connection status ── */}
+                <div className={`mb-5 p-4 rounded-2xl border ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E8EBF0] bg-[#F9FAFB]'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white border border-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                      <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-medium text-[#111]">Google Business</p>
+                      <p className="text-[11px] text-[#98A2B3]">{googleConnected?'Syncing hours, photos & reviews':'Sync your hours, photos & reviews'}</p>
+                    </div>
+                    {googleConnected&&(
+                      <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#BBF7D0] text-[#166534] text-[10px] font-semibold">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Connected
+                      </span>
+                    )}
+                  </div>
+                  {!googleConnected&&(
+                    <a href="/connect/google"
+                      className="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                      Connect Google Business
+                    </a>
+                  )}
+                </div>
+
+                {/* ── Reviews & rating ── */}
+                <ReviewsCard block={allBlocks.find(b=>b.id==='location')} onUpdateBlock={u=>updateBlock('location',u)}/>
+
+                {/* ── Tips for success ── */}
+                <div className="mb-5">
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Tips for success</p>
+                  <div className="space-y-2">
+                    {([
+                      {tab:'hours' as SidebarTab, bg:'#ECFDF3', fg:'#16A34A', text:"Set your hours so customers always know when you're open"},
+                      {tab:'style' as SidebarTab, bg:'#F5F3FF', fg:'#7C3AED', text:'Add a cover photo and pick a background that feels like you'},
+                      {tab:'design' as SidebarTab, bg:'#EFF6FF', fg:'#2563EB', text:'Turn on the blocks your customers actually need'},
+                    ]).map(({tab,bg,fg,text})=>(
+                      <button key={tab} onClick={()=>setSidebarTab(tab)}
+                        className="flex items-center gap-3 w-full p-3 rounded-2xl border border-[#E8EBF0] hover:border-[#111] hover:bg-[#F9FAFB] transition-all text-left">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{background:bg,color:fg}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <p className="text-[12px] text-[#667085] leading-relaxed flex-1">{text}</p>
+                        <LucideChevronRight size={14} color="#C0C0C0"/>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* ══ LINKS ══ */}
+            {sidebarTab==='links'&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
+                <div className="mb-7">
+                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Your link</h2>
+                  <p className="text-[#667085] text-[13px] mt-1">Share this anywhere — it always shows your live status.</p>
+                </div>
+                {localBusiness?.slug
+                  ?(
+                    <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#DEDEDC] bg-[#F9FAFB]">
+                      <p className="flex-1 min-w-0 text-[13px] font-medium text-[#111] truncate">forothers.co/{localBusiness.slug}</p>
+                      <button
+                        onClick={()=>{ void navigator.clipboard?.writeText(`https://forothers.co/${localBusiness.slug}`); }}
+                        className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
+                        Copy
+                      </button>
+                      <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
+                        className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
+                        View
+                      </a>
+                    </div>
+                  )
+                  :<p className="text-[13px] text-[#667085]">No link set yet.</p>
+                }
+              </div>
+            )}
+
+            {/* ══ STYLE ══ */}
+            {sidebarTab==='style'&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px] space-y-8">
+                <div>
+                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Style</h2>
+                  <p className="text-[#667085] text-[13px] mt-1">Background, cover photo, and fonts.</p>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Page background</p>
+                  <PageBackgroundPicker value={config.bg} onChange={v=>setConfig(pc=>({...pc,bg:v}))}/>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Cover photo</p>
+                  {config.bgImage&&(
+                    <CoverPhotoCrop
+                      src={config.bgImage}
+                      position={config.bgImagePosition}
+                      onChange={pos=>setConfig(c=>({...c,bgImagePosition:pos}))}
+                      onRemove={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
+                    />
+                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
+                      <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                        const file=e.target.files?.[0];if(!file)return;
+                        setBgUploading(true);setBgUploadError('');
+                        try{
+                          const ref=await uploadAsset(file,'header');
+                          const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
+                          setConfig(c=>({...c,bgImage:bgUrl}));
+                        }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+                        finally{setBgUploading(false);e.target.value='';}
+                      }}/>
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-medium text-[#111111] hover:bg-[#E8EBF0] transition-colors">
+                        <LucideImage size={13} color="#667085"/>
+                        {bgUploading?'Uploading…':'Upload photo'}
+                      </span>
+                    </label>
+                    {googlePhotos.map((url,i)=>(
+                      <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+                        className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#111111]':'border-[#E8EBF0] hover:border-[#111111]'}`}>
+                        <img src={url} className="w-full h-full object-cover" alt=""/>
+                      </button>
+                    ))}
+                  </div>
+                  {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Business name font</p>
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                    {FONT_OPTIONS.map(opt=>{
+                      const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
+                      return (
+                        <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
+                          className={`flex flex-col items-start px-3 py-2.5 rounded-2xl border transition-all text-left ${isActive?'border-[#111] bg-[#111]':'border-[#E8EBF0] bg-[#F9FAFB] hover:border-[#111]'}`}>
+                          <span className={`text-[16px] leading-tight ${isActive?'text-white':'text-[#111]'}`} style={{fontFamily:opt.family}}>Aa</span>
+                          <span className={`text-[10px] font-medium mt-0.5 ${isActive?'text-white/70':'text-[#98A2B3]'}`}>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ══ SETTINGS (incl. integrations + links) ══ */}
             {(sidebarTab==='analytics'||sidebarTab==='settings'||sidebarTab==='integrations')&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[600px] space-y-8">
