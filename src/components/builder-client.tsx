@@ -2589,20 +2589,24 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {/* ── Analytics snapshot ── */}
                 {analyticsData&&(
                   <div className="mb-7">
-                    <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider mb-3">Last 30 days</p>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider">Last 30 days</p>
+                      <span className="text-[10px] font-semibold text-[#98A2B3] bg-[#F4F6FA] px-2 py-0.5 rounded-full">Live data</span>
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
-                      {[
-                        {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
-                        {label:'Directions',value:analyticsData.metrics.directions,color:'#2563EB',data:(analyticsData.trend??[]).map(t=>t.clicks)},
-                        {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',data:(analyticsData.trend??[]).map((_,i)=>i%3===0?analyticsData.metrics.menu:0)},
-                        {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
-                      ].map(({label,value,color,data})=>(
-                        <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <p className="text-[11px] font-semibold text-[#98A2B3]">{label}</p>
+                      {([
+                        {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',bg:'#ECFDF5',textColor:'#065F46',icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,data:(analyticsData.trend??[]).map(t=>t.views)},
+                        {label:'Directions',value:analyticsData.metrics.directions,color:'#2563EB',bg:'#EFF6FF',textColor:'#1E40AF',icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>,data:(analyticsData.trend??[]).map(t=>t.clicks)},
+                        {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',bg:'#F5F3FF',textColor:'#5B21B6',icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,data:(analyticsData.trend??[]).map((_,i)=>i%3===0?analyticsData.metrics.menu:0)},
+                        {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',bg:'#FFFBEB',textColor:'#92400E',icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>,data:(analyticsData.trend??[]).map(t=>t.clicks)},
+                      ] as {label:string;value:number;color:string;bg:string;textColor:string;icon:React.ReactNode;data:number[]}[]).map(({label,value,color,bg,textColor,icon,data})=>(
+                        <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-4 hover:shadow-sm transition-shadow">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:bg,color:color}}>{icon}</div>
                             <BuilderSparkline data={data} color={color}/>
                           </div>
-                          <p className="text-[24px] font-bold text-[#0A0A0A] leading-none">{value.toLocaleString()}</p>
+                          <p className="text-[26px] font-black text-[#0A0A0A] leading-none mb-1">{value.toLocaleString()}</p>
+                          <p className="text-[11px] font-semibold" style={{color:textColor}}>{label}</p>
                         </div>
                       ))}
                     </div>
@@ -2621,7 +2625,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <p className="text-[13px] font-semibold text-[#111] truncate">forothers.co/{localBusiness.slug}</p>
                     </div>
                     <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       View
                     </a>
@@ -2640,7 +2644,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </div>
                     </div>
                     <a href="/connect/google"
-                      className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292929] transition-colors">
+                      className="inline-flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors">
                       Connect Google
                     </a>
                   </div>
