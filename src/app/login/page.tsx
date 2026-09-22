@@ -42,7 +42,7 @@ export default function LoginPage() {
         .select('id')
         .eq('user_id', session.user.id)
         .maybeSingle();
-      router.replace(biz ? '/builder' : '/setup');
+      router.replace(biz ? '/dashboard' : '/setup');
     })();
   }, [router]);
 
@@ -70,7 +70,7 @@ export default function LoginPage() {
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
-      router.push('/builder');
+      router.push('/dashboard');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Login failed');
     } finally {

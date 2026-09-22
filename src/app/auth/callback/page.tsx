@@ -43,7 +43,7 @@ export default function AuthCallbackPage() {
         .eq('user_id', session.user.id)
         .maybeSingle();
 
-      router.replace(biz ? '/builder' : '/setup');
+      router.replace(biz ? '/dashboard' : '/setup');
     })();
   }, [router]);
 
