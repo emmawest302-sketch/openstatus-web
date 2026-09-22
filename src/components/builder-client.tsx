@@ -2570,6 +2570,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
     { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg> },
 
+    { key:'analytics',label:'Analytics',icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
     { key:'settings', label:'Settings', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
   ];
 
@@ -3613,8 +3614,145 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
 
+            {/* ══ ANALYTICS ══ */}
+            {sidebarTab==='analytics'&&(
+              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[760px] space-y-7">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Analytics</h2>
+                    <p className="text-[#667085] text-[13px] mt-1">What people actually do when they land on your page.</p>
+                  </div>
+                  <div className="flex gap-1 p-1 rounded-full bg-[#F4F6FA]">
+                    {[7,30,90].map(d=>(
+                      <button key={d} onClick={()=>setAnalyticsDays(d)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${analyticsDays===d?'bg-white text-[#6D28D9] shadow-sm':'text-[#98A2B3] hover:text-[#111]'}`}>
+                        {d} days
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {analyticsLoading&&(
+                  <div className="rounded-2xl border border-[#EBEBEA] bg-white p-10 text-center">
+                    <p className="text-[13px] text-[#98A2B3]">Loading…</p>
+                  </div>
+                )}
+
+                {!analyticsLoading&&!analyticsData&&(
+                  <div className="rounded-2xl border border-[#EBEBEA] bg-white p-10 text-center">
+                    <p className="text-[13px] text-[#98A2B3]">No data yet. Share your link and check back.</p>
+                  </div>
+                )}
+
+                {!analyticsLoading&&analyticsData&&(()=>{
+                  const m = analyticsData.metrics;
+                  const trend = analyticsData.trend ?? [];
+                  const maxV = Math.max(1, ...trend.map(t=>t.views));
+                  const topMax = analyticsData.topActions[0]?.count || 1;
+                  const actionRate = m.views ? Math.round((m.clicks/m.views)*100) : 0;
+                  const TILES = [
+                    {label:'Page views',      value:m.views,          color:'#12B76A'},
+                    {label:'Unique visitors', value:m.uniqueVisitors, color:'#7C3AED'},
+                    {label:'Directions',      value:m.directions,     color:'#2563EB'},
+                    {label:'Menu taps',       value:m.menu,           color:'#D97706'},
+                  ];
+                  return (
+                    <>
+                      {/* headline numbers */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {TILES.map(({label,value,color})=>(
+                          <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-3.5">
+                            <span className="inline-flex w-7 h-7 rounded-lg items-center justify-center mb-2"
+                              style={{background:`${color}14`,color}}>{METRIC_ICONS[label]}</span>
+                            <p className="text-[24px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
+                            <p className="text-[11px] text-[#98A2B3] mt-1.5">{label}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* views over time */}
+                      <div className="rounded-2xl border border-[#EBEBEA] bg-white p-5">
+                        <div className="flex items-baseline justify-between mb-4">
+                          <p className="text-[13px] font-semibold text-[#111]">Page views over time</p>
+                          <p className="text-[11px] text-[#98A2B3]">Peak {maxV.toLocaleString()}</p>
+                        </div>
+                        {trend.length>0
+                          ?(
+                            <div className="flex items-end gap-[3px]" style={{height:150}}>
+                              {trend.map(t=>(
+                                <div key={t.date} className="group relative flex-1 min-w-[3px] h-full flex items-end">
+                                  <div className="w-full rounded-t-[3px] bg-[#7C3AED]/80 group-hover:bg-[#6D28D9] transition-colors"
+                                    style={{height:`${Math.max(2,(t.views/maxV)*100)}%`}}/>
+                                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded-lg bg-[#111] px-2 py-1 text-[10px] text-white">
+                                    {t.date}: {t.views}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                          :<p className="text-[12px] text-[#98A2B3] py-10 text-center">No visits recorded yet.</p>
+                        }
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* what people tap */}
+                        <div className="rounded-2xl border border-[#EBEBEA] bg-white p-5">
+                          <p className="text-[13px] font-semibold text-[#111] mb-3.5">What people tap</p>
+                          {analyticsData.topActions.length>0
+                            ?(
+                              <div className="space-y-2.5">
+                                {analyticsData.topActions.slice(0,6).map(({id,count})=>(
+                                  <div key={id} className="flex items-center gap-2.5">
+                                    <span className="text-[12px] text-[#111] w-24 truncate capitalize">{id}</span>
+                                    <div className="flex-1 h-2 bg-[#F4F6FA] rounded-full overflow-hidden">
+                                      <div className="h-full bg-[#7C3AED] rounded-full" style={{width:`${Math.round((count/topMax)*100)}%`}}/>
+                                    </div>
+                                    <span className="text-[11px] text-[#667085] w-8 text-right tabular-nums">{count}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                            :<p className="text-[12px] text-[#98A2B3]">Nothing tapped yet.</p>
+                          }
+                        </div>
+
+                        {/* where they came from */}
+                        <div className="rounded-2xl border border-[#EBEBEA] bg-white p-5">
+                          <p className="text-[13px] font-semibold text-[#111] mb-3.5">Where they came from</p>
+                          {analyticsData.trafficSources.length>0
+                            ?(
+                              <div className="space-y-2.5">
+                                {analyticsData.trafficSources.slice(0,6).map(({source,count})=>(
+                                  <div key={source} className="flex items-center justify-between gap-2">
+                                    <span className="text-[12px] text-[#111] truncate">{source||'Direct'}</span>
+                                    <span className="text-[11px] text-[#667085] tabular-nums">{count}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                            :<p className="text-[12px] text-[#98A2B3]">No referrers yet — most link-in-bio traffic shows as Direct.</p>
+                          }
+                        </div>
+                      </div>
+
+                      {/* one honest summary line */}
+                      <div className="rounded-2xl border border-[#DDD6FE] bg-[#F5F3FF] p-5">
+                        <p className="text-[13px] font-semibold text-[#6D28D9]">
+                          {actionRate}% of visitors did something
+                        </p>
+                        <p className="text-[12px] text-[#667085] mt-1 leading-relaxed">
+                          {m.clicks.toLocaleString()} taps from {m.views.toLocaleString()} views in the last {analyticsDays} days.
+                          Your own visits aren&apos;t counted.
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* ══ SETTINGS ══ */}
-            {(sidebarTab==='analytics'||sidebarTab==='settings')&&(
+            {sidebarTab==='settings'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[640px] space-y-8">
                 <div>
                   <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Settings</h2>
