@@ -83,12 +83,12 @@ export default function ResetPasswordPage() {
   return (
     <div style={{
       minHeight: '100dvh',
-      background: '#0A0A0A',
+      background: '#7C3AED',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px 20px',
-      fontFamily: 'Inter, system-ui, sans-serif',
+      fontFamily: 'var(--font-poppins), system-ui, sans-serif',
     }}>
       <div style={{
         position: 'fixed', inset: 0,

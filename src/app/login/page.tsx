@@ -79,7 +79,7 @@ export default function LoginPage() {
   };
 
   const inputCls =
-    'w-full rounded-2xl border border-[#DEDEDC] bg-white px-4 py-3.5 text-[14px] text-[#0A0A0A] outline-none transition placeholder:text-[#858585] focus:border-[#0A0A0A]/30 focus:ring-4 focus:ring-[#0A0A0A]/5';
+    'w-full rounded-2xl border border-[#EBEBEA] bg-white px-4 py-3.5 text-[14px] text-[#0A0A0A] outline-none transition placeholder:text-[#858585] focus:border-[#7C3AED]/40 focus:ring-4 focus:ring-[#7C3AED]/10';
 
   const btnBase =
     'w-full flex items-center justify-center gap-3 py-[14px] rounded-full text-[14px] font-semibold transition-all disabled:opacity-50';
@@ -87,7 +87,7 @@ export default function LoginPage() {
   return (
     <main
       className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-12"
-      style={{ background: '#F7F7F5', fontFamily: "'Inter', system-ui, sans-serif" }}
+      style={{ background: '#F7F7F5', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}
     >
       {/* Mark / wordmark */}
       <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40, textDecoration: 'none' }}>
@@ -108,7 +108,7 @@ export default function LoginPage() {
             color: '#0A0A0A',
             letterSpacing: '-0.04em',
             lineHeight: 1.08,
-            fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+            fontFamily: 'var(--font-poppins), system-ui, sans-serif',
           }}>
             Welcome back
           </h1>
@@ -123,7 +123,7 @@ export default function LoginPage() {
             onClick={() => handleOAuth('google')}
             disabled={busy}
             className={btnBase}
-            style={{ background: '#0A0A0A', color: '#F7F7F5' }}
+            style={{ background: '#7C3AED', color: '#FFFFFF' }}
           >
             <GoogleLogo />
             {oauthLoading === 'google' ? 'Opening…' : 'Continue with Google'}
@@ -134,7 +134,7 @@ export default function LoginPage() {
             onClick={() => handleOAuth('facebook')}
             disabled={busy}
             className={btnBase}
-            style={{ background: '#fff', border: '1.5px solid #DEDEDC', color: '#0A0A0A' }}
+            style={{ background: '#fff', border: '1.5px solid #EBEBEA', color: '#0A0A0A' }}
           >
             <MetaLogo />
             {oauthLoading === 'meta' ? 'Opening…' : 'Continue with Meta'}
@@ -142,9 +142,9 @@ export default function LoginPage() {
 
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
-            <div style={{ flex: 1, height: 1, background: '#DEDEDC' }}/>
+            <div style={{ flex: 1, height: 1, background: '#EBEBEA' }}/>
             <span style={{ fontSize: 11, color: '#858585', fontWeight: 600, letterSpacing: '0.06em' }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: '#DEDEDC' }}/>
+            <div style={{ flex: 1, height: 1, background: '#EBEBEA' }}/>
           </div>
 
           {/* Email */}
@@ -178,7 +178,7 @@ export default function LoginPage() {
               type="submit"
               disabled={busy}
               className={btnBase}
-              style={{ background: '#0A0A0A', color: '#F7F7F5' }}
+              style={{ background: '#7C3AED', color: '#FFFFFF' }}
             >
               {loading ? 'Signing in…' : 'Log in →'}
             </button>
@@ -186,7 +186,7 @@ export default function LoginPage() {
 
           <p style={{ textAlign: 'center', fontSize: 13, color: '#858585', paddingTop: 8 }}>
             Don&apos;t have an account?{' '}
-            <Link href="/signup" style={{ fontWeight: 600, color: '#0A0A0A', textDecoration: 'none' }}>
+            <Link href="/signup" style={{ fontWeight: 600, color: '#6D28D9', textDecoration: 'none' }}>
               Create one
             </Link>
           </p>

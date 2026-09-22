@@ -164,7 +164,7 @@ function StepBar({ step, total }: { step: number; total: number }) {
           height: 3,
           flex: 1,
           borderRadius: 99,
-          background: i < step ? '#0A0A0A' : '#DEDEDC',
+          background: i < step ? '#0A0A0A' : '#EBEBEA',
           transition: 'background 0.3s ease',
         }}/>
       ))}
@@ -442,7 +442,7 @@ export default function SetupPage() {
 
   // ── STYLES ────────────────────────────────────────────────────────────────
   const base: React.CSSProperties = {
-    fontFamily: "'Inter', system-ui, sans-serif",
+    fontFamily: 'var(--font-poppins), system-ui, sans-serif',
     background: '#F7F7F5',
     minHeight: '100dvh',
     display: 'flex',
@@ -459,7 +459,7 @@ export default function SetupPage() {
   };
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    border: '1.5px solid #DEDEDC',
+    border: '1.5px solid #EBEBEA',
     borderRadius: 16,
     padding: '14px 16px',
     fontSize: 15,
@@ -467,12 +467,12 @@ export default function SetupPage() {
     background: '#fff',
     outline: 'none',
     boxSizing: 'border-box',
-    fontFamily: "'Inter', system-ui, sans-serif",
+    fontFamily: 'var(--font-poppins), system-ui, sans-serif',
   };
   const primaryBtn: React.CSSProperties = {
     width: '100%',
-    background: '#0A0A0A',
-    color: '#F7F7F5',
+    background: '#7C3AED',
+    color: '#FFFFFF',
     border: 'none',
     borderRadius: 99,
     padding: '15px 24px',
@@ -483,7 +483,7 @@ export default function SetupPage() {
     justifyContent: 'space-between',
     alignItems: 'center',
     transition: 'opacity 0.15s',
-    fontFamily: "'Inter', system-ui, sans-serif",
+    fontFamily: 'var(--font-poppins), system-ui, sans-serif',
   };
 
   if (loading) {
@@ -495,7 +495,7 @@ export default function SetupPage() {
           <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
           <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
         </svg>
-        <p style={{ fontSize: 13, color: '#858585', fontFamily: "'Inter', system-ui, sans-serif" }}>
+        <p style={{ fontSize: 13, color: '#858585', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}>
           Setting up your account…
         </p>
       </main>
@@ -525,7 +525,7 @@ export default function SetupPage() {
               Step 1 of {TOTAL_STEPS}
             </p>
             <h1 style={{
-              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
               fontSize: 38, fontWeight: 800, color: '#0A0A0A',
               letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
             }}>
@@ -558,7 +558,7 @@ export default function SetupPage() {
               {placeSuggestions.length > 0 && (
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, right: 0,
-                  background: '#fff', border: '1.5px solid #DEDEDC',
+                  background: '#fff', border: '1.5px solid #EBEBEA',
                   borderRadius: 16, marginTop: 6, overflow: 'hidden',
                   boxShadow: '0 8px 24px rgba(0,0,0,0.10)', zIndex: 10,
                 }}>
@@ -571,7 +571,7 @@ export default function SetupPage() {
                         background: 'none', cursor: 'pointer', textAlign: 'left',
                         display: 'flex', flexDirection: 'column', gap: 2,
                         borderBottom: '1px solid #EEEEEC',
-                        fontFamily: "'Inter', system-ui, sans-serif",
+                        fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                       }}
                     >
                       <span style={{ fontSize: 13, fontWeight: 600, color: '#0A0A0A' }}>{place.name}</span>
@@ -661,7 +661,7 @@ export default function SetupPage() {
                 style={{
                   background: 'none', border: 'none', fontSize: 13,
                   color: '#858585', cursor: 'pointer', padding: '8px 0',
-                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                 }}
               >
                 My business isn&apos;t on Google Maps →
@@ -677,7 +677,7 @@ export default function SetupPage() {
               Step 2 of {TOTAL_STEPS}
             </p>
             <h1 style={{
-              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
               fontSize: 38, fontWeight: 800, color: '#0A0A0A',
               letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
             }}>
@@ -700,7 +700,7 @@ export default function SetupPage() {
 
               <div style={{
                 display: 'flex', alignItems: 'center',
-                border: '1.5px solid #DEDEDC', borderRadius: 16,
+                border: '1.5px solid #EBEBEA', borderRadius: 16,
                 background: '#fff', overflow: 'hidden',
               }}>
                 <span style={{ padding: '14px 4px 14px 16px', fontSize: 14, color: '#858585', whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -714,7 +714,7 @@ export default function SetupPage() {
                     flex: 1, border: 'none', outline: 'none',
                     fontSize: 14, fontWeight: 600, color: '#0A0A0A',
                     padding: '14px 8px', background: 'transparent',
-                    fontFamily: "'Inter', system-ui, sans-serif", minWidth: 0,
+                    fontFamily: 'var(--font-poppins), system-ui, sans-serif', minWidth: 0,
                   }}
                 />
                 <span style={{ padding: '0 14px', fontSize: 10, fontWeight: 700, color: slugColor, flexShrink: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
@@ -743,7 +743,7 @@ export default function SetupPage() {
               Step 3 of {TOTAL_STEPS}
             </p>
             <h1 style={{
-              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
               fontSize: 38, fontWeight: 800, color: '#0A0A0A',
               letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
             }}>
@@ -769,12 +769,12 @@ export default function SetupPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '12px 14px', borderRadius: 16,
-                    border: `1.5px solid ${categoryId === cat.id ? '#0A0A0A' : '#DEDEDC'}`,
+                    border: `1.5px solid ${categoryId === cat.id ? '#0A0A0A' : '#EBEBEA'}`,
                     background: categoryId === cat.id ? '#0A0A0A' : '#fff',
                     color: categoryId === cat.id ? '#F7F7F5' : '#0A0A0A',
                     cursor: 'pointer', fontSize: 13, fontWeight: 600,
                     textAlign: 'left', transition: 'all 0.12s ease',
-                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                   }}
                 >
                   <CategoryIcon id={cat.id} active={categoryId === cat.id}/>
@@ -801,7 +801,7 @@ export default function SetupPage() {
               Step 4 of {TOTAL_STEPS}
             </p>
             <h1 style={{
-              fontFamily: "'Inter Tight', 'Inter', system-ui, sans-serif",
+              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
               fontSize: 38, fontWeight: 800, color: '#0A0A0A',
               letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
             }}>
@@ -814,17 +814,17 @@ export default function SetupPage() {
             {/* Tag input */}
             <div style={{
               display: 'flex', alignItems: 'center',
-              border: '1.5px solid #DEDEDC', borderRadius: 16,
+              border: '1.5px solid #EBEBEA', borderRadius: 16,
               background: '#fff', padding: '4px 8px 4px 16px',
               marginBottom: 12, flexWrap: 'wrap', gap: 6,
             }}>
               {selectedTags.map(tag => (
                 <span key={tag} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  background: '#0A0A0A', color: '#F7F7F5',
+                  background: '#7C3AED', color: '#FFFFFF',
                   borderRadius: 99, padding: '5px 10px',
                   fontSize: 12, fontWeight: 600,
-                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                 }}>
                   {tag}
                   <button
@@ -856,7 +856,7 @@ export default function SetupPage() {
                 style={{
                   flex: 1, minWidth: 120, border: 'none', outline: 'none',
                   fontSize: 14, color: '#0A0A0A', padding: '8px 4px',
-                  background: 'transparent', fontFamily: "'Inter', system-ui, sans-serif",
+                  background: 'transparent', fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                 }}
               />
             </div>
@@ -878,9 +878,9 @@ export default function SetupPage() {
                       }}
                       style={{
                         padding: '7px 13px', borderRadius: 99,
-                        border: '1.5px solid #DEDEDC', background: '#fff',
+                        border: '1.5px solid #EBEBEA', background: '#fff',
                         color: '#555', fontSize: 12, fontWeight: 500,
-                        cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif",
+                        cursor: 'pointer', fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                       }}
                     >
                       + {tag}
@@ -908,7 +908,7 @@ export default function SetupPage() {
                   style={{
                     background: 'none', border: 'none', fontSize: 13,
                     color: '#858585', cursor: 'pointer', padding: '8px 0',
-                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                   }}
                 >
                   Skip for now
@@ -928,7 +928,7 @@ export default function SetupPage() {
               fontSize: 13, color: '#ABABAB',
               cursor: 'pointer', padding: '8px 0',
               display: 'flex', alignItems: 'center', gap: 6,
-              fontFamily: "'Inter', system-ui, sans-serif",
+              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
             }}
           >
             <span>←</span> Back
