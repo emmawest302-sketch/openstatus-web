@@ -2002,7 +2002,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
 }
 
 type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'links'|'analytics'|'integrations';
-type HoursSubTab = 'special'|'status'|'auto';
+type HoursSubTab = 'special'|'status';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
 function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:{
@@ -2105,6 +2105,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt);
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('business');
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('status');
+  // Status and Analytics don't edit the page config: every Status action posts the
+  // moment it's tapped, and Analytics is read-only. A Save button there implies
+  // there are unsaved changes to lose, so it's hidden on those tabs.
+  const showSaveButton = sidebarTab!=='hours' && sidebarTab!=='analytics';
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>('mobile');
   const [previewKey,setPreviewKey]=useState(0);
   const [quickAction,setQuickAction]=useState<string|null>(null);
@@ -2384,7 +2388,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       const {data:{session}}=await supabase.auth.getSession();
       const token=session?.access_token;
       if(!token) return;
-      const res=await fetch('/api/google/status',{headers:{Authorization:`Bearer ${token}`}});
+      const res=await fetch('/api/google/status',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
       if(!res.ok) return;
       const b=await res.json() as {status:string|null;canReopen:boolean|null;isClosed:boolean};
       setGStatus(b);
@@ -2438,12 +2442,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     finally{ setGBusy(false); }
   }
 
-  async function googleSetOpenState(action:'close_temporarily'|'reopen') {
+  /**
+   * Reopen only — closing a listing from here was removed after it left an owner
+   * unable to reopen without filing a "suggest an edit" on their own profile.
+   *
+   * The server re-reads openInfo after the write, so `applied` is Google's real
+   * answer. We never claim success just because the PATCH returned 2xx.
+   */
+  async function googleReopen() {
     setGBusy(true);setGMsg('');
     try{
-      await googleStatusRequest({action});
-      setGMsg(action==='reopen'?'✓ Marked open on Google':'✓ Marked temporarily closed on Google');
+      const b=await googleStatusRequest({action:'reopen'}) as {
+        applied?:boolean|null; message?:string; status?:string|null;
+      };
       await loadGoogleStatus();
+      if(b.applied===true) setGMsg('✓ '+(b.message??'Google now reports this listing as open.'));
+      else setGMsg(b.message??'Google did not apply the reopen. Check your listing directly.');
     }catch(e){ setGMsg(e instanceof Error?e.message:'Could not update Google'); }
     finally{ setGBusy(false); }
   }
@@ -2608,7 +2622,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       catch(e){ problems.push(e instanceof Error?e.message:'hours did not republish'); }
     }
     if(googleConnected&&gStatus?.isClosed&&gStatus.canReopen!==false){
-      try{ await googleSetOpenState('reopen'); }
+      try{ await googleReopen(); }
       catch{ problems.push('Google would not reopen — try the Temporarily closed tab'); }
     }
     await loadStatusUpdates();
@@ -2835,10 +2849,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
 
             <div className="flex flex-col items-end gap-0.5">
+              {showSaveButton&&(
               <button onClick={save} disabled={saving} data-tut="tut-save"
                 className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#EDE9FE] text-[#5B21B6]':saving?'bg-[#F4F6FA] text-[#98A2B3]':saveError?'bg-red-100 text-red-600':hasPublished?'bg-[#F5F3FF] text-[#6D28D9] hover:bg-[#EDE9FE]':'bg-[#7C3AED] text-white hover:bg-[#6D28D9]'}`}>
                 {saving?'Saving…':saved?'✓ Saved':saveError?'Error':hasPublished?'Save':'Publish'}
               </button>
+              )}
+              {sidebarTab==='hours'&&(
+                <span className="text-[11px] text-[#98A2B3] hidden sm:block">Changes here go live right away</span>
+              )}
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
               {googleConnected&&googleSyncStatus==='syncing'&&<p className="text-[10px] text-[#4285F4] text-right">Syncing to Google…</p>}
               {googleConnected&&googleSyncStatus==='ok'&&<p className="text-[10px] text-[#166534] text-right">✓ Synced to Google</p>}
@@ -2869,7 +2888,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     Status
                   </h1>
                   <p className="text-[#858585] text-[14px] mt-2 leading-relaxed">
-                    Close early, post an update, or set special hours. Your weekly hours live in the Hours block.
+                    Change what today says, or close for specific dates. Your normal week lives in the Hours block.
                   </p>
                 </div>
 
@@ -2878,7 +2897,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   {([
                     {key:'status', label:'Status controls'},
                     {key:'special',label:'Special hours'},
-                    {key:'auto',   label:'Temporarily closed'},
                   ] as const).map(({key,label})=>(
                     <button key={key} onClick={()=>setHoursSubTab(key)}
                       className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap ${hoursSubTab===key?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
@@ -2889,9 +2907,42 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 {hoursSubTab==='status'&&(
                   <div className="space-y-8">
+                    {/* Recovery only. OpenStatus can no longer mark a listing
+                        temporarily closed, but a listing closed in the past (or
+                        from Google directly) still needs a visible way back. */}
+                    {googleConnected&&gStatus?.isClosed&&(
+                      <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="w-2 h-2 rounded-full bg-[#F79009] flex-shrink-0"/>
+                          <p className="text-[13px] font-semibold text-[#111]">
+                            Google lists you as {gStatus.status==='CLOSED_TEMPORARILY'?'temporarily closed':(gStatus.status??'closed')}
+                          </p>
+                        </div>
+                        <p className="text-[12px] text-[#B54708] leading-relaxed mb-3">
+                          OpenStatus can&apos;t set this state any more — only Google or you can. You can try
+                          reopening from here, but Google reviews profile reopenings and may take a few days,
+                          or ask you to confirm from your Google Business Profile.
+                        </p>
+                        <button disabled={gBusy||gStatus.canReopen===false}
+                          onClick={()=>void googleReopen()}
+                          className="w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                          {gBusy?'Asking Google…':'Ask Google to reopen my listing'}
+                        </button>
+                        {gStatus.canReopen===false&&(
+                          <p className="text-[11px] text-[#B54708] mt-2 leading-relaxed">
+                            Google says this profile isn&apos;t eligible to reopen through the API right now.
+                            Open your Google Business Profile and change the status there, or use
+                            &ldquo;Suggest an edit&rdquo; on your listing.
+                          </p>
+                        )}
+                        {gMsg&&<p className={`text-[12px] mt-2 ${gMsg.startsWith('\u2713')?'text-[#166534]':'text-[#B54708]'}`}>{gMsg}</p>}
+                      </div>
+                    )}
+
                     {/* Active status banner */}
                     <div>
-                      <p className="text-[14px] font-semibold text-[#0A0A0A] mb-3">Live status</p>
+                      <p className="text-[14px] font-semibold text-[#0A0A0A]">What your page says right now</p>
+                      <p className="text-[12px] text-[#858585] mt-1 mb-3">This is exactly what a customer sees when they tap your link.</p>
                       {statusLoading?(
                         <div className="rounded-2xl border border-[#DEDEDC] bg-white px-4 py-3">
                           <p className="text-[13px] text-[#858585]">Loading…</p>
@@ -2912,14 +2963,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                 disabled={statusPosting}
                                 className="flex-shrink-0 text-[12px] font-semibold text-[#EF4444] hover:text-red-700 transition-colors disabled:opacity-40"
                               >
-                                Clear
+                                {statusPosting?'…':'Undo — back to regular hours'}
                               </button>
                             </div>
                           ))}
                         </div>
                       ):(
                         <div className="rounded-2xl border border-dashed border-[#DEDEDC] bg-[#F7F7F5] px-4 py-3 text-center">
-                          <p className="text-[13px] text-[#858585]">No live status — your regular hours show on your page.</p>
+                          <p className="text-[13px] text-[#858585]">
+                            Nothing special today — your page is showing your regular weekly hours.
+                          </p>
                         </div>
                       )}
                       <div className="mt-3 flex items-center gap-3 flex-wrap">
@@ -2928,10 +2981,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           disabled={statusPosting}
                           className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
                         >
-                          {statusPosting?'Working…':'Reopen and republish my hours'}
+                          {statusPosting?'Working…':'Reset me to my regular hours'}
                         </button>
-                        <p className="text-[11px] text-[#858585]">
-                          Clears every closure and pushes your weekly hours to your live page.
+                        <p className="text-[11px] text-[#858585] flex-1 min-w-[220px] leading-relaxed">
+                          Use this if your page is stuck saying closed. Removes every closure and note,
+                          re-sends your weekly hours to your live page, and asks Google to reopen your
+                          listing if it&apos;s marked closed.
                         </p>
                       </div>
                       {reopenMsg&&(
@@ -2941,7 +2996,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                     {/* Quick post presets */}
                     <div>
-                      <p className="text-[14px] font-semibold text-[#0A0A0A] mb-4">Post a status update</p>
+                      <p className="text-[14px] font-semibold text-[#0A0A0A]">Just for today</p>
+                      <p className="text-[12px] text-[#858585] mt-1 mb-4 leading-relaxed">
+                        These change what your OpenStatus page says <strong className="font-semibold text-[#111]">today only</strong> —
+                        your regular hours come back by themselves tomorrow morning. Your Google listing is not touched.
+                        To close for a specific date or a whole week, use <strong className="font-semibold text-[#111]">Special hours</strong>.
+                      </p>
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         {/* Closed today */}
                         <button
@@ -2951,14 +3011,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         >
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-[#858585] group-hover:text-[#EF4444] transition-colors"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                           <div>
-                            <p className="text-[13px] font-semibold text-[#111]">Closed today</p>
-                            <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">Mark as fully closed all day</p>
+                            <p className="text-[13px] font-semibold text-[#111]">Closed for the rest of today</p>
+                            <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">
+                              Your page will say &ldquo;Closed today&rdquo;. Reopens on its own tomorrow.
+                            </p>
                           </div>
                         </button>
                         {/* Close early */}
                         <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <p className="text-[13px] font-semibold text-[#111]">Close early at</p>
+                          <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
+                          <p className="text-[11px] text-[#858585] leading-snug">
+                            Your page shows your new closing time for today only.
+                          </p>
                           <div className="flex items-center gap-2">
                             <div className="relative flex-1">
                               <select
@@ -2975,7 +3040,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                               disabled={statusPosting}
                               className="px-3 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
                             >
-                              Set
+                              {statusPosting?'…':'Show on my page'}
                             </button>
                           </div>
                         </div>
@@ -2985,8 +3050,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white space-y-3">
                         <div className="flex items-center gap-2">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                          <p className="text-[13px] font-semibold text-[#111]">Leave a note</p>
+                          <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
                         </div>
+                        <p className="text-[11px] text-[#858585] leading-snug -mt-1">
+                          Shows on your page alongside your hours. Doesn&apos;t mark you closed.
+                        </p>
                         <textarea
                           value={statusNote}
                           onChange={e=>setStatusNote(e.target.value.slice(0,100))}
@@ -3001,7 +3069,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             disabled={statusPosting||!statusNote.trim()}
                             className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
                           >
-                            Post
+                            {statusPosting?'…':'Show this note'}
                           </button>
                         </div>
                       </div>
@@ -3014,27 +3082,30 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {hoursSubTab==='special'&&(
                   <div className="space-y-5">
                     <div>
-                      <p className="text-[15px] font-semibold text-[#0A0A0A]">Special hours</p>
+                      <p className="text-[15px] font-semibold text-[#0A0A0A]">Closed on a specific date</p>
                       <p className="text-[13px] text-[#858585] mt-1 leading-relaxed">
-                        A one-off closure for a holiday or an event. These carry dates, so your
-                        normal hours come back on their own — there&apos;s nothing to undo later.
+                        For a holiday, a trip, or an event. Each closure has real dates on it, so your
+                        normal hours come back by themselves — you never have to remember to undo it.
+                        {googleConnected
+                          ?' Because these are dated, they are safe to send to Google, and they will show on your Google listing too.'
+                          :''}
                       </p>
                     </div>
 
                     {!googleConnected&&(
                       <div className="rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB] p-4">
                         <p className="text-[12px] text-[#667085]">
-                          These update your OpenStatus page now. Connect Google Business in the Business tab
-                          to push them to your Google listing as well.
+                          Right now these only change your OpenStatus page. Connect Google Business in the
+                          Business tab and they&apos;ll update your Google listing at the same time.
                         </p>
                       </div>
                     )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {([
-                        {label:'Closed today',       days:0, hint:'Just today'},
-                        {label:'Closed tomorrow',    days:1, hint:'Tomorrow only'},
-                        {label:'Closed this weekend',days:-1,hint:'Sat and Sun'},
+                        {label:'Closed today',       days:0, hint:googleConnected?'Today only \u00b7 page + Google':'Today only \u00b7 your page'},
+                        {label:'Closed tomorrow',    days:1, hint:googleConnected?'Tomorrow only \u00b7 page + Google':'Tomorrow only \u00b7 your page'},
+                        {label:'Closed this weekend',days:-1,hint:googleConnected?'Sat + Sun \u00b7 page + Google':'Sat + Sun \u00b7 your page'},
                       ]).map(({label,days,hint})=>(
                         <button key={label} disabled={gBusy}
                           onClick={()=>{
@@ -3064,73 +3135,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                 )}
 
-                {/* ══ EXTENDED CLOSURE — maps to Google openInfo.status ══ */}
-                {hoursSubTab==='auto'&&(
-                  <div className="space-y-5">
-                    <div>
-                      <p className="text-[15px] font-semibold text-[#0A0A0A]">Temporarily closed</p>
-                      <p className="text-[13px] text-[#858585] mt-1 leading-relaxed">
-                        For a longer break — renovation, a season off. This marks your Google listing
-                        as temporarily closed, and you can reopen it from right here.
-                      </p>
-                    </div>
-
-                    {!googleConnected
-                      ?(
-                        <div className="rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB] p-4">
-                          <p className="text-[12px] text-[#667085]">Connect Google Business in the Business tab to use this.</p>
-                        </div>
-                      )
-                      :(
-                        <div className={`rounded-2xl border p-4 ${gStatus?.isClosed?'border-[#FEC84B] bg-[#FFFCF5]':'border-[#BBF7D0] bg-[#F0FDF4]'}`}>
-                          <div className="flex items-center gap-3 mb-3">
-                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background:gStatus?.isClosed?'#F79009':'#16A34A'}}/>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-semibold text-[#111]">
-                                {gStatus===null?'Checking Google…':gStatus.isClosed?'Temporarily closed on Google':'Open on Google'}
-                              </p>
-                              {gStatus?.status&&(
-                                <p className="text-[11px] text-[#98A2B3] mt-0.5">Google reports: {gStatus.status}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          {gStatus?.isClosed
-                            ?(
-                              <>
-                                <button disabled={gBusy||gStatus.canReopen===false}
-                                  onClick={()=>void googleSetOpenState('reopen')}
-                                  className="w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
-                                  {gBusy?'Working…':'Reopen my business'}
-                                </button>
-                                {gStatus.canReopen===false&&(
-                                  <p className="text-[11px] text-[#B54708] mt-2 leading-relaxed">
-                                    Google says this profile isn&apos;t currently eligible to reopen. That usually means it was
-                                    marked permanently closed, which has to be sorted out with Google support.
-                                  </p>
-                                )}
-                              </>
-                            )
-                            :(
-                              <button disabled={gBusy}
-                                onClick={()=>void googleSetOpenState('close_temporarily')}
-                                className="w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-semibold hover:border-[#111] transition-colors disabled:opacity-40">
-                                {gBusy?'Working…':'Mark temporarily closed'}
-                              </button>
-                            )
-                          }
-                        </div>
-                      )
-                    }
-
-                    {gMsg&&<p className={`text-[12px] ${gMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{gMsg}</p>}
-
-                    <p className="text-[11px] text-[#98A2B3] leading-relaxed">
-                      Closing permanently isn&apos;t offered here on purpose — Google can&apos;t reliably undo it,
-                      and their guidance is to create a new profile instead. Contact them directly if you need that.
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 
@@ -4094,10 +4098,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <span className="text-[#111111] font-semibold text-[17px] tracking-[-0.03em]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
         <div className="flex items-center gap-2">
 
-          <button onClick={save} disabled={saving}
-            className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#EDE9FE] text-[#5B21B6]':saving?'bg-[#F4F6FA] text-[#98A2B3]':hasPublished?'bg-[#F5F3FF] text-[#6D28D9]':'bg-[#7C3AED] text-white'}`}>
-            {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
-          </button>
+          {showSaveButton?(
+            <button onClick={save} disabled={saving}
+              className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#EDE9FE] text-[#5B21B6]':saving?'bg-[#F4F6FA] text-[#98A2B3]':hasPublished?'bg-[#F5F3FF] text-[#6D28D9]':'bg-[#7C3AED] text-white'}`}>
+              {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
+            </button>
+          ):sidebarTab==='hours'?(
+            <span className="text-[11px] text-[#98A2B3]">Goes live right away</span>
+          ):null}
         </div>
       </div>
 

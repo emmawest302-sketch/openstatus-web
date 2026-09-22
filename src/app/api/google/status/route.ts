@@ -4,26 +4,26 @@ import { getAdminClient } from '@/lib/supabaseAdmin';
 /**
  * Google Business Profile open-state + special hours.
  *
- * Two different concepts, deliberately kept apart:
+ * Only ONE of these is writable from OpenStatus:
  *
  *  - specialHours  — dated, self-expiring exceptions ("closed today", "closed
- *    Dec 25"). This is the everyday case. Because each period carries dates,
- *    the business reopens on its own and the owner never has to undo anything.
+ *    Dec 25", "closing early Friday"). Because each period carries dates, the
+ *    business reopens on its own and the owner never has to undo anything.
+ *    This is the only closure mechanism the product exposes.
  *
- *  - openInfo.status — a heavyweight state for an extended closure. Reversible
- *    only while Google's OUTPUT-ONLY `canReopen` flag is true, which is why the
- *    UI has to read it back rather than assume.
+ *  - openInfo.status — a heavyweight state for an extended closure. Setting it
+ *    is DISABLED here, on purpose. It is reversible only while Google's
+ *    OUTPUT-ONLY `canReopen` flag is true, and when Google decides it is false
+ *    the owner's only route back is a "suggest an edit" appeal on their own
+ *    profile. An owner hit exactly that. A button in a builder must never be
+ *    able to put someone in a state they cannot get out of from the builder.
+ *    The `reopen` action is kept as a one-way recovery valve.
  *
- * Permanent closure is intentionally NOT exposed: Google's own guidance is that
- * a permanently closed profile should not be reopened — you create a new one and
- * contact support to move the reviews. That is not something to put behind a
- * button in a builder.
+ * Permanent closure is likewise not exposed: Google's own guidance is that a
+ * permanently closed profile should not be reopened — you create a new one and
+ * contact support to move the reviews.
  */
 
-// The v1 reference pages don't render the OpenForBusiness enum, and the
-// deprecated v4 docs disagree with one v1 rendering. Rather than guess we try
-// the documented values in order and let Google arbitrate.
-const CLOSE_TEMPORARILY_VALUES = ['CLOSED_TEMPORARILY', 'CLOSED'];
 const OPEN_VALUE = 'OPEN';
 
 async function refreshAccessToken(refresh: string, clientId: string, clientSecret: string) {
@@ -91,6 +91,28 @@ async function resolveGoogle(req: NextRequest) {
 
 const BASE = 'https://mybusinessbusinessinformation.googleapis.com/v1';
 
+/**
+ * Reads openInfo straight from Google with caching disabled. Next will happily
+ * cache a plain GET fetch inside a route handler, and a cached openInfo looks
+ * exactly like a reopen that silently did nothing — which is how an owner ends
+ * up staring at "Open on Google" while their listing still says closed.
+ */
+async function readOpenInfo(locationName: string, accessToken: string) {
+  const res = await fetch(`${BASE}/${locationName}?readMask=openInfo`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false as const, status: res.status, body };
+  const info = (body as { openInfo?: { status?: string; canReopen?: boolean } }).openInfo;
+  return {
+    ok: true as const,
+    status: info?.status ?? null,
+    canReopen: info?.canReopen ?? null,
+    isClosed: !!info?.status && info.status !== OPEN_VALUE,
+  };
+}
+
 function googleError(status: number, body: unknown) {
   if (status === 429) {
     return NextResponse.json(
@@ -112,7 +134,10 @@ export async function GET(req: NextRequest) {
   if ('error' in r) return NextResponse.json({ error: r.error }, { status: r.status });
 
   const url = `${BASE}/${r.locationName}?readMask=openInfo,specialHours`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${r.accessToken}` } });
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${r.accessToken}` },
+    cache: 'no-store',
+  });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) return googleError(res.status, body);
 
@@ -142,7 +167,7 @@ export async function POST(req: NextRequest) {
   if ('error' in r) return NextResponse.json({ error: r.error }, { status: r.status });
 
   const body = await req.json().catch(() => null) as
-    | { action: 'close_temporarily' | 'reopen' }
+    | { action: 'reopen' | 'close_temporarily' }
     | { action: 'special_hours'; periods: SpecialPeriod[] }
     | null;
   if (!body?.action) return NextResponse.json({ error: 'Missing action' }, { status: 400 });
@@ -152,6 +177,7 @@ export async function POST(req: NextRequest) {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${r.accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      cache: 'no-store',
     });
 
   // ── Dated exceptions. These expire on their own. ──
@@ -163,23 +189,50 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // ── Extended closure / reopen ──
+  // ── Reopen (recovery only) ──
+  // A 2xx on the PATCH is NOT proof the listing reopened: Google can accept the
+  // write and still leave the profile closed, or route the change into a pending
+  // review. So we read openInfo back and report what Google actually says, never
+  // what we asked for. `applied` is the only field the UI should trust.
   if (body.action === 'reopen') {
     const res = await patch('openInfo.status', { openInfo: { status: OPEN_VALUE } });
     const out = await res.json().catch(() => ({}));
     if (!res.ok) return googleError(res.status, out);
-    return NextResponse.json({ ok: true, status: OPEN_VALUE });
+
+    const after = await readOpenInfo(r.locationName, r.accessToken);
+    if (!after.ok) {
+      return NextResponse.json({
+        ok: true,
+        applied: null,
+        status: null,
+        canReopen: null,
+        isClosed: null,
+        message: 'Google accepted the change but would not tell us the new state. Check your listing.',
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      applied: !after.isClosed,
+      status: after.status,
+      canReopen: after.canReopen,
+      isClosed: after.isClosed,
+      message: after.isClosed
+        ? `Google still reports this listing as ${after.status ?? 'closed'}. Reopening a profile often has to be reviewed by Google, or done from your Google Business Profile directly — the change may take up to a few days to appear.`
+        : 'Google now reports this listing as open.',
+    });
   }
 
-  // Try each documented spelling; a bad enum comes back as 400 INVALID_ARGUMENT.
-  let lastStatus = 500;
-  let lastBody: unknown = {};
-  for (const value of CLOSE_TEMPORARILY_VALUES) {
-    const res = await patch('openInfo.status', { openInfo: { status: value } });
-    if (res.ok) return NextResponse.json({ ok: true, status: value });
-    lastStatus = res.status;
-    lastBody = await res.json().catch(() => ({}));
-    if (res.status !== 400) break; // a real failure, not an enum mismatch
-  }
-  return googleError(lastStatus, lastBody);
+  // Anything else — in practice only the retired 'close_temporarily' — is refused.
+  // Kept as an explicit 410 rather than a silent fallthrough so a stale client
+  // that still sends it gets a message instead of a mystery.
+  return NextResponse.json(
+    {
+      error:
+        'Marking your business temporarily closed on Google has been removed. ' +
+        'Use Special hours to close for a day or a date range — those expire on ' +
+        'their own and never need undoing.',
+    },
+    { status: 410 }
+  );
 }

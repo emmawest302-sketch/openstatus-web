@@ -137,6 +137,20 @@ export async function POST(req: NextRequest) {
   }
 
   const periods = toGBPPeriods(weeklyHours);
+
+  // Never push a week with no open periods. An empty regularHours reads to Google
+  // as "this business is never open", which is not something a hours-sync bug or a
+  // half-filled form should be able to tell Google on an owner's behalf.
+  if (periods.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          'Every day is marked closed, so nothing was sent to Google. Set at least one ' +
+          'open day, or use Special hours to close for specific dates.',
+      },
+      { status: 400 }
+    );
+  }
   const locationName = business.google_location_id;
   const gbpUrl = `https://mybusinessbusinessinformation.googleapis.com/v1/${locationName}?updateMask=regularHours`;
 
