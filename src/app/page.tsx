@@ -10,6 +10,21 @@ import { supabase } from '@/lib/supabase';
 // with, endorsed by, or a partner of any of these companies — the copy says
 // "works with" for exactly that reason.
 
+// ── OpenStatus mark ───────────────────────────────────────────────────────────
+// Keyhole knocked straight out of a solid disc. The older version layered a
+// light disc and a dark keyhole inside the black circle, which muddied the
+// shape at small sizes — a single white cut-out reads cleanly down to 16px.
+function OpenStatusMark({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true" style={{ display: 'block', flexShrink: 0 }}>
+      <circle cx="50" cy="50" r="50" fill="#0A0A0A" />
+      {/* keyhole: bow + tapered stem, one colour so it reads as one shape */}
+      <circle cx="50" cy="41" r="12.5" fill="#FFFFFF" />
+      <path d="M43.4 49.5h13.2l3.1 22.6a1.6 1.6 0 0 1-1.6 1.8H41.9a1.6 1.6 0 0 1-1.6-1.8z" fill="#FFFFFF" />
+    </svg>
+  );
+}
+
 function GoogleLogo({ size = 18 }: { size?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
@@ -169,7 +184,10 @@ export default function HomePage() {
       {/* ── Nav ── */}
       <header style={{ borderBottom: `1px solid ${LINE}`, background: 'rgba(255,255,255,0.86)', backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 40 }}>
         <div style={{ ...shell, padding: isMobile ? '14px 20px' : '16px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.03em' }}>OpenStatus</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <OpenStatusMark size={26}/>
+            <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.03em' }}>OpenStatus</span>
+          </span>
           <nav style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 14 : 30 }}>
             {!isMobile && ['Product', 'Pricing'].map((l) => (
               <a key={l} href={`#${l.toLowerCase()}`} style={{ fontSize: 14, fontWeight: 500, color: MUTED, textDecoration: 'none' }}>{l}</a>
@@ -354,7 +372,10 @@ export default function HomePage() {
       <footer style={{ borderTop: `1px solid ${LINE}`, padding: isMobile ? '32px 0' : '40px 0' }}>
         <div style={{ ...shell, padding: pad, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.03em' }}>OpenStatus</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <OpenStatusMark size={22}/>
+              <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.03em' }}>OpenStatus</span>
+            </span>
             <p style={{ fontSize: 12, color: '#98A2B3', margin: '5px 0 0' }}>
               © {new Date().getFullYear()} OpenStatus. Not affiliated with or endorsed by Google, DoorDash, Uber Eats, Grubhub, Square or Instagram.
             </p>
