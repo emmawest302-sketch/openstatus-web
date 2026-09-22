@@ -1796,7 +1796,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [isMobile,setIsMobile]=useState<boolean>(false);
   const sheetDragRef=useRef<{startY:number,open:boolean}|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
-  const [previewWidth,setPreviewWidth]=useState(360);
+  // contentMaxWidth: how wide the editor panel can grow. Drag handle shrinks it to give more room to preview.
+  const [contentMaxWidth,setContentMaxWidth]=useState(()=>{
+    if(typeof window==='undefined') return 680;
+    // Default: give ~55% to content, rest to preview
+    return Math.max(380,Math.min(780,Math.round((window.innerWidth-220)*0.55)));
+  });
+  const [previewWidth,setPreviewWidth]=useState(0); // unused for layout now, kept for compat
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
   const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:business?.category??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
   const [bizSaving,setBizSaving]=useState(false);
@@ -1817,14 +1823,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     e.preventDefault();
     isResizing.current=true;
     resizeStartX.current=e.clientX;
-    resizeStartW.current=previewWidth;
+    resizeStartW.current=contentMaxWidth;
     document.body.style.userSelect='none';
     document.body.style.cursor='col-resize';
-    const onMove=(ev:MouseEvent)=>{ if(!isResizing.current)return; const delta=resizeStartX.current-ev.clientX; setPreviewWidth(Math.max(280,Math.min(900,resizeStartW.current+delta))); };
+    const onMove=(ev:MouseEvent)=>{ if(!isResizing.current)return; const delta=ev.clientX-resizeStartX.current; setContentMaxWidth(Math.max(320,Math.min(840,resizeStartW.current+delta))); };
     const onUp=()=>{ isResizing.current=false; document.body.style.userSelect=''; document.body.style.cursor=''; window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp); };
     window.addEventListener('mousemove',onMove);
     window.addEventListener('mouseup',onUp);
-  },[previewWidth]);
+  },[contentMaxWidth]);
 
   const uploadAsset=useCallback(async(file:File,kind:'avatar'|'header')=>{
     const {data:s}=await supabase.auth.getSession();
@@ -2124,7 +2130,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <div className="flex-1 overflow-hidden select-none" style={{display:isMobile?"none":"flex"}}>
 
           {/* ── MAIN CONTENT ── */}
-          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white/72 backdrop-blur-md rounded-tl-2xl">
+          <div className="flex-1 overflow-y-auto min-w-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-white/72 backdrop-blur-md rounded-tl-2xl" style={{maxWidth:contentMaxWidth}}>
 
             {/* ══ HOURS & STATUS ══ */}
             {sidebarTab==='hours'&&(
@@ -3277,10 +3283,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
               {/* Preview panel */}
               <div
-                className="flex-shrink-0 flex flex-col items-center justify-center relative"
+                className="flex-1 flex flex-col items-center justify-center relative"
                 style={{
-                  width: previewWidth,
-                  minWidth: 0,
+                  minWidth: 280,
                   overflow: 'hidden',
                   backgroundImage:'linear-gradient(rgba(139,92,246,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.12) 1px,transparent 1px)',
                   backgroundSize:'24px 24px',
@@ -3289,7 +3294,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               >
                 {/* Centered phone */}
                 <div className="flex flex-col items-center gap-3" style={{padding:'0 24px',maxWidth:'100%'}}>
-                  <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:Math.min(300,previewWidth-80),maxWidth:'100%'}}>
+                  <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:300,maxWidth:'calc(100% - 48px)'}}>
                     <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
                       onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
                   </div>
