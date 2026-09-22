@@ -42,9 +42,9 @@ export default function EmmasCoffeeDemo({ phone = false }: { phone?: boolean }) 
       <div className="space-y-3 px-4 pb-8">
         <section className="rounded-[26px] border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur-xl">
           <div className="flex items-center gap-3">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#2E7D5B] text-white"><DemoIcon /></span>
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white"><DemoIcon /></span>
             <div>
-              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[#2E7D5B]"><span className="h-2 w-2 rounded-full bg-[#2E7D5B]" /> Live status</div>
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[#7C3AED]"><span className="h-2 w-2 rounded-full bg-[#7C3AED]" /> Live status</div>
               <p className="mt-1 text-[28px] font-bold leading-none tracking-[-0.03em]">Open now</p>
               <p className="mt-1 text-sm text-black/60">Closing early at 4:00 PM</p>
             </div>
@@ -57,7 +57,7 @@ export default function EmmasCoffeeDemo({ phone = false }: { phone?: boolean }) 
 
         <details open className="overflow-hidden rounded-[22px] border border-white/70 bg-white/75 backdrop-blur-xl">
           <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between px-4">
-            <span className="flex items-center gap-3"><span className="text-[#2E7D5B]"><DemoIcon /></span><span className="font-medium">Today &amp; weekly hours</span></span>
+            <span className="flex items-center gap-3"><span className="text-[#7C3AED]"><DemoIcon /></span><span className="font-medium">Today &amp; weekly hours</span></span>
             <span className="text-right text-sm text-black/50"><span className="block">7:00 AM–4:00 PM</span><span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#9A7434]">Changed today</span></span>
           </summary>
           <div className="border-t border-black/10 px-4 py-3">

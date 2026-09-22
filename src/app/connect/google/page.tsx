@@ -73,8 +73,8 @@ export default function ConnectGoogle() {
         {/* ── Just connected: show big success state ── */}
         {justConnected ? (
           <div className="text-center">
-            <div className="w-16 h-16 rounded-full bg-[#E2EFE7] flex items-center justify-center mx-auto mb-5">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2E7D5B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-16 h-16 rounded-full bg-[#F5F3FF] flex items-center justify-center mx-auto mb-5">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </div>
@@ -130,15 +130,15 @@ export default function ConnectGoogle() {
             </div>
 
             {connected ? (
-              <div className="mt-4 rounded-2xl bg-[#E2EFE7] px-5 py-4">
-                <p className="text-[#2E7D5B] font-medium">Your Google listing is connected</p>
+              <div className="mt-4 rounded-2xl bg-[#F5F3FF] px-5 py-4">
+                <p className="text-[#7C3AED] font-medium">Your Google listing is connected</p>
                 <p className="mt-1 text-sm text-[#4A4842]">Hours changes will sync automatically.</p>
               </div>
             ) : (
               <button
                 onClick={connect}
                 disabled={working}
-                className="mt-5 w-full py-3.5 rounded-full bg-[#2E7D5B] text-white font-medium hover:bg-[#256349] disabled:opacity-40 transition"
+                className="mt-5 w-full py-3.5 rounded-full bg-[#7C3AED] text-white font-medium hover:bg-[#6D28D9] disabled:opacity-40 transition"
               >
                 {working ? 'Opening Google...' : 'Connect Google'}
               </button>
@@ -147,10 +147,10 @@ export default function ConnectGoogle() {
             {error ? <p className="mt-4 text-sm text-[#C4453F]">{error}</p> : null}
 
             <a
-              href="/builder"
+              href="/dashboard"
               className="mt-3 block text-center py-3.5 rounded-full border border-black/15 font-medium hover:border-black/50 transition"
             >
-              Back to builder
+              Back to dashboard
             </a>
           </>
         )}

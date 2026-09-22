@@ -13,9 +13,10 @@ function extractMapQuery(googleUrl: string, fallback: string): string {
   return fallback;
 }
 
-type Props = { block: OpenStatusBlock; businessId: string; themeColor?: string };
+type Props = { block: OpenStatusBlock; businessId: string; themeColor?: string; dark?: boolean };
 
-export default function PublicLocationBlock({ block, businessId, themeColor }: Props) {
+export default function PublicLocationBlock({ block, businessId, themeColor, dark = false }: Props) {
+  const CARD = dark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.72)';
   const [hovered, setHovered] = useState(false);
 
   // `sub` is the block's caption ("Get directions"/"Tap for directions"), not an
@@ -43,7 +44,7 @@ export default function PublicLocationBlock({ block, businessId, themeColor }: P
   return (
     <div style={{
       overflow: 'hidden', borderRadius: 22,
-      background: 'rgba(255,255,255,0.72)',
+      background: CARD,
       backdropFilter: 'blur(24px) saturate(130%)',
       WebkitBackdropFilter: 'blur(24px) saturate(130%)',
       border: '1px solid rgba(255,255,255,0.82)',

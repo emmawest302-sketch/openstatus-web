@@ -11,10 +11,11 @@ type Props = {
   config: OpenStatusPageConfig;
   themeColor: string;
   placeId?: string | null;
+  dark?: boolean;
 };
 
 export default function PublishedBusinessBlocks({
-  businessId, businessName, location, config, themeColor, placeId,
+  businessId, businessName, location, config, themeColor, placeId, dark = false,
 }: Props) {
   // Skip hours and location — those are handled inline in the page.
   // Also drop blocks with nothing to open: a tappable row that goes nowhere
@@ -59,7 +60,7 @@ export default function PublishedBusinessBlocks({
 
         return (
           <div key={block.id} style={{ gridColumn: `span ${span}` }}>
-            <PublicActionBlock block={block} businessId={businessId}/>
+            <PublicActionBlock block={block} businessId={businessId} dark={dark}/>
           </div>
         );
       })}

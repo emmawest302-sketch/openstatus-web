@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
 
-type Props = { block: OpenStatusBlock; businessId: string };
+type Props = { block: OpenStatusBlock; businessId: string; dark?: boolean };
 
 function safeUrl(value?: string) {
   const raw = value?.trim();
@@ -55,7 +55,13 @@ function BlockIcon({ id, color }: { id: string; color: string }) {
   );
 }
 
-export default function PublicActionBlock({ block, businessId }: Props) {
+export default function PublicActionBlock({ block, businessId, dark = false }: Props) {
+  // Card fill was a fixed 72% white, which turns into a glaring slab on a dark
+  // page. Derive it so the card is always visible against whatever is behind it.
+  const CARD = dark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.72)';
+  const CARD_BORDER = dark ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.82)';
+  const TEXT = dark ? '#FFFFFF' : '#151515';
+  const TEXT_MUTED = dark ? 'rgba(255,255,255,0.64)' : '#8A8A86';
   const href = safeUrl(block.url);
   const [hovered, setHovered] = useState(false);
   // Photos only render in the bigger sizes — mirrors the builder preview, so a
@@ -160,10 +166,10 @@ export default function PublicActionBlock({ block, businessId }: Props) {
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 11,
-        background: 'rgba(255,255,255,0.72)',
+        background: CARD,
+        border: `1px solid ${CARD_BORDER}`,
         backdropFilter: 'blur(24px) saturate(130%)',
         WebkitBackdropFilter: 'blur(24px) saturate(130%)',
-        border: '1px solid rgba(255,255,255,0.82)',
         borderRadius: 18, padding: '11px 14px',
         boxShadow: hovered
           ? '0 12px 36px rgba(0,0,0,0.10)'
@@ -184,7 +190,7 @@ export default function PublicActionBlock({ block, businessId }: Props) {
       {/* Text */}
       <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const }}>
         <div style={{
-          fontSize: 13, color: '#151515', lineHeight: 1.35,
+          fontSize: 13, color: TEXT, lineHeight: 1.35,
           fontWeight: block.titleBold ? 800 : 600,
           fontStyle: block.titleItalic ? 'italic' : 'normal',
         }}>
@@ -192,7 +198,7 @@ export default function PublicActionBlock({ block, businessId }: Props) {
         </div>
         {block.sub && (
           <div style={{
-            fontSize: 11, color: '#8A8A86', marginTop: 2, lineHeight: 1.35,
+            fontSize: 11, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35,
             fontWeight: block.subBold ? 700 : 400,
             fontStyle: block.subItalic ? 'italic' : 'normal',
             overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const,

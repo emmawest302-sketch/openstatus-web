@@ -244,7 +244,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
   // Glass card style
   const glass = {
-    background: 'rgba(255,255,255,0.72)',
+    background: bgIsDark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.72)',
     backdropFilter: 'blur(24px) saturate(130%)',
     WebkitBackdropFilter: 'blur(24px) saturate(130%)',
     border: '1px solid rgba(255,255,255,0.82)',
@@ -495,11 +495,12 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
           {/* Location block */}
           {locationBlockOn && locationBlock && (
-            <PublicLocationBlock block={locationBlock} businessId={business.id} themeColor={themeColor}/>
+            <PublicLocationBlock block={locationBlock} businessId={business.id} themeColor={themeColor} dark={bgIsDark}/>
           )}
 
           {/* All other blocks */}
           <PublishedBusinessBlocks
+          dark={bgIsDark}
             businessId={business.id}
             businessName={business.name}
             location={enrichedConfig.location || business.tagline || business.name}

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
-import { BG_KEYFRAMES, bgAnimationStyle } from '@/lib/page-theme';
+import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
@@ -112,22 +112,8 @@ const BG_DESIGNS: { label:string; css:string; anim?:'drift'|'fall'|'rise'; speed
 ];
 
 // config.bg may be a gradient/pattern. Anywhere we need a SOLID colour (e.g. to
-// fade a photo into the page) interpolating a gradient produces invalid CSS, so
-// pull out the last hex it contains and fall back to the default page colour.
-// Is the page background dark enough that light text is needed? Was previously
-// a hardcoded list of 5 hex values, so any gradient or custom colour fell through
-// as "light" and rendered near-black text on a dark page.
-function isDarkBg(bg?: string): boolean {
-  const hex = solidBg(bg);
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  return (0.2126*r + 0.7152*g + 0.0722*b) < 140;
-}
-function solidBg(bg?: string): string {
-  const v = (bg ?? '').trim();
-  if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
-  const hexes = v.match(/#[0-9a-fA-F]{6}/g);
-  return hexes ? hexes[hexes.length - 1] : '#F7F7F5';
-}
+
+
 const FONT_OPTIONS: { label:string; family:string; google?:string }[] = [
   { label:'Default',          family:'Inter, system-ui, sans-serif' },
   { label:'Playfair',         family:'"Playfair Display", Georgia, serif',      google:'Playfair+Display:wght@700;800' },
@@ -875,6 +861,14 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
   const tx = isDark?'text-white':'text-[#0A0A0A]';
   const sx = isDark?'text-white/55':'text-[#6B6B6B]';
   const { status, todayLabel } = getLiveStatus(config.weeklyHours);
+  const TOK = surfaceTokens(config.bg);
+  // Bold / italic are per-block, so every place a title or subtitle is drawn has
+  // to honour them — previously only the generic fallback did, which is why the
+  // toggles looked dead on most blocks.
+  const tStyle = (b:OpenStatusBlock):React.CSSProperties =>
+    ({ fontWeight: b.titleBold?800:undefined, fontStyle: b.titleItalic?'italic':undefined });
+  const sStyle = (b:OpenStatusBlock):React.CSSProperties =>
+    ({ fontWeight: b.subBold?700:undefined, fontStyle: b.subItalic?'italic':undefined });
   const locBlock = config.blocks.find(b=>b.id==='location');
   const reviewPct = locBlock?.reviewStars&&locBlock.reviewStars>0 ? starsToPercent(locBlock.reviewStars) : null;
 
@@ -938,8 +932,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
               {sortedBlocks.map(b=>{
                 const isSquare = b.size==='square' && b.id!=='hours';
                 const isHalf = (b.size==='half'||b.size==='square'||b.size==='third') && b.id!=='hours';
-                const cardBg = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.72)';
-                const bdr = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.82)';
+                const cardBg = TOK.card;
+                const bdr = TOK.cardBorder;
 
                 const bStyle = b.blockStyle ?? (b.id==='hours'?'minimal':b.id==='location'?'place':'brand');
                 const inner = (() => {
@@ -962,7 +956,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                     // default minimal
                     return (
                       <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
-                        <BlockIcon id={b.id} size={12} color={b.color}/>
+                        <BlockIcon id={b.id} size={12} color={TOK.icon(b.color)}/>
                         <div className="min-w-0 flex-1">
                           <p className={`text-[10px] font-bold ${tx}`}>{status==='open'?'Open now':'Closed'}</p>
                           <p className={`text-[8px] ${sx}`}>Tap for hours</p>
@@ -984,9 +978,9 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                     // Minimal layout — compact row
                     if(bStyle==='minimal') return (
                       <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
-                        <LucidePin size={10} color={b.color}/>
+                        <LucidePin size={10} color={TOK.icon(b.color)}/>
                         <div className="min-w-0 flex-1">
-                          <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
+                          <p className={`text-[10px] font-semibold ${tx} truncate`} style={tStyle(b)}>{b.title}</p>
                           {hasAddr&&!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{addr}</p>}
                         </div>
                         <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
@@ -1014,7 +1008,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                     // No address yet — prompt in the builder rather than a world map
                     return (
                       <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border border-dashed" style={{ borderColor:bdr }}>
-                        <LucidePin size={10} color={b.color}/>
+                        <LucidePin size={10} color={TOK.icon(b.color)}/>
                         <p className={`text-[9px] ${sx} flex-1`}>Add your address to show a map</p>
                       </div>
                     );
@@ -1026,8 +1020,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                         <div className="flex items-center gap-2">
                           <BlockIcon id="menu" size={12} color="white"/>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-semibold text-white truncate">{b.title}</p>
-                            {!isHalf&&<p className="text-[8px] text-white/40 truncate">{b.sub}</p>}
+                            <p className="text-[10px] font-semibold text-white truncate" style={tStyle(b)}>{b.title}</p>
+                            {!isHalf&&<p className="text-[8px] text-white/40 truncate" style={sStyle(b)}>{b.sub}</p>}
                           </div>
                           <span className="text-white/20 text-xs">›</span>
                         </div>
@@ -1039,8 +1033,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                         <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
                         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
                         <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
-                          <p className="text-[9px] font-bold truncate" style={{ color:'#fff' }}>{b.title}</p>
-                          {!isHalf&&<p className="text-[7px] truncate" style={{ color:'rgba(255,255,255,0.75)' }}>{b.sub}</p>}
+                          <p className="text-[9px] font-bold truncate" style={{ color:'#fff', ...tStyle(b) }}>{b.title}</p>
+                          {!isHalf&&<p className="text-[7px] truncate" style={{ color:'rgba(255,255,255,0.75)', ...sStyle(b) }}>{b.sub}</p>}
                         </div>
                       </div>
                     );
@@ -1049,10 +1043,10 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                       <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr, background:cardBg }}>
                         {b.coverPhoto&&<img src={b.coverPhoto} className="w-full h-[54px] object-cover" alt=""/>}
                         <div className="flex items-center gap-2 px-2.5 py-2.5">
-                          <BlockIcon id="menu" size={10} color={b.color}/>
+                          <BlockIcon id="menu" size={10} color={TOK.icon(b.color)}/>
                           <div className="min-w-0 flex-1">
-                            <p className={`text-[10px] font-semibold ${tx} truncate`}>{b.title}</p>
-                            {!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{b.sub}</p>}
+                            <p className={`text-[10px] font-semibold ${tx} truncate`} style={tStyle(b)}>{b.title}</p>
+                            {!isHalf&&<p className={`text-[8px] ${sx} truncate`} style={sStyle(b)}>{b.sub}</p>}
                           </div>
                           <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
                         </div>
@@ -1067,8 +1061,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                       <div className="rounded-2xl border overflow-hidden" style={{ borderColor:bdr }}>
                         {activeSocials.length===0
                           ?<div className="flex items-center gap-2 px-2.5 py-2.5" style={{ background:cardBg }}>
-                            <BlockIcon id="socials" size={10} color={b.color}/>
-                            <p className={`text-[10px] font-semibold ${tx}`}>{b.title}</p>
+                            <BlockIcon id="socials" size={10} color={TOK.icon(b.color)}/>
+                            <p className={`text-[10px] font-semibold ${tx}`} style={tStyle(b)}>{b.title}</p>
                           </div>
                           :activeSocials.slice(0,3).map((s,i)=>(
                             <div key={s.key} className={`flex items-center gap-2 px-2.5 py-1.5 ${i>0?'border-t':''}` } style={{ background:cardBg, borderColor:bdr }}>
@@ -1088,8 +1082,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                       <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
                       <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
                       <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
-                        <p className={`text-[9px] font-bold truncate`} style={{ color:'#fff' }}>{b.title}</p>
-                        {b.sub&&<p className={`text-[7px] truncate`} style={{ color:'rgba(255,255,255,0.75)' }}>{b.sub}</p>}
+                        <p className={`text-[9px] font-bold truncate`} style={{ color:'#fff', ...tStyle(b) }}>{b.title}</p>
+                        {b.sub&&<p className={`text-[7px] truncate`} style={{ color:'rgba(255,255,255,0.75)', ...sStyle(b) }}>{b.sub}</p>}
                       </div>
                       {b.url&&<div style={{ position:'absolute', top:5, right:5, width:14, height:14, borderRadius:'50%', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                         <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1100,7 +1094,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
 
                   return (
                     <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
-                      <BlockIcon id={b.id} size={10} color={b.color}/>
+                      <BlockIcon id={b.id} size={10} color={TOK.icon(b.color)}/>
                       <div className="min-w-0 flex-1">
                         <p className={`text-[10px] ${tx} truncate`}
                           style={{fontWeight:b.titleBold?800:600,fontStyle:b.titleItalic?'italic':'normal'}}>{b.title}</p>
@@ -1144,6 +1138,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
 // ── Desktop page preview (matches [slug]/page.tsx layout) ─────────────────────
 function LiveDesktopPreview({ business,config }: { business:Business|null; config:OpenStatusPageConfig }) {
   const isDark = isDarkBg(config.bg);
+  const DTOK = surfaceTokens(config.bg);
   const bg = config.bg || '#F7F7F5';
   const { status, todayLabel } = getLiveStatus(config.weeklyHours);
   const activeBlocks = config.blocks.filter(b => b.on);
@@ -1166,10 +1161,10 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
   const fadeGradient = `linear-gradient(to bottom, rgba(${r},${g},${bv},0) 0%, rgba(${r},${g},${bv},0.35) 48%, ${bg} 100%)`;
 
   const glass: React.CSSProperties = {
-    background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.72)',
+    background: DTOK.card,
     backdropFilter: 'blur(24px) saturate(130%)',
     WebkitBackdropFilter: 'blur(24px) saturate(130%)',
-    border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.82)'}`,
+    border: `1px solid ${DTOK.cardBorder}`,
     boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
     borderRadius: 20,
     padding: '14px 16px',
@@ -1241,7 +1236,7 @@ function LiveDesktopPreview({ business,config }: { business:Business|null; confi
             <div key={b.id} style={{ ...glass }}>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ width:40, height:40, borderRadius:'50%', flexShrink:0, background: isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
-                  <BlockIcon id={b.id} size={18} color={b.color}/>
+                  <BlockIcon id={b.id} size={18} color={DTOK.icon(b.color)}/>
                 </div>
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:15, fontWeight:700, color:tx, margin:0, letterSpacing:'-0.01em' }}>
@@ -2071,7 +2066,7 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
       <div className="border-t border-[#EBEBEB] pt-3 mt-1">
         {googleConnected?(
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-[11px] text-[#2E7D5B] font-medium">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#7C3AED] font-medium">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Auto-syncs to Google on every Save
             </div>
@@ -2324,8 +2319,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         is_closed: !!d?.closed,
       };
     });
-    await supabase.from('business_hours').delete().eq('business_id', businessId);
-    const { error } = await supabase.from('business_hours').insert(rows);
+    // Upsert (not delete+insert): two saves can overlap, and a delete that has not
+    // landed yet makes the insert collide on business_id+day_of_week. Upsert is also
+    // atomic per row, so the public page never sees a moment with zero hours rows.
+    const { error } = await supabase
+      .from('business_hours')
+      .upsert(rows, { onConflict: 'business_id,day_of_week' });
     if (error) throw new Error('Hours did not save to your live page: ' + error.message);
   }
 
@@ -2591,6 +2590,34 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       await loadStatusUpdates();
     }catch{}
     setStatusPosting(false);
+  };
+  // Escape hatch: clears every owner closure, re-publishes the weekly hours to the
+  // table the public page reads, and reopens the Google listing if it is closed.
+  // Needed because a failed hours save used to leave a page stuck on "closed"
+  // with nothing in the UI to undo.
+  const [reopenMsg,setReopenMsg]=useState<string>('');
+  const reopenEverything=async()=>{
+    setStatusPosting(true);setReopenMsg('');
+    const problems:string[]=[];
+    try{
+      const {data:s}=await supabase.auth.getSession();
+      const token=s?.session?.access_token;
+      if(!token){setReopenMsg('Your session expired — sign in again.');setStatusPosting(false);return;}
+      const r=await fetch('/api/status',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({action:'clear'})});
+      if(!r.ok) problems.push('could not clear your closures');
+    }catch{ problems.push('could not clear your closures'); }
+    if(business?.id&&config.weeklyHours){
+      try{ await syncHoursToDb(business.id, config.weeklyHours); }
+      catch(e){ problems.push(e instanceof Error?e.message:'hours did not republish'); }
+    }
+    if(googleConnected&&gStatus?.isClosed&&gStatus.canReopen!==false){
+      try{ await googleSetOpenState('reopen'); }
+      catch{ problems.push('Google would not reopen — try the Temporarily closed tab'); }
+    }
+    await loadStatusUpdates();
+    setReopenMsg(problems.length?problems.join(' · '):'✓ You\u2019re open again — your regular hours are live.');
+    setStatusPosting(false);
+    setTimeout(()=>setReopenMsg(''),8000);
   };
   const postStatus=async(preset:string)=>{
     setStatusPosting(true);
@@ -2897,6 +2924,21 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         <div className="rounded-2xl border border-dashed border-[#DEDEDC] bg-[#F7F7F5] px-4 py-3 text-center">
                           <p className="text-[13px] text-[#858585]">No live status — your regular hours show on your page.</p>
                         </div>
+                      )}
+                      <div className="mt-3 flex items-center gap-3 flex-wrap">
+                        <button
+                          onClick={reopenEverything}
+                          disabled={statusPosting}
+                          className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
+                        >
+                          {statusPosting?'Working…':'Reopen &amp; republish my hours'}
+                        </button>
+                        <p className="text-[11px] text-[#858585]">
+                          Clears every closure and pushes your weekly hours to your live page.
+                        </p>
+                      </div>
+                      {reopenMsg&&(
+                        <p className={`text-[12px] mt-2 ${reopenMsg.startsWith('\u2713')?'text-emerald-600':'text-[#EF4444]'}`}>{reopenMsg}</p>
                       )}
                     </div>
 
