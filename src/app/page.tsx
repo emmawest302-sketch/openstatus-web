@@ -350,7 +350,7 @@ export default function HomePage() {
             One dashboard. One update. Customers always know the truth.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 24 }}>
             {[
               {
                 label: 'Live status',
@@ -443,7 +443,7 @@ export default function HomePage() {
             Start with your free business page. Upgrade when you want OpenStatus to help keep your information synced across the places customers find you.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 760, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, maxWidth: 760, margin: '0 auto' }}>
             {/* Free */}
             <div style={{
               background: '#FFFFFF', borderRadius: 24,

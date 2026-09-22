@@ -1347,8 +1347,8 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
                   {DAYS.map(({key,label},i)=>{
                     const day=hours[key];
                     return (
-                      <div key={key} className={`flex items-center gap-3 px-4 ${i<DAYS.length-1?'border-b border-[#F5F5F5]':''}`} style={{ height:58 }}>
-                        <span className="text-[13px] font-medium text-[#0A0A0A] w-24 flex-shrink-0">{label}</span>
+                      <div key={key} className={`flex items-center gap-2 px-4 py-3 ${i<DAYS.length-1?'border-b border-[#F5F5F5]':''}`}>
+                        <span className="text-[13px] font-medium text-[#0A0A0A] w-10 flex-shrink-0">{label.slice(0,3)}</span>
                         <button
                           onClick={()=>onUpdateConfig({weeklyHours:{...hours,[key]:{...day,closed:!day.closed}}})}
                           className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all flex-shrink-0 font-semibold ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}

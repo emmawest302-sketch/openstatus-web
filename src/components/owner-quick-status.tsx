@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -31,33 +31,44 @@ export default function OwnerQuickStatus({
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [errorBar, setErrorBar] = useState(''); // visible in collapsed bar
   const [hasOwnerUpdate, setHasOwnerUpdate] = useState(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    let cancelled = false;
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
-    const checkOwner = async () => {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) return;
+  // Extracted so it can be called both on mount and after clear
+  const checkOwner = useCallback(async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token || !mountedRef.current) return;
 
-      const response = await fetch(`/api/status?businessId=${encodeURIComponent(businessId)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const body = await response.json().catch(() => null);
-      if (cancelled || !response.ok || !body?.isOwner) return;
+    const response = await fetch(`/api/status?businessId=${encodeURIComponent(businessId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await response.json().catch(() => null);
+    if (!mountedRef.current || !response.ok || !body?.isOwner) return;
 
-      setIsOwner(true);
-      setHasOwnerUpdate(Boolean(body.updates?.some((update: { source?: string }) => update.source === 'owner')));
-    };
-
-    void checkOwner();
-    return () => { cancelled = true; };
+    setIsOwner(true);
+    // Only count 'active' owner updates as blocking the Open button
+    setHasOwnerUpdate(
+      Boolean(body.updates?.some((u: { source?: string; status?: string }) =>
+        u.source === 'owner' && u.status === 'active'
+      ))
+    );
   }, [businessId]);
+
+  useEffect(() => {
+    void checkOwner();
+  }, [checkOwner]);
 
   const request = async (payload: Record<string, unknown>) => {
     setSaving(true);
     setMessage('');
+    setErrorBar('');
     try {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
@@ -75,13 +86,23 @@ export default function OwnerQuickStatus({
       if (!response.ok) throw new Error(body?.error ?? 'Could not update your status.');
 
       const cleared = payload.action === 'clear';
-      setHasOwnerUpdate(!cleared);
+
+      if (cleared) {
+        // Re-sync from server to confirm the clear actually worked
+        setHasOwnerUpdate(false);
+        await checkOwner();
+      } else {
+        setHasOwnerUpdate(true);
+      }
+
       setMessage(cleared ? 'Back to regular hours.' : 'Live page updated.');
       setReason('');
       router.refresh();
       if (variant === 'floating') window.setTimeout(() => setExpanded(false), 900);
     } catch (caught) {
-      setMessage(caught instanceof Error ? caught.message : 'Could not update your status.');
+      const msg = caught instanceof Error ? caught.message : 'Could not update your status.';
+      setMessage(msg);
+      setErrorBar(msg); // show in collapsed bar too
     } finally {
       setSaving(false);
     }
@@ -158,7 +179,7 @@ export default function OwnerQuickStatus({
 
   if (variant === 'dashboard') return <section className="mb-5">{panel}</section>;
 
-  // ── Floating owner bar (redesigned) ───────────────────────────────────────
+  // ── Floating owner bar ─────────────────────────────────────────────────────
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[560px] pb-[env(safe-area-inset-bottom)]">
       {expanded ? panel : (
@@ -171,95 +192,107 @@ export default function OwnerQuickStatus({
             border: '1px solid rgba(0,0,0,0.10)',
             borderRadius: 18,
             boxShadow: '0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)',
+            overflow: 'hidden',
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}
+        >
+          {/* Error strip — only shown when there's a problem in collapsed state */}
+          {errorBar ? (
+            <div style={{ padding: '6px 14px', background: '#FEE2E2', fontSize: 11, color: '#991B1B', fontWeight: 600 }}>
+              {errorBar}
+            </div>
+          ) : null}
+
+          <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
             padding: '8px 8px 8px 14px',
-            fontFamily: "'Inter', system-ui, sans-serif",
-          }}
-        >
-          {/* Label */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#0A0A0A', margin: 0, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {businessName}
-            </p>
-            <p style={{ fontSize: 11, color: '#8A8A8A', margin: 0, lineHeight: 1.3 }}>Owner view</p>
+          }}>
+            {/* Label */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#0A0A0A', margin: 0, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {businessName}
+              </p>
+              <p style={{ fontSize: 11, color: '#8A8A8A', margin: 0, lineHeight: 1.3 }}>Owner view</p>
+            </div>
+
+            {/* Open button */}
+            <button
+              type="button"
+              onClick={() => void request({ action: 'clear' })}
+              disabled={saving || !hasOwnerUpdate}
+              aria-label="Mark as open — clear current status update"
+              style={{
+                height: 36,
+                paddingLeft: 14,
+                paddingRight: 14,
+                borderRadius: 10,
+                border: '1px solid rgba(0,0,0,0.10)',
+                background: hasOwnerUpdate ? '#DCFCE7' : '#F5F5F3',
+                color: hasOwnerUpdate ? '#166534' : '#BDBDBD',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: (saving || !hasOwnerUpdate) ? 'default' : 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s',
+                flexShrink: 0,
+              }}
+            >
+              {saving ? '…' : '✓ Open'}
+            </button>
+
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => { setErrorBar(''); setExpanded(true); }}
+              disabled={saving}
+              style={{
+                height: 36,
+                paddingLeft: 14,
+                paddingRight: 14,
+                borderRadius: 10,
+                border: '1px solid rgba(0,0,0,0.10)',
+                background: hasOwnerUpdate ? '#F5F5F3' : '#FEE2E2',
+                color: hasOwnerUpdate ? '#BDBDBD' : '#991B1B',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s',
+                flexShrink: 0,
+              }}
+            >
+              ✕ Close
+            </button>
+
+            {/* Dashboard button */}
+            <a
+              href="/builder"
+              style={{
+                height: 36,
+                paddingLeft: 14,
+                paddingRight: 14,
+                borderRadius: 10,
+                background: '#0A0A0A',
+                color: '#FFFFFF',
+                fontSize: 12,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                transition: 'background 0.15s',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+              </svg>
+              Dashboard
+            </a>
           </div>
-
-          {/* Open button */}
-          <button
-            type="button"
-            onClick={() => void request({ action: 'clear' })}
-            disabled={saving || !hasOwnerUpdate}
-            style={{
-              height: 36,
-              paddingLeft: 14,
-              paddingRight: 14,
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.10)',
-              background: hasOwnerUpdate ? '#DCFCE7' : '#F5F5F3',
-              color: hasOwnerUpdate ? '#166534' : '#BDBDBD',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: hasOwnerUpdate ? 'pointer' : 'default',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.15s',
-              flexShrink: 0,
-            }}
-          >
-            ✓ Open
-          </button>
-
-          {/* Close button */}
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            disabled={saving}
-            style={{
-              height: 36,
-              paddingLeft: 14,
-              paddingRight: 14,
-              borderRadius: 10,
-              border: '1px solid rgba(0,0,0,0.10)',
-              background: hasOwnerUpdate ? '#F5F5F3' : '#FEE2E2',
-              color: hasOwnerUpdate ? '#BDBDBD' : '#991B1B',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.15s',
-              flexShrink: 0,
-            }}
-          >
-            ✕ Close
-          </button>
-
-          {/* Dashboard button */}
-          <a
-            href="/builder"
-            style={{
-              height: 36,
-              paddingLeft: 14,
-              paddingRight: 14,
-              borderRadius: 10,
-              background: '#0A0A0A',
-              color: '#FFFFFF',
-              fontSize: 12,
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              transition: 'background 0.15s',
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-            </svg>
-            Dashboard
-          </a>
         </div>
       )}
     </div>
