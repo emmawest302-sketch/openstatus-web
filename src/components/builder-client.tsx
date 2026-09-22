@@ -850,7 +850,14 @@ function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
 }
 
 // ── Screen preview (no phone frame) ───────────────────────────────────────────
-function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { business:Business|null; config:OpenStatusPageConfig; selectedId?:string|null; onSelectBlock?:(id:string)=>void }) {
+function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps }: {
+  business:Business|null;
+  config:OpenStatusPageConfig;
+  selectedId?:string|null;
+  onSelectBlock?:(id:string)=>void;
+  /** Mobile-only hook for long-press drag. Returns extra DOM props per block. */
+  blockProps?:(id:string)=>{ style?:React.CSSProperties } & React.DOMAttributes<HTMLDivElement> & Record<string,unknown>;
+}) {
   const activeBlocks = config.blocks.filter(b=>b.on);
   // Hours always first in preview
   const sortedBlocks = [
@@ -1107,10 +1114,17 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock }: { busine
                 })();
 
                 const isSelected = selectedId === b.id;
+                const extra = blockProps?.(b.id);
+                const { style: extraStyle, ...extraRest } = extra ?? {};
                 return (
-                  <div key={b.id} className={`${isHalf?'col-span-1':'col-span-2'} ${onSelectBlock?'cursor-pointer':''}`}
+                  <div key={b.id} data-block-id={b.id}
+                    className={`${isHalf?'col-span-1':'col-span-2'} ${onSelectBlock?'cursor-pointer':''}`}
                     onClick={()=>onSelectBlock?.(b.id)}
-                    style={isSelected?{ outline:'2px solid #0A0A0A', borderRadius:16, outlineOffset:2 }:{}}
+                    {...extraRest}
+                    style={{
+                      ...(isSelected?{ outline:'2px solid #7C3AED', borderRadius:16, outlineOffset:2 }:{}),
+                      ...(extraStyle ?? {}),
+                    }}
                   >
                     {inner}
                   </div>
@@ -2098,6 +2112,64 @@ function BuilderSparkline({data,color}:{data:number[];color:string}){
   return <svg width={w} height={h} style={{display:'block'}}><polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 }
 
+/**
+ * Mobile popup sheet. Deliberately auto-height and capped — the old builder put
+ * every editor in a 52vh panel that hid the page you were editing. These sit low,
+ * only as tall as their content, so the phone canvas stays visible above them.
+ */
+function MobileSheet({ open, title, onClose, children, maxVh = 62 }: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  maxVh?: number;
+}) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position:'fixed', inset:0, zIndex:44,
+          background:'rgba(10,10,10,0.28)',
+          backdropFilter:'blur(2px)',
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? 'auto' : 'none',
+          transition:'opacity .22s ease',
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        style={{
+          position:'fixed', left:0, right:0, zIndex:45,
+          bottom:'calc(56px + env(safe-area-inset-bottom))',
+          background:'#fff',
+          borderTopLeftRadius:26, borderTopRightRadius:26,
+          boxShadow:'0 -10px 44px rgba(0,0,0,0.18)',
+          maxHeight:`${maxVh}vh`,
+          display:'flex', flexDirection:'column',
+          transform: open ? 'translateY(0)' : 'translateY(115%)',
+          transition:'transform .3s cubic-bezier(.32,.72,0,1)',
+          fontFamily:'var(--font-poppins), system-ui, sans-serif',
+        }}
+      >
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px 8px', flexShrink:0 }}>
+          <div style={{ position:'absolute', left:'50%', top:6, transform:'translateX(-50%)', width:36, height:4, borderRadius:2, background:'#E4E7EC' }} />
+          <p style={{ fontSize:15, fontWeight:600, color:'#111', margin:0, letterSpacing:'-0.02em' }}>{title}</p>
+          <button type="button" onClick={onClose} aria-label="Close"
+            style={{ width:28, height:28, borderRadius:'50%', border:'none', background:'#F2F4F7', color:'#667085', fontSize:15, lineHeight:1, cursor:'pointer', flexShrink:0 }}>
+            ×
+          </button>
+        </div>
+        <div style={{ overflowY:'auto', padding:'4px 16px 20px', scrollbarWidth:'none' }}>
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function BuilderClient({ business,initialConfig,isFirstRun=false,onboardedAt,googleConnected=false }: {
   business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null; googleConnected?:boolean;
 }) {
@@ -2134,6 +2206,89 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [dragId,setDragId]=useState<string|null>(null);
   const [mobileBlockCat,setMobileBlockCat]=useState<string>('All');
   const [mobileSheetOpen,setMobileSheetOpen]=useState<boolean>(false);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  MOBILE SHELL STATE  (phone only — nothing below is read by the desktop
+  //  layout, which is rendered in its own branch and left untouched.)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /** Which small sheet is up over the phone canvas. null = just the canvas. */
+  type MSheetKind = null | 'block' | 'add' | 'font' | 'color' | 'background';
+  const [mSheet,setMSheet] = useState<MSheetKind>(null);
+
+  /** Widget currently picked up by a long press on the phone canvas. */
+  const [mDragId,setMDragId] = useState<string|null>(null);
+  const dragTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
+  const dragStart = useRef<{x:number;y:number}|null>(null);
+  const dragging  = useRef(false);
+
+  const cancelLongPress = useCallback(()=>{
+    if(dragTimer.current){ clearTimeout(dragTimer.current); dragTimer.current=null; }
+    dragStart.current=null;
+  },[]);
+
+  const endDrag = useCallback(()=>{
+    cancelLongPress();
+    dragging.current=false;
+    setMDragId(null);
+  },[cancelLongPress]);
+
+  /** Swap two blocks in config order. Live-reorders as the finger passes each one. */
+  const swapBlocks = useCallback((a:string,b:string)=>{
+    if(a===b) return;
+    setConfig(c=>{
+      const list=[...c.blocks];
+      const i=list.findIndex(x=>x.id===a), j=list.findIndex(x=>x.id===b);
+      if(i<0||j<0) return c;
+      [list[i],list[j]]=[list[j],list[i]];
+      return {...c,blocks:list};
+    });
+  },[]);
+
+  /**
+   * Long-press a widget to pick it up, then drag to rearrange — the iOS
+   * home-screen gesture. We reorder live as the finger crosses each neighbour
+   * rather than computing drop gaps, which keeps it correct in the two-column
+   * grid where blocks are different widths.
+   */
+  const mobileBlockProps = useCallback((id:string)=>({
+    style:{
+      touchAction: dragging.current ? 'none' as const : undefined,
+      transform: mDragId===id ? 'scale(1.06)' : undefined,
+      boxShadow: mDragId===id ? '0 12px 32px rgba(0,0,0,0.28)' : undefined,
+      opacity: mDragId && mDragId!==id ? 0.55 : undefined,
+      zIndex: mDragId===id ? 5 : undefined,
+      position: mDragId===id ? 'relative' as const : undefined,
+      transition: 'transform .18s cubic-bezier(.32,.72,0,1), opacity .18s, box-shadow .18s',
+    },
+    onPointerDown:(e:React.PointerEvent<HTMLDivElement>)=>{
+      dragStart.current={x:e.clientX,y:e.clientY};
+      cancelLongPress();
+      dragTimer.current=setTimeout(()=>{
+        dragging.current=true;
+        setMDragId(id);
+        // A short tick confirms the pick-up on devices that support it.
+        try{ navigator.vibrate?.(12); }catch{/* not supported */}
+      },320);
+    },
+    onPointerMove:(e:React.PointerEvent<HTMLDivElement>)=>{
+      // Before pick-up, any real movement means the user is scrolling, not holding.
+      if(!dragging.current){
+        const st=dragStart.current;
+        if(st && Math.hypot(e.clientX-st.x, e.clientY-st.y) > 8) cancelLongPress();
+        return;
+      }
+      e.preventDefault();
+      const el=document.elementFromPoint(e.clientX,e.clientY) as HTMLElement|null;
+      const over=el?.closest('[data-block-id]') as HTMLElement|null;
+      const overId=over?.getAttribute('data-block-id');
+      if(overId && mDragId && overId!==mDragId) swapBlocks(mDragId,overId);
+    },
+    onPointerUp:()=>{ const wasDragging=dragging.current; endDrag(); if(wasDragging) try{ navigator.vibrate?.(8); }catch{} },
+    onPointerCancel:endDrag,
+    onContextMenu:(e:React.MouseEvent)=>{ if(dragging.current) e.preventDefault(); },
+  }),[mDragId,cancelLongPress,endDrag,swapBlocks]);
+
   const [isMobile,setIsMobile]=useState<boolean>(false);
   const sheetDragRef=useRef<{startY:number,open:boolean}|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
@@ -4089,15 +4244,26 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>
 
       {/* ══════════════════════════════════════════════════════════
-           MOBILE LAYOUT  (hidden on md+)
+           MOBILE LAYOUT  (phone only — the desktop layout above is a
+           separate branch and is not affected by anything in here)
            ══════════════════════════════════════════════════════════ */}
 
-      {/* Mobile dark top bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-[#EBEBEA] flex items-center justify-between px-4 gap-3"
-        style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)'}}>
-        <span className="text-[#111111] font-semibold text-[17px] tracking-[-0.03em]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
-        <div className="flex items-center gap-2">
-
+      {/* ── TOP BAR ── names the section you're in; Save only where it means something */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/92 backdrop-blur-md border-b border-[#EBEBEA] flex items-center justify-between px-4 gap-3"
+        style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)',fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
+        <span className="text-[#111111] font-semibold text-[17px] tracking-[-0.03em] truncate">
+          {isEditSubTab?'Edit page'
+            :sidebarTab==='business'?'Business'
+            :sidebarTab==='hours'?'Status'
+            :sidebarTab==='analytics'?'Analytics'
+            :sidebarTab==='settings'?'Settings'
+            :'OpenStatus'}
+        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {business?.slug&&isEditSubTab&&(
+            <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+              className="text-[12px] font-medium text-[#667085] px-2 py-1">View ↗</a>
+          )}
           {showSaveButton?(
             <button onClick={save} disabled={saving}
               className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#EDE9FE] text-[#5B21B6]':saving?'bg-[#F4F6FA] text-[#98A2B3]':hasPublished?'bg-[#F5F3FF] text-[#6D28D9]':'bg-[#7C3AED] text-white'}`}>
@@ -4109,153 +4275,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </div>
 
-      {/* Mobile canvas — phone IS the editing surface, Canva-style */}
-      <div className="fixed left-0 right-0 bg-[#f5f3ff] overflow-y-auto"
+      {/* ══ FULL PAGES ══ Business, Status, Analytics and Settings are real pages,
+           not sheets over the canvas. The nav stays put underneath them. */}
+      <div className="fixed left-0 right-0 z-20 bg-white flex flex-col"
         style={{
-          display:isMobile?"block":"none",
+          display: isMobile && !isEditSubTab ? 'flex' : 'none',
           top:'calc(52px + env(safe-area-inset-top))',
-          bottom: mobileSheetOpen
-            ? 'calc(52vh + 56px + env(safe-area-inset-bottom))'
-            : isEditSubTab
-              ? 'calc(104px + env(safe-area-inset-bottom))'
-              : 'calc(56px + env(safe-area-inset-bottom))',
-          transition:'bottom 0.3s cubic-bezier(0.32,0.72,0,1)',
+          bottom:'calc(56px + env(safe-area-inset-bottom))',
+          fontFamily:'var(--font-poppins), system-ui, sans-serif',
         }}>
-        {/* Purple grid canvas background */}
-        <div className="min-h-full flex items-start justify-center py-3 px-2"
-          style={{backgroundImage:'linear-gradient(rgba(139,92,246,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.12) 1px,transparent 1px)',backgroundSize:'24px 24px',backgroundColor:'#f5f3ff',position:'relative'}}>
-          {/* Refresh button — top right of canvas */}
-          <div style={{position:'absolute',top:12,right:12,zIndex:10}}>
-            <button
-              onClick={e=>{e.stopPropagation();setPreviewKey(k=>k+1);}}
-              title="Refresh preview"
-              style={{
-                display:'flex',alignItems:'center',justifyContent:'center',
-                width:32,height:32,borderRadius:'50%',
-                background:'rgba(255,255,255,0.85)',
-                backdropFilter:'blur(8px)',
-                border:'1px solid rgba(0,0,0,0.08)',
-                boxShadow:'0 2px 8px rgba(0,0,0,0.12)',
-                cursor:'pointer',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#292929" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-            </button>
-          </div>
-          {/* Phone page — no phone frame, just the scrollable content card */}
-          <div className="w-full rounded-[24px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.16)]"
-            style={{maxWidth:340,marginLeft:'auto',marginRight:'auto'}}
-            onClick={()=>{ if(mobileSheetOpen) setMobileSheetOpen(false); }}>
-            <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
-              onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');setMobileSheetOpen(true);}}/>
-          </div>
-        </div>
-      </div>
 
-      {/* Mobile bottom sheet */}
-      <div className="fixed left-0 right-0 z-30 bg-white rounded-t-[24px] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden"
-        style={{display:isMobile?"flex":"none",bottom:isEditSubTab?'calc(104px + env(safe-area-inset-bottom))':'calc(56px + env(safe-area-inset-bottom))',height:'52vh',transform:mobileSheetOpen?'translateY(0)':'translateY(110%)',transition:'transform 0.3s cubic-bezier(0.32,0.72,0,1)'}}>
-
-        {/* Close button — tap to dismiss sheet */}
-        <button onClick={()=>setMobileSheetOpen(false)}
-          className="flex-shrink-0 flex items-center justify-center w-full pt-3 pb-2 active:opacity-60"
-          aria-label="Close panel">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F0F2F5]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-            <span className="text-[11px] font-normal text-[#667085]">Close</span>
-          </div>
-        </button>
-
-        {/* ── BLOCKS tab content ── */}
-        {sidebarTab==='design'&&(
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* If a block is selected, show its edit panel */}
-            {openId&&openBlock?(
-              <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-                <div className="flex items-center gap-2 pt-1 pb-3 flex-shrink-0">
-                  <button onClick={()=>setOpenId(null)}
-                    className="flex items-center gap-1 text-[12px] font-semibold text-[#667085] hover:text-[#111] transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                    Back
-                  </button>
-                  <span className="text-[14px] font-semibold text-[#111]">{openBlock.title||'Edit block'}</span>
-                </div>
-                <BlockEditPanel
-                  block={openBlock} config={config}
-                  onUpdateBlock={u=>updateBlock(openBlock.id,u)}
-                  onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
-                  onClose={()=>setOpenId(null)}
-                />
-              </div>
-            ):(
-            <>
-            {/* Header */}
-            <div className="flex items-start justify-between px-4 pt-1 pb-2 flex-shrink-0">
-              <div>
-                <h2 className="text-[20px] font-semibold text-[#111] leading-tight">Add blocks</h2>
-                <p className="text-[12px] text-[#667085] mt-0.5">Choose what to show on your page. Drag to reorder.</p>
-              </div>
-              <button className="w-8 h-8 rounded-full bg-[#F4F6FA] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              </button>
-            </div>
-            {/* Category pills */}
-            <div className="flex gap-2 px-4 pb-3 overflow-x-auto flex-shrink-0" style={{scrollbarWidth:'none',msOverflowStyle:'none'}}>
-              {['All','Essential','Food & Beverage','Engagement','Contact','Social','More'].map(cat=>(
-                <button key={cat} onClick={()=>setMobileBlockCat(cat)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${mobileBlockCat===cat?'bg-[#7C3AED] text-white font-semibold':'bg-[#F4F6FA] text-[#667085]'}`}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-            {/* Block grid */}
-            <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-              <div className="grid grid-cols-2 gap-3">
-                {(()=>{
-                  const catMap: Record<string,string[]> = {
-                    'Essential':['hours','location'],
-                    'Food & Beverage':['menu','order'],
-                    'Engagement':['book'],
-                    'Contact':['website'],
-                    'More':[],
-                  };
-                  const showIds = mobileBlockCat==='All'
-                    ? DEFAULT_BLOCKS.map(b=>b.id)
-                    : (catMap[mobileBlockCat]??[]);
-                  return DEFAULT_BLOCKS.filter(b=>showIds.includes(b.id)&&b.id!=='socials').map(def=>{
-                    const isOn = allBlocks.find(b=>b.id===def.id)?.on;
-                    return (
-                      <div key={def.id}
-                        className="flex items-center gap-2.5 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-left active:bg-[#F0F2F5] transition-colors">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                          style={{backgroundColor:`${def.color}18`,border:`1px solid ${def.color}30`}}>
-                          <BlockIcon id={def.id} size={18} color={def.color}/>
-                        </div>
-                        <button className="flex-1 min-w-0 text-left"
-                          onClick={()=>{ if(!isOn){enableBlock(def.id);}else{setOpenId(def.id);} }}>
-                          <p className="text-[11px] font-semibold text-[#111] leading-tight truncate">{def.title}</p>
-                          <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{isOn?'Tap to edit':'Tap to add'}</p>
-                        </button>
-                        <button
-                          onClick={e=>{e.stopPropagation();if(isOn){removeBlock(def.id);}else{enableBlock(def.id);}}}
-                          className={`w-6 h-6 rounded-full border flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${isOn?'bg-[#111] border-[#111]':'border-[#D0D5DD]'}`}>
-                          {isOn
-                            ?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            :<span className="text-[14px] leading-none text-[#98A2B3]">+</span>
-                          }
-                        </button>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-            </>
-            )}
-          </div>
-        )}
-
-        {/* ── BUSINESS tab content ── */}
+{/* ── BUSINESS tab content ── */}
         {sidebarTab==='business'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
             <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Business</h2>
@@ -4382,53 +4412,150 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
           </div>
         )}
-
-        {/* ── HOURS tab (accessible from Business → Edit hours) ── */}
+        {/* ── STATUS page ── today's controls, then the weekly hours they fall back to ── */}
         {sidebarTab==='hours'&&(
-          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-            <div className="flex items-center gap-2 pt-1 pb-3">
-              <button onClick={()=>setSidebarTab('business')}
-                className="w-7 h-7 rounded-full bg-[#F4F6FA] flex items-center justify-center">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <h2 className="text-[18px] font-semibold text-[#111]">Hours</h2>
+          <div className="flex-1 overflow-y-auto px-4 pb-6" style={{scrollbarWidth:'none'}}>
+
+            {/* Google closed-listing recovery. OpenStatus can't set this state,
+                only clear it, so the banner only appears when Google reports it. */}
+            {googleConnected&&gStatus?.isClosed&&(
+              <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4 mt-3">
+                <p className="text-[13px] font-semibold text-[#111] mb-1">
+                  Google lists you as {gStatus.status==='CLOSED_TEMPORARILY'?'temporarily closed':(gStatus.status??'closed')}
+                </p>
+                <p className="text-[11.5px] text-[#B54708] leading-relaxed mb-3">
+                  Google reviews reopenings and it can take a few days.
+                </p>
+                <button disabled={gBusy||gStatus.canReopen===false}
+                  onClick={()=>void googleReopen()}
+                  className="w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+                  {gBusy?'Asking Google…':'Ask Google to reopen'}
+                </button>
+              </div>
+            )}
+
+            {/* What the page says right now */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-4 mb-2">What customers see</p>
+            {statusUpdates.filter(u=>u.status!=='needs_review').length>0?(
+              statusUpdates.filter(u=>u.status!=='needs_review').map(u=>(
+                <div key={u.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8EBF0] bg-white px-4 py-3 mb-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"/>
+                    <p className="text-[13px] font-semibold text-[#111] truncate">{u.headline}</p>
+                  </div>
+                  <button onClick={clearStatus} disabled={statusPosting}
+                    className="flex-shrink-0 text-[12px] font-semibold text-[#EF4444] disabled:opacity-40">
+                    {statusPosting?'…':'Undo'}
+                  </button>
+                </div>
+              ))
+            ):(
+              <div className="rounded-2xl border border-dashed border-[#E8EBF0] bg-[#F9FAFB] px-4 py-3 mb-2">
+                <p className="text-[12.5px] text-[#667085]">Your normal weekly hours.</p>
+              </div>
+            )}
+
+            <button onClick={reopenEverything} disabled={statusPosting}
+              className="w-full mt-1 py-2.5 rounded-xl bg-[#F5F3FF] text-[#6D28D9] text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+              {statusPosting?'Working…':'Reset me to my regular hours'}
+            </button>
+            <p className="text-[11px] text-[#98A2B3] mt-1.5 leading-relaxed">
+              Use if your page is stuck saying closed. Clears every closure and re-sends your hours.
+            </p>
+
+            {/* Today only */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-6 mb-1">Just for today</p>
+            <p className="text-[11.5px] text-[#667085] mb-3 leading-relaxed">
+              Expires tonight on its own. Doesn&apos;t touch your Google listing.
+            </p>
+
+            <button onClick={()=>postStatus('closed_today')} disabled={statusPosting}
+              className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-[#E8EBF0] bg-white mb-2 active:bg-[#FEF2F2] transition-colors disabled:opacity-40">
+              <div className="w-9 h-9 rounded-xl bg-[#FEF2F2] flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-[13px] font-semibold text-[#111] leading-tight">Closed for the rest of today</p>
+                <p className="text-[11px] text-[#667085] leading-tight mt-0.5">Reopens by itself tomorrow</p>
+              </div>
+            </button>
+
+            <div className="p-3.5 rounded-2xl border border-[#E8EBF0] bg-white mb-2">
+              <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
+              <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">Shows a new closing time, today only.</p>
+              <div className="flex items-center gap-2">
+                <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
+                  className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
+                  {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                </select>
+                <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
+                  className="px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
+                  {statusPosting?'…':'Show it'}
+                </button>
+              </div>
             </div>
+
+            <div className="p-3.5 rounded-2xl border border-[#E8EBF0] bg-white">
+              <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
+              <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">Shows beside your hours. Doesn&apos;t mark you closed.</p>
+              <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
+                placeholder="Running about 20 minutes behind today…" rows={2}
+                className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
+                <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
+                  className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
+                  {statusPosting?'…':'Show this note'}
+                </button>
+              </div>
+            </div>
+
+            {/* Dated closures — these DO reach Google, which is why they're labelled */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-6 mb-1">Closed on a date</p>
+            <p className="text-[11.5px] text-[#667085] mb-3 leading-relaxed">
+              Carries real dates, so your hours come back on their own
+              {googleConnected?' — safe to send to Google, and it will.':'.'}
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {([
+                {label:'Closed today',        days:0 },
+                {label:'Closed tomorrow',     days:1 },
+                {label:'Closed this weekend', days:-1},
+              ]).map(({label,days})=>(
+                <button key={label} disabled={gBusy}
+                  onClick={()=>{
+                    const now=new Date();
+                    let from=new Date(now), to=new Date(now);
+                    if(days===1){ from.setDate(now.getDate()+1); to=new Date(from); }
+                    if(days===-1){
+                      const dow=now.getDay();
+                      from=new Date(now); from.setDate(now.getDate()+((6-dow+7)%7));
+                      to=new Date(from);  to.setDate(from.getDate()+1);
+                    }
+                    void googleCloseDates(from,to,label);
+                  }}
+                  className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#E8EBF0] bg-white active:bg-[#FAFAFF] transition-colors disabled:opacity-40">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'#F5F3FF'}}>
+                    <LucideCalendar size={15} color="#7C3AED"/>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[13px] font-semibold text-[#111] leading-tight">{label}</p>
+                    <p className="text-[11px] text-[#98A2B3] leading-tight mt-0.5">{googleConnected?'Your page + Google':'Your page'}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {gMsg&&<p className={`text-[12px] mt-3 ${gMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{gMsg}</p>}
+
+            {/* Weekly hours live here too, so Status is one page not two */}
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-6 mb-2">Your normal week</p>
             <div className="rounded-2xl border border-[#E8EBF0] overflow-hidden bg-white">
               {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
             </div>
           </div>
         )}
 
-        {/* ── PHOTOS tab ── */}
-        {sidebarTab==='style'&&(
-          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Style</h2>
-
-            {/* Font picker */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Business Name Font</p>
-            <div className="grid grid-cols-2 gap-2 mb-5">
-              {FONT_OPTIONS.map(opt=>{
-                const isActive = (config.font??FONT_OPTIONS[0].family)===opt.family;
-                return (
-                  <button key={opt.family}
-                    onClick={()=>setConfig(c=>({...c,font:opt.family}))}
-                    className={`flex flex-col items-start px-3 py-2.5 rounded-2xl border transition-all text-left active:scale-95 ${isActive?'border-[#111] bg-[#111]':'border-[#E8EBF0] bg-[#F9FAFB]'}`}>
-                    <span className={`text-[16px] leading-tight ${isActive?'text-white':'text-[#111]'}`}
-                      style={{fontFamily:opt.family}}>Aa</span>
-                    <span className={`text-[10px] font-semibold mt-0.5 ${isActive?'text-white/70':'text-[#98A2B3]'}`}>{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Page color */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Page background</p>
-            <div className="mb-4"><PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))} dark/></div>
-          </div>
-        )}
-
-
-        {/* ── ANALYTICS mobile tab ── */}
+{/* ── ANALYTICS mobile tab ── */}
         {sidebarTab==='analytics'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
             <div className="flex items-center justify-between pt-1 pb-3">
@@ -4506,8 +4633,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
           </div>
         )}
-
-        {/* ── SETTINGS tab ── */}
+{/* ── SETTINGS tab ── */}
         {sidebarTab==='settings'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
             <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Settings</h2>
@@ -4558,73 +4684,184 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           </div>
         )}
 
-      </div>{/* end bottom sheet */}
+      </div>{/* end of the full-page container */}
 
-      {/* ── MOBILE EDIT PILL TOOLBAR ── Floats above nav when Edit tab is active */}
-      <div className="fixed left-0 right-0 z-40 flex justify-center"
+      {/* ══ EDIT CANVAS ══ the phone page itself is the editing surface.
+           Tap a widget to edit it, press and hold to pick it up and rearrange. */}
+      <div className="fixed left-0 right-0 overflow-y-auto"
         style={{
-          display:isMobile?'flex':'none',
+          display: isMobile && isEditSubTab ? 'block' : 'none',
+          top:'calc(52px + env(safe-area-inset-top))',
+          bottom:'calc(112px + env(safe-area-inset-bottom))',
+          backgroundColor:'#f5f3ff',
+          backgroundImage:'linear-gradient(rgba(139,92,246,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.12) 1px,transparent 1px)',
+          backgroundSize:'24px 24px',
+          touchAction: mDragId ? 'none' : undefined,
+        }}>
+        <div className="min-h-full flex items-start justify-center py-3 px-2" style={{position:'relative'}}>
+          <div style={{position:'absolute',top:12,right:12,zIndex:10}}>
+            <button onClick={e=>{e.stopPropagation();setPreviewKey(k=>k+1);}} title="Refresh preview"
+              style={{display:'flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,0.85)',backdropFilter:'blur(8px)',border:'1px solid rgba(0,0,0,0.08)',boxShadow:'0 2px 8px rgba(0,0,0,0.12)',cursor:'pointer'}}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#292929" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+          </div>
+
+          <div className="w-full rounded-[24px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.16)]"
+            style={{maxWidth:340,marginLeft:'auto',marginRight:'auto'}}>
+            <LivePhonePreview key={previewKey} business={localBusiness} config={config}
+              selectedId={mSheet==='block'?openId:null}
+              onSelectBlock={id=>{ if(dragging.current) return; setOpenId(id); setSidebarTab('design'); setMSheet('block'); }}
+              blockProps={mobileBlockProps}/>
+          </div>
+        </div>
+
+        {/* Coach line — the hold gesture isn't discoverable on its own */}
+        <p className="text-center text-[11px] text-[#8B5CF6] pb-4 pt-1 font-medium">
+          {mDragId?'Drag to rearrange, let go to drop':'Tap a widget to edit · hold to move it'}
+        </p>
+      </div>
+
+      {/* ══ EDIT TOOLBAR ══ replaces the full-screen Blocks/Style sheet */}
+      <div className="fixed left-0 right-0 z-40 flex justify-center px-3"
+        style={{
+          display: isMobile ? 'flex' : 'none',
           bottom:'calc(56px + env(safe-area-inset-bottom))',
-          padding:'0 0 8px 0',
-          transform:isEditSubTab?'translateY(0)':'translateY(calc(100% + 8px))',
+          paddingBottom:8,
+          transform:isEditSubTab?'translateY(0)':'translateY(calc(100% + 12px))',
           opacity:isEditSubTab?1:0,
           pointerEvents:isEditSubTab?'auto':'none',
-          transition:'transform 0.25s cubic-bezier(0.32,0.72,0,1), opacity 0.2s ease',
+          transition:'transform .25s cubic-bezier(.32,.72,0,1), opacity .2s ease',
         }}>
-        <div className="flex bg-white/90 backdrop-blur border border-[#EBEBEA] rounded-full p-1 gap-0.5 shadow-[0_4px_20px_rgba(124,58,237,0.14)]">
+        <div className="flex w-full max-w-[420px] bg-white/92 backdrop-blur border border-[#EBEBEA] rounded-2xl p-1 gap-1 shadow-[0_6px_24px_rgba(124,58,237,0.16)]">
           {([
-            {key:'design' as SidebarTab,label:'Blocks',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>},
-            {key:'style' as SidebarTab,label:'Style',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>},
-          ] as {key:SidebarTab;label:string;svg:React.ReactNode}[]).map(({key,label,svg})=>(
+            {key:'add'        as const, label:'Block',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>},
+            {key:'font'       as const, label:'Font',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>},
+            {key:'color'      as const, label:'Color',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>},
+            {key:'background' as const, label:'Background', svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>},
+          ]).map(({key,label,svg})=>(
             <button key={key}
-              onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[12px] font-semibold transition-all ${sidebarTab===key?'bg-[#F5F3FF] text-[#6D28D9]':'text-[#98A2B3]'}`}>
+              onClick={()=>{ setSidebarTab('design'); setOpenId(null); setMSheet(m=>m===key?null:key); }}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10.5px] font-semibold transition-all active:scale-95 ${mSheet===key?'bg-[#F5F3FF] text-[#6D28D9]':'text-[#667085]'}`}>
               {svg}{label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* ── MOBILE BOTTOM NAV ── 4 items: Business | Analytics | Edit | Settings */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E8EBF0] flex items-stretch"
-        style={{display:isMobile?"flex":"none", paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))' }}>
-        {/* Business */}
-        <button onClick={()=>{if(sidebarTab==='business'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('business');setMobileSheetOpen(true);}}}
-          className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
-          {sidebarTab==='business'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F5F3FF]"/>}
-          <span className="relative z-10" style={{color:sidebarTab==='business'?'#6D28D9':'#98A2B3'}}>
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </span>
-          <span className={`text-[9px] font-medium leading-none relative z-10 ${sidebarTab==='business'?'text-[#6D28D9]':'text-[#98A2B3]'}`}>Business</span>
-        </button>
-        {/* Analytics */}
-        <button onClick={()=>{if(sidebarTab==='analytics'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('analytics');setMobileSheetOpen(true);}}}
-          className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
-          {sidebarTab==='analytics'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F5F3FF]"/>}
-          <span className="relative z-10" style={{color:sidebarTab==='analytics'?'#6D28D9':'#98A2B3'}}>
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
-          </span>
-          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='analytics'?'text-[#6D28D9]':'text-[#98A2B3]'}`}>Analytics</span>
-        </button>
-        {/* Edit — meta-tab that activates the Blocks/Photos/Style pill */}
-        <button onClick={()=>{if(isEditSubTab&&mobileSheetOpen){setMobileSheetOpen(false);}else{if(!isEditSubTab)setSidebarTab('design');setMobileSheetOpen(true);}}}
-          className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
-          {isEditSubTab&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F5F3FF]"/>}
-          <span className="relative z-10" style={{color:isEditSubTab?'#6D28D9':'#98A2B3'}}>
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </span>
-          <span className={`text-[9px] font-semibold leading-none relative z-10 ${isEditSubTab?'text-[#6D28D9]':'text-[#98A2B3]'}`}>Edit</span>
-        </button>
-        {/* Settings */}
-        <button onClick={()=>{if(sidebarTab==='settings'&&mobileSheetOpen){setMobileSheetOpen(false);}else{setSidebarTab('settings');setMobileSheetOpen(true);}}}
-          className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-colors">
-          {sidebarTab==='settings'&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-7 rounded-xl bg-[#F5F3FF]"/>}
-          <span className="relative z-10" style={{color:sidebarTab==='settings'?'#6D28D9':'#98A2B3'}}>
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          </span>
-          <span className={`text-[9px] font-semibold leading-none relative z-10 ${sidebarTab==='settings'?'text-[#6D28D9]':'text-[#98A2B3]'}`}>Settings</span>
-        </button>
+      {/* ══ SMALL SHEETS ══ one per toolbar button, plus the per-widget editor */}
+
+      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={68}>
+        {openBlock&&(
+          <BlockEditPanel
+            block={openBlock} config={config}
+            onUpdateBlock={u=>updateBlock(openBlock.id,u)}
+            onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
+            onClose={()=>{setMSheet(null);setOpenId(null);}}
+          />
+        )}
+      </MobileSheet>
+
+      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={64}>
+        <div className="flex gap-2 pb-3 overflow-x-auto" style={{scrollbarWidth:'none'}}>
+          {['All','Essential','Food & Beverage','Engagement','Contact','Social','More'].map(cat=>(
+            <button key={cat} onClick={()=>setMobileBlockCat(cat)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] transition-all ${mobileBlockCat===cat?'bg-[#7C3AED] text-white font-semibold':'bg-[#F4F6FA] text-[#667085] font-medium'}`}>
+              {cat}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {(()=>{
+            const catMap: Record<string,string[]> = {
+              'Essential':['hours','location'],
+              'Food & Beverage':['menu','order'],
+              'Engagement':['book'],
+              'Contact':['website'],
+              'More':[],
+            };
+            const showIds = mobileBlockCat==='All' ? DEFAULT_BLOCKS.map(b=>b.id) : (catMap[mobileBlockCat]??[]);
+            return DEFAULT_BLOCKS.filter(b=>showIds.includes(b.id)&&b.id!=='socials').map(def=>{
+              const isOn = allBlocks.find(b=>b.id===def.id)?.on;
+              return (
+                <button key={def.id}
+                  onClick={()=>{ if(!isOn){ enableBlock(def.id); } else { setOpenId(def.id); setMSheet('block'); } }}
+                  className="flex items-center gap-2.5 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-left active:scale-[0.97] transition-transform">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{backgroundColor:`${def.color}18`,border:`1px solid ${def.color}30`}}>
+                    <BlockIcon id={def.id} size={17} color={def.color}/>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11.5px] font-semibold text-[#111] leading-tight truncate">{def.title}</p>
+                    <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{isOn?'On — tap to edit':'Tap to add'}</p>
+                  </div>
+                  {isOn&&(
+                    <span className="w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                  )}
+                </button>
+              );
+            });
+          })()}
+        </div>
+      </MobileSheet>
+
+      <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={56}>
+        <p className="text-[11.5px] text-[#667085] mb-3">Changes every bit of text on your page.</p>
+        <div className="grid grid-cols-2 gap-2.5">
+          {FONT_OPTIONS.map(opt=>{
+            const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
+            return (
+              <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
+                className={`flex flex-col items-start px-3 py-3 rounded-2xl border transition-all active:scale-95 ${isActive?'border-[#7C3AED] bg-[#F5F3FF]':'border-[#E8EBF0] bg-[#F9FAFB]'}`}>
+                <span className={`text-[19px] leading-tight ${isActive?'text-[#6D28D9]':'text-[#111]'}`} style={{fontFamily:opt.family}}>Aa</span>
+                <span className={`text-[10px] font-semibold mt-1 ${isActive?'text-[#7C3AED]':'text-[#98A2B3]'}`}>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </MobileSheet>
+
+      <MobileSheet open={isMobile&&mSheet==='color'} title="Business name colour" onClose={()=>setMSheet(null)} maxVh={52}>
+        <p className="text-[11.5px] text-[#667085] mb-3">Pick a colour that reads clearly on your background.</p>
+        <NameColorPicker
+          value={config.nameColor}
+          autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
+          onChange={v=>setConfig(c=>({...c,nameColor:v}))}
+        />
+      </MobileSheet>
+
+      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={66}>
+        <p className="text-[11.5px] text-[#667085] mb-3">Your widgets lighten or darken automatically to stay readable.</p>
+        <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
+      </MobileSheet>
+
+
+      {/* ── BOTTOM NAV ── always visible, on every page */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-[#E8EBF0] flex items-stretch"
+        style={{display:isMobile?"flex":"none", paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))', fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
+        {([
+          {key:'business'  as SidebarTab, label:'Business',  active:sidebarTab==='business',
+           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
+          {key:'hours'     as SidebarTab, label:'Status',    active:sidebarTab==='hours',
+           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>},
+          {key:'analytics' as SidebarTab, label:'Analytics', active:sidebarTab==='analytics',
+           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>},
+          {key:'design'    as SidebarTab, label:'Edit',      active:isEditSubTab,
+           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>},
+          {key:'settings'  as SidebarTab, label:'Settings',  active:sidebarTab==='settings',
+           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>},
+        ]).map(({key,label,active,svg})=>(
+          <button key={label}
+            onClick={()=>{ setSidebarTab(key); setMSheet(null); setOpenId(null); }}
+            className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:opacity-70 transition-opacity">
+            {active&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-11 h-7 rounded-xl bg-[#F5F3FF]"/>}
+            <span className="relative z-10" style={{color:active?'#6D28D9':'#98A2B3'}}>{svg}</span>
+            <span className={`text-[9px] font-medium leading-none relative z-10 ${active?'text-[#6D28D9]':'text-[#98A2B3]'}`}>{label}</span>
+          </button>
+        ))}
       </nav>
+
 
       {/* ── QUICK ACTION FLYOUT ── */}
       {quickAction&&(
