@@ -1279,6 +1279,73 @@ function CoverPhotoField({ block, onUpdateBlock, label='Cover photo', hint }: {
   return <PhotoField label={label} value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint={hint}/>;
 }
 
+// ── Cover photo crop ─────────────────────────────────────────────────────────
+// Framed at the SAME aspect ratio as the live page header (600x280), so what the
+// owner positions here is exactly what visitors see. Drag (mouse or touch) to
+// move the focal point; the slider is the precise fallback for vertical nudges,
+// which is what almost every crop actually needs.
+const COVER_W = 600, COVER_H = 280;
+function CoverPhotoCrop({ src, position, onChange, onRemove }: {
+  src: string; position?: string;
+  onChange:(pos:string)=>void; onRemove:()=>void;
+}) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [dragging,setDragging] = useState(false);
+  const [rawX,rawY] = (position ?? '50% 60%').split(' ');
+  const px = parseFloat(rawX) || 50;
+  const py = parseFloat(rawY) || 60;
+
+  function apply(clientX:number, clientY:number) {
+    const el = frameRef.current; if(!el) return;
+    const r = el.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, Math.round(((clientX-r.left)/r.width)*100)));
+    const y = Math.max(0, Math.min(100, Math.round(((clientY-r.top)/r.height)*100)));
+    onChange(`${x}% ${y}%`);
+  }
+
+  return (
+    <div className="mb-3">
+      <div
+        ref={frameRef}
+        className="relative rounded-xl overflow-hidden touch-none select-none"
+        style={{ aspectRatio:`${COVER_W} / ${COVER_H}`, cursor: dragging ? 'grabbing' : 'grab' }}
+        title="Drag to reposition"
+        onPointerDown={e=>{ e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); apply(e.clientX,e.clientY); }}
+        onPointerMove={e=>{ if(dragging) apply(e.clientX,e.clientY); }}
+        onPointerUp={e=>{ e.currentTarget.releasePointerCapture(e.pointerId); setDragging(false); }}
+        onPointerCancel={()=>setDragging(false)}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt="Cover" draggable={false}
+          className="w-full h-full object-cover pointer-events-none"
+          style={{ objectPosition:`${px}% ${py}%` }}/>
+        {/* focal marker */}
+        <div style={{
+          position:'absolute', left:`${px}%`, top:`${py}%`,
+          transform:'translate(-50%,-50%)',
+          width:18, height:18, borderRadius:'50%',
+          border:'2px solid #fff', background:'rgba(255,255,255,0.35)',
+          boxShadow:'0 0 0 1px rgba(0,0,0,0.45)', pointerEvents:'none',
+        }}/>
+        <span className="absolute bottom-1.5 left-2 text-[9px] font-semibold text-white/85 pointer-events-none"
+          style={{textShadow:'0 1px 3px rgba(0,0,0,0.7)'}}>Drag to reposition</span>
+        <button onClick={e=>{e.stopPropagation();onRemove();}}
+          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
+          <LucideX size={10} color="white"/>
+        </button>
+      </div>
+      {/* vertical nudge — the axis that actually matters on a wide banner */}
+      <div className="flex items-center gap-2.5 mt-2">
+        <span className="text-[10px] font-semibold text-[#98A2B3] w-8 flex-shrink-0">Up</span>
+        <input type="range" min={0} max={100} value={py}
+          onChange={e=>onChange(`${px}% ${e.target.value}%`)}
+          className="flex-1 accent-[#4ADE80]" aria-label="Vertical crop position"/>
+        <span className="text-[10px] font-semibold text-[#98A2B3] w-10 flex-shrink-0 text-right">Down</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Collapsible "More options" disclosure ─────────────────────────────────────
 function MoreOptions({ label='More options', children }: { label?:string; children:React.ReactNode }) {
   const [open,setOpen]=useState(false);
@@ -1804,7 +1871,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'photos'|'links'|'analytics'|'integrations';
+type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'links'|'analytics'|'integrations';
 type HoursSubTab = 'regular'|'special'|'status'|'auto';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
@@ -1994,7 +2061,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours);
   const hours = config.weeklyHours??{...DEFAULT_WEEK_HOURS};
   const showEditPanel = !!openBlock && sidebarTab==='design';
-  const isEditSubTab = ['design','photos','style'].includes(sidebarTab);
+  const isEditSubTab = ['design','style'].includes(sidebarTab);
   const igHandle = (business as (Business & { instagram_handle?: string })|null)?.instagram_handle??null;
 
   function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
@@ -2098,7 +2165,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     { key:'hours',    label:'Hours',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
       badge:<span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#98A2B3]'}`}>{liveStatus==='open'?'Open':'Closed'}</span> },
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
-    { key:'photos',   label:'Photos',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
     { key:'style',    label:'Style',    icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg> },
 
     { key:'settings', label:'Settings', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
@@ -2676,530 +2742,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                       {/* Background photo */}
                       <div>
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Background photo</p>
+                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-wider mb-3">Cover photo</p>
                         {config.bgImage&&(
-                          <div className="mb-3">
-                            {/* Focal point picker — click to set crop position */}
-                            <div className="relative rounded-xl overflow-hidden cursor-crosshair" style={{height:80}}
-                              title="Click to set where to focus the photo"
-                              onClick={(e)=>{
-                                const rect=e.currentTarget.getBoundingClientRect();
-                                const x=Math.round(((e.clientX-rect.left)/rect.width)*100);
-                                const y=Math.round(((e.clientY-rect.top)/rect.height)*100);
-                                setConfig(c=>({...c,bgImagePosition:`${x}% ${y}%`}));
-                              }}
-                            >
-                              <img src={config.bgImage} className="w-full h-full object-cover" alt="Background"
-                                style={{objectPosition:config.bgImagePosition??'center 60%'}}/>
-                              {/* Crosshair dot at focal point */}
-                              {config.bgImagePosition&&(()=>{
-                                const [px,py]=(config.bgImagePosition||'50% 60%').split(' ');
-                                return (
-                                  <div style={{
-                                    position:'absolute',
-                                    left:`calc(${px} - 6px)`,
-                                    top:`calc(${py} - 6px)`,
-                                    width:12,height:12,
-                                    borderRadius:'50%',
-                                    border:'2px solid white',
-                                    background:'rgba(255,255,255,0.6)',
-                                    boxShadow:'0 0 0 1px rgba(0,0,0,0.4)',
-                                    pointerEvents:'none',
-                                  }}/>
-                                );
-                              })()}
-                              {/* Remove button */}
-                              <button onClick={e=>{e.stopPropagation();setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}));}}
-                                className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
-                                <LucideX size={10} color="white"/>
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-[#858585] mt-1.5">Click the photo to set the crop focal point</p>
-                          </div>
+                          <CoverPhotoCrop
+                            src={config.bgImage}
+                            position={config.bgImagePosition}
+                            onChange={pos=>setConfig(c=>({...c,bgImagePosition:pos}))}
+                            onRemove={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
+                          />
                         )}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
-                            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                              const file=e.target.files?.[0];if(!file)return;
-                              setBgUploading(true);setBgUploadError('');
-                              try{
-                                const ref=await uploadAsset(file,'header');
-                                const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:ref;
-                                setConfig(c=>({...c,bgImage:bgUrl}));
-                              }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
-                              finally{setBgUploading(false);e.target.value='';}
-                            }}/>
-                            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors">
-                              <LucideImage size={13} color="#6B6B6B"/>
-                              {bgUploading?'Uploading…':'Upload photo'}
-                            </span>
-                          </label>
-                          {googlePhotos.map((url,i)=>(
-                            <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                              className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}
-                              title={`Google photo ${i+1}`}>
-                              <img src={url} className="w-full h-full object-cover" alt=""/>
-                            </button>
-                          ))}
-                        </div>
-                        {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
-                        {googlePhotos.length>0&&<p className="text-[10px] text-[#858585] mt-1.5">Tap a thumbnail to use your Google Business photo.</p>}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* ══ BUSINESS INFO ══ */}
-            {sidebarTab==='business'&&(
-              <div className="px-8 py-8 max-w-[600px]">
-                {/* ── Analytics snapshot ── */}
-                {analyticsData&&(
-                  <div className="mb-7">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider">Last 30 days</p>
-                      <span className="text-[10px] font-semibold text-[#98A2B3] bg-[#F4F6FA] px-2 py-0.5 rounded-full">Live data</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {([
-                        {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',bg:'#ECFDF5',textColor:'#065F46',icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,data:(analyticsData.trend??[]).map(t=>t.views)},
-                        {label:'Directions',value:analyticsData.metrics.directions,color:'#2563EB',bg:'#EFF6FF',textColor:'#1E40AF',icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>,data:(analyticsData.trend??[]).map(t=>t.clicks)},
-                        {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',bg:'#F5F3FF',textColor:'#5B21B6',icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,data:(analyticsData.trend??[]).map((_,i)=>i%3===0?analyticsData.metrics.menu:0)},
-                        {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',bg:'#FFFBEB',textColor:'#92400E',icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>,data:(analyticsData.trend??[]).map(t=>t.clicks)},
-                      ] as {label:string;value:number;color:string;bg:string;textColor:string;icon:React.ReactNode;data:number[]}[]).map(({label,value,color,bg,textColor,icon,data})=>(
-                        <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-4 hover:shadow-sm transition-shadow">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:bg,color:color}}>{icon}</div>
-                            <BuilderSparkline data={data} color={color}/>
-                          </div>
-                          <p className="text-[26px] font-black text-[#0A0A0A] leading-none mb-1">{value.toLocaleString()}</p>
-                          <p className="text-[11px] font-semibold" style={{color:textColor}}>{label}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {analyticsLoading&&(
-                  <div className="mb-7 rounded-2xl border border-[#EBEBEA] bg-white p-5 text-center">
-                    <p className="text-[13px] text-[#98A2B3]">Loading analytics…</p>
-                  </div>
-                )}
-                {/* ── Live page link ── */}
-                {localBusiness?.slug&&(
-                  <div className="mb-5 flex items-center gap-3 p-4 rounded-2xl border border-[#DEDEDC] bg-[#F9FAFB]">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider mb-0.5">Your page</p>
-                      <p className="text-[13px] font-semibold text-[#111] truncate">forothers.co/{localBusiness.slug}</p>
-                    </div>
-                    <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-semibold hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                      View
-                    </a>
-                  </div>
-                )}
-                {/* ── Google connection status ── */}
-                <div className={`mb-5 p-4 rounded-2xl border ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E8EBF0] bg-[#F9FAFB]'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-white border border-[#E8EBF0] flex items-center justify-center flex-shrink-0">
-                      <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-semibold text-[#111]">Google Business</p>
-                      <p className="text-[11px] text-[#98A2B3]">{googleConnected?'Syncing hours, photos & reviews':'Sync your hours, photos & reviews'}</p>
-                    </div>
-                    {googleConnected&&(
-                      <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#BBF7D0] text-[#166534] text-[10px] font-bold">
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        Connected
-                      </span>
-                    )}
-                  </div>
-                  {!googleConnected&&(
-                    <a href="/connect/google"
-                      className="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-semibold hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
-                      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                      Connect Google Business
-                    </a>
-                  )}
-                </div>
-                {/* ── Reviews & rating ── */}
-                <ReviewsCard block={allBlocks.find(b=>b.id==='location')} onUpdateBlock={u=>updateBlock('location',u)}/>
-                {/* ── Recent Activity ── */}
-                <div className="mb-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider">Recent activity</p>
-                    <button className="text-[11px] font-semibold text-[#667085] hover:text-[#111] transition-colors flex items-center gap-1">
-                      See all
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    </button>
-                  </div>
-                  <div className="rounded-2xl border border-[#EBEBEA] bg-white overflow-hidden divide-y divide-[#F5F5F4]">
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{background:'#ECFDF3',color:'#16A34A'}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-semibold text-[#111] leading-tight">Hours updated</p>
-                        <p className="text-[11px] text-[#98A2B3] leading-tight mt-0.5">Changes saved to your page</p>
-                      </div>
-                      <p className="text-[10px] text-[#C0C0C0] flex-shrink-0">Just now</p>
-                    </div>
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{background:'#F0F4FF'}}>
-                        <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-semibold text-[#111] leading-tight">Google Business synced</p>
-                        <p className="text-[11px] text-[#98A2B3] leading-tight mt-0.5">Your info and photos are up to date</p>
-                      </div>
-                      <p className="text-[10px] text-[#C0C0C0] flex-shrink-0">3 hours ago</p>
-                    </div>
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{background:'#F5F3FF',color:'#7C3AED'}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-semibold text-[#111] leading-tight">Link shared</p>
-                        <p className="text-[11px] text-[#98A2B3] leading-tight mt-0.5">Your OpenStatus link was copied</p>
-                      </div>
-                      <p className="text-[10px] text-[#C0C0C0] flex-shrink-0">1 day ago</p>
-                    </div>
-                  </div>
-                </div>
-                {/* ── Tips for success ── */}
-                <div className="mb-5">
-                  <p className="text-[11px] font-bold text-[#98A2B3] uppercase tracking-wider mb-3">Tips for success</p>
-                  <div className="space-y-2">
-                    <button onClick={()=>setSidebarTab('hours')}
-                      className="flex items-center gap-3 w-full p-3 rounded-2xl border border-[#E8EBF0] hover:border-[#0A0A0A] hover:bg-[#F9FAFB] transition-all text-left">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{background:'#ECFDF3',color:'#16A34A'}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      </div>
-                      <p className="text-[12px] text-[#667085] leading-relaxed flex-1">Set your hours so customers always know when you&apos;re open</p>
-                      <svg className="flex-shrink-0 text-[#C0C0C0]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    </button>
-                    <button onClick={()=>setSidebarTab('photos')}
-                      className="flex items-center gap-3 w-full p-3 rounded-2xl border border-[#E8EBF0] hover:border-[#0A0A0A] hover:bg-[#F9FAFB] transition-all text-left">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{background:'#FFF7ED',color:'#EA580C'}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                      </div>
-                      <p className="text-[12px] text-[#667085] leading-relaxed flex-1">Add a cover photo to make your page stand out</p>
-                      <svg className="flex-shrink-0 text-[#C0C0C0]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    </button>
-                    <button onClick={()=>setSidebarTab('design')}
-                      className="flex items-center gap-3 w-full p-3 rounded-2xl border border-[#E8EBF0] hover:border-[#0A0A0A] hover:bg-[#F9FAFB] transition-all text-left">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{background:'#F5F3FF',color:'#7C3AED'}}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                      </div>
-                      <p className="text-[12px] text-[#667085] leading-relaxed flex-1">Turn on blocks to show your menu, links, and more</p>
-                      <svg className="flex-shrink-0 text-[#C0C0C0]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                    </button>
-                  </div>
-                </div>
-                <div className="mb-7">
-                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Business Info</h2>
-                  <p className="text-[#858585] text-[13px] mt-1">Your name, location, and category.</p>
-                </div>
-                <div className="rounded-2xl border border-[#DEDEDC] p-5 space-y-4 bg-white">
-                  <div>
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Business name</p>
-                    <p className="text-[15px] font-semibold text-[#111]">{business?.name??'—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Category</p>
-                    <p className="text-[15px] font-semibold text-[#111]">{([{id:'restaurant',label:'Restaurant'},{id:'cafe',label:'Café'},{id:'salon',label:'Salon / Beauty'},{id:'retail',label:'Retail Shop'},{id:'online',label:'Online Business'},{id:'fitness',label:'Fitness / Gym'},{id:'wellness',label:'Wellness / Spa'},{id:'services',label:'Professional Services'},{id:'food_truck',label:'Food Truck'},{id:'bar',label:'Bar / Nightlife'}].find(c=>c.id===(localBusiness?.category??business?.category))?.label)??(localBusiness?.category??business?.category??'Not set')}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Description</p>
-                    <p className="text-[13px] text-[#6B6B6B] leading-relaxed">{business?.tagline??'No description yet.'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Location</p>
-                    <div className="flex items-center gap-3">
-                      <input value={config.location??''} onChange={e=>setConfig(c=>({...c,location:e.target.value}))}
-                        placeholder="e.g. 123 Main St, Austin TX"
-                        className="flex-1 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                    </div>
-                  </div>
-                </div>
-                {/* Logo upload */}
-                <div className="mt-5">
-                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
-                  <div className="flex items-center gap-4 mb-3">
-                    {localBusiness?.avatar_url
-                      ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                          className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
-                      :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
-                    }
-                    <div className="flex-1 min-w-0">
-                      <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
-                        <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                          const file=e.target.files?.[0];if(!file)return;
-                          setLogoUploading(true);setLogoUploadError('');
-                          try{
-                            const ref=await uploadAsset(file,'avatar');
-                            if(localBusiness?.id){
-                              await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                              setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                            }
-                          }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                          finally{setLogoUploading(false);e.target.value='';}
-                        }}/>
-                        <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
-                          {logoUploading?'Uploading…':'Upload logo'}
-                        </span>
-                      </label>
-                      {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
-                    </div>
-                  </div>
-                  {googlePhotos.length>0&&(
-                    <div className="mb-3">
-                      <p className="text-[10px] text-[#858585] mb-2">Or use a Google Business photo as your logo:</p>
-                      <div className="flex gap-2 flex-wrap">
-                        {googlePhotos.map((url,i)=>(
-                          <button key={i} onClick={async()=>{
-                            if(!localBusiness?.id){setLogoUploadError('No business found');return;}
-                            setLogoUploading(true);setLogoUploadError('');
-                            try{
-                              const blob=await fetch(url).then(r=>r.blob());
-                              const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
-                              const ref=await uploadAsset(file,'avatar');
-                              await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                              setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                            }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
-                            finally{setLogoUploading(false);}
-                          }}
-                          className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#DEDEDC] hover:border-[#0A0A0A]`}
-                          title={`Use Google photo ${i+1}`}>
-                            <img src={url} className="w-full h-full object-cover" alt=""/>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-[12px] text-[#858585]">
-                    To edit your name or category, <button onClick={()=>setSidebarTab('business')} className="font-semibold text-[#111] underline underline-offset-2">go to Business →</button>
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* ══ LINKS ══ */}
-            {sidebarTab==='photos'&&(
-              <div className="px-8 py-8 max-w-[600px]">
-                <div className="mb-7">
-                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Photos</h2>
-                  <p className="text-[#858585] text-[13px] mt-1">Upload photos for your page header and logo.</p>
-                </div>
-                {/* Logo */}
-                <div className="mb-5">
-                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Logo</p>
-                  <div className="flex items-center gap-4">
-                    {localBusiness?.avatar_url
-                      ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                          className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
-                      :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
-                    }
-                    <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
-                      <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                        const file=e.target.files?.[0];if(!file)return;
-                        setLogoUploading(true);setLogoUploadError('');
-                        try{
-                          const ref=await uploadAsset(file,'avatar');
-                          if(localBusiness?.id){
-                            await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                            setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                          }
-                        }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                        finally{setLogoUploading(false);e.target.value='';}
-                      }}/>
-                      <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
-                        {logoUploading?'Uploading…':'Upload logo'}
-                      </span>
-                    </label>
-                  </div>
-                  {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
-                </div>
-                {/* Cover photo */}
-                <div className="mb-5">
-                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-3">Cover Photo</p>
-                  {config.bgImage&&(
-                    <div className="relative mb-3 rounded-2xl overflow-hidden border border-[#DEDEDC]" style={{height:140}}>
-                      <img src={config.bgImage.startsWith('storage:')&&localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:config.bgImage}
-                        className="w-full h-full object-cover" alt="Cover"/>
-                      <button onClick={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
-                        className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
-                        <LucideX size={12} color="white"/>
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
-                      <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                        const file=e.target.files?.[0];if(!file)return;
-                        setBgUploading(true);setBgUploadError('');
-                        try{
-                          const ref=await uploadAsset(file,'header');
-                          const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
-                          setConfig(c=>({...c,bgImage:bgUrl}));
-                        }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
-                        finally{setBgUploading(false);e.target.value='';}
-                      }}/>
-                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-semibold text-[#111] hover:bg-[#E8EBF0] transition-colors">
-                        <LucideImage size={13} color="#667085"/>
-                        {bgUploading?'Uploading…':'Upload cover photo'}
-                      </span>
-                    </label>
-                    {googlePhotos.map((url,i)=>(
-                      <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                        className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#111111]':'border-[#E8EBF0] hover:border-[#111111]'}`}>
-                        <img src={url} className="w-full h-full object-cover" alt=""/>
-                      </button>
-                    ))}
-                  </div>
-                  {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
-                </div>
-
-              </div>
-            )}
-
-            {sidebarTab==='links'&&(
-              <div className="px-8 py-8 max-w-[600px]">
-                <div className="mb-7">
-                  <h2 className="text-[22px] font-bold text-[#0A0A0A] leading-tight">Links</h2>
-                  <p className="text-[#858585] text-[13px] mt-1">Your public OpenStatus link.</p>
-                </div>
-                <div className="rounded-2xl border border-[#DEDEDC] p-5 bg-white">
-                  <p className="text-[11px] font-bold text-[#858585] uppercase tracking-wider mb-2">Your link</p>
-                  {business?.slug?(
-                    <div className="flex items-center gap-3">
-                      <code className="text-[14px] font-semibold text-[#111] bg-[#EEEEEC] px-3 py-2 rounded-xl flex-1">
-                        openstatus.co/{business.slug}
-                      </code>
-                      <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-full bg-[#0A0A0A] text-[#4ADE80] text-[12px] font-bold hover:bg-[#1a1a1a] transition-colors whitespace-nowrap">
-                        Open ↗
-                      </a>
-                    </div>
-                  ):(
-                    <p className="text-[13px] text-[#858585]">No link set yet.</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-
-            {/* ══ STYLE ══ */}
-            {sidebarTab==='style'&&(
-              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
-                <div className="mb-7">
-                  <h2 className="text-[22px] font-bold text-[#111111] leading-tight tracking-[-0.03em]">Style</h2>
-                  <p className="text-[#667085] text-[13px] mt-1">Logo, colors, and social links.</p>
-                </div>
-                <div className="space-y-8">
-                  {/* Logo */}
-                  <div>
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Logo</p>
-                    <div className="flex items-center gap-4 mb-3">
-                      {localBusiness?.avatar_url
-                        ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                            className="w-14 h-14 rounded-full object-cover border border-[#E8EBF0] flex-shrink-0" alt="Logo"/>
-                        :<div className="w-14 h-14 rounded-full bg-[#F4F6FA] flex items-center justify-center flex-shrink-0 border border-[#E8EBF0]"><LucideImage size={18} color="#98A2B3"/></div>
-                      }
-                      <div className="flex-1 min-w-0">
-                        <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
-                          <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                            const file=e.target.files?.[0];if(!file)return;
-                            setLogoUploading(true);setLogoUploadError('');
-                            try{
-                              const ref=await uploadAsset(file,'avatar');
-                              if(localBusiness?.id){
-                                await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                                setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                              }
-                            }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                            finally{setLogoUploading(false);e.target.value='';}
-                          }}/>
-                          <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-semibold text-[#111111] hover:bg-[#E8EBF0] transition-colors ${logoUploading?'opacity-60':''}`}>
-                            <LucideImage size={13} color="#667085"/>
-                            {logoUploading?'Uploading…':'Upload logo'}
-                          </span>
-                        </label>
-                        {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
-                      </div>
-                    </div>
-                    {googlePhotos.length>0&&(
-                      <div className="mb-2">
-                        <p className="text-[10px] text-[#98A2B3] mb-2">Or pick from your Google Business photos:</p>
-                        <div className="flex gap-2 flex-wrap">
-                          {googlePhotos.map((url,i)=>(
-                            <button key={i} onClick={async()=>{
-                              if(!localBusiness?.id){setLogoUploadError('No business found');return;}
-                              setLogoUploading(true);setLogoUploadError('');
-                              try{
-                                const blob=await fetch(url).then(r=>r.blob());
-                                const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
-                                const ref=await uploadAsset(file,'avatar');
-                                await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                                setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                              }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
-                              finally{setLogoUploading(false);}
-                            }}
-                            className={`relative w-12 h-12 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#E8EBF0] hover:border-[#111111]`}>
-                              <img src={url} className="w-full h-full object-cover" alt=""/>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {/* Page color */}
-                  <div>
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Page background</p>
-                    <PageBackgroundPicker value={config.bg} onChange={v=>setConfig(p=>({...p,bg:v}))} dark/>
-                  </div>
-                  {/* Background photo */}
-                  <div>
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-3">Background photo</p>
-                    {config.bgImage&&(
-                      <div className="mb-3">
-                        <div className="relative rounded-xl overflow-hidden cursor-crosshair" style={{height:80}}
-                          title="Click to set focal point"
-                          onClick={(e)=>{
-                            const rect=e.currentTarget.getBoundingClientRect();
-                            const x=Math.round(((e.clientX-rect.left)/rect.width)*100);
-                            const y=Math.round(((e.clientY-rect.top)/rect.height)*100);
-                            setConfig(c=>({...c,bgImagePosition:`${x}% ${y}%`}));
-                          }}
-                        >
-                          <img src={config.bgImage} className="w-full h-full object-cover" alt="Background"
-                            style={{objectPosition:config.bgImagePosition??'center 60%'}}/>
-                          {config.bgImagePosition&&(()=>{
-                            const [px,py]=(config.bgImagePosition||'50% 60%').split(' ');
-                            return (
-                              <div style={{
-                                position:'absolute',
-                                left:`calc(${px} - 6px)`,
-                                top:`calc(${py} - 6px)`,
-                                width:12,height:12,
-                                borderRadius:'50%',
-                                border:'2px solid white',
-                                background:'rgba(255,255,255,0.6)',
-                                boxShadow:'0 0 0 1px rgba(0,0,0,0.4)',
-                                pointerEvents:'none',
-                              }}/>
-                            );
-                          })()}
-                          <button onClick={e=>{e.stopPropagation();setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}));}}
-                            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors">
-                            <LucideX size={10} color="white"/>
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-[#98A2B3] mt-1.5">Tap the photo to set where to crop it</p>
-                      </div>
-                    )}
                     <div className="flex items-center gap-2 flex-wrap">
                       <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
                         <input type="file" accept="image/*" className="hidden" onChange={async e=>{
@@ -3705,153 +3256,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
 
         {/* ── PHOTOS tab ── */}
-        {sidebarTab==='photos'&&(
-          <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-1">Photos</h2>
-            <p className="text-[11px] text-[#98A2B3] mb-4">Upload photos for your page and each active widget</p>
-
-            {/* ── Page-level photos ── */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">Page</p>
-
-            {/* Logo */}
-            <div className="mb-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-              <p className="text-[11px] font-semibold text-[#111] mb-2">Logo</p>
-              <div className="flex items-center gap-3">
-                {localBusiness?.avatar_url
-                  ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                    className="w-12 h-12 rounded-full object-cover border border-[#E8EBF0] flex-shrink-0" alt="Logo"/>
-                  :<div className="w-12 h-12 rounded-full bg-[#E8EBF0] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#98A2B3"/></div>
-                }
-                <label className={`cursor-pointer flex-1 ${logoUploading?'pointer-events-none':''}`}>
-                  <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                    const file=e.target.files?.[0];if(!file)return;
-                    setLogoUploading(true);setLogoUploadError('');
-                    try{
-                      const ref=await uploadAsset(file,'avatar');
-                      if(localBusiness?.id){
-                        await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                        setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                      }
-                    }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                    finally{setLogoUploading(false);e.target.value='';}
-                  }}/>
-                  <span className={`flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-[#E8EBF0] text-[12px] font-semibold text-[#111] w-fit ${logoUploading?'opacity-60':''}`}>
-                    <LucideImage size={13} color="#667085"/>
-                    {logoUploading?'Uploading…':'Change logo'}
-                  </span>
-                </label>
-              </div>
-              {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
-            </div>
-
-            {/* Cover / background */}
-            <div className="mb-4 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-              <p className="text-[11px] font-semibold text-[#111] mb-2">Cover Photo</p>
-              <label className={`cursor-pointer block ${bgUploading?'pointer-events-none':''}`}>
-                <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                  const file=e.target.files?.[0];if(!file)return;
-                  setBgUploading(true);setBgUploadError('');
-                  try{
-                    const ref=await uploadAsset(file,'header');
-                    const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
-                    setConfig(c=>({...c,bgImage:bgUrl}));
-                  }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
-                  finally{setBgUploading(false);e.target.value='';}
-                }}/>
-                <div className="h-20 rounded-xl border border-[#E8EBF0] overflow-hidden relative">
-                  {config.bgImage
-                    ?<img src={config.bgImage.startsWith('storage:')&&localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header`:config.bgImage}
-                       className="w-full h-full object-cover" alt="Cover"/>
-                    :<div className="w-full h-full bg-[#F0F2F5] flex flex-col items-center justify-center gap-1">
-                      <LucideImage size={20} color="#98A2B3"/>
-                      <span className="text-[11px] font-semibold text-[#667085]">{bgUploading?'Uploading…':'Tap to upload'}</span>
-                    </div>
-                  }
-                  {config.bgImage&&<div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <span className="text-[11px] font-bold text-white bg-black/40 px-3 py-1 rounded-full">{bgUploading?'Uploading…':'Change'}</span>
-                  </div>}
-                </div>
-              </label>
-              {bgUploadError&&<p className="text-[11px] text-red-500 mt-1">{bgUploadError}</p>}
-            </div>
-
-            {/* Google photos pool */}
-            {googlePhotos.length>0&&(
-              <div className="mb-5">
-                <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2">From Google</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {googlePhotos.slice(0,6).map((url,i)=>(
-                    <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                      className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${config.bgImage===url?'border-[#111]':'border-transparent'}`}>
-                      <img src={url} className="w-full h-full object-cover" alt="Google photo"/>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Per-block photos ── */}
-            {(()=>{
-              const photoBlocks = activeBlocks.filter(b=>['location','menu','order','book','socials','website'].includes(b.id));
-              if(photoBlocks.length===0) return null;
-              return (
-                <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-wider mb-2 mt-2">Widgets</p>
-                  <div className="space-y-3">
-                    {photoBlocks.map(blk=>{
-                      const def = DEFAULT_BLOCKS.find(d=>d.id===blk.id);
-                      const photoLabel = blk.id==='location' ? 'Place photo' : 'Cover photo';
-                      const hint = blk.id==='location' ? 'Storefront or place photo' :
-                                   blk.id==='menu'     ? 'Banner at top of menu' :
-                                   blk.id==='socials'  ? 'Photo behind social links' : '';
-                      return (
-                        <div key={blk.id} className="p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                              style={{backgroundColor:`${def?.color??'#111'}18`}}>
-                              <BlockIcon id={blk.id} size={14} color={def?.color??'#111'}/>
-                            </div>
-                            <p className="text-[11px] font-semibold text-[#111]">{blk.title??def?.title}</p>
-                          </div>
-                          <label className="cursor-pointer block">
-                            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                              const file=e.target.files?.[0]; if(!file) return;
-                              const reader=new FileReader();
-                              reader.onload=ev=>{ if(ev.target?.result) updateBlock(blk.id,{coverPhoto:ev.target.result as string}); };
-                              reader.readAsDataURL(file);
-                              e.target.value='';
-                            }}/>
-                            <div className="h-16 rounded-xl border border-[#E8EBF0] overflow-hidden relative">
-                              {blk.coverPhoto
-                                ?<img src={blk.coverPhoto} className="w-full h-full object-cover" alt=""/>
-                                :<div className="w-full h-full bg-[#F0F2F5] flex items-center justify-center gap-2">
-                                  <LucideImage size={16} color="#98A2B3"/>
-                                  <span className="text-[11px] text-[#98A2B3]">{hint||photoLabel} — tap to upload</span>
-                                </div>
-                              }
-                              {blk.coverPhoto&&<div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                <span className="text-[10px] font-bold text-white bg-black/40 px-2 py-0.5 rounded-full">Change</span>
-                              </div>}
-                            </div>
-                          </label>
-                          {blk.coverPhoto&&(
-                            <button onClick={()=>updateBlock(blk.id,{coverPhoto:''})}
-                              className="mt-1.5 text-[10px] text-[#98A2B3] hover:text-red-500 transition-colors">
-                              Remove photo
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
-          </div>
-        )}
-
-        {/* ── STYLE tab ── */}
         {sidebarTab==='style'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-4" style={{scrollbarWidth:'none'}}>
             <h2 className="text-[20px] font-bold text-[#111] pt-1 pb-3">Style</h2>
@@ -4022,7 +3426,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <div className="flex bg-[#0D0D0D] rounded-full p-1 gap-0.5 shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
           {([
             {key:'design' as SidebarTab,label:'Blocks',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>},
-            {key:'photos' as SidebarTab,label:'Photos',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>},
             {key:'style' as SidebarTab,label:'Style',svg:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.58a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/><path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/><path d="M14.5 17.5 4.5 15"/></svg>},
           ] as {key:SidebarTab;label:string;svg:React.ReactNode}[]).map(({key,label,svg})=>(
             <button key={key}

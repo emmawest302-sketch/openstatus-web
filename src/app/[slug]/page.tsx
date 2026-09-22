@@ -113,12 +113,20 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   // Theme color
   const themeColor = enrichedConfig.themeColor || '#DB6B8F';
 
-  // Page background
-  const bg = typeof enrichedConfig.bg === 'string' && enrichedConfig.bg.startsWith('#')
-    ? pageConfig.bg
+  // Page background. `bg` may be any CSS background — a hex, a gradient, or a
+  // multi-layer pattern from the curated designs — so it is used verbatim.
+  // The photo fade needs a SOLID colour to fade into, which a gradient can't
+  // provide, so pull the last hex out of the value for that purpose only.
+  // (Previously anything not starting with '#' was thrown away here, which is
+  //  why the curated gradient/pattern backgrounds never reached the live page.)
+  const bg = typeof enrichedConfig.bg === 'string' && enrichedConfig.bg.trim()
+    ? enrichedConfig.bg.trim()
     : '#F7F7F5';
-  const { r: bgR, g: bgG, b: bgB } = hexToRgb(bg);
-  const fadeGradient = `linear-gradient(to bottom, rgba(${bgR},${bgG},${bgB},0) 0%, rgba(${bgR},${bgG},${bgB},0.08) 22%, rgba(${bgR},${bgG},${bgB},0.35) 48%, rgba(${bgR},${bgG},${bgB},0.72) 72%, ${bg} 100%)`;
+  const bgSolid = /^#[0-9a-fA-F]{6}$/.test(bg)
+    ? bg
+    : (bg.match(/#[0-9a-fA-F]{6}/g)?.slice(-1)[0] ?? '#F7F7F5');
+  const { r: bgR, g: bgG, b: bgB } = hexToRgb(bgSolid);
+  const fadeGradient = `linear-gradient(to bottom, rgba(${bgR},${bgG},${bgB},0) 0%, rgba(${bgR},${bgG},${bgB},0.08) 22%, rgba(${bgR},${bgG},${bgB},0.35) 48%, rgba(${bgR},${bgG},${bgB},0.72) 72%, ${bgSolid} 100%)`;
 
   // Hours / open status
   const timezone = business.timezone || 'America/Chicago';
@@ -187,7 +195,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
         {/* ── Cover photo ── */}
         {coverPhoto ? (
-          <div style={{ position: 'relative', height: 200, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
+          <div style={{ position: 'relative', height: 280, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverPhoto}
