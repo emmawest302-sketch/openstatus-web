@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
 import { getBusinessStatus, type WeeklySchedule } from '@/lib/business-status';
+import { CATEGORIES, normalizeCategory } from '@/lib/categories';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
@@ -2251,7 +2252,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [googleFetchError,setGoogleFetchError]=useState('');
   const [googleFetchDone,setGoogleFetchDone]=useState(false);
   const [dragId,setDragId]=useState<string|null>(null);
-  const [mobileBlockCat,setMobileBlockCat]=useState<string>('All');
   // Retained only because the desktop sidebar still sets it. The 52vh mobile
   // sheet it used to drive is gone — the phone uses full pages and small sheets.
   const [,setMobileSheetOpen]=useState<boolean>(false);
@@ -2381,7 +2381,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[idealContentWidth]);
   const [previewWidth,setPreviewWidth]=useState(0); // unused for layout now, kept for compat
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
-  const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:business?.category??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
+  const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:normalizeCategory(business?.category)??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
   const [slugEdit,setSlugEdit]=useState(business?.slug??'');
   const [slugSaving,setSlugSaving]=useState(false);
   const [slugMsg,setSlugMsg]=useState('');
@@ -4412,7 +4412,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <select value={bizEdit.category} onChange={e=>setBizEdit(b=>({...b,category:e.target.value}))}
                     className="flex-1 text-[12px] text-[#111] bg-transparent outline-none appearance-none cursor-pointer">
                     <option value="">— Select —</option>
-                    {[{id:'restaurant',label:'Restaurant'},{id:'cafe',label:'Café'},{id:'salon',label:'Salon / Beauty'},{id:'retail',label:'Retail Shop'},{id:'online',label:'Online Business'},{id:'fitness',label:'Fitness / Gym'},{id:'wellness',label:'Wellness / Spa'},{id:'services',label:'Professional Services'},{id:'food_truck',label:'Food Truck'},{id:'bar',label:'Bar / Nightlife'}].map(c=>(
+                    {CATEGORIES.map(c=>(
                       <option key={c.id} value={c.id}>{c.label}</option>
                     ))}
                   </select>
@@ -4798,48 +4798,44 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </MobileSheet>
 
       <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={56}>
-        <div className="flex gap-2 pb-3 overflow-x-auto" style={{scrollbarWidth:'none'}}>
-          {['All','Essential','Food & Beverage','Engagement','Contact','Social','More'].map(cat=>(
-            <button key={cat} onClick={()=>setMobileBlockCat(cat)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] transition-all ${mobileBlockCat===cat?'bg-[#7C3AED] text-white font-semibold':'bg-[#F4F6FA] text-[#667085] font-medium'}`}>
-              {cat}
-            </button>
-          ))}
-        </div>
+        {/*
+          There are seven blocks. Filtering seven things into six categories was
+          never going to help, and two of those tabs ("Social", "More") mapped to
+          nothing at all — they looked like buttons and did nothing. Just show
+          them all, plus the one thing people actually want that isn't in the list.
+        */}
         <div className="grid grid-cols-2 gap-2.5">
-          {(()=>{
-            const catMap: Record<string,string[]> = {
-              'Essential':['hours','location'],
-              'Food & Beverage':['menu','order'],
-              'Engagement':['book'],
-              'Contact':['website'],
-              'More':[],
-            };
-            const showIds = mobileBlockCat==='All' ? DEFAULT_BLOCKS.map(b=>b.id) : (catMap[mobileBlockCat]??[]);
-            return DEFAULT_BLOCKS.filter(b=>showIds.includes(b.id)&&b.id!=='socials').map(def=>{
-              const isOn = allBlocks.find(b=>b.id===def.id)?.on;
-              return (
-                <button key={def.id}
-                  onClick={()=>{ if(!isOn){ enableBlock(def.id); } else { setOpenId(def.id); setMSheet('block'); } }}
-                  className="flex items-center gap-2.5 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-left active:scale-[0.97] transition-transform">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{backgroundColor:`${def.color}18`,border:`1px solid ${def.color}30`}}>
-                    <BlockIcon id={def.id} size={17} color={def.color}/>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11.5px] font-semibold text-[#111] leading-tight truncate">{def.title}</p>
-                    <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{isOn?'On — tap to edit':'Tap to add'}</p>
-                  </div>
-                  {isOn&&(
-                    <span className="w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    </span>
-                  )}
-                </button>
-              );
-            });
-          })()}
+          {DEFAULT_BLOCKS.map(def=>{
+            const isOn = allBlocks.find(b=>b.id===def.id)?.on;
+            return (
+              <button key={def.id}
+                onClick={()=>{ if(!isOn){ enableBlock(def.id); } else { setOpenId(def.id); setMSheet('block'); } }}
+                className="flex items-center gap-2.5 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-left active:scale-[0.97] transition-transform">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{backgroundColor:`${def.color}18`,border:`1px solid ${def.color}30`}}>
+                  <BlockIcon id={def.id} size={17} color={def.color}/>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11.5px] font-semibold text-[#111] leading-tight truncate">{def.title}</p>
+                  <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{isOn?'On — tap to edit':'Tap to add'}</p>
+                </div>
+                {isOn&&(
+                  <span className="w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        <button
+          onClick={()=>{ addCustomLink(); setMSheet('block'); }}
+          className="mt-2.5 w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-[#D0D5DD] text-[12.5px] font-semibold text-[#667085] active:scale-[0.98] transition-transform"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add any other link
+        </button>
       </MobileSheet>
 
       <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={46} dim={false}>

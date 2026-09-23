@@ -3,8 +3,17 @@ import { getAdminClient } from '@/lib/supabaseAdmin';
 
 const EVENT_TYPES = new Set(['page_view','block_click','directions_click','social_click']);
 
-function sourceLabel(referrer: string | null) {
+/**
+ * Turn a referrer into a source label. Applied at WRITE time now, so we store
+ * "Instagram" rather than the visitor's full referring URL — the label is all
+ * the analytics ever used, and the URL can carry more about a person than we
+ * have any reason to keep. Still applied on read too, for rows written before
+ * this change.
+ */
+export function sourceLabel(referrer: string | null) {
   if (!referrer) return 'Direct';
+  // Already normalised on the way in.
+  if (!referrer.includes('/') && !referrer.includes('.')) return referrer;
   try {
     const host = new URL(referrer).hostname.replace(/^www\./, '').toLowerCase();
     if (host.includes('instagram')) return 'Instagram';
@@ -83,14 +92,64 @@ export async function GET(req: NextRequest) {
   });
 }
 
+/**
+ * Public ingest. There is no auth here by design — real visitors are anonymous —
+ * so the protections are: it must be called from our own pages, one visitor
+ * can't flood it, and the business must exist. Without these, anyone who knew a
+ * business id could inflate that business's numbers, which matters more once
+ * analytics is something people pay for.
+ */
+
+// Per-instance, so it is a speed bump rather than a guarantee. Serverless spreads
+// traffic across instances; this still stops a single naive loop.
+const hits = new Map<string, { count: number; first: number }>();
+const WINDOW_MS = 60_000;
+const MAX_PER_WINDOW = 40;
+
+function tooManyFrom(ip: string) {
+  const now = Date.now();
+  const rec = hits.get(ip);
+  if (!rec || now - rec.first > WINDOW_MS) {
+    hits.set(ip, { count: 1, first: now });
+    if (hits.size > 5000) hits.clear(); // crude bound on memory
+    return false;
+  }
+  rec.count += 1;
+  return rec.count > MAX_PER_WINDOW;
+}
+
+/** Only accept events that came from a page we serve. */
+function fromOurSite(req: NextRequest) {
+  const origin = req.headers.get('origin') ?? '';
+  const referer = req.headers.get('referer') ?? '';
+  const host = req.headers.get('host') ?? '';
+  if (!origin && !referer) return false;
+  const candidates = [origin, referer].filter(Boolean);
+  return candidates.some((value) => {
+    try { return new URL(value).host === host; } catch { return false; }
+  });
+}
+
 export async function POST(req: NextRequest) {
+  if (!fromOurSite(req)) {
+    return NextResponse.json({ error: 'Rejected' }, { status: 403 });
+  }
+
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  if (tooManyFrom(ip)) {
+    // Quietly accepted-but-dropped: a real visitor should never see an error,
+    // and a flooder gets no signal about the limit.
+    return new NextResponse(null, { status: 204 });
+  }
+
   const body = await req.json().catch(() => null);
   const businessId = typeof body?.businessId === 'string' ? body.businessId : '';
   const eventType = typeof body?.eventType === 'string' ? body.eventType : '';
   const blockId = typeof body?.blockId === 'string' ? body.blockId.slice(0, 80) : null;
   const visitorId = typeof body?.visitorId === 'string' ? body.visitorId.slice(0, 80) : null;
   const path = typeof body?.path === 'string' ? body.path.slice(0, 240) : null;
-  const referrer = typeof body?.referrer === 'string' ? body.referrer.slice(0, 500) : null;
+  // Store the label, not the URL.
+  const referrer = sourceLabel(typeof body?.referrer === 'string' ? body.referrer : null);
 
   if (!businessId || !EVENT_TYPES.has(eventType)) return NextResponse.json({ error: 'Invalid analytics event' }, { status: 400 });
 

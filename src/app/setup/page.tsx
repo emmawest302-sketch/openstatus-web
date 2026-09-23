@@ -81,7 +81,7 @@ const CATEGORIES: Category[] = [
     blockIds: ['shop', 'arrivals', 'bestsellers', 'promo', 'track', 'reviews'],
   },
   {
-    id: 'foodtruck',
+    id: 'food_truck',
     label: 'Food Truck / Mobile',
     tags: ['Street food', 'Events', 'Catering', 'Vegan', 'Cash & card', 'Family-owned'],
     blockIds: ['location', 'menu', 'stops', 'order', 'gallery', 'reviews'],
@@ -93,7 +93,7 @@ const CATEGORIES: Category[] = [
     blockIds: ['classes', 'book', 'membership', 'website', 'reviews', 'call'],
   },
   {
-    id: 'service',
+    id: 'services',
     label: 'Services',
     tags: ['Free estimates', 'Licensed & insured', 'Same-day service', 'Emergency calls', 'Local & trusted'],
     blockIds: ['book', 'call', 'services', 'reviews', 'website', 'email'],
@@ -135,7 +135,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   salon:     'M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M8 6l8 12 M16 6l-8 12',
   retail:    'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0',
   online:    'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10',
-  foodtruck: 'M1 3h15v13H1z M16 8h4l3 3v5h-7V8z M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  food_truck: 'M1 3h15v13H1z M16 8h4l3 3v5h-7V8z M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
   fitness:   'M6 5v14 M2 8h4 M2 16h4 M18 5v14 M20 8h-4 M20 16h-4 M6 12h12',
   service:   'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
   events:    'M3 4h18v18H3V4z M16 2v4 M8 2v4 M3 10h18 M8 14h.01 M12 14h.01 M16 14h.01',
