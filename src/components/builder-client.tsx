@@ -6,6 +6,59 @@ import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
 import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedule } from '@/lib/business-status';
+import {
+  BlockIcon,
+  IconAcuity,
+  IconCalendly,
+  IconDoorDash,
+  IconFacebook,
+  IconGoogle,
+  IconGrubhub,
+  IconInstagram,
+  IconMindbody,
+  IconOpenTable,
+  IconResy,
+  IconSquare,
+  IconTikTok,
+  IconToast,
+  IconTwitterX,
+  IconUberEats,
+  IconYouTube,
+  LucideCalendar,
+  LucideChevronRight,
+  LucideClock,
+  LucideFileText,
+  LucideGlobe,
+  LucideGrip,
+  LucideImage,
+  LucideLayoutGrid,
+  LucideLayoutList,
+  LucideList,
+  LucidePin,
+  LucideShare,
+  LucideShoppingBag,
+  LucideStar,
+  LucideThumbsDown,
+  LucideThumbsUp,
+  LucideX,
+  ProviderIcon,
+  SocialIcon,
+} from '@/components/builder/icons';
+import {
+  BG_DESIGNS,
+  BG_RAINBOW,
+  BLOCK_STYLES,
+  BOOK_PROVIDERS,
+  DAYS,
+  DEFAULT_BLOCKS,
+  DEFAULT_WEEK_HOURS,
+  FEATURE_TAGS,
+  FONT_OPTIONS,
+  ORDER_PROVIDERS,
+  SOCIAL_PLATFORMS,
+} from '@/components/builder/constants';
+
+
 import { CATEGORIES, normalizeCategory } from '@/lib/categories';
 import { savePageConfig } from '@/lib/page-config-store';
 
@@ -37,10 +90,10 @@ function blockNeedsSetup(b: OpenStatusBlock) {
   if (SELF_CONTAINED_BLOCKS.has(b.id)) return false;
   return !(b.url && b.url.trim()) && !(b.menuFile && b.menuFile.trim());
 }
-type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+export type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 interface DayHours { open: string; close: string; closed: boolean; }
-type WeeklyHours = Record<WeekDay, DayHours>;
-interface OpenStatusBlock {
+export type WeeklyHours = Record<WeekDay, DayHours>;
+export interface OpenStatusBlock {
   id: string; title: string; sub: string; icon: string; on: boolean; tone: Tone;
   url?: string; size?: BlockSize; color?: string; coverPhoto?: string;
   menuType?: 'url' | 'pdf' | 'photos'; menuFile?: string;
@@ -72,128 +125,6 @@ export interface Business {
   /** IANA zone, e.g. "America/New_York". Every open/closed decision uses it. */
   timezone?: string | null;
 }
-
-// ── constants ──────────────────────────────────────────────────────────────────
-// Full-spectrum swatch row — the "rainbow palette"
-const BG_RAINBOW = [
-  '#FFFFFF','#F7F7F5','#E7E5E4','#9CA3AF','#3F3F46','#0A0A0A',
-  '#FECACA','#FDBA74','#FDE68A','#BBF7D0','#A5F3FC','#BFDBFE','#DDD6FE','#FBCFE8',
-  '#EF4444','#F97316','#F59E0B','#22C55E','#06B6D4','#3B82F6','#8B5CF6','#EC4899',
-];
-// Designed backgrounds. Any CSS `background` value works, including multi-layer
-// patterns. `anim` names a keyframe from BG_KEYFRAMES below; animated designs
-// keep a FLAT base (linear-gradient(c,c)) so scrolling the layers doesn't drag
-// a visible gradient around with them.
-const BG_DESIGNS: { label:string; css:string; anim?:'drift'|'fall'|'rise'; speed?:number }[] = [
-  // ── gradients ──
-  { label:'Sunset',   css:'linear-gradient(160deg,#FF9A5A 0%,#FF5F6D 55%,#C13584 100%)' },
-  { label:'Peach',    css:'linear-gradient(160deg,#FFE9D6 0%,#FFC3A0 100%)' },
-  { label:'Lagoon',   css:'linear-gradient(160deg,#43C6AC 0%,#191654 100%)' },
-  { label:'Sky',      css:'linear-gradient(160deg,#E3F2FF 0%,#A8D8FF 100%)' },
-  { label:'Mint',     css:'linear-gradient(160deg,#E8F9F1 0%,#B8E9D0 100%)' },
-  { label:'Lilac',    css:'linear-gradient(160deg,#F3E7FF 0%,#C4A5FF 100%)' },
-  { label:'Ember',    css:'linear-gradient(160deg,#2B1B17 0%,#7A2E1E 100%)' },
-  { label:'Midnight', css:'linear-gradient(160deg,#0F172A 0%,#334155 100%)' },
-
-  // ── patterns ──
-  { label:'Dots',     css:'radial-gradient(#D6D3D1 1px,transparent 1px) 0 0/16px 16px,linear-gradient(#FAFAF9,#FAFAF9)' },
-  { label:'Grid',     css:'linear-gradient(#EAEAE8 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,#EAEAE8 1px,transparent 1px) 0 0/22px 22px,linear-gradient(#FBFBFA,#FBFBFA)' },
-  { label:'Confetti', css:'radial-gradient(4px 4px at 20% 25%,#FCA5A5,transparent),radial-gradient(4px 4px at 70% 15%,#FDE68A,transparent),radial-gradient(4px 4px at 40% 60%,#A7F3D0,transparent),radial-gradient(4px 4px at 85% 55%,#BFDBFE,transparent),radial-gradient(4px 4px at 15% 80%,#DDD6FE,transparent),linear-gradient(#FFFDF8,#FFFDF8)' },
-  { label:'Waves',    css:'repeating-radial-gradient(circle at 50% 120%,rgba(255,255,255,0.5) 0 12px,transparent 12px 26px),linear-gradient(160deg,#BFE7FF 0%,#7FC5F5 100%)' },
-
-  // ── animated ──
-  { label:'Starry',   anim:'drift', speed:90,
-    css:'radial-gradient(1.5px 1.5px at 12% 18%,#fff,transparent),radial-gradient(1.5px 1.5px at 62% 12%,#fff,transparent),radial-gradient(1.5px 1.5px at 32% 46%,#fff,transparent),radial-gradient(2px 2px at 82% 38%,#fff,transparent),radial-gradient(1.5px 1.5px at 48% 72%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 82%,#fff,transparent),radial-gradient(1.5px 1.5px at 18% 88%,#fff,transparent),linear-gradient(160deg,#0B1026,#1B2455)' },
-  { label:'Snowfall', anim:'fall', speed:26,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Ccircle cx='15' cy='20' r='2.2' fill='white' opacity='.9'/%3E%3Ccircle cx='62' cy='44' r='1.7' fill='white' opacity='.75'/%3E%3Ccircle cx='38' cy='72' r='2' fill='white' opacity='.85'/%3E%3Ccircle cx='80' cy='12' r='1.4' fill='white' opacity='.7'/%3E%3C/svg%3E\") 0 0/90px 90px,linear-gradient(#3F5E8C,#3F5E8C)" },
-  { label:'Coffee',   anim:'drift', speed:60,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ctext x='8' y='34' font-size='26'%3E%E2%98%95%3C/text%3E%3Ctext x='46' y='70' font-size='20' opacity='.75'%3E%E2%98%95%3C/text%3E%3C/svg%3E\") 0 0/80px 80px,linear-gradient(#F5EADA,#F5EADA)" },
-  { label:'Sparkle',  anim:'rise', speed:34,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70'%3E%3Ctext x='6' y='26' font-size='16' opacity='.85'%3E%E2%9C%A6%3C/text%3E%3Ctext x='44' y='58' font-size='12' opacity='.6'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E\") 0 0/70px 70px,linear-gradient(#2E1065,#2E1065)" },
-  { label:'Hearts',   anim:'rise', speed:40,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='76' height='76'%3E%3Ctext x='8' y='30' font-size='20' opacity='.8'%3E%F0%9F%A4%8D%3C/text%3E%3Ctext x='46' y='64' font-size='15' opacity='.6'%3E%F0%9F%A4%8D%3C/text%3E%3C/svg%3E\") 0 0/76px 76px,linear-gradient(#FFE9EF,#FFE9EF)" },
-  { label:'Bubbles',  anim:'rise', speed:30,
-    css:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Ccircle cx='18' cy='24' r='7' fill='none' stroke='white' stroke-opacity='.45' stroke-width='1.5'/%3E%3Ccircle cx='58' cy='56' r='4.5' fill='none' stroke='white' stroke-opacity='.4' stroke-width='1.3'/%3E%3Ccircle cx='70' cy='18' r='3' fill='none' stroke='white' stroke-opacity='.35' stroke-width='1.2'/%3E%3C/svg%3E\") 0 0/84px 84px,linear-gradient(#0E7490,#0E7490)" },
-];
-
-// config.bg may be a gradient/pattern. Anywhere we need a SOLID colour (e.g. to
-
-
-const FONT_OPTIONS: { label:string; family:string; google?:string }[] = [
-  { label:'Default',          family:'Inter, system-ui, sans-serif' },
-  { label:'Playfair',         family:'"Playfair Display", Georgia, serif',      google:'Playfair+Display:wght@700;800' },
-  { label:'Poppins',          family:'"Poppins", system-ui, sans-serif',        google:'Poppins:wght@700;800' },
-  { label:'DM Serif',         family:'"DM Serif Display", Georgia, serif',      google:'DM+Serif+Display' },
-  { label:'Space Grotesk',    family:'"Space Grotesk", system-ui, sans-serif',  google:'Space+Grotesk:wght@600;700' },
-  { label:'Bebas',            family:'"Bebas Neue", Impact, sans-serif',        google:'Bebas+Neue' },
-  { label:'Cormorant',        family:'"Cormorant Garamond", Georgia, serif',    google:'Cormorant+Garamond:wght@600;700' },
-  { label:'Pacifico',         family:'"Pacifico", cursive',                     google:'Pacifico' },
-  { label:'Oswald',           family:'"Oswald", Impact, sans-serif',            google:'Oswald:wght@600;700' },
-  { label:'Lobster',          family:'"Lobster", cursive',                      google:'Lobster' },
-];
-const ORDER_PROVIDERS = [
-  { key:'doordash',  label:'DoorDash'  },
-  { key:'ubereats',  label:'Uber Eats' },
-  { key:'grubhub',   label:'Grubhub'   },
-  { key:'square',    label:'Square'    },
-  { key:'toast',     label:'Toast'     },
-  { key:'other',     label:'Other'     },
-];
-const BOOK_PROVIDERS = [
-  { key:'resy',       label:'Resy'         },
-  { key:'opentable',  label:'OpenTable'    },
-  { key:'calendly',   label:'Calendly'     },
-  { key:'squareappts',label:'Square Appts' },
-  { key:'acuity',     label:'Acuity'       },
-  { key:'mindbody',   label:'Mindbody'     },
-  { key:'other',      label:'Other'        },
-];
-const SOCIAL_PLATFORMS = [
-  { key:'instagram', label:'Instagram' },
-  { key:'tiktok',    label:'TikTok'    },
-  { key:'facebook',  label:'Facebook'  },
-  { key:'twitter',   label:'Twitter / X'},
-  { key:'youtube',   label:'YouTube'   },
-];
-const BLOCK_STYLES: Record<string, { key:string; label:string }[]> = {
-  hours:    [{ key:'minimal', label:'Minimal' }, { key:'clock',  label:'Clock'   }, { key:'hero',    label:'Hero'    }],
-  location: [{ key:'place',   label:'Map'     }, { key:'minimal', label:'Minimal' }],
-  menu:     [{ key:'photo',   label:'Photo'   }, { key:'card',   label:'Card'    }, { key:'dark',    label:'Dark'    }],
-  order:    [{ key:'brand',   label:'Brand'   }, { key:'hero',   label:'Hero'    }, { key:'cta',     label:'CTA'     }],
-  book:     [{ key:'brand',   label:'Brand'   }, { key:'cal',    label:'Calendar'}, { key:'cta',     label:'CTA'     }],
-  socials:  [{ key:'icons',   label:'Icons'   }, { key:'list',   label:'List'    }],
-  website:  [{ key:'photo',   label:'Photo'   }, { key:'link',   label:'Link'    }],
-};
-
-const FEATURE_TAGS = [
-  'Delivery','Takeout','Dine-in','Curbside pickup','Catering',
-  'Dog friendly','Kid friendly','Wheelchair accessible','Free WiFi',
-  'Outdoor seating','Patio','Rooftop',
-  'Vegan options','Vegetarian','Gluten-free','Halal','Kosher','Organic',
-  'LGBTQ+ friendly','Happy hour','Live music','Sports bar','Late night',
-  'Cash only','Contactless pay',
-  'Restaurant','Café','Bar','Bakery','Coffee shop','Brewery',
-  'Food truck','Non-profit','Retail','Salon','Spa','Gym','Pop-up','Market',
-];
-const DAYS: { key: WeekDay; label: string }[] = [
-  { key:'mon',label:'Monday' },{ key:'tue',label:'Tuesday' },{ key:'wed',label:'Wednesday' },
-  { key:'thu',label:'Thursday' },{ key:'fri',label:'Friday' },{ key:'sat',label:'Saturday' },{ key:'sun',label:'Sunday' },
-];
-const DEFAULT_WEEK_HOURS: WeeklyHours = {
-  mon:{ open:'09:00',close:'17:00',closed:false },tue:{ open:'09:00',close:'17:00',closed:false },
-  wed:{ open:'09:00',close:'17:00',closed:false },thu:{ open:'09:00',close:'17:00',closed:false },
-  fri:{ open:'09:00',close:'21:00',closed:false },sat:{ open:'10:00',close:'21:00',closed:false },
-  sun:{ open:'10:00',close:'16:00',closed:false },
-};
-const DEFAULT_BLOCKS: OpenStatusBlock[] = [
-  { id:'hours',   title:'Hours & status',        sub:'Live open / closed status',  icon:'clock',on:true, tone:'default',color:'#059669',size:'full' },
-  { id:'location',title:'Location & directions', sub:'Tap for directions',          icon:'pin',  on:true, tone:'default',color:'#2563eb',size:'full' },
-  { id:'menu',    title:'Menu',                  sub:'Tap to view',                icon:'menu', on:false,tone:'default',color:'#d97706',menuType:'url',size:'full' },
-  { id:'order',   title:'Online ordering',       sub:'DoorDash, Uber Eats & more', icon:'bag',  on:false,tone:'default',color:'#dc2626',size:'half' },
-  { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'half' },
-  { id:'socials', title:'Follow us',             sub:'Social media links',         icon:'share',  on:false,tone:'default',color:'#db2777',size:'full' },
-  { id:'website', title:'Website',               sub:'Link to your site',          icon:'globe',  on:false,tone:'default',color:'#0891b2',size:'full' },
-];
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 function fmt12(t: string) {
@@ -277,266 +208,6 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
 }
 
 // ── icons ──────────────────────────────────────────────────────────────────────
-function LucidePin({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>;
-}
-function LucideClock({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
-}
-function LucideList({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
-}
-function LucideShoppingBag({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>;
-}
-function LucideCalendar({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-}
-function LucideShare({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
-}
-function LucideGlobe({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>;
-}
-function LucideGrip({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1" fill={color}/><circle cx="9" cy="5" r="1" fill={color}/><circle cx="9" cy="19" r="1" fill={color}/><circle cx="15" cy="12" r="1" fill={color}/><circle cx="15" cy="5" r="1" fill={color}/><circle cx="15" cy="19" r="1" fill={color}/></svg>;
-}
-function LucideX({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-}
-function LucideChevronRight({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>;
-}
-function LucideStar({ size=12,color='currentColor',filled=false }: { size?: number; color?: string; filled?: boolean }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill={filled?color:'none'} stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
-}
-function LucideImage({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
-}
-function LucideThumbsUp({ size=12,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>;
-}
-function LucideThumbsDown({ size=12,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>;
-}
-function LucideFileText({ size=16,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
-}
-function LucideLayoutGrid({ size=14,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
-}
-function LucideLayoutList({ size=14,color='currentColor' }: { size?: number; color?: string }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="5"/><rect x="3" y="11" width="18" height="5"/><rect x="3" y="19" width="18" height="2"/></svg>;
-}
-
-function BlockIcon({ id, size=16, color='currentColor' }: { id:string; size?:number; color?:string }) {
-  switch(id) {
-    case 'location': return <LucidePin size={size} color={color}/>;
-    case 'hours':    return <LucideClock size={size} color={color}/>;
-    case 'menu':     return <LucideList size={size} color={color}/>;
-    case 'order':    return <LucideShoppingBag size={size} color={color}/>;
-    case 'book':     return <LucideCalendar size={size} color={color}/>;
-    case 'socials':  return <LucideShare size={size} color={color}/>;
-    default:         return <LucideGlobe size={size} color={color}/>;
-  }
-}
-
-// Brand icons
-function IconInstagram({ size=22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs><linearGradient id="ig" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stopColor="#f09433"/><stop offset="25%" stopColor="#e6683c"/><stop offset="50%" stopColor="#dc2743"/><stop offset="75%" stopColor="#cc2366"/><stop offset="100%" stopColor="#bc1888"/></linearGradient></defs>
-      <rect x="2" y="2" width="20" height="20" rx="5.5" fill="url(#ig)"/>
-      <circle cx="12" cy="12" r="4.2" stroke="white" strokeWidth="1.7" fill="none"/>
-      <circle cx="17.2" cy="6.8" r="1.1" fill="white"/>
-    </svg>
-  );
-}
-function IconTikTok({ size=22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect width="24" height="24" rx="5.5" fill="#010101"/>
-      <path d="M17.5 5.5a3.8 3.8 0 0 1-2.9-3.3V2H11.8v13.1a2.2 2.2 0 0 1-4.4 0 2.2 2.2 0 0 1 2.2-2.2c.2 0 .4 0 .6.1V9.9a5.9 5.9 0 0 0-5.9 5.9 5.9 5.9 0 0 0 11.8 0V9a7.5 7.5 0 0 0 4.3 1.3V7.1a3.8 3.8 0 0 1-2.9-1.6z" fill="white"/>
-    </svg>
-  );
-}
-function IconFacebook({ size=22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect width="24" height="24" rx="5.5" fill="#1877F2"/>
-      <path d="M16 8h-2a1 1 0 0 0-1 1v2h3l-.5 3H13v7h-3v-7H8v-3h2V9a4 4 0 0 1 4-4h2v3z" fill="white"/>
-    </svg>
-  );
-}
-function IconTwitterX({ size=22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect width="24" height="24" rx="5.5" fill="#000"/>
-      <path d="M17.5 4h2.5l-5.4 6.2 6.3 8.3h-5L12 13.4l-4.4 5.1H4.6l5.8-6.6L4.4 4h5.1l3.5 4.6L17.5 4zm-.9 12.9h1.4L7.1 5.5H5.6l11 11.4z" fill="white"/>
-    </svg>
-  );
-}
-function IconYouTube({ size=22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect width="24" height="24" rx="5.5" fill="#FF0000"/>
-      <path d="M21.4 8a2.6 2.6 0 0 0-1.8-1.8C18 5.8 12 5.8 12 5.8s-6 0-7.5.4A2.6 2.6 0 0 0 2.6 8C2.2 9.5 2.2 12 2.2 12s0 2.5.4 4a2.6 2.6 0 0 0 1.8 1.8C6 18.2 12 18.2 12 18.2s6 0 7.5-.4a2.6 2.6 0 0 0 1.8-1.8c.4-1.5.4-4 .4-4s0-2.5-.3-4z" fill="white"/>
-      <polygon points="10 15 15.5 12 10 9" fill="#FF0000"/>
-    </svg>
-  );
-}
-function SocialIcon({ platform, size=22 }: { platform:string; size?:number }) {
-  switch(platform) {
-    case 'instagram': return <IconInstagram size={size}/>;
-    case 'tiktok':    return <IconTikTok size={size}/>;
-    case 'facebook':  return <IconFacebook size={size}/>;
-    case 'twitter':   return <IconTwitterX size={size}/>;
-    case 'youtube':   return <IconYouTube size={size}/>;
-    default:          return <LucideGlobe size={size} color="#858585"/>;
-  }
-}
-
-// ── Brand provider icons ──────────────────────────────────────────────────────
-// NOTE: these are simplified, brand-accurate-coloured marks, not the official
-// logo artwork. For production, drop in each brand's official SVG from their
-// press/brand kit — hand-traced logos drift from the real mark over time.
-function IconDoorDash({ size=32 }: { size?: number }) {
-  // DoorDash Red #FF3008; current mark is the chevron "swoosh", not a letter D.
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-label="DoorDash">
-      <rect width="32" height="32" rx="7" fill="#FF3008"/>
-      <path d="M7 12.4h11.3c2.1 0 3.6 1.3 3.6 3.2 0 2.4-1.9 4.4-4.6 4.4H7l2.6-3h7.5c.7 0 1.2-.5 1.2-1.1 0-.5-.35-.9-1-.9H7z" fill="#fff"/>
-    </svg>
-  );
-}
-function IconUberEats({ size=32 }: { size?: number }) {
-  // Uber Eats green #06C167 on black.
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-label="Uber Eats">
-      <rect width="32" height="32" rx="7" fill="#06C167"/>
-      <rect x="6.5" y="13" width="19" height="3.1" rx="1.55" fill="#0B0B0B"/>
-      <rect x="6.5" y="18.4" width="12.5" height="3.1" rx="1.55" fill="#0B0B0B"/>
-      <circle cx="23" cy="20" r="2.6" fill="#0B0B0B"/>
-    </svg>
-  );
-}
-function IconGrubhub({ size=32 }: { size?: number }) {
-  // Grubhub went orange in the 2021 Wolff Olins rebrand; the mark is a house
-  // with a chimney and cutlery in the negative space.
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-label="Grubhub">
-      <rect width="32" height="32" rx="7" fill="#FF8000"/>
-      <path d="M16 7.2 25 14v10.8h-6.2v-6H13.2v6H7V14z" fill="#fff"/>
-      <rect x="20.4" y="8.2" width="2.6" height="3.6" fill="#fff"/>
-      <rect x="13.6" y="14.2" width="1.5" height="3.4" rx="0.6" fill="#FF8000"/>
-      <rect x="16.9" y="14.2" width="1.5" height="3.4" rx="0.6" fill="#FF8000"/>
-    </svg>
-  );
-}
-function IconSquare({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#000"/>
-      {/* Square logo mark — rounded square inside */}
-      <rect x="9" y="9" width="14" height="14" rx="3" fill="white"/>
-      <rect x="12" y="12" width="8" height="8" rx="1.5" fill="#000"/>
-    </svg>
-  );
-}
-function IconToast({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#FF4C00"/>
-      <path d="M9 12h14M16 12v12" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-    </svg>
-  );
-}
-function IconOpenTable({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#DA3743"/>
-      {/* fork */}
-      <path d="M11 8v16M11 11c0 0 3.5 1.5 3.5 4s-3.5 4-3.5 4" stroke="white" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      {/* knife */}
-      <path d="M20 8l-1.5 8H20v8" stroke="white" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-    </svg>
-  );
-}
-function IconResy({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#000"/>
-      {/* Bold R */}
-      <path d="M11 8h7a4 4 0 0 1 0 8h-7V8z" fill="none" stroke="white" strokeWidth="2.2" strokeLinejoin="round"/>
-      <path d="M18 16l5 8" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-      <line x1="11" y1="8" x2="11" y2="24" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-    </svg>
-  );
-}
-function IconCalendly({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#006BFF"/>
-      <rect x="7" y="10" width="18" height="15" rx="2.5" stroke="white" strokeWidth="1.9" fill="none"/>
-      <path d="M7 15h18" stroke="white" strokeWidth="1.5"/>
-      <path d="M12 7v5M20 7v5" stroke="white" strokeWidth="1.9" strokeLinecap="round"/>
-      <circle cx="12" cy="20" r="1.2" fill="white"/>
-      <circle cx="16" cy="20" r="1.2" fill="white"/>
-      <circle cx="20" cy="20" r="1.2" fill="white"/>
-    </svg>
-  );
-}
-function IconAcuity({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#5C2D91"/>
-      {/* A shape */}
-      <path d="M16 8l7 16h-14L16 8z" fill="none" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-      <line x1="11.5" y1="19" x2="20.5" y2="19" stroke="white" strokeWidth="2"/>
-    </svg>
-  );
-}
-function IconMindbody({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="#1D1D1D"/>
-      {/* M shape */}
-      <path d="M7 22V10l5 7 5-7v12" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      {/* person dot */}
-      <circle cx="24" cy="12" r="2.5" fill="white"/>
-      <path d="M24 15v7" stroke="white" strokeWidth="2.2" strokeLinecap="round"/>
-    </svg>
-  );
-}
-function IconGoogle({ size=32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="7" fill="white" stroke="#DEDEDC" strokeWidth="1"/>
-      {/* Google G */}
-      <path d="M24 16.3c0-.6-.1-1.2-.2-1.8H16v3.4h4.5c-.2 1-.8 1.9-1.7 2.4v2h2.7C23 20.6 24 18.6 24 16.3z" fill="#4285F4"/>
-      <path d="M16 25c2.3 0 4.2-.7 5.5-2l-2.7-2c-.7.5-1.7.8-2.8.8-2.2 0-4-1.4-4.6-3.4H8.6v2.1C9.9 23.1 12.7 25 16 25z" fill="#34A853"/>
-      <path d="M11.4 18.4c-.2-.5-.3-1-.3-1.6s.1-1.1.3-1.6v-2.1H8.6C8 14.5 7.5 15.7 7.5 17s.5 2.5 1.1 3.5l2.8-2.1z" fill="#FBBC05"/>
-      <path d="M16 11.8c1.3 0 2.4.4 3.3 1.3l2.4-2.4C20.2 9.2 18.3 8.5 16 8.5c-3.3 0-6.1 1.9-7.4 4.7l2.8 2.1c.6-2 2.4-3.5 4.6-3.5z" fill="#EA4335"/>
-    </svg>
-  );
-}
-function ProviderIcon({ providerKey, size=32 }: { providerKey: string; size?: number }) {
-  switch(providerKey) {
-    case 'doordash':   return <IconDoorDash size={size}/>;
-    case 'ubereats':   return <IconUberEats size={size}/>;
-    case 'grubhub':    return <IconGrubhub size={size}/>;
-    case 'square':
-    case 'squareappts':return <IconSquare size={size}/>;
-    case 'toast':      return <IconToast size={size}/>;
-    case 'opentable':  return <IconOpenTable size={size}/>;
-    case 'resy':       return <IconResy size={size}/>;
-    case 'calendly':   return <IconCalendly size={size}/>;
-    case 'acuity':     return <IconAcuity size={size}/>;
-    case 'mindbody':   return <IconMindbody size={size}/>;
-    default:           return <LucideGlobe size={size} color="#858585"/>;
-  }
-}
-
 // ── UI primitives ──────────────────────────────────────────────────────────────
 function Toggle({ on, onChange }: { on:boolean; onChange:(v:boolean)=>void }) {
   return (
