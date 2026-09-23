@@ -2113,9 +2113,15 @@ function BuilderSparkline({data,color}:{data:number[];color:string}){
 }
 
 /**
- * Mobile popup sheet. Deliberately auto-height and capped — the old builder put
- * every editor in a 52vh panel that hid the page you were editing. These sit low,
- * only as tall as their content, so the phone canvas stays visible above them.
+ * Mobile popup sheet. Auto-height and capped — the old builder put every editor
+ * in a 52vh panel that hid the page you were editing. These sit low, only as
+ * tall as their content, so the phone canvas stays visible above them.
+ *
+ * Closed means GONE. An earlier version parked it at translateY(115%), which is
+ * a percentage of the sheet's own height — for a short sheet that was less than
+ * the 56px nav offset it sits above, so every closed sheet left a sliver of its
+ * header floating over the nav bar, unpressable, on phone and desktop alike.
+ * It now unmounts when closed and animates in on mount.
  */
 function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }: {
   open: boolean;
@@ -2126,44 +2132,64 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }:
   /** false = no scrim, so you can still see the widget you're editing change. */
   dim?: boolean;
 }) {
+  const [mounted, setMounted] = useState(false);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      // Next frame, so the browser has a closed position to animate away from.
+      const raf = requestAnimationFrame(() => setShown(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setShown(false);
+    const t = setTimeout(() => setMounted(false), 300);
+    return () => clearTimeout(t);
+  }, [open]);
+
+  if (!mounted) return null;
+
   return (
     <>
-      <div
-        onClick={onClose}
-        style={{
-          position:'fixed', inset:0, zIndex:44,
-          background: dim ? 'rgba(10,10,10,0.22)' : 'transparent',
-          opacity: open ? 1 : 0,
-          pointerEvents: open ? 'auto' : 'none',
-          transition:'opacity .22s ease',
-        }}
-      />
+      {dim && (
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 44,
+            background: 'rgba(10,10,10,0.22)',
+            opacity: shown ? 1 : 0,
+            transition: 'opacity .22s ease',
+          }}
+        />
+      )}
       <div
         role="dialog"
-        aria-modal="true"
+        aria-modal={dim ? true : undefined}
         aria-label={title}
         style={{
-          position:'fixed', left:0, right:0, zIndex:45,
-          bottom:'calc(56px + env(safe-area-inset-bottom))',
-          background:'#fff',
-          borderTopLeftRadius:26, borderTopRightRadius:26,
-          boxShadow:'0 -10px 44px rgba(0,0,0,0.18)',
-          maxHeight:`${maxVh}vh`,
-          display:'flex', flexDirection:'column',
-          transform: open ? 'translateY(0)' : 'translateY(115%)',
-          transition:'transform .3s cubic-bezier(.32,.72,0,1)',
-          fontFamily:'var(--font-poppins), system-ui, sans-serif',
+          position: 'fixed', left: 0, right: 0, zIndex: 45,
+          bottom: 'calc(56px + env(safe-area-inset-bottom))',
+          background: '#fff',
+          borderTopLeftRadius: 26, borderTopRightRadius: 26,
+          boxShadow: '0 -10px 44px rgba(0,0,0,0.18)',
+          maxHeight: `${maxVh}vh`,
+          display: 'flex', flexDirection: 'column',
+          // A fixed pixel fallback on top of the percentage, so a short sheet
+          // still clears the nav it sits above.
+          transform: shown ? 'translateY(0)' : 'translateY(calc(100% + 96px))',
+          transition: 'transform .3s cubic-bezier(.32,.72,0,1)',
+          fontFamily: 'var(--font-poppins), system-ui, sans-serif',
         }}
       >
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px 8px', flexShrink:0 }}>
-          <div style={{ position:'absolute', left:'50%', top:6, transform:'translateX(-50%)', width:36, height:4, borderRadius:2, background:'#E4E7EC' }} />
-          <p style={{ fontSize:15, fontWeight:600, color:'#111', margin:0, letterSpacing:'-0.02em' }}>{title}</p>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 8px', flexShrink: 0 }}>
+          <div style={{ position: 'absolute', left: '50%', top: 6, transform: 'translateX(-50%)', width: 36, height: 4, borderRadius: 2, background: '#E4E7EC' }} />
+          <p style={{ fontSize: 15, fontWeight: 600, color: '#111', margin: 0, letterSpacing: '-0.02em' }}>{title}</p>
           <button type="button" onClick={onClose} aria-label="Close"
-            style={{ width:28, height:28, borderRadius:'50%', border:'none', background:'#F2F4F7', color:'#667085', fontSize:15, lineHeight:1, cursor:'pointer', flexShrink:0 }}>
+            style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: '#F2F4F7', color: '#667085', fontSize: 15, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>
             ×
           </button>
         </div>
-        <div style={{ overflowY:'auto', padding:'4px 16px 20px', scrollbarWidth:'none' }}>
+        <div style={{ overflowY: 'auto', padding: '4px 16px 20px', scrollbarWidth: 'none' }}>
           {children}
         </div>
       </div>
