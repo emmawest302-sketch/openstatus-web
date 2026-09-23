@@ -388,18 +388,13 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             </p>
           )}
           {(enrichedConfig.tags ?? []).length > 0 && (
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, justifyContent:'center', marginTop:10 }}>
-              {(enrichedConfig.tags ?? []).slice(0,3).map((tag) => (
-                <span key={tag} style={{
-                  fontSize: 11, fontWeight: 500, lineHeight: 1,
-                  padding: '6px 10px', borderRadius: 999,
-                  background: bgIsDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.06)',
-                  color: bgIsDark ? 'rgba(255,255,255,0.86)' : '#3F3F46',
-                }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
+            <p style={{
+              maxWidth:440, margin:'9px auto 0', padding:'0 8px',
+              fontSize:12, fontWeight:500, lineHeight:1.6,
+              color:bgIsDark ? 'rgba(255,255,255,0.7)' : 'rgba(21,21,21,0.58)',
+            }}>
+              {(enrichedConfig.tags ?? []).filter(Boolean).join(' · ')}
+            </p>
           )}
           {business.tagline && (
             <p style={{
