@@ -188,11 +188,15 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
       </div>
 
       {/* Text */}
-      <div style={{ flex: 1, minWidth: 0, overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const }}>
+      {/* `break-word` was letting a narrow block split a word across lines, so
+          "Reviews" rendered as "Revi / ews". A title that doesn't fit should be
+          cut with an ellipsis, never broken mid-word. */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 13, color: TEXT, lineHeight: 1.35,
           fontWeight: block.titleBold ? 800 : 600,
           fontStyle: block.titleItalic ? 'italic' : 'normal',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {block.title}
         </div>
@@ -201,7 +205,8 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
             fontSize: 11, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35,
             fontWeight: block.subBold ? 700 : 400,
             fontStyle: block.subItalic ? 'italic' : 'normal',
-            overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
+            overflow: 'hidden', overflowWrap: 'anywhere' as const,
           }}>
             {block.sub}
           </div>

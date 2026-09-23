@@ -36,9 +36,12 @@ export default function PublishedBusinessBlocks({
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
       {enabled.map((block) => {
         // Determine column span
+        // A 'third' used to be 2 of 6 columns — about 33% of a phone screen,
+        // which after the icon and padding left ~60px for text. Titles broke
+        // mid-word ("Revi / ews") and subtitles rendered one word per line.
+        // Half is the narrowest a block with words in it can survive on a phone.
         const span =
-          block.size === 'third' ? 2
-          : block.size === 'half' || block.size === 'square' ? 3
+          block.size === 'third' || block.size === 'half' || block.size === 'square' ? 3
           : 6; // 'full' or default
 
         // Special renderers

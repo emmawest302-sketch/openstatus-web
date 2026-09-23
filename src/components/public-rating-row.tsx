@@ -175,7 +175,7 @@ export default function PublicRatingRow({ businessId, placeId }: Props) {
           fontSize: 14, fontWeight: 600,
           color: myVote === 'up' ? '#22C55E' : '#292929',
         }}>
-          {upVotes}
+          {upVotes > 0 ? upVotes : ''}
         </span>
       </button>
 
@@ -206,7 +206,7 @@ export default function PublicRatingRow({ businessId, placeId }: Props) {
           fontSize: 14, fontWeight: 600,
           color: myVote === 'down' ? '#EF4444' : '#292929',
         }}>
-          {downVotes}
+          {downVotes > 0 ? downVotes : ''}
         </span>
       </button>
     </div>

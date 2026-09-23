@@ -246,6 +246,18 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   // ("Get directions"), never an address — using it made every page render a
   // zoom-1 map of the whole world.
   const mapAddress = (locationBlock?.address || business.address || '').trim();
+
+  // Google returns "2716 Wind Gap Dr, Columbia, TN 38401, USA". The country and
+  // postcode are noise to a local customer and compete with the business name
+  // for attention, so the header shows street and town only. The full address
+  // is still what the map and directions use.
+  const shortAddress = (() => {
+    const parts = mapAddress.split(',').map((p) => p.trim()).filter(Boolean);
+    if (parts.length <= 2) return mapAddress;
+    const [street, town, region] = parts;
+    const state = (region ?? '').replace(/\s*\d{4,}.*$/, '').trim(); // drop the postcode
+    return [street, town, state].filter(Boolean).join(', ');
+  })();
   const locationBlockOn = locationBlock?.on !== false && !!locationBlock && (!!mapAddress || !!locationBlock.googleUrl || !!locationBlock.appleMapsUrl);
 
   // Initials fallback
@@ -379,12 +391,12 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           }}>
             {business.name}
           </h1>
-          {(locationBlock?.address || business.address) && (
+          {shortAddress && (
             <p style={{
               fontSize: 12, color: bgIsDark ? 'rgba(255,255,255,0.72)' : '#4B4B4B',
               marginTop: 6, lineHeight: 1.4,
             }}>
-              {locationBlock?.address || business.address}
+              {shortAddress}
             </p>
           )}
           {(enrichedConfig.tags ?? []).length > 0 && (

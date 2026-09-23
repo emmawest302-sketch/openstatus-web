@@ -1712,7 +1712,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   for (let h = 0; h < 24; h++) for (const m of [0, 30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
   return (
     <select value={value} onChange={e => onChange(e.target.value)}
-      className="bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-3 py-2 text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
+      className="flex-1 min-w-0 bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-2 sm:px-3 py-2 text-[12px] sm:text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
       {times.map(t => <option key={t} value={t}>{fmt12(t)}</option>)}
     </select>
   );
@@ -2456,16 +2456,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   function HoursRow({dayKey,label,idx}:{dayKey:WeekDay;label:string;idx:number}) {
     const day=hours[dayKey];
     return (
-      <div className={`flex items-center gap-4 px-5 ${idx<DAYS.length-1?'border-b border-[#F5F5F5]':''}`} style={{height:64}}>
-        <span className="text-[13px] font-semibold text-[#0A0A0A] w-28 flex-shrink-0">{label}</span>
+      <div className={`flex items-center gap-2 sm:gap-4 px-3 sm:px-5 ${idx<DAYS.length-1?'border-b border-[#F5F5F5]':''}`} style={{minHeight:60}}>
+        <span className="text-[12px] sm:text-[13px] font-semibold text-[#0A0A0A] w-[42px] sm:w-28 flex-shrink-0">
+          <span className="sm:hidden">{label.slice(0,3)}</span>
+          <span className="hidden sm:inline">{label}</span>
+        </span>
         <button
           onClick={()=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,closed:!day.closed}}}))}
-          className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold flex-shrink-0 transition-all ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
+          className={`text-[11px] px-2.5 sm:px-3 py-1.5 rounded-full border font-semibold flex-shrink-0 transition-all ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
         >
           {day.closed?'Closed':'● Open'}
         </button>
         {!day.closed&&(
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
             <TimeSelectInline value={day.open} onChange={v=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,open:v}}}))}/>
             <span className="text-[#C0C0C0] text-sm font-light">–</span>
             <TimeSelectInline value={day.close} onChange={v=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,close:v}}}))}/>
@@ -4563,34 +4566,43 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={56}>
+      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={46}>
         {/*
           There are seven blocks. Filtering seven things into six categories was
           never going to help, and two of those tabs ("Social", "More") mapped to
           nothing at all — they looked like buttons and did nothing. Just show
           them all, plus the one thing people actually want that isn't in the list.
         */}
-        <div className="grid grid-cols-2 gap-2.5">
+        {/* Compact rows. The circle is a real toggle — the previous version made
+            tapping an already-on block open its editor, so there was no way to
+            turn a block OFF from here at all. */}
+        <div className="space-y-1.5">
           {DEFAULT_BLOCKS.map(def=>{
             const isOn = allBlocks.find(b=>b.id===def.id)?.on;
             return (
-              <button key={def.id}
-                onClick={()=>{ if(!isOn){ enableBlock(def.id); } else { setOpenId(def.id); setMSheet('block'); } }}
-                className="flex items-center gap-2.5 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] text-left active:scale-[0.97] transition-transform">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{backgroundColor:`${def.color}18`,border:`1px solid ${def.color}30`}}>
-                  <BlockIcon id={def.id} size={17} color={def.color}/>
+              <div key={def.id}
+                className="flex items-center gap-2.5 py-2 px-2.5 rounded-xl border border-[#E8EBF0] bg-white">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{backgroundColor:`${def.color}18`}}>
+                  <BlockIcon id={def.id} size={14} color={def.color}/>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11.5px] font-semibold text-[#111] leading-tight truncate">{def.title}</p>
-                  <p className="text-[10px] text-[#667085] leading-tight mt-0.5 truncate">{isOn?'On — tap to edit':'Tap to add'}</p>
-                </div>
-                {isOn&&(
-                  <span className="w-5 h-5 rounded-full bg-[#7C3AED] flex items-center justify-center flex-shrink-0">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <button
+                  onClick={()=>{ if(!isOn){ enableBlock(def.id); } setOpenId(def.id); setMSheet('block'); }}
+                  className="flex-1 min-w-0 text-left active:opacity-60">
+                  <p className="text-[13px] font-medium text-[#111] leading-tight truncate">{def.title}</p>
+                </button>
+                <button
+                  onClick={()=>{ if(isOn){ removeBlock(def.id); } else { enableBlock(def.id); } }}
+                  aria-label={isOn?`Turn off ${def.title}`:`Turn on ${def.title}`}
+                  aria-pressed={!!isOn}
+                  className={`w-9 h-9 -mr-1 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform`}>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center border ${isOn?'bg-[#7C3AED] border-[#7C3AED]':'border-[#D0D5DD] bg-white'}`}>
+                    {isOn
+                      ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      : <span className="text-[13px] leading-none text-[#98A2B3]">+</span>}
                   </span>
-                )}
-              </button>
+                </button>
+              </div>
             );
           })}
         </div>
