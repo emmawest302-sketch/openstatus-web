@@ -8,7 +8,8 @@ export type OpenStatusBlock = {
   url?: string;
   size?: 'half' | 'square' | 'full' | 'third';
   color?: string;
-  menuType?: 'url' | 'photo' | 'pdf';
+  /** 'photo' is the legacy spelling of 'photos' and is migrated on read. */
+  menuType?: 'url' | 'photos' | 'pdf';
   titleBold?: boolean; titleItalic?: boolean;
   subBold?: boolean; subItalic?: boolean;
   menuFile?: string;
@@ -57,6 +58,27 @@ export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
   { id: 'reviews', title: 'Reviews',         sub: 'Read what guests say',         icon: '', on: true,  tone: 'glass', url: '', size: 'third' },
 ];
 
+/** The builder has always written 'photos'; older saves used 'photo'. */
+function normalizeMenuType(value: unknown): 'url' | 'photos' | 'pdf' {
+  if (value === 'photos' || value === 'photo') return 'photos';
+  if (value === 'pdf') return 'pdf';
+  return 'url';
+}
+
+/**
+ * The one normalizer for a page config.
+ *
+ * It returns an explicit object, which is safer than spreading unknown input —
+ * but that makes forgetting a field a silent data loss rather than a type
+ * error, because every optional field is happy to be undefined. Three fields
+ * had already gone missing this way: nameColor and the two background
+ * animation fields, which is why custom name colours and animated backgrounds
+ * worked in the builder preview and did nothing on the live page.
+ *
+ * If you add a field to OpenStatusPageConfig, add it here too, and add it to
+ * the round-trip test in openstatus-page-config.test.ts — that test exists
+ * specifically to fail when this list falls behind the type.
+ */
 export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageConfig {
   const raw = value && typeof value === 'object' ? value as Record<string, unknown> : {};
   const blocks = Array.isArray(raw.blocks)
@@ -66,9 +88,11 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
           ...b,
           icon: '',
           url: typeof b.url === 'string' ? b.url : '',
-          size: (b.size === 'half' || b.size === 'full' || b.size === 'third') ? b.size : 'full',
+          // 'square' is a real size the builder offers; omitting it here turned
+          // every square block into a full-width one on the live page.
+          size: (b.size === 'half' || b.size === 'square' || b.size === 'full' || b.size === 'third') ? b.size : 'full',
           color: typeof b.color === 'string' ? b.color : undefined,
-          menuType: (b.menuType === 'url' || b.menuType === 'photo' || b.menuType === 'pdf') ? b.menuType : 'url',
+          menuType: normalizeMenuType((b as { menuType?: unknown }).menuType),
           menuFile: typeof b.menuFile === 'string' ? b.menuFile : undefined,
         };
       })
@@ -96,5 +120,12 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
     location: typeof raw.location === 'string' ? raw.location : '',
     tags: Array.isArray(raw.tags) ? raw.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 8) : [],
     font: typeof raw.font === 'string' ? raw.font : undefined,
+    // Previously missing — see the note above normalizeOpenStatusPageConfig.
+    nameColor: typeof raw.nameColor === 'string' ? raw.nameColor : undefined,
+    bgAnim: typeof raw.bgAnim === 'string' ? raw.bgAnim : undefined,
+    bgAnimSpeed: typeof raw.bgAnimSpeed === 'number' ? raw.bgAnimSpeed : undefined,
+    weeklyHours: (raw.weeklyHours && typeof raw.weeklyHours === 'object')
+      ? raw.weeklyHours as WeeklyHours
+      : undefined,
   };
 }
