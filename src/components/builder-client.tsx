@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
+import { getBusinessStatus, type WeeklySchedule } from '@/lib/business-status';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
@@ -66,6 +67,8 @@ export interface Business {
   id: string; name: string; slug: string;
   avatar_url?: string; tagline?: string; category?: string | null;
   phone?: string | null; website?: string | null; address?: string | null;
+  /** IANA zone, e.g. "America/New_York". Every open/closed decision uses it. */
+  timezone?: string | null;
 }
 
 // ── constants ──────────────────────────────────────────────────────────────────
@@ -196,14 +199,22 @@ function fmt12(t: string) {
   const ap = h>=12?'PM':'AM', hr=h%12||12;
   return m===0?`${hr} ${ap}`:`${hr}:${m.toString().padStart(2,'0')} ${ap}`;
 }
-function getLiveStatus(hours?: WeeklyHours): { status:'open'|'closed'; todayLabel:string } {
+/**
+ * Preview status. Delegates to the shared engine so the builder and the public
+ * page cannot disagree, and takes the business timezone rather than the clock
+ * of whoever happens to be editing.
+ */
+function getLiveStatus(hours?: WeeklyHours, timeZone?: string|null): { status:'open'|'closed'; todayLabel:string } {
   if (!hours) return { status:'closed', todayLabel:'Set your hours' };
+  const tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Chicago';
+  const s = getBusinessStatus(new Date(), tz, hours as WeeklySchedule);
   const keys: WeekDay[] = ['sun','mon','tue','wed','thu','fri','sat'];
-  const today = hours[keys[new Date().getDay()]];
-  if (today.closed) return { status:'closed', todayLabel:'Closed today' };
-  const [oh,om]=today.open.split(':').map(Number), [ch,cm]=today.close.split(':').map(Number);
-  const now=new Date().getHours()*60+new Date().getMinutes();
-  return { status: now>=oh*60+om&&now<ch*60+cm?'open':'closed', todayLabel:`Today ${fmt12(today.open)} – ${fmt12(today.close)}` };
+  const today = hours[keys[s.dayIndex]];
+  if (!today || today.closed) return { status:'closed', todayLabel:'Closed today' };
+  return {
+    status: s.state==='open' ? 'open' : 'closed',
+    todayLabel: `Today ${fmt12(today.open)} – ${fmt12(today.close)}`,
+  };
 }
 function starsToPercent(stars: number) { return Math.round((stars/5)*100); }
 
@@ -2045,7 +2056,8 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
         body:JSON.stringify({weeklyHours:hours}),
       });
       const d=await r.json() as {ok?:boolean;error?:string};
-      if(d.ok){setPushMsg('✓ Hours updated on Google!');}
+      if(r.status===202){setPushMsg('Saved here. Google hasn\u2019t accepted it yet — '+(d.error??'pending review.'));}
+      else if(r.ok&&d.ok){setPushMsg('✓ Hours updated on Google');}
       else{setPushMsg('Error: '+(d.error??'Unknown error'));}
     }catch(e){setPushMsg('Failed to reach API.');}
     finally{setPushing(false);}
@@ -2209,7 +2221,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // Status and Analytics don't edit the page config: every Status action posts the
   // moment it's tapped, and Analytics is read-only. A Save button there implies
   // there are unsaved changes to lose, so it's hidden on those tabs.
-  const showSaveButton = sidebarTab!=='hours' && sidebarTab!=='analytics';
+  // The header Save writes the PAGE config. Business and Settings have their own
+  // save buttons for their own fields, so showing this one there invited people
+  // to press it and believe their phone number had been saved.
+  const showSaveButton = sidebarTab==='design' || sidebarTab==='style';
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>('mobile');
   const [previewKey,setPreviewKey]=useState(0);
   const [quickAction,setQuickAction]=useState<string|null>(null);
@@ -2227,7 +2242,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
   const [saveError,setSaveError]=useState('');
-  const [googleSyncStatus,setGoogleSyncStatus]=useState<null|'syncing'|'ok'|{error:string}>(null);
+  // 'pending' exists because /api/google/hours answers a Google 429 with HTTP 202
+  // ("saved here, Google hasn't accepted it"). fetch treats 202 as ok, so the old
+  // `if (r.ok)` rendered "✓ Synced to Google" for a sync that had not happened.
+  const [googleSyncStatus,setGoogleSyncStatus]=useState<null|'syncing'|'ok'|'pending'|{error:string}>(null);
   const [googleFetchUrl,setGoogleFetchUrl]=useState('');
   const [googleFetching,setGoogleFetching]=useState(false);
   const [googleFetchError,setGoogleFetchError]=useState('');
@@ -2428,7 +2446,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const orderedBlocks = [...allBlocks.filter(b=>b.id==='hours'),...allBlocks.filter(b=>b.id!=='hours')];
   const activeBlocks = orderedBlocks.filter(b=>b.on);
   const openBlock = allBlocks.find(b=>b.id===openId)??null;
-  const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours);
+  const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours, localBusiness?.timezone ?? null);
   const hours = config.weeklyHours??{...DEFAULT_WEEK_HOURS};
   const showEditPanel = !!openBlock && sidebarTab==='design';
   const isEditSubTab = ['design','style'].includes(sidebarTab);
@@ -2548,7 +2566,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             body:JSON.stringify({weeklyHours:config.weeklyHours}),
           });
           const body=await r.json().catch(()=>({}));
-          if(r.ok){
+          if(r.status===202){
+            setGoogleSyncStatus('pending');
+          } else if(r.ok){
             setGoogleSyncStatus('ok');
             setTimeout(()=>setGoogleSyncStatus(null),4000);
           } else {
@@ -3122,6 +3142,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
               {googleConnected&&googleSyncStatus==='syncing'&&<p className="text-[10px] text-[#4285F4] text-right">Syncing to Google…</p>}
               {googleConnected&&googleSyncStatus==='ok'&&<p className="text-[10px] text-[#166534] text-right">✓ Synced to Google</p>}
+              {googleConnected&&googleSyncStatus==='pending'&&(
+                <p className="text-[10px] text-[#B54708] max-w-[180px] text-right leading-tight">Saved here · Google sync pending</p>
+              )}
               {googleConnected&&googleSyncStatus&&typeof googleSyncStatus==='object'&&(
                 <p className="text-[10px] text-[#C4453F] max-w-[160px] text-right leading-tight" title={googleSyncStatus.error}>Google sync failed — check Integrations tab</p>
               )}
@@ -4138,7 +4161,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                 body:JSON.stringify({weeklyHours:config.weeklyHours??DEFAULT_WEEK_HOURS}),
                               });
                               const body=await r.json().catch(()=>({}));
-                              if(r.ok){setGoogleSyncStatus('ok');setTimeout(()=>setGoogleSyncStatus(null),4000);}
+                              if(r.status===202){setGoogleSyncStatus('pending');}
+                              else if(r.ok){setGoogleSyncStatus('ok');setTimeout(()=>setGoogleSyncStatus(null),4000);}
                               else{setGoogleSyncStatus({error:body?.error??`Sync failed (${r.status})`});}
                             }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
                           }}
@@ -4974,7 +4998,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           body:JSON.stringify({weeklyHours:gh}),
                         });
                         const body=await r.json().catch(()=>({}));
-                        if(r.ok){setGoogleSyncStatus('ok');setTimeout(()=>setGoogleSyncStatus(null),4000);}
+                        if(r.status===202){setGoogleSyncStatus('pending');}
+                              else if(r.ok){setGoogleSyncStatus('ok');setTimeout(()=>setGoogleSyncStatus(null),4000);}
                         else{setGoogleSyncStatus({error:body?.error??`Google sync failed (${r.status})`});}
                       }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
                     }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});

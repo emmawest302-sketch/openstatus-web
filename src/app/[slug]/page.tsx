@@ -12,6 +12,7 @@ import { loadPublishedPageConfig } from '@/lib/published-page-config';
 import { SITE_URL, pageUrl } from '@/lib/site';
 import { bgAnimationStyle, BG_KEYFRAMES } from '@/lib/page-theme';
 import type { Metadata } from 'next';
+import { getBusinessStatus, weeklyFromRows, toMinutes } from '@/lib/business-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,11 +80,6 @@ function pretty(t: string | null) {
   const mer = n >= 12 ? 'PM' : 'AM';
   if (n === 0) n = 12; else if (n > 12) n -= 12;
   return `${n}:${m} ${mer}`;
-}
-function mins(t: string | null) {
-  if (!t) return null;
-  const [h, m] = t.split(':');
-  return parseInt(h, 10) * 60 + parseInt(m, 10);
 }
 function rowLabel(r: Hours | undefined) {
   return !r ? '-' : r.is_closed ? 'Closed' : `${pretty(r.opens_at)} – ${pretty(r.closes_at)}`;
@@ -194,16 +190,10 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const pageFont = enrichedConfig.font ?? 'Inter, system-ui, sans-serif';
   const fadeGradient = `linear-gradient(to bottom, rgba(${bgR},${bgG},${bgB},0) 0%, rgba(${bgR},${bgG},${bgB},0.08) 22%, rgba(${bgR},${bgG},${bgB},0.35) 48%, rgba(${bgR},${bgG},${bgB},0.72) 72%, ${bgSolid} 100%)`;
 
-  // Hours / open status
+  // Hours / open status — one shared engine, see lib/business-status.ts.
+  // The builder preview calls the same function, so the owner and their
+  // customers can no longer be told different things.
   const timezone = business.timezone || 'America/Chicago';
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  }).formatToParts(new Date());
-  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? 'Sun';
-  const today = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(weekday);
-  const todayRow = hours.find((h) => h.day_of_week === today) ?? null;
-  const nowMins = Number(parts.find((p) => p.type === 'hour')?.value ?? 0) * 60 + Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
-  // Only apply closures that have actually started in the business's timezone.
   const localToday = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
@@ -211,23 +201,31 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
     (u) => !u.effective_date || u.effective_date <= localToday
   );
 
+  const status = getBusinessStatus(new Date(), timezone, weeklyFromRows(hours));
+  const today = status.dayIndex;
+  const todayRow = hours.find((h) => h.day_of_week === today) ?? null;
+
   const lead = updates[0] ?? null;
-  const effectiveClose = updates.find((u) => u.closes_at)?.closes_at ?? todayRow?.closes_at ?? null;
-  const closedAllDay = !todayRow || todayRow.is_closed || updates.some((u) => u.kind === 'closed');
-  const openMins = mins(todayRow?.opens_at ?? null);
-  const closeMins = mins(effectiveClose);
-  const isOpen = hours.length > 0 && !closedAllDay && openMins !== null && closeMins !== null && nowMins >= openMins && nowMins < closeMins;
+  const ownerClosed = updates.some((u) => u.kind === 'closed');
+  // An owner "closing early" overrides the scheduled closing time for today.
+  const earlyClose = updates.find((u) => u.closes_at)?.closes_at ?? null;
+  const earlyCloseMins = toMinutes(earlyClose);
+  const pastEarlyClose = earlyCloseMins !== null && status.minutesNow >= earlyCloseMins;
+
+  const hoursUnknown = status.state === 'unknown';
+  const closedAllDay = !hoursUnknown && (ownerClosed || (!!todayRow && todayRow.is_closed && !status.overnight));
+  const isOpen = status.state === 'open' && !ownerClosed && !pastEarlyClose;
+  const effectiveClose = earlyClose ?? (status.closesAt ? `${status.closesAt}:00` : todayRow?.closes_at ?? null);
 
   // Status. Absence of hours data must never be rendered as a factual claim
   // that the business is closed — that is how a page tells customers a shop is
   // shut while it is actually open.
-  const hoursUnknown = hours.length === 0;
   const dot = hoursUnknown ? '#8A8A86' : closedAllDay ? '#8A8A86' : isOpen ? '#22C55E' : '#E0921B';
   let bigText = 'Closed now', subText = 'Back tomorrow', accentText = '';
   if (hoursUnknown) { bigText = 'Hours not set'; subText = 'Check with the business'; }
   else if (closedAllDay) { bigText = 'Closed today'; subText = lead?.detail ?? 'Not open today'; }
   else if (isOpen) { bigText = 'Open now'; subText = 'Closes at '; accentText = pretty(effectiveClose); }
-  else if (openMins !== null && nowMins < openMins) { bigText = 'Opens later'; subText = 'Opens at '; accentText = pretty(todayRow?.opens_at ?? null); }
+  else if (status.opensAt) { bigText = 'Opens later'; subText = 'Opens at '; accentText = pretty(`${status.opensAt}:00`); }
 
   // Block visibility
   const hoursBlock = enrichedConfig.blocks.find((b) => b.id === 'hours');
