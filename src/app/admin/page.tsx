@@ -39,10 +39,10 @@ type EditState = {
 function Mark() {
   return (
     <svg width="26" height="26" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="48" fill="#050505"/>
-      <circle cx="50" cy="50" r="21" fill="#F7F7F3"/>
-      <circle cx="50" cy="44" r="7.4" fill="#050505"/>
-      <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#050505"/>
+      <circle cx="50" cy="50" r="48" fill="#7C3AED"/>
+      <circle cx="50" cy="50" r="21" fill="#FFFFFF"/>
+      <circle cx="50" cy="44" r="7.4" fill="#7C3AED"/>
+      <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#7C3AED"/>
     </svg>
   );
 }
@@ -195,21 +195,21 @@ export default function AdminPage() {
   // Not signed in, or signed in without an admin email: the server has already
   // refused, this just explains it.
   if (error === 'Not signed in' || error === 'Access denied' || error === 'Invalid session') return (
-    <main className="grid min-h-screen place-items-center bg-[#0A0A0A] px-6">
+    <main className="grid min-h-screen place-items-center bg-[#FAFAFA] px-6">
       <div className="w-full max-w-xs text-center">
         <div className="mb-8 flex justify-center">
           <svg viewBox="0 0 100 100" width="36" height="36">
             <circle cx="50" cy="50" r="48" fill="#7C3AED"/>
-            <circle cx="50" cy="50" r="21" fill="#0A0A0A"/>
+            <circle cx="50" cy="50" r="21" fill="#FFFFFF"/>
             <circle cx="50" cy="44" r="7.4" fill="#7C3AED"/>
             <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#7C3AED"/>
           </svg>
         </div>
-        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-white/30">Admin</p>
-        <p className="mb-2 text-lg font-semibold text-white">
+        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#98A2B3]">Admin</p>
+        <p className="mb-2 text-lg font-semibold text-[#111]">
           {error === 'Not signed in' ? 'Sign in to continue' : 'This account isn\u2019t an admin'}
         </p>
-        <p className="mb-6 text-xs leading-relaxed text-white/45">
+        <p className="mb-6 text-xs leading-relaxed text-[#667085]">
           {error === 'Not signed in'
             ? 'Admin access uses your OpenStatus login.'
             : 'Ask for your email to be added to ADMIN_EMAILS.'}
@@ -222,30 +222,30 @@ export default function AdminPage() {
   );
 
   if (loading) return (
-    <main className="grid min-h-screen place-items-center bg-[#0A0A0A]">
-      <p className="text-sm text-white/50">Loading admin hub...</p>
+    <main className="grid min-h-screen place-items-center bg-[#FAFAFA]">
+      <p className="text-sm text-[#667085]">Loading admin hub...</p>
     </main>
   );
 
   if (error) return (
-    <main className="grid min-h-screen place-items-center bg-[#0A0A0A]">
+    <main className="grid min-h-screen place-items-center bg-[#FAFAFA]">
       <div className="text-center">
-        <p className="text-white/50">{error}</p>
-        <Link href="/dashboard" className="mt-4 block text-sm text-white/30 underline">Go to dashboard</Link>
+        <p className="text-[#667085]">{error}</p>
+        <Link href="/dashboard" className="mt-4 block text-sm text-[#98A2B3] underline">Go to dashboard</Link>
       </div>
     </main>
   );
 
   return (
-    <main className="min-h-screen bg-[#7C3AED] text-white" style={{ fontFamily: 'var(--font-poppins)' }}>
+    <main className="min-h-screen bg-[#FAFAFA] text-[#111]" style={{ fontFamily: 'var(--font-poppins)' }}>
 
       {/* Edit modal */}
       {editRow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-[24px] bg-[#141414] border border-white/10 p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-[24px] bg-white border border-[#E4E7EC] p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-base font-bold">Edit business</h2>
-              <button onClick={() => setEditRow(null)} className="text-white/40 hover:text-white text-xl leading-none">×</button>
+              <h2 className="text-base font-semibold">Edit business</h2>
+              <button onClick={() => setEditRow(null)} className="text-[#98A2B3] hover:text-[#111] text-xl leading-none">×</button>
             </div>
             <div className="space-y-3">
               {([
@@ -257,27 +257,27 @@ export default function AdminPage() {
                 { key: 'website', label: 'Website' },
               ] as const).map(({ key, label }) => (
                 <div key={key}>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-white/35">{label}</label>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-[#98A2B3]">{label}</label>
                   <input
                     value={editRow[key]}
                     onChange={e => setEditRow(prev => prev ? { ...prev, [key]: e.target.value } : prev)}
-                    className="w-full rounded-[12px] border border-white/10 bg-white/6 px-3 py-2 text-sm text-white outline-none placeholder:text-white/20 focus:border-white/25"
+                    className="w-full rounded-[12px] border border-[#E4E7EC] bg-[#F5F6F8] px-3 py-2 text-sm text-[#111] outline-none placeholder:text-[#C0C6D0] focus:border-[#7C3AED]"
                   />
                 </div>
               ))}
             </div>
-            {saveError && <p className="mt-3 text-xs text-red-400">{saveError}</p>}
+            {saveError && <p className="mt-3 text-xs text-[#DC2626]">{saveError}</p>}
             <div className="mt-5 flex gap-2">
               <button
                 onClick={() => setEditRow(null)}
-                className="flex-1 rounded-[12px] border border-white/10 py-2.5 text-sm text-white/50 hover:text-white"
+                className="flex-1 rounded-[12px] border border-[#E4E7EC] py-2.5 text-sm text-[#667085] hover:text-[#111]"
               >
                 Cancel
               </button>
               <button
                 onClick={saveEdit}
                 disabled={saving}
-                className="flex-1 rounded-[12px] bg-[#C8FF62] py-2.5 text-sm font-bold text-black hover:bg-[#d4ff7a] disabled:opacity-50"
+                className="flex-1 rounded-[12px] bg-[#7C3AED] py-2.5 text-sm font-semibold text-white hover:bg-[#6D28D9] disabled:opacity-50"
               >
                 {saving ? 'Saving…' : 'Save changes'}
               </button>
@@ -288,19 +288,19 @@ export default function AdminPage() {
 
       {/* Delete confirm modal */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-[24px] bg-[#141414] border border-white/10 p-6 shadow-2xl text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-[24px] bg-white border border-[#E4E7EC] p-6 shadow-2xl text-center">
             <div className="mb-3 text-3xl">⚠️</div>
-            <h2 className="mb-2 text-base font-bold">Delete this business?</h2>
-            <p className="mb-5 text-sm text-white/40">This will permanently delete the business and all its data. There&apos;s no undo.</p>
+            <h2 className="mb-2 text-base font-semibold">Delete this business?</h2>
+            <p className="mb-5 text-sm text-[#98A2B3]">This will permanently delete the business and all its data. There&apos;s no undo.</p>
             <div className="flex gap-2">
-              <button onClick={() => setDeleteId(null)} className="flex-1 rounded-[12px] border border-white/10 py-2.5 text-sm text-white/50 hover:text-white">
+              <button onClick={() => setDeleteId(null)} className="flex-1 rounded-[12px] border border-[#E4E7EC] py-2.5 text-sm text-[#667085] hover:text-[#111]">
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="flex-1 rounded-[12px] bg-red-600 py-2.5 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-50"
+                className="flex-1 rounded-[12px] bg-[#DC2626] py-2.5 text-sm font-semibold text-white hover:bg-[#B91C1C] disabled:opacity-50"
               >
                 {deleting ? 'Deleting…' : 'Yes, delete'}
               </button>
@@ -309,16 +309,16 @@ export default function AdminPage() {
         </div>
       )}
 
-      <header className="sticky top-0 z-20 border-b border-white/8 bg-[#0A0A0A]/95 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-[#E8EBF0] bg-[#FAFAFA]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <Mark />
-            <span className="font-bold">OpenStatus</span>
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/50">ADMIN</span>
+            <span className="font-semibold">OpenStatus</span>
+            <span className="rounded-full bg-[#EEF0F3] px-2 py-0.5 text-[10px] font-semibold text-[#667085]">ADMIN</span>
           </div>
           <div className="flex gap-3">
-            <Link href="/dashboard" className="text-xs text-white/40 hover:text-white/70">Dashboard</Link>
-            <button onClick={() => supabase.auth.signOut()} className="text-xs text-white/40 hover:text-white/70">Sign out</button>
+            <Link href="/dashboard" className="text-xs text-[#98A2B3] hover:text-[#344054]">Dashboard</Link>
+            <button onClick={() => supabase.auth.signOut()} className="text-xs text-[#98A2B3] hover:text-[#344054]">Sign out</button>
           </div>
         </div>
       </header>
@@ -332,9 +332,9 @@ export default function AdminPage() {
             { label: 'Hours set', value: withHours },
             { label: 'Avg completion', value: `${avgCompletion}%` },
           ].map(s => (
-            <div key={s.label} className="rounded-[20px] bg-white/6 p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[.14em] text-white/35">{s.label}</p>
-              <p className="mt-2 text-3xl font-bold">{s.value}</p>
+            <div key={s.label} className="rounded-[20px] border border-[#E8EBF0] bg-white p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#98A2B3]">{s.label}</p>
+              <p className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[#111]">{s.value}</p>
             </div>
           ))}
         </div>
@@ -345,23 +345,23 @@ export default function AdminPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name, email or slug…"
-            className="w-full rounded-[14px] border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/20 focus:ring-2 focus:ring-white/10"
+            className="w-full rounded-[14px] border border-[#E4E7EC] bg-[#F5F6F8] px-4 py-3 text-sm text-[#111] outline-none placeholder:text-[#C0C6D0] focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
           />
         </div>
 
         {/* Table */}
-        <div className="mt-4 overflow-hidden rounded-[20px] border border-white/8">
+        <div className="mt-4 overflow-hidden rounded-[20px] border border-[#E8EBF0] bg-white">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/8 bg-white/4">
+              <tr className="border-b border-[#E8EBF0] bg-[#F7F8FA]">
                 {['Business', 'Email', 'Slug', 'Setup', 'Hours', 'IG', 'Joined', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[.12em] text-white/35">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[.12em] text-[#98A2B3]">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map((r, i) => (
-                <tr key={r.id} className={`border-b border-white/5 transition hover:bg-white/4 ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
+                <tr key={r.id} className={`border-b border-[#F0F2F5] transition hover:bg-[#F7F8FA] ${i % 2 === 0 ? '' : 'bg-[#FBFBFA]'}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {r.avatar_url ? (
@@ -371,41 +371,41 @@ export default function AdminPage() {
                           alt=""
                         />
                       ) : (
-                        <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-[9px] font-bold">
+                        <div className="h-7 w-7 rounded-full bg-[#EEF0F3] flex items-center justify-center text-[9px] font-semibold">
                           {r.name.slice(0, 2).toUpperCase()}
                         </div>
                       )}
                       <button onClick={() => setDetailId(r.id)} className="text-left">
-                        <div className="font-semibold leading-tight hover:text-[#A78BFA] transition-colors">{r.name}</div>
-                        {r.tagline && <div className="text-[10px] text-white/30 leading-tight truncate max-w-[140px]">{r.tagline}</div>}
+                        <div className="font-semibold leading-tight hover:text-[#6D28D9] transition-colors">{r.name}</div>
+                        {r.tagline && <div className="text-[10px] text-[#98A2B3] leading-tight truncate max-w-[140px]">{r.tagline}</div>}
                       </button>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-white/50 text-xs">{r.email}</td>
+                  <td className="px-4 py-3 text-[#667085] text-xs">{r.email}</td>
                   <td className="px-4 py-3">
                     {r.slug
-                      ? <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-mono">{r.slug}</span>
-                      : <span className="text-white/25 text-xs">—</span>
+                      ? <span className="rounded-full bg-[#EEF0F3] px-2 py-0.5 text-[11px] font-mono">{r.slug}</span>
+                      : <span className="text-[#C0C6D0] text-xs">—</span>
                     }
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-white/10">
-                        <div className="h-full rounded-full bg-[#C8FF62]" style={{ width: `${r.completion}%` }}/>
+                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[#EEF0F3]">
+                        <div className="h-full rounded-full bg-[#7C3AED]" style={{ width: `${r.completion}%` }}/>
                       </div>
-                      <span className="text-xs text-white/50">{r.completion}%</span>
+                      <span className="text-xs text-[#667085]">{r.completion}%</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     {r.has_hours
-                      ? <span className="text-[#C8FF62] text-xs">✓</span>
-                      : <span className="text-white/25 text-xs">—</span>
+                      ? <span className="text-[#7C3AED] text-xs">✓</span>
+                      : <span className="text-[#C0C6D0] text-xs">—</span>
                     }
                   </td>
-                  <td className="px-4 py-3 text-white/50 text-xs">
+                  <td className="px-4 py-3 text-[#667085] text-xs">
                     {r.instagram_handle ? `@${r.instagram_handle}` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-white/35 text-xs">
+                  <td className="px-4 py-3 text-[#98A2B3] text-xs">
                     {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
                   </td>
                   <td className="px-4 py-3">
@@ -415,28 +415,28 @@ export default function AdminPage() {
                           href={`/${r.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="rounded-full bg-white/8 px-2.5 py-1 text-[10px] hover:bg-white/15 transition"
+                          className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-[10px] hover:bg-[#E4E7EC] transition"
                         >
                           View ↗
                         </a>
                       )}
                       <button
                         onClick={() => setDetailId(r.id)}
-                        className="rounded-full bg-[#7C3AED] px-2.5 py-1 text-[10px] font-semibold hover:bg-[#6D28D9] transition"
+                        className="rounded-full bg-[#7C3AED] px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-[#6D28D9] transition"
                         title="Open customer record"
                       >
                         Open
                       </button>
                       <button
                         onClick={() => openEdit(r)}
-                        className="flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1 text-[10px] hover:bg-white/15 transition"
+                        className="flex items-center gap-1 rounded-full bg-[#F2F4F7] px-2.5 py-1 text-[10px] hover:bg-[#E4E7EC] transition"
                         title="Edit"
                       >
                         <IconEdit/> Edit
                       </button>
                       <button
                         onClick={() => setDeleteId(r.id)}
-                        className="flex items-center gap-1 rounded-full bg-red-900/30 px-2.5 py-1 text-[10px] text-red-400 hover:bg-red-900/60 transition"
+                        className="flex items-center gap-1 rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[10px] text-[#DC2626] hover:bg-[#FECACA] transition"
                         title="Delete"
                       >
                         <IconTrash/> Delete
@@ -447,45 +447,45 @@ export default function AdminPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-white/30">No businesses found</td>
+                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-[#98A2B3]">No businesses found</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-[10px] text-white/25">Showing {filtered.length} of {total} businesses</p>
+        <p className="mt-3 text-[10px] text-[#C0C6D0]">Showing {filtered.length} of {total} businesses</p>
 
       {/* ══ CUSTOMER RECORD ══ one screen that answers "what's going on with this business?" ══ */}
       {detailId && (
         <div className="fixed inset-0 z-50 flex" onClick={() => setDetailId(null)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" />
           <aside
             onClick={e => e.stopPropagation()}
-            className="relative ml-auto flex h-full w-full max-w-[560px] flex-col border-l border-white/10 bg-[#0E0E10] shadow-2xl"
+            className="relative ml-auto flex h-full w-full max-w-[560px] flex-col border-l border-[#E4E7EC] bg-white shadow-2xl"
           >
-            <div className="flex items-start justify-between gap-3 border-b border-white/8 px-6 py-4">
+            <div className="flex items-start justify-between gap-3 border-b border-[#E8EBF0] px-6 py-4">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Customer record</p>
-                <h2 className="truncate text-lg font-semibold text-white">{detail?.business.name ?? 'Loading…'}</h2>
-                {detail?.owner?.email && <p className="truncate text-xs text-white/45">{detail.owner.email}</p>}
+                <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#98A2B3]">Customer record</p>
+                <h2 className="truncate text-lg font-semibold text-[#111]">{detail?.business.name ?? 'Loading…'}</h2>
+                {detail?.owner?.email && <p className="truncate text-xs text-[#667085]">{detail.owner.email}</p>}
               </div>
-              <button onClick={() => setDetailId(null)} className="shrink-0 rounded-full bg-white/8 px-3 py-1.5 text-xs text-white/60 hover:bg-white/15">Close</button>
+              <button onClick={() => setDetailId(null)} className="shrink-0 rounded-full bg-[#F2F4F7] px-3 py-1.5 text-xs text-[#475467] hover:bg-[#E4E7EC]">Close</button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              {detailLoading && <p className="text-sm text-white/40">Loading…</p>}
-              {detailError && <p className="text-sm text-red-400">{detailError}</p>}
+              {detailLoading && <p className="text-sm text-[#98A2B3]">Loading…</p>}
+              {detailError && <p className="text-sm text-[#DC2626]">{detailError}</p>}
 
               {detail && (
                 <>
                   {/* Health — the reason this screen exists */}
-                  <div className={`mb-5 rounded-2xl border px-4 py-3 ${detail.health.failing === 0 ? 'border-emerald-500/30 bg-emerald-500/8' : 'border-amber-500/30 bg-amber-500/8'}`}>
-                    <p className={`text-sm font-semibold ${detail.health.failing === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  <div className={`mb-5 rounded-2xl border px-4 py-3 ${detail.health.failing === 0 ? 'border-[#A7F3D0] bg-[#ECFDF5]' : 'border-[#FDE68A] bg-[#FFFBEB]'}`}>
+                    <p className={`text-sm font-semibold ${detail.health.failing === 0 ? 'text-[#047857]' : 'text-[#B45309]'}`}>
                       {detail.health.failing === 0
                         ? 'Everything checks out'
                         : `${detail.health.failing} problem${detail.health.failing === 1 ? '' : 's'} found`}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-white/45">
+                    <p className="mt-0.5 text-[11px] text-[#667085]">
                       {detail.health.failing === 0
                         ? 'Their page is showing what they think it is.'
                         : 'These are the likely answers to whatever they wrote in about.'}
@@ -494,24 +494,24 @@ export default function AdminPage() {
 
                   <div className="mb-6 space-y-2">
                     {detail.checks.map(c => (
-                      <div key={c.id} className="flex gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3.5 py-3">
-                        <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${c.ok ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+                      <div key={c.id} className="flex gap-3 rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] px-3.5 py-3">
+                        <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${c.ok ? 'bg-emerald-500/20 text-[#047857]' : 'bg-[#FEE2E2] text-[#B91C1C]'}`}>
                           {c.ok ? '✓' : '!'}
                         </span>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-white/90">{c.label}</p>
-                          <p className="mt-0.5 text-[11px] leading-relaxed text-white/45">{c.detail}</p>
+                          <p className="text-[13px] font-medium text-[#111]">{c.label}</p>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-[#667085]">{c.detail}</p>
                         </div>
                       </div>
                     ))}
                   </div>
 
                   {/* Hours, both sources side by side */}
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Hours — builder vs live page</p>
-                  <div className="mb-6 overflow-hidden rounded-xl border border-white/8">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-[#98A2B3]">Hours — builder vs live page</p>
+                  <div className="mb-6 overflow-hidden rounded-xl border border-[#E8EBF0]">
                     <table className="w-full text-[11px]">
                       <thead>
-                        <tr className="bg-white/4 text-left text-white/35">
+                        <tr className="bg-[#F7F8FA] text-left text-[#98A2B3]">
                           <th className="px-3 py-2 font-semibold">Day</th>
                           <th className="px-3 py-2 font-semibold">Builder (what they see)</th>
                           <th className="px-3 py-2 font-semibold">Live page (what customers see)</th>
@@ -524,10 +524,10 @@ export default function AdminPage() {
                           const liveText = row.closed === null ? 'missing' : row.closed ? 'Closed' : `${row.open}–${row.close}`;
                           const differs = detail.hours.builder != null && builderText !== liveText;
                           return (
-                            <tr key={row.day} className={`border-t border-white/5 ${differs ? 'bg-red-500/8' : ''}`}>
-                              <td className="px-3 py-1.5 uppercase text-white/50">{row.day}</td>
-                              <td className="px-3 py-1.5 text-white/70">{builderText}</td>
-                              <td className={`px-3 py-1.5 ${differs ? 'font-semibold text-red-300' : 'text-white/70'}`}>{liveText}</td>
+                            <tr key={row.day} className={`border-t border-[#F0F2F5] ${differs ? 'bg-[#FEF2F2]' : ''}`}>
+                              <td className="px-3 py-1.5 uppercase text-[#667085]">{row.day}</td>
+                              <td className="px-3 py-1.5 text-[#344054]">{builderText}</td>
+                              <td className={`px-3 py-1.5 ${differs ? 'font-semibold text-[#B91C1C]' : 'text-[#344054]'}`}>{liveText}</td>
                             </tr>
                           );
                         })}
@@ -536,38 +536,38 @@ export default function AdminPage() {
                   </div>
 
                   {/* Traffic */}
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Last 30 days</p>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-[#98A2B3]">Last 30 days</p>
                   <div className="mb-6 grid grid-cols-3 gap-2">
-                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
-                      <p className="text-lg font-semibold text-white">{detail.traffic.total}</p>
-                      <p className="text-[10px] text-white/40">events</p>
+                    <div className="rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] px-3 py-2.5">
+                      <p className="text-lg font-semibold text-[#111]">{detail.traffic.total}</p>
+                      <p className="text-[10px] text-[#98A2B3]">events</p>
                     </div>
-                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
-                      <p className="text-lg font-semibold text-white">{detail.traffic.byType.view ?? 0}</p>
-                      <p className="text-[10px] text-white/40">page views</p>
+                    <div className="rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] px-3 py-2.5">
+                      <p className="text-lg font-semibold text-[#111]">{detail.traffic.byType.view ?? 0}</p>
+                      <p className="text-[10px] text-[#98A2B3]">page views</p>
                     </div>
-                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
-                      <p className="text-lg font-semibold text-white">{detail.votes}</p>
-                      <p className="text-[10px] text-white/40">votes</p>
+                    <div className="rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] px-3 py-2.5">
+                      <p className="text-lg font-semibold text-[#111]">{detail.votes}</p>
+                      <p className="text-[10px] text-[#98A2B3]">votes</p>
                     </div>
                   </div>
 
                   {/* Status history */}
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Recent status updates</p>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-[#98A2B3]">Recent status updates</p>
                   {detail.statusUpdates.length === 0 ? (
-                    <p className="mb-6 text-[11px] text-white/30">None yet.</p>
+                    <p className="mb-6 text-[11px] text-[#98A2B3]">None yet.</p>
                   ) : (
                     <div className="mb-6 space-y-1.5">
                       {detail.statusUpdates.map(u => (
-                        <div key={u.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+                        <div key={u.id} className="flex items-center justify-between gap-3 rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] px-3 py-2">
                           <div className="min-w-0">
-                            <p className="truncate text-[12px] text-white/80">{u.headline}</p>
-                            <p className="text-[10px] text-white/35">
+                            <p className="truncate text-[12px] text-[#1D2939]">{u.headline}</p>
+                            <p className="text-[10px] text-[#98A2B3]">
                               {u.source} · {new Date(u.created_at).toLocaleDateString()}
                               {u.expires_at ? ` · expires ${new Date(u.expires_at).toLocaleDateString()}` : ''}
                             </p>
                           </div>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${u.status === 'active' ? 'bg-amber-500/20 text-amber-300' : 'bg-white/8 text-white/40'}`}>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${u.status === 'active' ? 'bg-amber-500/20 text-[#B45309]' : 'bg-[#F2F4F7] text-[#98A2B3]'}`}>
                             {u.status}
                           </span>
                         </div>
@@ -576,7 +576,7 @@ export default function AdminPage() {
                   )}
 
                   {/* Raw detail */}
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Account</p>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-[#98A2B3]">Account</p>
                   <dl className="mb-4 space-y-1 text-[11px]">
                     {([
                       ['Business ID', detail.business.id],
@@ -587,8 +587,8 @@ export default function AdminPage() {
                       ['Last sign in', detail.owner?.last_sign_in_at ? new Date(detail.owner.last_sign_in_at).toLocaleString() : 'never'],
                     ] as [string, string][]).map(([k, v]) => (
                       <div key={k} className="flex gap-3">
-                        <dt className="w-32 shrink-0 text-white/35">{k}</dt>
-                        <dd className="min-w-0 break-all text-white/65">{v}</dd>
+                        <dt className="w-32 shrink-0 text-[#98A2B3]">{k}</dt>
+                        <dd className="min-w-0 break-all text-[#475467]">{v}</dd>
                       </div>
                     ))}
                   </dl>
@@ -597,9 +597,9 @@ export default function AdminPage() {
             </div>
 
             {detail?.business.slug && (
-              <div className="flex gap-2 border-t border-white/8 px-6 py-3">
+              <div className="flex gap-2 border-t border-[#E8EBF0] px-6 py-3">
                 <a href={`/${detail.business.slug}`} target="_blank" rel="noopener noreferrer"
-                  className="flex-1 rounded-xl bg-white/8 py-2.5 text-center text-xs font-semibold text-white/80 hover:bg-white/15">
+                  className="flex-1 rounded-xl bg-[#F2F4F7] py-2.5 text-center text-xs font-semibold text-[#1D2939] hover:bg-[#E4E7EC]">
                   View their page ↗
                 </a>
                 {detail.owner?.email && (
