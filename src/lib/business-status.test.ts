@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getBusinessStatus, toMinutes, fromMinutes, weeklyFromRows, type WeeklySchedule } from './business-status';
+import { getBusinessStatus, applyOverride, toMinutes, fromMinutes, weeklyFromRows, type WeeklySchedule } from './business-status';
 
 /**
  * These cases are the ones that can make OpenStatus tell a customer something
@@ -130,5 +130,50 @@ describe('weeklyFromRows', () => {
 
   it('returns null for an empty table, so callers can say "hours not set"', () => {
     expect(weeklyFromRows([])).toBeNull();
+  });
+});
+
+describe('today’s override folded onto the schedule', () => {
+  const base = () => getBusinessStatus(new Date('2026-09-23T15:00:00Z'), 'America/Chicago', NINE_TO_FIVE); // 10am, open
+
+  it('leaves the schedule alone when there is no override', () => {
+    expect(applyOverride(base(), null).state).toBe('open');
+    expect(applyOverride(base(), undefined).state).toBe('open');
+  });
+
+  it('"closed today" closes a shop that is otherwise open', () => {
+    // This is the case the builder preview was missing: Status said closed,
+    // the Hours block still said Open.
+    const s = applyOverride(base(), { kind: 'closed' });
+    expect(s.state).toBe('closed');
+    expect(s.closesAt).toBeNull();
+  });
+
+  it('an early close before now closes the shop', () => {
+    const s = applyOverride(base(), { closesAt: '09:30' }); // now is 10:00
+    expect(s.state).toBe('closed');
+  });
+
+  it('an early close later today keeps it open, with the new closing time', () => {
+    const s = applyOverride(base(), { closesAt: '15:00' });
+    expect(s.state).toBe('open');
+    expect(s.closesAt).toBe('15:00');
+  });
+
+  it('custom hours for today can open a shop later than usual', () => {
+    const s = applyOverride(base(), { opensAt: '12:00', closesAt: '16:00' }); // now 10:00
+    expect(s.state).toBe('closed');
+    expect(s.opensAt).toBe('12:00');
+  });
+
+  it('custom hours covering now report open', () => {
+    const s = applyOverride(base(), { opensAt: '08:00', closesAt: '16:00' });
+    expect(s.state).toBe('open');
+    expect(s.closesAt).toBe('16:00');
+  });
+
+  it('never invents a schedule when hours are unknown', () => {
+    const unknown = getBusinessStatus(new Date(), 'America/Chicago', null);
+    expect(applyOverride(unknown, { closesAt: '15:00' }).state).toBe('unknown');
   });
 });

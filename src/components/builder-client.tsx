@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
-import { getBusinessStatus, type WeeklySchedule } from '@/lib/business-status';
+import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedule } from '@/lib/business-status';
 import { CATEGORIES, normalizeCategory } from '@/lib/categories';
 import { savePageConfig } from '@/lib/page-config-store';
 
@@ -206,16 +206,23 @@ function fmt12(t: string) {
  * page cannot disagree, and takes the business timezone rather than the clock
  * of whoever happens to be editing.
  */
-function getLiveStatus(hours?: WeeklyHours, timeZone?: string|null): { status:'open'|'closed'; todayLabel:string } {
+function getLiveStatus(
+  hours?: WeeklyHours,
+  timeZone?: string|null,
+  override?: TodayOverride,
+): { status:'open'|'closed'; todayLabel:string } {
   if (!hours) return { status:'closed', todayLabel:'Set your hours' };
   const tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Chicago';
-  const s = getBusinessStatus(new Date(), tz, hours as WeeklySchedule);
+  const s = applyOverride(getBusinessStatus(new Date(), tz, hours as WeeklySchedule), override);
   const keys: WeekDay[] = ['sun','mon','tue','wed','thu','fri','sat'];
   const today = hours[keys[s.dayIndex]];
+  if (override?.kind === 'closed') return { status:'closed', todayLabel:'Closed today' };
   if (!today || today.closed) return { status:'closed', todayLabel:'Closed today' };
+  const closeLabel = override?.closesAt ? fmt12(override.closesAt) : fmt12(today.close);
+  const openLabel  = override?.opensAt  ? fmt12(override.opensAt)  : fmt12(today.open);
   return {
     status: s.state==='open' ? 'open' : 'closed',
-    todayLabel: `Today ${fmt12(today.open)} – ${fmt12(today.close)}`,
+    todayLabel: `Today ${openLabel} – ${closeLabel}`,
   };
 }
 function starsToPercent(stars: number) { return Math.round((stars/5)*100); }
@@ -863,11 +870,14 @@ function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
 }
 
 // ── Screen preview (no phone frame) ───────────────────────────────────────────
-function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps }: {
+function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,timeZone,override }: {
   business:Business|null;
   config:OpenStatusPageConfig;
   selectedId?:string|null;
   onSelectBlock?:(id:string)=>void;
+  /** So the preview's Hours block agrees with the live page. */
+  timeZone?:string|null;
+  override?:TodayOverride;
   /** Mobile-only hook for long-press drag. Returns extra DOM props per block. */
   blockProps?:(id:string)=>{ style?:React.CSSProperties } & React.DOMAttributes<HTMLDivElement> & Record<string,unknown>;
 }) {
@@ -880,7 +890,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps 
   const isDark = isDarkBg(config.bg);
   const tx = isDark?'text-white':'text-[#0A0A0A]';
   const sx = isDark?'text-white/55':'text-[#6B6B6B]';
-  const { status, todayLabel } = getLiveStatus(config.weeklyHours);
+  const { status, todayLabel } = getLiveStatus(config.weeklyHours, timeZone, override);
   const TOK = surfaceTokens(config.bg);
   // Bold / italic are per-block, so every place a title or subtitle is drawn has
   // to honour them — previously only the generic fallback did, which is why the
@@ -1163,11 +1173,11 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps 
 }
 
 // ── Desktop page preview (matches [slug]/page.tsx layout) ─────────────────────
-function LiveDesktopPreview({ business,config }: { business:Business|null; config:OpenStatusPageConfig }) {
+function LiveDesktopPreview({ business,config,timeZone,override }: { business:Business|null; config:OpenStatusPageConfig; timeZone?:string|null; override?:TodayOverride }) {
   const isDark = isDarkBg(config.bg);
   const DTOK = surfaceTokens(config.bg);
   const bg = config.bg || '#F7F7F5';
-  const { status, todayLabel } = getLiveStatus(config.weeklyHours);
+  const { status, todayLabel } = getLiveStatus(config.weeklyHours, timeZone, override);
   const activeBlocks = config.blocks.filter(b => b.on);
   const sortedBlocks = [
     ...activeBlocks.filter(b => b.id === 'hours'),
@@ -2220,6 +2230,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('status');
   // Status is now one decision with an escape hatch; the rest folds away.
   const [statusMore,setStatusMore]=useState(false);
+  // "Different hours today" — a full window, not just an early close.
+  const [todayOpen,setTodayOpen]=useState('09:00');
+  const [todayClose,setTodayClose]=useState('17:00');
   // Status and Analytics don't edit the page config: every Status action posts the
   // moment it's tapped, and Analytics is read-only. A Save button there implies
   // there are unsaved changes to lose, so it's hidden on those tabs.
@@ -2447,7 +2460,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const orderedBlocks = [...allBlocks.filter(b=>b.id==='hours'),...allBlocks.filter(b=>b.id!=='hours')];
   const activeBlocks = orderedBlocks.filter(b=>b.on);
   const openBlock = allBlocks.find(b=>b.id===openId)??null;
-  const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours, localBusiness?.timezone ?? null);
+  // What the owner has set for today, if anything. Passed into every preview so
+  // the Hours block shows what customers actually see — previously the preview
+  // read only the weekly schedule, so a "closed today" never appeared in it.
+  const todayOverride: TodayOverride = (() => {
+    const active = statusUpdates.find(u=>u.status==='active');
+    if(!active) return null;
+    return { kind: active.kind, closesAt: active.closes_at, opensAt: null };
+  })();
+  const bizTimeZone = localBusiness?.timezone ?? null;
+  const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours, bizTimeZone, todayOverride);
   const hours = config.weeklyHours??{...DEFAULT_WEEK_HOURS};
   const showEditPanel = !!openBlock && sidebarTab==='design';
   const isEditSubTab = ['design','style'].includes(sidebarTab);
@@ -2863,6 +2885,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       if(!token){setStatusPosting(false);return;}
       const body:Record<string,string>={action:'publish',preset};
       if(preset==='early_close') body.closesAt=statusCloseTime;
+      if(preset==='custom_hours'){ body.opensAt=todayOpen; body.closesAt=todayClose; }
       if(preset==='note_today') body.note=statusNote;
       const r=await fetch('/api/status',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
       if(r.ok) pageOk=true;
@@ -2883,8 +2906,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           ? { startDate:d, endDate:d, closed:true }
           : (()=>{
               const day = config.weeklyHours?.[(['sun','mon','tue','wed','thu','fri','sat'] as WeekDay[])[now.getDay()]];
-              const [oh,om] = (day?.open ?? '09:00').split(':').map(Number);
-              const [ch,cm] = statusCloseTime.split(':').map(Number);
+              // custom_hours sets both ends; early_close keeps the usual opening.
+              const openStr  = preset==='custom_hours' ? todayOpen  : (day?.open ?? '09:00');
+              const closeStr = preset==='custom_hours' ? todayClose : statusCloseTime;
+              const [oh,om] = openStr.split(':').map(Number);
+              const [ch,cm] = closeStr.split(':').map(Number);
               return { startDate:d, endDate:d, openTime:{hours:oh,minutes:om}, closeTime:{hours:ch,minutes:cm} };
             })();
         await googleStatusRequest({action:'special_hours',periods:[period]});
@@ -3256,6 +3282,33 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 {statusMore&&(
                   <div className="mt-4 space-y-3">
+                    {/* Different hours today — the common case that wasn't
+                        covered by "closed" or "closing early". */}
+                    <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
+                      <p className="text-[13px] font-semibold text-[#111]">Different hours today</p>
+                      <p className="text-[11.5px] text-[#858585] mt-0.5 mb-3">
+                        {googleConnected?'Sets today\u2019s opening and closing on your page and on Google.':'Sets today\u2019s opening and closing on your page.'}
+                      </p>
+                      <div className="flex items-center gap-2 max-w-[400px]">
+                        <select value={todayOpen} onChange={e=>setTodayOpen(e.target.value)}
+                          className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer">
+                          {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                        </select>
+                        <span className="text-[12px] text-[#98A2B3]">to</span>
+                        <select value={todayClose} onChange={e=>setTodayClose(e.target.value)}
+                          className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer">
+                          {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                        </select>
+                        <button onClick={()=>postStatus('custom_hours')} disabled={statusPosting||todayClose<=todayOpen}
+                          className="px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                          {statusPosting?'…':'Set'}
+                        </button>
+                      </div>
+                      {todayClose<=todayOpen&&(
+                        <p className="text-[11px] text-[#EF4444] mt-2">Closing time has to be after the opening time.</p>
+                      )}
+                    </div>
+
                     {/* Closing early */}
                     <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
                       <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
@@ -4239,7 +4292,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   {previewMode==='mobile'
                     ?(
                       <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:300,maxWidth:'calc(100% - 48px)'}}>
-                        <LivePhonePreview key={previewKey} business={localBusiness} config={config} selectedId={openId}
+                        <LivePhonePreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride} selectedId={openId}
                           onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
                       </div>
                     )
@@ -4256,7 +4309,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           </span>
                         </div>
                         <div className="overflow-y-auto" style={{maxHeight:560}}>
-                          <LiveDesktopPreview key={previewKey} business={localBusiness} config={config}/>
+                          <LiveDesktopPreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}/>
                         </div>
                       </div>
                     )
@@ -4519,6 +4572,26 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {statusMore&&(
               <div className="mt-3 space-y-2.5">
                 <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
+                  <p className="text-[13px] font-semibold text-[#111]">Different hours today</p>
+                  <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
+                  <div className="flex items-center gap-2">
+                    <select value={todayOpen} onChange={e=>setTodayOpen(e.target.value)}
+                      className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
+                      {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                    </select>
+                    <span className="text-[11px] text-[#98A2B3]">to</span>
+                    <select value={todayClose} onChange={e=>setTodayClose(e.target.value)}
+                      className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
+                      {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                    </select>
+                  </div>
+                  <button onClick={()=>postStatus('custom_hours')} disabled={statusPosting||todayClose<=todayOpen}
+                    className="mt-2.5 w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+                    {statusPosting?'…':'Set today\u2019s hours'}
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
                   <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
                   <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
                   <div className="flex items-center gap-2">
@@ -4745,7 +4818,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
           <div className="w-full rounded-[24px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.16)]"
             style={{maxWidth:340,marginLeft:'auto',marginRight:'auto'}}>
-            <LivePhonePreview key={previewKey} business={localBusiness} config={config}
+            <LivePhonePreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}
               selectedId={mSheet==='block'?openId:null}
               onSelectBlock={id=>{ if(dragging.current||suppressTap.current) return; setOpenId(id); setSidebarTab('design'); setMSheet('block'); }}
               blockProps={mobileBlockProps}/>

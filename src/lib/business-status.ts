@@ -171,3 +171,46 @@ export function weeklyFromRows(
   }
   return weekly;
 }
+
+/**
+ * Today's owner override, as stored in status_updates.
+ * `closesAt` is an early-closing time; `opensAt` a late opening.
+ */
+export type TodayOverride = {
+  kind?: string | null;
+  opensAt?: string | null;
+  closesAt?: string | null;
+} | null | undefined;
+
+/**
+ * Fold an owner's override for today onto the scheduled status.
+ *
+ * The builder preview used to ignore overrides entirely, so setting "closed
+ * today" in Status changed the live page while the Hours block in the preview
+ * carried on saying Open — the owner had no way to see what customers saw.
+ */
+export function applyOverride(base: BusinessStatus, override: TodayOverride): BusinessStatus {
+  if (!override) return base;
+
+  if (override.kind === 'closed') {
+    return { ...base, state: 'closed', closesAt: null, opensAt: null };
+  }
+
+  const opens = toMinutes(override.opensAt ?? null);
+  const closes = toMinutes(override.closesAt ?? null);
+  if (opens === null && closes === null) return base;
+
+  // Unknown hours stay unknown — an override shouldn't invent a schedule.
+  if (base.state === 'unknown') return base;
+
+  const afterOpen = opens === null || base.minutesNow >= opens;
+  const beforeClose = closes === null || base.minutesNow < closes;
+  const open = afterOpen && beforeClose;
+
+  return {
+    ...base,
+    state: open ? 'open' : 'closed',
+    closesAt: open && closes !== null ? fromMinutes(closes) : open ? base.closesAt : null,
+    opensAt: !open && opens !== null && base.minutesNow < opens ? fromMinutes(opens) : null,
+  };
+}

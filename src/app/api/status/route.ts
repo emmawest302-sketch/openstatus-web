@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
 
   if (action === 'publish') {
     const preset = body?.preset;
-    if (preset !== 'closed_today' && preset !== 'early_close' && preset !== 'note_today') {
+    if (preset !== 'closed_today' && preset !== 'early_close' && preset !== 'note_today' && preset !== 'custom_hours') {
       return NextResponse.json({ error: 'Choose a valid status update' }, { status: 400 });
     }
 
@@ -182,14 +182,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Write the update customers should see' }, { status: 400 });
     }
 
+    // Different hours for today only — both ends, not just an early close.
+    const opensAt = typeof body?.opensAt === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(body.opensAt)
+      ? body.opensAt
+      : null;
+    if (preset === 'custom_hours' && (!opensAt || !closesAt)) {
+      return NextResponse.json({ error: 'Choose an opening and a closing time' }, { status: 400 });
+    }
+    if (preset === 'custom_hours' && opensAt && closesAt && closesAt <= opensAt) {
+      return NextResponse.json({ error: 'Closing time has to be after the opening time' }, { status: 400 });
+    }
+
     const timezone = actor.timezone || 'America/Chicago';
     const { year, month, day } = localDateParts(timezone);
     const effectiveDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const update = preset === 'closed_today'
       ? { kind: 'closed', headline: 'Closed today', detail: 'Closed for the rest of today', closes_at: null }
       : preset === 'early_close'
-        ? { kind: 'closed', headline: `Closing early at ${displayTime(closesAt!)}`, detail: null, closes_at: closesAt }
-        : { kind: 'other', headline: note, detail: null, closes_at: null };
+        // 'hours' rather than 'closed': the shop is still open, just not as late.
+        // Marking it 'closed' made the public page treat an early close as shut.
+        ? { kind: 'hours', headline: `Closing early at ${displayTime(closesAt!)}`, detail: null, closes_at: closesAt }
+        : preset === 'custom_hours'
+          ? {
+              kind: 'hours',
+              headline: `Today ${displayTime(opensAt!)} \u2013 ${displayTime(closesAt!)}`,
+              detail: 'Different hours today',
+              closes_at: closesAt,
+            }
+          : { kind: 'other', headline: note, detail: null, closes_at: null };
 
     const { error: clearError } = await actor.admin
       .from('status_updates')

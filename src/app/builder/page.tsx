@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import BuilderClient from '@/components/builder-client';
 import { normalizeOpenStatusPageConfig, type OpenStatusPageConfig, type Business } from '@/components/builder-client';
 import { loadPageConfig, savePageConfig } from '@/lib/page-config-store';
+import { detectTimeZone, isValidTimeZone } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,7 +72,7 @@ function BuilderPageInner() {
 
       const { data: biz, error: bizError } = await supabase
         .from('businesses')
-        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, onboarded_at, google_location_id, category, phone, website, address, place_id')
+        .select('id, name, tagline, slug, avatar_url, header_url, instagram_handle, onboarded_at, google_location_id, category, phone, website, address, place_id, timezone')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -80,6 +81,16 @@ function BuilderPageInner() {
         return;
       }
       if (!biz) { router.replace('/setup'); return; }
+
+      // Backfill for every business created before onboarding started capturing
+      // this. Until it is set, the public page treats them as Central Time.
+      if (!biz.timezone) {
+        const detected = detectTimeZone();
+        if (isValidTimeZone(detected)) {
+          biz.timezone = detected;
+          void supabase.from('businesses').update({ timezone: detected }).eq('id', biz.id);
+        }
+      }
 
       // Prefers business_page_config, falls back to the old auth metadata.
       const raw = (await loadPageConfig(biz.id)) as Record<string, unknown> | null;

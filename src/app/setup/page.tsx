@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { OpenStatusBlock, OpenStatusPageConfig, OpenStatusSocial, WeeklyHours } from '@/lib/openstatus-page-config';
 import { savePageConfig } from '@/lib/page-config-store';
+import { detectTimeZone, isValidTimeZone } from '@/lib/timezone';
 
 // ─── SLUG UTILS ───────────────────────────────────────────────────────────────
 
@@ -422,6 +423,10 @@ export default function SetupPage() {
     const businessUpdate: Record<string, string | null> = {
       category: categoryId || null,
     };
+    // Without this every business defaults to America/Chicago and its
+    // open/closed state is wrong outside Central Time.
+    const detected = detectTimeZone();
+    if (isValidTimeZone(detected)) businessUpdate.timezone = detected;
     if (selectedPlace?.id) businessUpdate.place_id = selectedPlace.id;
     if (placeDetails?.address) businessUpdate.address = placeDetails.address;
     if (placeDetails?.phone) businessUpdate.phone = placeDetails.phone;
