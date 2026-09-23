@@ -850,22 +850,12 @@ function TimeSelect({ value,onChange }: { value:string; onChange:(v:string)=>voi
   );
 }
 
-// ── Tags row with expand ──────────────────────────────────────────────────────
+// Customer-facing tags are profile details, not actions.
 function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? tags : tags.slice(0, 3);
-  const hasMore = tags.length > 3;
   return (
-    <div className="flex flex-wrap gap-1 justify-center mt-2">
-      {shown.map(t=>(
-        <span key={t} className={`text-[8px] px-2 py-0.5 rounded-full ${isDark?'bg-white/15 text-white/75':'bg-black/6 text-black/50'}`}>{t}</span>
-      ))}
-      {hasMore && (
-        <button onClick={()=>setExpanded(e=>!e)} className={`text-[8px] px-2 py-0.5 rounded-full font-semibold ${isDark?'bg-white/20 text-white/80':'bg-black/10 text-black/60'}`}>
-          {expanded?'Less':'+'+(tags.length-3)+' more'}
-        </button>
-      )}
-    </div>
+    <p className={`mt-2 px-2 text-center text-[9px] leading-relaxed ${isDark?'text-white/70':'text-black/55'}`}>
+      {tags.filter(Boolean).join(' · ')}
+    </p>
   );
 }
 
@@ -1253,6 +1243,11 @@ function LiveDesktopPreview({ business,config,timeZone,override }: { business:Bu
           {business?.tagline && (
             <p style={{ fontSize:10, fontWeight:500, letterSpacing:'0.15em', textTransform:'uppercase', color:sx, marginTop:6 }}>
               {business.tagline}
+            </p>
+          )}
+          {!!config.tags?.length && (
+            <p style={{ fontSize:11, fontWeight:500, lineHeight:1.6, color:sx, marginTop:8 }}>
+              {config.tags.filter(Boolean).join(' · ')}
             </p>
           )}
           {reviewPct && (
@@ -3229,14 +3224,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   const active = statusUpdates.filter(u=>u.status!=='needs_review');
                   const isOverridden = active.length>0;
                   return (
-                    <div className={`rounded-[22px] border p-6 mb-4 transition-colors ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#DEDEDC] bg-white'}`}>
-                      <div className="flex items-center gap-2.5 mb-1">
-                        <span className={`w-2.5 h-2.5 rounded-full ${isOverridden?'bg-amber-500':liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
-                        <p className="text-[19px] font-semibold text-[#111] tracking-[-0.02em]">
+                    <div className={`rounded-[22px] border px-7 py-8 mb-5 transition-colors ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E9E9E7] bg-[#FAFAF9]'}`}>
+                      <p className="mb-4 text-[12px] font-medium text-[#667085]">What customers see today</p>
+                      <div className="flex items-start gap-3 mb-1">
+                        <span className={`mt-3 w-2.5 h-2.5 shrink-0 rounded-full ${isOverridden?'bg-amber-500':liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
+                        <p className="text-[32px] font-semibold leading-tight text-[#111] tracking-[-0.045em]">
                           {isOverridden ? active[0].headline : liveStatus==='open' ? 'You’re open' : 'Closed right now'}
                         </p>
                       </div>
-                      <p className="text-[13px] text-[#858585] mb-5 leading-relaxed">
+                      <p className="pl-[22px] text-[13px] text-[#667085] mb-6 leading-relaxed">
                         {isOverridden
                           ? 'This is what customers see instead of your normal hours today.'
                           : liveStatus==='open'
@@ -4291,7 +4287,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <div className="flex flex-col items-center gap-3 w-full" style={{padding:'0 24px',maxWidth:previewMode==='desktop'?'100%':undefined}}>
                   {previewMode==='mobile'
                     ?(
-                      <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:300,maxWidth:'calc(100% - 48px)'}}>
+                      <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:340,maxWidth:'100%'}}>
                         <LivePhonePreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride} selectedId={openId}
                           onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
                       </div>
@@ -4529,14 +4525,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               const active = statusUpdates.filter(u=>u.status!=='needs_review');
               const isOverridden = active.length>0;
               return (
-                <div className={`rounded-[22px] border p-5 mt-4 ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E8EBF0] bg-white'}`}>
-                  <div className="flex items-center gap-2.5 mb-1">
-                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isOverridden?'bg-amber-500':liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
-                    <p className="text-[17px] font-semibold text-[#111] tracking-[-0.02em]">
+                <div className={`rounded-[20px] border p-6 mt-4 ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E9E9E7] bg-[#FAFAF9]'}`}>
+                  <p className="mb-4 text-[12px] font-medium text-[#667085]">What customers see today</p>
+                  <div className="flex items-start gap-3 mb-1">
+                    <span className={`mt-2.5 w-2.5 h-2.5 shrink-0 rounded-full ${isOverridden?'bg-amber-500':liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
+                    <p className="text-[29px] font-semibold leading-tight text-[#111] tracking-[-0.045em]">
                       {isOverridden ? active[0].headline : liveStatus==='open' ? 'You’re open' : 'Closed right now'}
                     </p>
                   </div>
-                  <p className="text-[12.5px] text-[#858585] mb-4 leading-relaxed">
+                  <p className="pl-[22px] text-[12.5px] text-[#667085] mb-6 leading-relaxed">
                     {isOverridden
                       ? 'This is what customers see instead of your normal hours today.'
                       : `Your normal hours for today — ${todayLabel}.`}
