@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminClient } from '@/lib/supabaseAdmin';
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'emeline@forothers.com,emmawest302@gmail.com')
-  .split(',')
-  .map(e => e.trim().toLowerCase());
-
-async function verifyAdmin(req: NextRequest) {
-  // Identity comes from a verified Supabase JWT and nothing else. There used to
-  // be a shared passcode accepted here, but it was hardcoded in a client
-  // component, so it shipped in the public JS bundle — anyone who opened /admin
-  // could read it and then edit or delete any business. Never reintroduce a
-  // static secret that the browser has to know.
-  const auth = req.headers.get('authorization') ?? '';
-  const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!jwt) return null;
-  const admin = getAdminClient();
-  const { data: userData, error } = await admin.auth.getUser(jwt);
-  if (error || !userData.user) return null;
-  const email = (userData.user.email ?? '').toLowerCase();
-  if (!ADMIN_EMAILS.includes(email)) return null;
-  return admin;
-}
+import { requireAdmin } from '@/lib/adminAuth';
 
 // PATCH /api/admin/business — edit a business
 export async function PATCH(req: NextRequest) {
-  const admin = await verifyAdmin(req);
+  const admin = await requireAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
   const body = await req.json().catch(() => null);
@@ -51,7 +30,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/admin/business — delete a business
 export async function DELETE(req: NextRequest) {
-  const admin = await verifyAdmin(req);
+  const admin = await requireAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
   const id = req.nextUrl.searchParams.get('id');

@@ -1,28 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminClient } from '@/lib/supabaseAdmin';
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'emeline@forothers.com,emmawest302@gmail.com')
-  .split(',')
-  .map(e => e.trim().toLowerCase());
-
+import { requireAdmin } from '@/lib/adminAuth';
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get('authorization') ?? '';
-  const admin = getAdminClient();
-
-  // Verified Supabase JWT only — see the note in api/admin/business.
-  {
-    const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-    if (!jwt) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
-    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-    if (userErr || !userData.user) {
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-    }
-    const userEmail = (userData.user.email ?? '').toLowerCase();
-    if (!ADMIN_EMAILS.includes(userEmail)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-  }
+  const admin = await requireAdmin(req);
+  if (!admin) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
   // Fetch all businesses with user info
   const { data: businesses, error: bizErr } = await admin

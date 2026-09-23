@@ -63,10 +63,16 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
 
-  // There used to be a passcode gate here with the code written into this file.
-  // This is a client component, so that code shipped in the public JS bundle and
-  // the API accepted it as full admin auth. Access is now the signed-in user's
-  // Supabase session, checked server-side against ADMIN_EMAILS.
+  // Passcode sign-in. The code itself is NOT in this file — it lives in
+  // ADMIN_PASSCODE on the server. This posts whatever was typed to
+  // /api/admin/session, which compares it and sets an httpOnly cookie. That is
+  // the whole difference from the old gate, which hardcoded the code here and
+  // therefore published it in the browser bundle.
+  const [passcodeEntry, setPasscodeEntry] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+  const [passcodeBusy, setPasscodeBusy] = useState(false);
+  const [passcodeOffered, setPasscodeOffered] = useState(false);
+  const [authed, setAuthed] = useState(false);
 
   // Edit modal state
   const [editRow, setEditRow] = useState<EditState | null>(null);
@@ -84,22 +90,54 @@ export default function AdminPage() {
   const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async (tok: string) => {
+    // The admin cookie is httpOnly and same-origin, so fetch sends it without
+    // us touching it. The bearer token is the other accepted route in.
     const res = await fetch('/api/admin/data', {
-      headers: { Authorization: `Bearer ${tok}` },
+      headers: tok ? { Authorization: `Bearer ${tok}` } : undefined,
     });
-    const body = await res.json();
-    if (!res.ok) { setError(body.error ?? 'Failed'); setLoading(false); return; }
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(body.error ?? 'Failed'); setAuthed(false); setLoading(false); return; }
     setRows(body.rows);
     setFiltered(body.rows);
+    setError('');
+    setAuthed(true);
     setLoading(false);
   }, []);
 
+  const submitPasscode = async () => {
+    setPasscodeBusy(true);
+    setPasscodeError('');
+    try {
+      const res = await fetch('/api/admin/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: passcodeEntry }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) { setPasscodeError(body.error ?? 'Incorrect passcode'); setPasscodeEntry(''); return; }
+      setPasscodeEntry('');
+      setLoading(true);
+      await load(token);
+    } catch {
+      setPasscodeError('Could not reach the server');
+    } finally {
+      setPasscodeBusy(false);
+    }
+  };
+
   useEffect(() => {
     void (async () => {
+      // Does the server offer passcode sign-in at all?
+      try {
+        const cfg = await fetch('/api/admin/session').then(r => r.json());
+        setPasscodeOffered(!!cfg?.passcodeEnabled);
+      } catch { /* not fatal */ }
+
+      // Try the signed-in session, then the admin cookie. Either may work.
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setError('Not signed in'); setLoading(false); return; }
-      setToken(session.access_token);
-      await load(session.access_token);
+      const tok = session?.access_token ?? '';
+      setToken(tok);
+      await load(tok);
     })();
   }, [load]);
 
@@ -192,30 +230,55 @@ export default function AdminPage() {
   const withHours = rows.filter(r => r.has_hours).length;
   const avgCompletion = total ? Math.round(rows.reduce((s, r) => s + r.completion, 0) / total) : 0;
 
-  // Not signed in, or signed in without an admin email: the server has already
-  // refused, this just explains it.
-  if (error === 'Not signed in' || error === 'Access denied' || error === 'Invalid session') return (
-    <main className="grid min-h-screen place-items-center bg-[#FAFAFA] px-6">
-      <div className="w-full max-w-xs text-center">
-        <div className="mb-8 flex justify-center">
-          <svg viewBox="0 0 100 100" width="36" height="36">
-            <circle cx="50" cy="50" r="48" fill="#7C3AED"/>
-            <circle cx="50" cy="50" r="21" fill="#FFFFFF"/>
-            <circle cx="50" cy="44" r="7.4" fill="#7C3AED"/>
-            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#7C3AED"/>
-          </svg>
-        </div>
-        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-[#98A2B3]">Admin</p>
-        <p className="mb-2 text-lg font-semibold text-[#111]">
-          {error === 'Not signed in' ? 'Sign in to continue' : 'This account isn\u2019t an admin'}
-        </p>
-        <p className="mb-6 text-xs leading-relaxed text-[#667085]">
-          {error === 'Not signed in'
-            ? 'Admin access uses your OpenStatus login.'
-            : 'Ask for your email to be added to ADMIN_EMAILS.'}
-        </p>
-        <a href="/login" className="block w-full rounded-[14px] bg-[#7C3AED] py-3 text-sm font-semibold text-white hover:bg-[#6D28D9]">
-          Go to sign in
+  // Not authorised yet. The server has already refused; this offers the two
+  // ways in. Which email you're signed in as doesn't matter if you have the code.
+  if (!authed && !loading) return (
+    <main className="grid min-h-screen place-items-center bg-[#FAFAFA] px-6" style={{ fontFamily: 'var(--font-poppins)' }}>
+      <div className="w-full max-w-sm text-center">
+        <div className="mb-7 flex justify-center"><Mark /></div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[.16em] text-[#98A2B3]">OpenStatus admin</p>
+        <p className="mb-6 text-xl font-semibold tracking-[-0.03em] text-[#111]">Sign in to continue</p>
+
+        {passcodeOffered ? (
+          <div className="rounded-[20px] border border-[#E8EBF0] bg-white p-5 text-left shadow-sm">
+            <label htmlFor="admin-passcode" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[.12em] text-[#98A2B3]">
+              Admin passcode
+            </label>
+            <input
+              id="admin-passcode"
+              type="password"
+              autoComplete="one-time-code"
+              value={passcodeEntry}
+              onChange={e => { setPasscodeEntry(e.target.value); setPasscodeError(''); }}
+              onKeyDown={e => { if (e.key === 'Enter' && passcodeEntry && !passcodeBusy) void submitPasscode(); }}
+              placeholder="••••••••••••••••"
+              className="w-full rounded-[12px] border border-[#E4E7EC] bg-[#F9FAFB] px-3.5 py-2.5 text-sm tracking-[0.2em] text-[#111] outline-none placeholder:tracking-normal placeholder:text-[#C0C6D0] focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
+              autoFocus
+            />
+            {passcodeError && <p className="mt-2 text-[12px] text-[#DC2626]">{passcodeError}</p>}
+            <button
+              onClick={() => void submitPasscode()}
+              disabled={passcodeBusy || !passcodeEntry}
+              className="mt-3 w-full rounded-[12px] bg-[#7C3AED] py-2.5 text-sm font-semibold text-white transition hover:bg-[#6D28D9] disabled:opacity-40"
+            >
+              {passcodeBusy ? 'Checking…' : 'Unlock'}
+            </button>
+            <p className="mt-3 text-[11px] leading-relaxed text-[#98A2B3]">
+              Works whichever account you&apos;re signed in as, including a test business owner.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-[20px] border border-[#E8EBF0] bg-white p-5 text-left shadow-sm">
+            <p className="text-[13px] font-medium text-[#111]">Passcode sign-in isn&apos;t set up</p>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-[#667085]">
+              Add <code className="rounded bg-[#F2F4F7] px-1 py-0.5 text-[11px]">ADMIN_PASSCODE</code> (16+ characters)
+              in Vercel to enable it. Until then, sign in with an email listed in ADMIN_EMAILS.
+            </p>
+          </div>
+        )}
+
+        <a href="/login" className="mt-4 inline-block text-[12px] font-medium text-[#7C3AED] hover:text-[#6D28D9]">
+          Or sign in with an admin email
         </a>
       </div>
     </main>
@@ -318,7 +381,19 @@ export default function AdminPage() {
           </div>
           <div className="flex gap-3">
             <Link href="/dashboard" className="text-xs text-[#98A2B3] hover:text-[#344054]">Dashboard</Link>
-            <button onClick={() => supabase.auth.signOut()} className="text-xs text-[#98A2B3] hover:text-[#344054]">Sign out</button>
+            <button
+              onClick={async () => {
+                // Clear the admin cookie as well as the Supabase session,
+                // otherwise "sign out" would leave admin access behind.
+                await fetch('/api/admin/session', { method: 'DELETE' }).catch(() => {});
+                await supabase.auth.signOut().catch(() => {});
+                setAuthed(false);
+                setToken('');
+              }}
+              className="text-xs text-[#98A2B3] hover:text-[#344054]"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </header>

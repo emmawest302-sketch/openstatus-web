@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminClient } from '@/lib/supabaseAdmin';
+import { requireAdmin } from '@/lib/adminAuth';
 
 /**
  * Everything about one customer, on one screen.
@@ -15,27 +15,12 @@ import { getAdminClient } from '@/lib/supabaseAdmin';
  * "why is my page wrong?".
  */
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'emeline@forothers.com,emmawest302@gmail.com')
-  .split(',')
-  .map((e) => e.trim().toLowerCase());
-
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 type DayHours = { open?: string; close?: string; closed?: boolean };
 type HoursRow = { day_of_week: number; opens_at: string | null; closes_at: string | null; is_closed: boolean };
 
 type Check = { id: string; label: string; ok: boolean; detail: string };
-
-async function requireAdmin(req: NextRequest) {
-  const auth = req.headers.get('authorization') ?? '';
-  const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!jwt) return null;
-  const admin = getAdminClient();
-  const { data, error } = await admin.auth.getUser(jwt);
-  if (error || !data.user) return null;
-  if (!ADMIN_EMAILS.includes((data.user.email ?? '').toLowerCase())) return null;
-  return admin;
-}
 
 /** "09:00:00" | "09:00" -> "09:00" */
 function hhmm(value: string | null) {
