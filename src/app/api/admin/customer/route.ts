@@ -43,17 +43,24 @@ export async function GET(req: NextRequest) {
   if (bizErr) return NextResponse.json({ error: bizErr.message }, { status: 500 });
   if (!business) return NextResponse.json({ error: 'No such business' }, { status: 404 });
 
-  const [owner, hoursRes, statusRes, tokenRes, eventsRes, votesRes] = await Promise.all([
+  const [owner, hoursRes, statusRes, tokenRes, eventsRes, votesRes, configRes] = await Promise.all([
     admin.auth.admin.getUserById(business.user_id as string),
     admin.from('business_hours').select('day_of_week, opens_at, closes_at, is_closed').eq('business_id', businessId).order('day_of_week'),
     admin.from('status_updates').select('id, kind, headline, detail, status, source, created_at, expires_at').eq('business_id', businessId).order('created_at', { ascending: false }).limit(10),
     admin.from('oauth_tokens').select('provider, expires_at, updated_at').eq('business_id', businessId),
     admin.from('page_events').select('event_type, created_at').eq('business_id', businessId).gte('created_at', new Date(Date.now() - 30 * 864e5).toISOString()),
     admin.from('business_votes').select('vote').eq('business_id', businessId),
+    admin.from('business_page_config').select('config').eq('business_id', businessId).maybeSingle(),
   ]);
 
   const user = owner.data?.user ?? null;
-  const savedConfig = (user?.user_metadata?.openstatus_page ?? null) as { weeklyHours?: Record<string, DayHours> } | null;
+  // Read the same source the builder now writes to. Comparing against the old
+  // auth metadata after the migration would report mismatches that aren't real.
+  type SavedConfig = { weeklyHours?: Record<string, DayHours> };
+  const savedConfig =
+    ((configRes.data?.config as SavedConfig | undefined) ??
+      (user?.user_metadata?.openstatus_page as SavedConfig | undefined) ??
+      null);
   const builderHours = savedConfig?.weeklyHours ?? null;
   const dbHours = (hoursRes.data ?? []) as HoursRow[];
 

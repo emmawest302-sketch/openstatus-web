@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BuilderClient from '@/components/builder-client';
 import { normalizeOpenStatusPageConfig, type OpenStatusPageConfig, type Business } from '@/components/builder-client';
+import { loadPageConfig, savePageConfig } from '@/lib/page-config-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,7 +81,8 @@ function BuilderPageInner() {
       }
       if (!biz) { router.replace('/setup'); return; }
 
-      const raw = user.user_metadata?.openstatus_page ?? null;
+      // Prefers business_page_config, falls back to the old auth metadata.
+      const raw = (await loadPageConfig(biz.id)) as Record<string, unknown> | null;
       const config = normalizeOpenStatusPageConfig(raw);
 
       // ── Cleanup: strip any base64 images from user metadata on load ──────────
@@ -99,7 +101,7 @@ function BuilderPageInner() {
           })),
         };
         // Save cleaned version silently — don't block the page load
-        supabase.auth.updateUser({ data: { openstatus_page: cleaned } }).catch(()=>{});
+        void savePageConfig(biz.id, cleaned).catch(()=>{});
       }
 
       // Reconstruct bgImage from businesses.header_url if not already set

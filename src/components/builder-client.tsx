@@ -7,6 +7,7 @@ import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
 import { getBusinessStatus, type WeeklySchedule } from '@/lib/business-status';
 import { CATEGORIES, normalizeCategory } from '@/lib/categories';
+import { savePageConfig } from '@/lib/page-config-store';
 
 // ── types ──────────────────────────────────────────────────────────────────────
 type Tone = 'default' | 'muted' | 'accent';
@@ -2540,7 +2541,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   async function save() {
     setSaving(true);setSaveError('');
-    const {error}=await supabase.auth.updateUser({data:{openstatus_page:config}});
+    const {error}=await savePageConfig(business?.id,config);
     // Mirror hours to the table the public page actually reads
     if(business?.id&&config.weeklyHours&&!error){
       try{ await syncHoursToDb(business.id, config.weeklyHours); }
@@ -3015,7 +3016,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     if(autosaveTimer.current)clearTimeout(autosaveTimer.current);
     autosaveTimer.current=setTimeout(()=>{
       setSaving(true);setSaveError('');
-      supabase.auth.updateUser({data:{openstatus_page:config}}).then(async ({error})=>{
+      savePageConfig(business?.id,config).then(async ({error})=>{
         if(!error&&business?.id&&config.weeklyHours){
           try{ await syncHoursToDb(business.id, config.weeklyHours); }
           catch{/* surfaced on an explicit save */}
@@ -4979,7 +4980,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   // Save to Supabase immediately so OpenStatus page updates
                   setSaving(true);
                   const newConfig={...config,weeklyHours:gh};
-                  const {error}=await supabase.auth.updateUser({data:{openstatus_page:newConfig}});
+                  const {error}=await savePageConfig(business?.id,newConfig);
                   setSaving(false);
                   if(!error){setSaved(true);setTimeout(()=>setSaved(false),2500);}
                   // Push to Google if connected

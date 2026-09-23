@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { OpenStatusBlock, OpenStatusPageConfig, OpenStatusSocial, WeeklyHours } from '@/lib/openstatus-page-config';
+import { savePageConfig } from '@/lib/page-config-store';
 
 // ─── SLUG UTILS ───────────────────────────────────────────────────────────────
 
@@ -412,9 +413,9 @@ export default function SetupPage() {
       ...(placeDetails?.hours ? { weeklyHours: placeDetails.hours as WeeklyHours } : {}),
     };
 
-    const { error: metaErr } = await supabase.auth.updateUser({
-      data: { openstatus_page: pageConfig },
-    });
+    // Goes to business_page_config, falling back to auth metadata if the
+    // migration has not been run yet. businessId is set earlier in this flow.
+    const { error: metaErr } = await savePageConfig(businessId, pageConfig);
     if (metaErr) { setError(metaErr.message); setSaving(false); return; }
 
     // Save business fields to DB
