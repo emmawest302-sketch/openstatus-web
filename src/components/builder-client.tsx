@@ -1245,14 +1245,18 @@ function ReviewsCard({ block,placeId,onUpdateBlock }: {
 }
 
 // ── Block edit panel (inline right of blocks, no modal) ───────────────────────
-function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose }: {
+function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,timeZone,override }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
   onUpdateConfig:(u:Partial<OpenStatusPageConfig>)=>void;
   onClose:()=>void;
+  /** The third place that shows open/closed. Missed when the other two were
+      fixed, so this panel kept saying "Open now" after the owner closed. */
+  timeZone?:string|null;
+  override?:TodayOverride;
 }) {
   const hours=config.weeklyHours??DEFAULT_WEEK_HOURS;
-  const {status,todayLabel}=getLiveStatus(hours);
+  const {status,todayLabel}=getLiveStatus(hours, timeZone, override);
   function copyMonToWeekdays() {
     const mon=hours.mon;
     onUpdateConfig({ weeklyHours:{ ...hours, tue:{...mon},wed:{...mon},thu:{...mon},fri:{...mon} } });
@@ -2941,6 +2945,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                       {gMsg&&<p className={`text-[12px] mt-3 ${gMsg.startsWith('✓')?'text-[#166534]':'text-[#EF4444]'}`}>{gMsg}</p>}
                       {reopenMsg&&<p className={`text-[12px] mt-2 ${reopenMsg.startsWith('✓')?'text-emerald-600':'text-[#EF4444]'}`}>{reopenMsg}</p>}
+                      {googleConnected&&(
+                        <p className="text-[11.5px] text-[#98A2B3] mt-3 leading-relaxed">
+                          Your page updates instantly. Google usually catches up within about 10 minutes — that delay is on their end, not yours.
+                        </p>
+                      )}
                     </div>
                   );
                 })()}
@@ -3068,7 +3077,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {/* Block edit panel — slides in when a block is open */}
                 {showEditPanel&&openBlock?(
                   <BlockEditPanel
-                    block={openBlock} config={config}
+                    block={openBlock} config={config} timeZone={bizTimeZone} override={todayOverride}
                     onUpdateBlock={u=>updateBlock(openBlock.id,u)}
                     onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
                     onClose={()=>setOpenId(null)}
@@ -4234,6 +4243,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                   {gMsg&&<p className={`text-[12px] mt-3 ${gMsg.startsWith('✓')?'text-[#166534]':'text-[#EF4444]'}`}>{gMsg}</p>}
                   {reopenMsg&&<p className={`text-[12px] mt-2 ${reopenMsg.startsWith('✓')?'text-emerald-600':'text-[#EF4444]'}`}>{reopenMsg}</p>}
+                  {googleConnected&&(
+                    <p className="text-[11.5px] text-[#98A2B3] mt-3 leading-relaxed">
+                      Your page updates instantly. Google usually takes about 10 minutes.
+                    </p>
+                  )}
                 </div>
               );
             })()}
@@ -4541,7 +4555,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={46} dim={false}>
         {openBlock&&(
           <BlockEditPanel
-            block={openBlock} config={config}
+            block={openBlock} config={config} timeZone={bizTimeZone} override={todayOverride}
             onUpdateBlock={u=>updateBlock(openBlock.id,u)}
             onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
             onClose={()=>{setMSheet(null);setOpenId(null);}}
