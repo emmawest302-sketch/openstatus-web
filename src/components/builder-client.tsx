@@ -2204,6 +2204,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt);
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('business');
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('status');
+  // Status is now one decision with an escape hatch; the rest folds away.
+  const [statusMore,setStatusMore]=useState(false);
   // Status and Analytics don't edit the page config: every Status action posts the
   // moment it's tapped, and Analytics is read-only. A Save button there implies
   // there are unsaved changes to lose, so it's hidden on those tabs.
@@ -3138,266 +3140,168 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {sidebarTab==='hours'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 {/* Header */}
-                <div className="mb-7">
-                  <div className={`inline-flex items-center gap-1.5 mb-3 px-3 py-1 rounded-full text-[11px] font-semibold ${liveStatus==='open'?'bg-[#F0FDF4] text-[#166534]':'bg-[#EEEEEC] text-[#858585]'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
-                    {liveStatus==='open'?'Open now · '+todayLabel:'Closed · '+todayLabel}
-                  </div>
+                <div className="mb-6">
                   <h1 className="text-[26px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.04em]">
                     Status
                   </h1>
-                  <p className="text-[#858585] text-[14px] mt-2 leading-relaxed">
-                    Change what today says, or close for specific dates. Your normal week lives in the Hours block.
+                  <p className="text-[#858585] text-[14px] mt-1.5 leading-relaxed">
+                    Close for today, or open back up. Your normal week lives in the Hours block.
                   </p>
                 </div>
 
-                {/* Sub-tabs */}
-                <div className="flex items-center gap-1 mb-8 bg-black/5 rounded-full p-1 w-fit">
-                  {([
-                    {key:'status', label:'Status controls'},
-                    {key:'special',label:'Special hours'},
-                  ] as const).map(({key,label})=>(
-                    <button key={key} onClick={()=>setHoursSubTab(key)}
-                      className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap ${hoursSubTab===key?'bg-white text-[#111] shadow-sm':'text-[#858585] hover:text-[#111]'}`}>
-                      {label}
+                {/* Google recovery — only when Google itself reports the listing closed */}
+                {googleConnected&&gStatus?.isClosed&&(
+                  <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4 mb-5">
+                    <p className="text-[13px] font-semibold text-[#111] mb-1">
+                      Google lists you as {gStatus.status==='CLOSED_TEMPORARILY'?'temporarily closed':(gStatus.status??'closed')}
+                    </p>
+                    <p className="text-[12px] text-[#B54708] leading-relaxed mb-3">
+                      Google reviews reopenings, so this can take a few days to show.
+                    </p>
+                    <button disabled={gBusy||gStatus.canReopen===false}
+                      onClick={()=>void googleReopen()}
+                      className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                      {gBusy?'Asking Google…':'Ask Google to reopen'}
                     </button>
-                  ))}
-                </div>
-
-                {hoursSubTab==='status'&&(
-                  <div className="space-y-8">
-                    {/* Recovery only. OpenStatus can no longer mark a listing
-                        temporarily closed, but a listing closed in the past (or
-                        from Google directly) still needs a visible way back. */}
-                    {googleConnected&&gStatus?.isClosed&&(
-                      <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="w-2 h-2 rounded-full bg-[#F79009] flex-shrink-0"/>
-                          <p className="text-[13px] font-semibold text-[#111]">
-                            Google lists you as {gStatus.status==='CLOSED_TEMPORARILY'?'temporarily closed':(gStatus.status??'closed')}
-                          </p>
-                        </div>
-                        <p className="text-[12px] text-[#B54708] leading-relaxed mb-3">
-                          OpenStatus can&apos;t set this state any more — only Google or you can. You can try
-                          reopening from here, but Google reviews profile reopenings and may take a few days,
-                          or ask you to confirm from your Google Business Profile.
-                        </p>
-                        <button disabled={gBusy||gStatus.canReopen===false}
-                          onClick={()=>void googleReopen()}
-                          className="w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
-                          {gBusy?'Asking Google…':'Ask Google to reopen my listing'}
-                        </button>
-                        {gStatus.canReopen===false&&(
-                          <p className="text-[11px] text-[#B54708] mt-2 leading-relaxed">
-                            Google says this profile isn&apos;t eligible to reopen through the API right now.
-                            Open your Google Business Profile and change the status there, or use
-                            &ldquo;Suggest an edit&rdquo; on your listing.
-                          </p>
-                        )}
-                        {gMsg&&<p className={`text-[12px] mt-2 ${gMsg.startsWith('\u2713')?'text-[#166534]':'text-[#B54708]'}`}>{gMsg}</p>}
-                      </div>
-                    )}
-
-                    {/* Active status banner */}
-                    <div>
-                      <p className="text-[14px] font-semibold text-[#0A0A0A]">What your page says right now</p>
-                      <p className="text-[12px] text-[#858585] mt-1 mb-3">
-                        {googleConnected
-                          ? 'What a customer sees on your link and on Google.'
-                          : 'What a customer sees when they tap your link.'}
-                      </p>
-                      {statusLoading?(
-                        <div className="rounded-2xl border border-[#DEDEDC] bg-white px-4 py-3">
-                          <p className="text-[13px] text-[#858585]">Loading…</p>
-                        </div>
-                      ):statusUpdates.filter(u=>u.status!=='needs_review').length>0?(
-                        <div>
-                          {statusUpdates.filter(u=>u.status!=='needs_review').map(u=>(
-                            <div key={u.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[#DEDEDC] bg-white px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"/>
-                                <div>
-                                  <p className="text-[14px] font-semibold text-[#111]">{u.headline}</p>
-                                  {u.detail&&<p className="text-[12px] text-[#858585] mt-0.5">{u.detail}</p>}
-                                </div>
-                              </div>
-                              <button
-                                onClick={clearStatusEverywhere}
-                                disabled={statusPosting}
-                                className="flex-shrink-0 text-[12px] font-semibold text-[#EF4444] hover:text-red-700 transition-colors disabled:opacity-40"
-                              >
-                                {statusPosting?'…':googleConnected?'Undo — everywhere':'Undo — back to regular hours'}
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ):(
-                        <div className="rounded-2xl border border-dashed border-[#DEDEDC] bg-[#F7F7F5] px-4 py-3 text-center">
-                          <p className="text-[13px] text-[#858585]">
-                            Nothing special today — your page is showing your regular weekly hours.
-                          </p>
-                        </div>
-                      )}
-                      <div className="mt-3 flex items-center gap-3 flex-wrap">
-                        <button
-                          onClick={reopenEverything}
-                          disabled={statusPosting}
-                          className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
-                        >
-                          {statusPosting?'Working…':'Reset me to my regular hours'}
-                        </button>
-                        <p className="text-[11px] text-[#858585] flex-1 min-w-[220px] leading-relaxed">
-                          Use this if your page is stuck saying closed. Removes every closure and note,
-                          re-sends your weekly hours to your live page, and asks Google to reopen your
-                          listing if it&apos;s marked closed.
-                        </p>
-                      </div>
-                      {reopenMsg&&(
-                        <p className={`text-[12px] mt-2 ${reopenMsg.startsWith('\u2713')?'text-emerald-600':'text-[#EF4444]'}`}>{reopenMsg}</p>
-                      )}
-                    </div>
-
-                    {/* Quick post presets */}
-                    <div>
-                      <p className="text-[14px] font-semibold text-[#0A0A0A]">Change today&apos;s hours</p>
-                      <p className="text-[12px] text-[#858585] mt-1 mb-4 leading-relaxed">
-                        {googleConnected
-                          ? <>Updates your page <strong className="font-semibold text-[#111]">and your Google listing</strong> together — that&apos;s the whole point. </>
-                          : <>Updates your page. Connect Google Business and it&apos;ll update your listing at the same time. </>}
-                        Applies to <strong className="font-semibold text-[#111]">today only</strong> and expires by itself overnight.
-                        For a future date or a longer stretch, use <strong className="font-semibold text-[#111]">Special hours</strong>.
-                      </p>
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        {/* Closed today */}
-                        <button
-                          onClick={()=>postStatus('closed_today')}
-                          disabled={statusPosting}
-                          className="flex flex-col items-start gap-2.5 p-4 rounded-2xl border border-[#DEDEDC] bg-white hover:border-[#EF4444] hover:bg-red-50/60 transition-all text-left group disabled:opacity-40"
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-[#858585] group-hover:text-[#EF4444] transition-colors"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                          <div>
-                            <p className="text-[13px] font-semibold text-[#111]">Closed for the rest of today</p>
-                            <p className="text-[11px] text-[#858585] mt-0.5 leading-snug">
-                              {googleConnected?'Your page and Google both say closed today.':'Your page says closed today.'} Reopens on its own tomorrow.
-                            </p>
-                          </div>
-                        </button>
-                        {/* Close early */}
-                        <div className="flex flex-col gap-2 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
-                          <p className="text-[11px] text-[#858585] leading-snug">
-                            {googleConnected?'Your page and Google show the earlier closing time, today only.':'Your page shows the earlier closing time, today only.'}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <div className="relative flex-1">
-                              <select
-                                value={statusCloseTime}
-                                onChange={e=>setStatusCloseTime(e.target.value)}
-                                className="w-full bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-3 py-2 text-[12px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer"
-                              >
-                                {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
-                              </select>
-                              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={11} color="#858585"/></div>
-                            </div>
-                            <button
-                              onClick={()=>postStatus('early_close')}
-                              disabled={statusPosting}
-                              className="px-3 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
-                            >
-                              {statusPosting?'…':'Show on my page'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Custom note */}
-                      <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white space-y-3">
-                        <div className="flex items-center gap-2">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#858585" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                          <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
-                        </div>
-                        <p className="text-[11px] text-[#858585] leading-snug -mt-1">
-                          Shows on your page alongside your hours. Doesn&apos;t mark you closed.
-                          Google has nowhere to put free text, so a note stays on your page only.
-                        </p>
-                        <textarea
-                          value={statusNote}
-                          onChange={e=>setStatusNote(e.target.value.slice(0,100))}
-                          placeholder="e.g. Running about 20 minutes behind today…"
-                          rows={2}
-                          className="w-full bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"
-                        />
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
-                          <button
-                            onClick={()=>postStatus('note_today')}
-                            disabled={statusPosting||!statusNote.trim()}
-                            className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40"
-                          >
-                            {statusPosting?'…':'Show this note'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
 
-                {/* ── SPECIAL HOURS & AUTO — placeholders ── */}
-                {/* ══ SPECIAL HOURS — dated exceptions, mapped to Google specialHours ══ */}
-                {hoursSubTab==='special'&&(
-                  <div className="space-y-5">
-                    <div>
-                      <p className="text-[15px] font-semibold text-[#0A0A0A]">Closed on a specific date</p>
-                      <p className="text-[13px] text-[#858585] mt-1 leading-relaxed">
-                        For a holiday, a trip, or an event. Each closure has real dates on it, so your
-                        normal hours come back by themselves — you never have to remember to undo it.
-                        {googleConnected
-                          ?' Because these are dated, they are safe to send to Google, and they will show on your Google listing too.'
-                          :''}
-                      </p>
-                    </div>
+                {/*
+                  ONE decision, one button.
 
-                    {!googleConnected&&(
-                      <div className="rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB] p-4">
-                        <p className="text-[12px] text-[#667085]">
-                          Right now these only change your OpenStatus page. Connect Google Business in the
-                          Business tab and they&apos;ll update your Google listing at the same time.
+                  This panel used to have sub-tabs, a "live status" list, a reset
+                  button with a paragraph of explanation and a separate presets
+                  grid. All of it expressed the same two states a shop owner
+                  actually has: I'm open, or I'm not. Everything else is now
+                  secondary and folded away.
+                */}
+                {(()=>{
+                  const active = statusUpdates.filter(u=>u.status!=='needs_review');
+                  const isOverridden = active.length>0;
+                  return (
+                    <div className={`rounded-[22px] border p-6 mb-4 transition-colors ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#DEDEDC] bg-white'}`}>
+                      <div className="flex items-center gap-2.5 mb-1">
+                        <span className={`w-2.5 h-2.5 rounded-full ${isOverridden?'bg-amber-500':liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
+                        <p className="text-[19px] font-semibold text-[#111] tracking-[-0.02em]">
+                          {isOverridden ? active[0].headline : liveStatus==='open' ? 'You’re open' : 'Closed right now'}
                         </p>
                       </div>
-                    )}
+                      <p className="text-[13px] text-[#858585] mb-5 leading-relaxed">
+                        {isOverridden
+                          ? 'This is what customers see instead of your normal hours today.'
+                          : liveStatus==='open'
+                            ? `Your normal hours for today — ${todayLabel}.`
+                            : `Outside your normal hours for today — ${todayLabel}.`}
+                      </p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {([
-                        {label:'Closed today',       days:0, hint:googleConnected?'Today only \u00b7 page + Google':'Today only \u00b7 your page'},
-                        {label:'Closed tomorrow',    days:1, hint:googleConnected?'Tomorrow only \u00b7 page + Google':'Tomorrow only \u00b7 your page'},
-                        {label:'Closed this weekend',days:-1,hint:googleConnected?'Sat + Sun \u00b7 page + Google':'Sat + Sun \u00b7 your page'},
-                      ]).map(({label,days,hint})=>(
-                        <button key={label} disabled={gBusy}
-                          onClick={()=>{
-                            const now=new Date();
-                            let from=new Date(now), to=new Date(now);
-                            if(days===1){ from.setDate(now.getDate()+1); to=new Date(from); }
-                            if(days===-1){
-                              const dow=now.getDay();
-                              from=new Date(now); from.setDate(now.getDate()+((6-dow+7)%7));
-                              to=new Date(from);  to.setDate(from.getDate()+1);
-                            }
-                            void googleCloseDates(from,to,label);
-                          }}
-                          className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#E8EBF0] bg-white hover:border-[#7C3AED] hover:bg-[#FAFAFF] transition-all text-left disabled:opacity-40 disabled:hover:border-[#E8EBF0]">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{background:'#F5F3FF',color:'#7C3AED'}}>
-                            <LucideCalendar size={14} color="currentColor"/>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[12px] font-semibold text-[#111] leading-tight">{label}</p>
-                            <p className="text-[11px] text-[#98A2B3] leading-tight mt-0.5">{hint}</p>
-                          </div>
+                      {isOverridden ? (
+                        <button
+                          onClick={reopenEverything}
+                          disabled={statusPosting}
+                          className="w-full sm:w-auto px-7 py-3 rounded-full bg-[#16A34A] text-white text-[14px] font-semibold hover:bg-[#15803D] transition-colors disabled:opacity-40"
+                        >
+                          {statusPosting?'Working…':'I’m open again'}
                         </button>
-                      ))}
+                      ) : (
+                        <button
+                          onClick={()=>postStatus('closed_today')}
+                          disabled={statusPosting}
+                          className="w-full sm:w-auto px-7 py-3 rounded-full bg-[#111] text-white text-[14px] font-semibold hover:bg-black transition-colors disabled:opacity-40"
+                        >
+                          {statusPosting?'Working…':'Close for today'}
+                        </button>
+                      )}
+
+                      {gMsg&&<p className={`text-[12px] mt-3 ${gMsg.startsWith('✓')?'text-[#166534]':'text-[#EF4444]'}`}>{gMsg}</p>}
+                      {reopenMsg&&<p className={`text-[12px] mt-2 ${reopenMsg.startsWith('✓')?'text-emerald-600':'text-[#EF4444]'}`}>{reopenMsg}</p>}
+                    </div>
+                  );
+                })()}
+
+                {/* Everything else is a rarer case, so it stays out of the way. */}
+                <button
+                  onClick={()=>setStatusMore(v=>!v)}
+                  className="flex items-center gap-1.5 text-[13px] font-medium text-[#667085] hover:text-[#111] transition-colors"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                    style={{transform:statusMore?'rotate(90deg)':'none',transition:'transform .18s'}}>
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                  Something else
+                </button>
+
+                {statusMore&&(
+                  <div className="mt-4 space-y-3">
+                    {/* Closing early */}
+                    <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
+                      <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
+                      <p className="text-[11.5px] text-[#858585] mt-0.5 mb-3">
+                        {googleConnected?'Your page and Google show the earlier time, today only.':'Your page shows the earlier time, today only.'}
+                      </p>
+                      <div className="flex items-center gap-2 max-w-[320px]">
+                        <div className="relative flex-1">
+                          <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
+                            className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer">
+                            {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                          </select>
+                          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={11} color="#858585"/></div>
+                        </div>
+                        <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
+                          className="px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                          {statusPosting?'…':'Set'}
+                        </button>
+                      </div>
                     </div>
 
-                    {gMsg&&<p className={`text-[12px] ${gMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{gMsg}</p>}
+                    {/* Note */}
+                    <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
+                      <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
+                      <p className="text-[11.5px] text-[#858585] mt-0.5 mb-3">
+                        Shows beside your hours without marking you closed. Your page only — Google has nowhere to put free text.
+                      </p>
+                      <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
+                        placeholder="Running about 20 minutes behind today…" rows={2}
+                        className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
+                        <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
+                          className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                          {statusPosting?'…':'Add note'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dated closures — the old "Special hours" tab, now just a row of buttons */}
+                    <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
+                      <p className="text-[13px] font-semibold text-[#111]">Closing on another day</p>
+                      <p className="text-[11.5px] text-[#858585] mt-0.5 mb-3">
+                        Has real dates on it, so your hours come back by themselves
+                        {googleConnected?' — and it updates Google too.':'.'}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {([
+                          {label:'Tomorrow',     days:1 },
+                          {label:'This weekend', days:-1},
+                        ]).map(({label,days})=>(
+                          <button key={label} disabled={gBusy}
+                            onClick={()=>{
+                              const now=new Date();
+                              let from=new Date(now), to=new Date(now);
+                              if(days===1){ from.setDate(now.getDate()+1); to=new Date(from); }
+                              if(days===-1){
+                                const dow=now.getDay();
+                                from=new Date(now); from.setDate(now.getDate()+((6-dow+7)%7));
+                                to=new Date(from);  to.setDate(from.getDate()+1);
+                              }
+                              void googleCloseDates(from,to,`Closed ${label.toLowerCase()}`);
+                            }}
+                            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] hover:border-[#7C3AED] transition-colors disabled:opacity-40">
+                            <LucideCalendar size={13} color="#7C3AED"/>
+                            <span className="text-[12px] font-semibold text-[#111]">{label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -4523,19 +4427,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
           </div>
         )}
-        {/* ── STATUS page ── today's controls, then the weekly hours they fall back to ── */}
+        {/* ── STATUS page ── one decision: closed, or open. Everything else folds away. ── */}
         {sidebarTab==='hours'&&(
-          <div className="flex-1 overflow-y-auto px-4 pb-6" style={{scrollbarWidth:'none'}}>
+          <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
 
-            {/* Google closed-listing recovery. OpenStatus can't set this state,
-                only clear it, so the banner only appears when Google reports it. */}
             {googleConnected&&gStatus?.isClosed&&(
               <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4 mt-3">
                 <p className="text-[13px] font-semibold text-[#111] mb-1">
                   Google lists you as {gStatus.status==='CLOSED_TEMPORARILY'?'temporarily closed':(gStatus.status??'closed')}
                 </p>
                 <p className="text-[11.5px] text-[#B54708] leading-relaxed mb-3">
-                  Google reviews reopenings and it can take a few days.
+                  Google reviews reopenings, so it can take a few days.
                 </p>
                 <button disabled={gBusy||gStatus.canReopen===false}
                   onClick={()=>void googleReopen()}
@@ -4545,125 +4447,115 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
 
-            {/* What the page says right now */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-4 mb-2">
-              {googleConnected?'What customers see — link + Google':'What customers see'}
-            </p>
-            {statusUpdates.filter(u=>u.status!=='needs_review').length>0?(
-              statusUpdates.filter(u=>u.status!=='needs_review').map(u=>(
-                <div key={u.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8EBF0] bg-white px-4 py-3 mb-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"/>
-                    <p className="text-[13px] font-semibold text-[#111] truncate">{u.headline}</p>
+            {(()=>{
+              const active = statusUpdates.filter(u=>u.status!=='needs_review');
+              const isOverridden = active.length>0;
+              return (
+                <div className={`rounded-[22px] border p-5 mt-4 ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E8EBF0] bg-white'}`}>
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isOverridden?'bg-amber-500':liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
+                    <p className="text-[17px] font-semibold text-[#111] tracking-[-0.02em]">
+                      {isOverridden ? active[0].headline : liveStatus==='open' ? 'You’re open' : 'Closed right now'}
+                    </p>
                   </div>
-                  <button onClick={clearStatusEverywhere} disabled={statusPosting}
-                    className="flex-shrink-0 text-[12px] font-semibold text-[#EF4444] disabled:opacity-40">
-                    {statusPosting?'…':'Undo'}
-                  </button>
+                  <p className="text-[12.5px] text-[#858585] mb-4 leading-relaxed">
+                    {isOverridden
+                      ? 'This is what customers see instead of your normal hours today.'
+                      : `Your normal hours for today — ${todayLabel}.`}
+                  </p>
+
+                  {isOverridden ? (
+                    <button onClick={reopenEverything} disabled={statusPosting}
+                      className="w-full py-3.5 rounded-2xl bg-[#16A34A] text-white text-[15px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+                      {statusPosting?'Working…':'I’m open again'}
+                    </button>
+                  ) : (
+                    <button onClick={()=>postStatus('closed_today')} disabled={statusPosting}
+                      className="w-full py-3.5 rounded-2xl bg-[#111] text-white text-[15px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+                      {statusPosting?'Working…':'Close for today'}
+                    </button>
+                  )}
+
+                  {gMsg&&<p className={`text-[12px] mt-3 ${gMsg.startsWith('✓')?'text-[#166534]':'text-[#EF4444]'}`}>{gMsg}</p>}
+                  {reopenMsg&&<p className={`text-[12px] mt-2 ${reopenMsg.startsWith('✓')?'text-emerald-600':'text-[#EF4444]'}`}>{reopenMsg}</p>}
                 </div>
-              ))
-            ):(
-              <div className="rounded-2xl border border-dashed border-[#E8EBF0] bg-[#F9FAFB] px-4 py-3 mb-2">
-                <p className="text-[12.5px] text-[#667085]">Your normal weekly hours.</p>
+              );
+            })()}
+
+            <button onClick={()=>setStatusMore(v=>!v)}
+              className="flex items-center gap-1.5 mt-4 text-[13px] font-medium text-[#667085] active:opacity-60">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                style={{transform:statusMore?'rotate(90deg)':'none',transition:'transform .18s'}}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+              Something else
+            </button>
+
+            {statusMore&&(
+              <div className="mt-3 space-y-2.5">
+                <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
+                  <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
+                  <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
+                  <div className="flex items-center gap-2">
+                    <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
+                      className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
+                      {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                    </select>
+                    <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
+                      className="px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
+                      {statusPosting?'…':'Set'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
+                  <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
+                  <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">Shows beside your hours. Your page only.</p>
+                  <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
+                    placeholder="Running about 20 minutes behind today…" rows={2}
+                    className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
+                    <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
+                      className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
+                      {statusPosting?'…':'Add note'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
+                  <p className="text-[13px] font-semibold text-[#111]">Closing on another day</p>
+                  <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">
+                    Dated, so your hours return on their own{googleConnected?' — updates Google too.':'.'}
+                  </p>
+                  <div className="flex gap-2">
+                    {([
+                      {label:'Tomorrow',     days:1 },
+                      {label:'This weekend', days:-1},
+                    ]).map(({label,days})=>(
+                      <button key={label} disabled={gBusy}
+                        onClick={()=>{
+                          const now=new Date();
+                          let from=new Date(now), to=new Date(now);
+                          if(days===1){ from.setDate(now.getDate()+1); to=new Date(from); }
+                          if(days===-1){
+                            const dow=now.getDay();
+                            from=new Date(now); from.setDate(now.getDate()+((6-dow+7)%7));
+                            to=new Date(from);  to.setDate(from.getDate()+1);
+                          }
+                          void googleCloseDates(from,to,`Closed ${label.toLowerCase()}`);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] active:scale-95 transition-transform disabled:opacity-40">
+                        <LucideCalendar size={13} color="#7C3AED"/>
+                        <span className="text-[12px] font-semibold text-[#111]">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
-            <button onClick={reopenEverything} disabled={statusPosting}
-              className="w-full mt-1 py-2.5 rounded-xl bg-[#F5F3FF] text-[#6D28D9] text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
-              {statusPosting?'Working…':'Reset me to my regular hours'}
-            </button>
-            <p className="text-[11px] text-[#98A2B3] mt-1.5 leading-relaxed">
-              Use if your page is stuck saying closed. Clears every closure and re-sends your hours.
-            </p>
-
-            {/* Today only */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-6 mb-1">Change today&apos;s hours</p>
-            <p className="text-[11.5px] text-[#667085] mb-3 leading-relaxed">
-              {googleConnected
-                ? 'Updates your page and your Google listing together. Today only — expires overnight.'
-                : 'Updates your page. Today only — expires overnight.'}
-            </p>
-
-            <button onClick={()=>postStatus('closed_today')} disabled={statusPosting}
-              className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-[#E8EBF0] bg-white mb-2 active:bg-[#FEF2F2] transition-colors disabled:opacity-40">
-              <div className="w-9 h-9 rounded-xl bg-[#FEF2F2] flex items-center justify-center flex-shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              </div>
-              <div className="text-left min-w-0">
-                <p className="text-[13px] font-semibold text-[#111] leading-tight">Closed for the rest of today</p>
-                <p className="text-[11px] text-[#667085] leading-tight mt-0.5">{googleConnected?'Page + Google · reopens by itself':'Reopens by itself tomorrow'}</p>
-              </div>
-            </button>
-
-            <div className="p-3.5 rounded-2xl border border-[#E8EBF0] bg-white mb-2">
-              <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
-              <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
-              <div className="flex items-center gap-2">
-                <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
-                  className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
-                  {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
-                </select>
-                <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
-                  className="px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
-                  {statusPosting?'…':'Show it'}
-                </button>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl border border-[#E8EBF0] bg-white">
-              <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
-              <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">Shows beside your hours. Your page only — Google has nowhere to put free text.</p>
-              <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
-                placeholder="Running about 20 minutes behind today…" rows={2}
-                className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
-                <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
-                  className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
-                  {statusPosting?'…':'Show this note'}
-                </button>
-              </div>
-            </div>
-
-            {/* Dated closures — these DO reach Google, which is why they're labelled */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-6 mb-1">Closed on a date</p>
-            <p className="text-[11.5px] text-[#667085] mb-3 leading-relaxed">
-              Carries real dates, so your hours come back on their own
-              {googleConnected?' — safe to send to Google, and it will.':'.'}
-            </p>
-            <div className="grid grid-cols-1 gap-2">
-              {([
-                {label:'Closed today',        days:0 },
-                {label:'Closed tomorrow',     days:1 },
-                {label:'Closed this weekend', days:-1},
-              ]).map(({label,days})=>(
-                <button key={label} disabled={gBusy}
-                  onClick={()=>{
-                    const now=new Date();
-                    let from=new Date(now), to=new Date(now);
-                    if(days===1){ from.setDate(now.getDate()+1); to=new Date(from); }
-                    if(days===-1){
-                      const dow=now.getDay();
-                      from=new Date(now); from.setDate(now.getDate()+((6-dow+7)%7));
-                      to=new Date(from);  to.setDate(from.getDate()+1);
-                    }
-                    void googleCloseDates(from,to,label);
-                  }}
-                  className="flex items-center gap-3 p-3.5 rounded-2xl border border-[#E8EBF0] bg-white active:bg-[#FAFAFF] transition-colors disabled:opacity-40">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'#F5F3FF'}}>
-                    <LucideCalendar size={15} color="#7C3AED"/>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[13px] font-semibold text-[#111] leading-tight">{label}</p>
-                    <p className="text-[11px] text-[#98A2B3] leading-tight mt-0.5">{googleConnected?'Your page + Google':'Your page'}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-            {gMsg&&<p className={`text-[12px] mt-3 ${gMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{gMsg}</p>}
-
-            {/* Weekly hours live here too, so Status is one page not two */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-6 mb-2">Your normal week</p>
+            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-7 mb-2">Your normal week</p>
             <div className="rounded-2xl border border-[#E8EBF0] overflow-hidden bg-white">
               {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
             </div>
