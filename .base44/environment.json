@@ -1,0 +1,60 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_URL",
+      "description": "Supabase project URL (e.g. https://xxxxx.supabase.co). Get from Supabase dashboard → Project Settings → API.",
+      "requiredAtBoot": true,
+      "generatedForDevelopment": true
+    },
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "description": "Supabase anon/public API key. Get from Supabase dashboard → Project Settings → API.",
+      "requiredAtBoot": true,
+      "generatedForDevelopment": true
+    },
+    {
+      "name": "SUPABASE_SERVICE_ROLE_KEY",
+      "description": "Supabase service role key (server-side only). Get from Supabase dashboard → Project Settings → API.",
+      "requiredAtBoot": true,
+      "generatedForDevelopment": true
+    },
+    {
+      "name": "NEXT_PUBLIC_GOOGLE_CLIENT_ID",
+      "description": "Google OAuth client ID for Google Business Profile integration. Get from Google Cloud Console → Credentials.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "GOOGLE_CLIENT_SECRET",
+      "description": "Google OAuth client secret. Get from Google Cloud Console → Credentials.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "GOOGLE_PLACES_API_KEY",
+      "description": "Google Places API key for place lookups. Get from Google Cloud Console → Credentials.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "META_APP_SECRET",
+      "description": "Meta/Facebook app secret for OAuth. Get from Meta for Developers → App Settings.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "ADMIN_EMAILS",
+      "description": "Comma-separated admin email addresses for admin panel access.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "ADMIN_PASSCODE",
+      "description": "Passcode for admin panel authentication.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "ADMIN_SESSION_SECRET",
+      "description": "Secret key for signing admin session tokens. Falls back to SUPABASE_SERVICE_ROLE_KEY if not set.",
+      "requiredAtBoot": false
+    }
+  ]
+}
