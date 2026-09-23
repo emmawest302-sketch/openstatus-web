@@ -5,15 +5,13 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'emeline@forothers.com,emmawes
   .split(',')
   .map(e => e.trim().toLowerCase());
 
-const ADMIN_PASSCODE = '6869959799';
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization') ?? '';
   const admin = getAdminClient();
 
-  // Accept passcode auth
-  if (auth !== `Passcode ${ADMIN_PASSCODE}`) {
-    // Fall back to JWT email check
+  // Verified Supabase JWT only — see the note in api/admin/business.
+  {
     const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!jwt) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
     const { data: userData, error: userErr } = await admin.auth.getUser(jwt);

@@ -1,5 +1,25 @@
 'use client';
 
+/** Shape returned by /api/admin/customer — see that route for what each check means. */
+type CustomerDetail = {
+  business: {
+    id: string; name: string; slug: string | null; tagline: string | null;
+    address: string | null; phone: string | null; website: string | null;
+    timezone: string | null; google_location_id: string | null;
+    created_at: string; onboarded_at: string | null;
+  };
+  owner: { email: string | null; created_at: string | null; last_sign_in_at: string | null } | null;
+  checks: { id: string; label: string; ok: boolean; detail: string }[];
+  health: { failing: number; total: number };
+  hours: {
+    live: { day: string; closed: boolean | null; open: string | null; close: string | null }[];
+    builder: Record<string, { open?: string; close?: string; closed?: boolean }> | null;
+  };
+  statusUpdates: { id: string; headline: string; status: string; source: string; created_at: string; expires_at: string | null }[];
+  traffic: { days: number; total: number; byType: Record<string, number> };
+  votes: number;
+};
+
 import Link from 'next/link';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -42,26 +62,22 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
-  const [passcode, setPasscode] = useState('');
-  const [passcodeEntry, setPasscodeEntry] = useState('');
-  const [passcodeError, setPasscodeError] = useState(false);
 
-  const ADMIN_CODE = '6869959799';
-
-  const submitPasscode = () => {
-    if (passcodeEntry === ADMIN_CODE) {
-      setPasscode(passcodeEntry);
-      setPasscodeError(false);
-    } else {
-      setPasscodeError(true);
-      setPasscodeEntry('');
-    }
-  };
+  // There used to be a passcode gate here with the code written into this file.
+  // This is a client component, so that code shipped in the public JS bundle and
+  // the API accepted it as full admin auth. Access is now the signed-in user's
+  // Supabase session, checked server-side against ADMIN_EMAILS.
 
   // Edit modal state
   const [editRow, setEditRow] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  // Customer detail drawer — the "why is their page wrong?" view
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<CustomerDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
 
   // Delete confirm state
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -69,7 +85,7 @@ export default function AdminPage() {
 
   const load = useCallback(async (tok: string) => {
     const res = await fetch('/api/admin/data', {
-      headers: { Authorization: `Passcode ${ADMIN_CODE}` },
+      headers: { Authorization: `Bearer ${tok}` },
     });
     const body = await res.json();
     if (!res.ok) { setError(body.error ?? 'Failed'); setLoading(false); return; }
@@ -83,17 +99,32 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setError('Not signed in'); setLoading(false); return; }
       setToken(session.access_token);
-      if (passcode === ADMIN_CODE) await load(session.access_token);
+      await load(session.access_token);
     })();
-  }, [load, passcode]);
+  }, [load]);
 
   useEffect(() => {
-    if (passcode === ADMIN_CODE) {
-      setLoading(true);
-      setError('');
-      void load(token);
-    }
-  }, [passcode]);
+    if (!detailId || !token) { setDetail(null); return; }
+    let cancelled = false;
+    setDetailLoading(true);
+    setDetailError('');
+    void (async () => {
+      try {
+        const res = await fetch(`/api/admin/customer?id=${encodeURIComponent(detailId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const body = await res.json();
+        if (cancelled) return;
+        if (!res.ok) { setDetailError(body.error ?? 'Could not load'); setDetail(null); }
+        else setDetail(body as CustomerDetail);
+      } catch {
+        if (!cancelled) setDetailError('Could not reach the server');
+      } finally {
+        if (!cancelled) setDetailLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [detailId, token]);
 
   useEffect(() => {
     const q = search.toLowerCase();
@@ -123,7 +154,7 @@ export default function AdminPage() {
     setSaveError('');
     const res = await fetch('/api/admin/business', {
       method: 'PATCH',
-      headers: { Authorization: `Passcode ${ADMIN_CODE}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(editRow),
     });
     const body = await res.json();
@@ -147,7 +178,7 @@ export default function AdminPage() {
     setDeleting(true);
     const res = await fetch(`/api/admin/business?id=${deleteId}`, {
       method: 'DELETE',
-      headers: { Authorization: `Passcode ${ADMIN_CODE}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
       setRows(prev => prev.filter(r => r.id !== deleteId));
@@ -161,36 +192,31 @@ export default function AdminPage() {
   const withHours = rows.filter(r => r.has_hours).length;
   const avgCompletion = total ? Math.round(rows.reduce((s, r) => s + r.completion, 0) / total) : 0;
 
-  // Passcode gate
-  if (passcode !== ADMIN_CODE) return (
-    <main className="grid min-h-screen place-items-center bg-[#0A0A0A]">
+  // Not signed in, or signed in without an admin email: the server has already
+  // refused, this just explains it.
+  if (error === 'Not signed in' || error === 'Access denied' || error === 'Invalid session') return (
+    <main className="grid min-h-screen place-items-center bg-[#0A0A0A] px-6">
       <div className="w-full max-w-xs text-center">
         <div className="mb-8 flex justify-center">
           <svg viewBox="0 0 100 100" width="36" height="36">
-            <circle cx="50" cy="50" r="48" fill="#C8FF62"/>
+            <circle cx="50" cy="50" r="48" fill="#7C3AED"/>
             <circle cx="50" cy="50" r="21" fill="#0A0A0A"/>
-            <circle cx="50" cy="44" r="7.4" fill="#C8FF62"/>
-            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#C8FF62"/>
+            <circle cx="50" cy="44" r="7.4" fill="#7C3AED"/>
+            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#7C3AED"/>
           </svg>
         </div>
-        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-white/30">Admin Access</p>
-        <p className="mb-6 text-lg font-bold text-white">Enter passcode</p>
-        <input
-          type="password"
-          value={passcodeEntry}
-          onChange={e => { setPasscodeEntry(e.target.value); setPasscodeError(false); }}
-          onKeyDown={e => e.key === 'Enter' && submitPasscode()}
-          placeholder="••••••••••"
-          className="mb-3 w-full rounded-[14px] border border-white/10 bg-white/6 px-4 py-3 text-center text-lg tracking-[0.3em] text-white outline-none placeholder:text-white/15 focus:border-white/25"
-          autoFocus
-        />
-        {passcodeError && <p className="mb-3 text-xs text-red-400">Incorrect passcode</p>}
-        <button
-          onClick={submitPasscode}
-          className="w-full rounded-[14px] bg-[#C8FF62] py-3 text-sm font-bold text-black hover:bg-[#d4ff7a]"
-        >
-          Unlock
-        </button>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-white/30">Admin</p>
+        <p className="mb-2 text-lg font-semibold text-white">
+          {error === 'Not signed in' ? 'Sign in to continue' : 'This account isn\u2019t an admin'}
+        </p>
+        <p className="mb-6 text-xs leading-relaxed text-white/45">
+          {error === 'Not signed in'
+            ? 'Admin access uses your OpenStatus login.'
+            : 'Ask for your email to be added to ADMIN_EMAILS.'}
+        </p>
+        <a href="/login" className="block w-full rounded-[14px] bg-[#7C3AED] py-3 text-sm font-semibold text-white hover:bg-[#6D28D9]">
+          Go to sign in
+        </a>
       </div>
     </main>
   );
@@ -349,10 +375,10 @@ export default function AdminPage() {
                           {r.name.slice(0, 2).toUpperCase()}
                         </div>
                       )}
-                      <div>
-                        <div className="font-semibold leading-tight">{r.name}</div>
+                      <button onClick={() => setDetailId(r.id)} className="text-left">
+                        <div className="font-semibold leading-tight hover:text-[#A78BFA] transition-colors">{r.name}</div>
                         {r.tagline && <div className="text-[10px] text-white/30 leading-tight truncate max-w-[140px]">{r.tagline}</div>}
-                      </div>
+                      </button>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-white/50 text-xs">{r.email}</td>
@@ -395,6 +421,13 @@ export default function AdminPage() {
                         </a>
                       )}
                       <button
+                        onClick={() => setDetailId(r.id)}
+                        className="rounded-full bg-[#7C3AED] px-2.5 py-1 text-[10px] font-semibold hover:bg-[#6D28D9] transition"
+                        title="Open customer record"
+                      >
+                        Open
+                      </button>
+                      <button
                         onClick={() => openEdit(r)}
                         className="flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1 text-[10px] hover:bg-white/15 transition"
                         title="Edit"
@@ -421,6 +454,166 @@ export default function AdminPage() {
           </table>
         </div>
         <p className="mt-3 text-[10px] text-white/25">Showing {filtered.length} of {total} businesses</p>
+
+      {/* ══ CUSTOMER RECORD ══ one screen that answers "what's going on with this business?" ══ */}
+      {detailId && (
+        <div className="fixed inset-0 z-50 flex" onClick={() => setDetailId(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+          <aside
+            onClick={e => e.stopPropagation()}
+            className="relative ml-auto flex h-full w-full max-w-[560px] flex-col border-l border-white/10 bg-[#0E0E10] shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-white/8 px-6 py-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Customer record</p>
+                <h2 className="truncate text-lg font-semibold text-white">{detail?.business.name ?? 'Loading…'}</h2>
+                {detail?.owner?.email && <p className="truncate text-xs text-white/45">{detail.owner.email}</p>}
+              </div>
+              <button onClick={() => setDetailId(null)} className="shrink-0 rounded-full bg-white/8 px-3 py-1.5 text-xs text-white/60 hover:bg-white/15">Close</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {detailLoading && <p className="text-sm text-white/40">Loading…</p>}
+              {detailError && <p className="text-sm text-red-400">{detailError}</p>}
+
+              {detail && (
+                <>
+                  {/* Health — the reason this screen exists */}
+                  <div className={`mb-5 rounded-2xl border px-4 py-3 ${detail.health.failing === 0 ? 'border-emerald-500/30 bg-emerald-500/8' : 'border-amber-500/30 bg-amber-500/8'}`}>
+                    <p className={`text-sm font-semibold ${detail.health.failing === 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                      {detail.health.failing === 0
+                        ? 'Everything checks out'
+                        : `${detail.health.failing} problem${detail.health.failing === 1 ? '' : 's'} found`}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-white/45">
+                      {detail.health.failing === 0
+                        ? 'Their page is showing what they think it is.'
+                        : 'These are the likely answers to whatever they wrote in about.'}
+                    </p>
+                  </div>
+
+                  <div className="mb-6 space-y-2">
+                    {detail.checks.map(c => (
+                      <div key={c.id} className="flex gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3.5 py-3">
+                        <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${c.ok ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+                          {c.ok ? '✓' : '!'}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-white/90">{c.label}</p>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-white/45">{c.detail}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Hours, both sources side by side */}
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Hours — builder vs live page</p>
+                  <div className="mb-6 overflow-hidden rounded-xl border border-white/8">
+                    <table className="w-full text-[11px]">
+                      <thead>
+                        <tr className="bg-white/4 text-left text-white/35">
+                          <th className="px-3 py-2 font-semibold">Day</th>
+                          <th className="px-3 py-2 font-semibold">Builder (what they see)</th>
+                          <th className="px-3 py-2 font-semibold">Live page (what customers see)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detail.hours.live.map(row => {
+                          const b = detail.hours.builder?.[row.day];
+                          const builderText = !detail.hours.builder ? '—' : b?.closed ? 'Closed' : `${b?.open ?? '09:00'}–${b?.close ?? '17:00'}`;
+                          const liveText = row.closed === null ? 'missing' : row.closed ? 'Closed' : `${row.open}–${row.close}`;
+                          const differs = detail.hours.builder != null && builderText !== liveText;
+                          return (
+                            <tr key={row.day} className={`border-t border-white/5 ${differs ? 'bg-red-500/8' : ''}`}>
+                              <td className="px-3 py-1.5 uppercase text-white/50">{row.day}</td>
+                              <td className="px-3 py-1.5 text-white/70">{builderText}</td>
+                              <td className={`px-3 py-1.5 ${differs ? 'font-semibold text-red-300' : 'text-white/70'}`}>{liveText}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Traffic */}
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Last 30 days</p>
+                  <div className="mb-6 grid grid-cols-3 gap-2">
+                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
+                      <p className="text-lg font-semibold text-white">{detail.traffic.total}</p>
+                      <p className="text-[10px] text-white/40">events</p>
+                    </div>
+                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
+                      <p className="text-lg font-semibold text-white">{detail.traffic.byType.view ?? 0}</p>
+                      <p className="text-[10px] text-white/40">page views</p>
+                    </div>
+                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
+                      <p className="text-lg font-semibold text-white">{detail.votes}</p>
+                      <p className="text-[10px] text-white/40">votes</p>
+                    </div>
+                  </div>
+
+                  {/* Status history */}
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Recent status updates</p>
+                  {detail.statusUpdates.length === 0 ? (
+                    <p className="mb-6 text-[11px] text-white/30">None yet.</p>
+                  ) : (
+                    <div className="mb-6 space-y-1.5">
+                      {detail.statusUpdates.map(u => (
+                        <div key={u.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-[12px] text-white/80">{u.headline}</p>
+                            <p className="text-[10px] text-white/35">
+                              {u.source} · {new Date(u.created_at).toLocaleDateString()}
+                              {u.expires_at ? ` · expires ${new Date(u.expires_at).toLocaleDateString()}` : ''}
+                            </p>
+                          </div>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${u.status === 'active' ? 'bg-amber-500/20 text-amber-300' : 'bg-white/8 text-white/40'}`}>
+                            {u.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Raw detail */}
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[.14em] text-white/35">Account</p>
+                  <dl className="mb-4 space-y-1 text-[11px]">
+                    {([
+                      ['Business ID', detail.business.id],
+                      ['Timezone', detail.business.timezone ?? '—'],
+                      ['Address', detail.business.address ?? '—'],
+                      ['Google location', detail.business.google_location_id ?? '—'],
+                      ['Signed up', detail.owner?.created_at ? new Date(detail.owner.created_at).toLocaleDateString() : '—'],
+                      ['Last sign in', detail.owner?.last_sign_in_at ? new Date(detail.owner.last_sign_in_at).toLocaleString() : 'never'],
+                    ] as [string, string][]).map(([k, v]) => (
+                      <div key={k} className="flex gap-3">
+                        <dt className="w-32 shrink-0 text-white/35">{k}</dt>
+                        <dd className="min-w-0 break-all text-white/65">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </>
+              )}
+            </div>
+
+            {detail?.business.slug && (
+              <div className="flex gap-2 border-t border-white/8 px-6 py-3">
+                <a href={`/${detail.business.slug}`} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 rounded-xl bg-white/8 py-2.5 text-center text-xs font-semibold text-white/80 hover:bg-white/15">
+                  View their page ↗
+                </a>
+                {detail.owner?.email && (
+                  <a href={`mailto:${detail.owner.email}`}
+                    className="flex-1 rounded-xl bg-[#7C3AED] py-2.5 text-center text-xs font-semibold text-white hover:bg-[#6D28D9]">
+                    Email them
+                  </a>
+                )}
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
+
       </div>
     </main>
   );

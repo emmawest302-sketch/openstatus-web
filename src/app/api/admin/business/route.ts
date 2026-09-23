@@ -6,10 +6,12 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? 'emeline@forothers.com,emmawes
   .map(e => e.trim().toLowerCase());
 
 async function verifyAdmin(req: NextRequest) {
+  // Identity comes from a verified Supabase JWT and nothing else. There used to
+  // be a shared passcode accepted here, but it was hardcoded in a client
+  // component, so it shipped in the public JS bundle — anyone who opened /admin
+  // could read it and then edit or delete any business. Never reintroduce a
+  // static secret that the browser has to know.
   const auth = req.headers.get('authorization') ?? '';
-  // Accept simple passcode auth
-  if (auth === 'Passcode 6869959799') return getAdminClient();
-  // Fall back to JWT email check
   const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
   if (!jwt) return null;
   const admin = getAdminClient();
