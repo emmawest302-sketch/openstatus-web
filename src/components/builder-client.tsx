@@ -2245,7 +2245,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [quickAction,setQuickAction]=useState<string|null>(null);
   const [closeEarlyTime,setCloseEarlyTime]=useState('15:00');
   const [quickMsg,setQuickMsg]=useState('');
-  const [statusUpdates,setStatusUpdates]=useState<{id:number;kind:string;headline:string;detail:string|null;closes_at:string|null;created_at:string;expires_at:string;status:string}[]>([]);
+  const [statusUpdates,setStatusUpdates]=useState<{id:number;kind:string;headline:string;detail:string|null;closes_at:string|null;opens_at?:string|null;created_at:string;expires_at:string;status:string}[]>([]);
   const [statusLoading,setStatusLoading]=useState(false);
   const [statusPosting,setStatusPosting]=useState(false);
   const [statusNote,setStatusNote]=useState('');
@@ -2466,7 +2466,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const todayOverride: TodayOverride = (() => {
     const active = statusUpdates.find(u=>u.status==='active');
     if(!active) return null;
-    return { kind: active.kind, closesAt: active.closes_at, opensAt: null };
+    return { kind: active.kind, closesAt: active.closes_at, opensAt: active.opens_at ?? null };
   })();
   const bizTimeZone = localBusiness?.timezone ?? null;
   const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours, bizTimeZone, todayOverride);

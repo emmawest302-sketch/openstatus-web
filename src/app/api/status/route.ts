@@ -86,7 +86,9 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await actor.admin
     .from('status_updates')
-    .select('id, kind, headline, detail, reason, closes_at, confidence, status, source, created_at, expires_at')
+    // '*' on purpose: tolerates opens_at not existing yet, so deploying before
+    // running the migration degrades to the old behaviour instead of 500ing.
+    .select('*')
     .eq('business_id', actor.businessId)
     .in('status', ['needs_review', 'active'])
     .order('created_at', { ascending: false })
@@ -208,6 +210,9 @@ export async function POST(req: NextRequest) {
               headline: `Today ${displayTime(opensAt!)} \u2013 ${displayTime(closesAt!)}`,
               detail: 'Different hours today',
               closes_at: closesAt,
+              // Without this the page reads the opening time off the regular
+              // schedule and can report the shop open before it opens.
+              opens_at: opensAt,
             }
           : { kind: 'other', headline: note, detail: null, closes_at: null };
 
@@ -219,22 +224,38 @@ export async function POST(req: NextRequest) {
       .eq('status', 'active');
     if (clearError) return NextResponse.json({ error: clearError.message }, { status: 500 });
 
-    const { data, error } = await actor.admin
+    const row: Record<string, unknown> = {
+      business_id: actor.businessId,
+      ...update,
+      reason: reason || null,
+      effective_date: effectiveDate,
+      expires_at: zonedEndOfDay(timezone),
+      confidence: 1,
+      status: 'active',
+      source: 'owner',
+    };
+
+    let { data, error } = await actor.admin
       .from('status_updates')
-      .insert({
-        business_id: actor.businessId,
-        ...update,
-        reason: reason || null,
-        effective_date: effectiveDate,
-        expires_at: zonedEndOfDay(timezone),
-        confidence: 1,
-        status: 'active',
-        source: 'owner',
-      })
+      .insert(row)
       .select('id')
       .single();
+
+    // If supabase_migration_status_opens_at.sql has not been run yet, retry
+    // without that column rather than failing the owner's save outright. They
+    // lose the custom opening time, not the whole update.
+    if (error && 'opens_at' in row && /opens_at/i.test(error.message)) {
+      delete row.opens_at;
+      ({ data, error } = await actor.admin
+        .from('status_updates')
+        .insert(row)
+        .select('id')
+        .single());
+    }
+
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ ok: true, id: data.id });
+    // Nullable now that the insert can go through the retry path above.
+    return NextResponse.json({ ok: true, id: data?.id ?? null });
   }
 
   if (!id || (action !== 'approve' && action !== 'dismiss')) {

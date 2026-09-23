@@ -12,7 +12,7 @@ import { loadPublishedPageConfig } from '@/lib/published-page-config';
 import { SITE_URL, pageUrl } from '@/lib/site';
 import { bgAnimationStyle, BG_KEYFRAMES } from '@/lib/page-theme';
 import type { Metadata } from 'next';
-import { getBusinessStatus, weeklyFromRows, toMinutes } from '@/lib/business-status';
+import { getBusinessStatus, applyOverride, weeklyFromRows } from '@/lib/business-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 type Hours = { day_of_week: number; opens_at: string | null; closes_at: string | null; is_closed: boolean };
-type Update = { kind: string; headline: string; detail: string | null; reason: string | null; closes_at: string | null; created_at: string; source: string | null; effective_date?: string | null };
+type Update = { kind: string; headline: string; detail: string | null; reason: string | null; closes_at: string | null; opens_at?: string | null; created_at: string; source: string | null; effective_date?: string | null };
 
 function pretty(t: string | null) {
   if (!t) return '';
@@ -133,7 +133,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
   const [{ data: hoursRows }, { data: updateRows }, pageConfig, placeWebsite] = await Promise.all([
     admin.from('business_hours').select('day_of_week,opens_at,closes_at,is_closed').eq('business_id', business.id),
-    admin.from('status_updates').select('kind,headline,detail,reason,closes_at,created_at,source,effective_date').eq('business_id', business.id).eq('status', 'active').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(4),
+    admin.from('status_updates').select('*').eq('business_id', business.id).eq('status', 'active').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(4),
     loadPublishedPageConfig(business.user_id),
     business.place_id ? fetchPlaceWebsite(business.place_id as string) : Promise.resolve(null),
   ]);
@@ -207,15 +207,21 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
   const lead = updates[0] ?? null;
   const ownerClosed = updates.some((u) => u.kind === 'closed');
-  // An owner "closing early" overrides the scheduled closing time for today.
-  const earlyClose = updates.find((u) => u.closes_at)?.closes_at ?? null;
-  const earlyCloseMins = toMinutes(earlyClose);
-  const pastEarlyClose = earlyCloseMins !== null && status.minutesNow >= earlyCloseMins;
+  // Today's override, folded on by the same function the builder preview uses,
+  // so the two cannot disagree. opens_at matters: a "different hours today" of
+  // 12:00-16:00 must not be read as opening at the regular 09:00.
+  const hoursOverride = updates.find((u) => u.closes_at || u.opens_at) ?? null;
+  const effective = applyOverride(status, ownerClosed
+    ? { kind: 'closed' }
+    : hoursOverride
+      ? { closesAt: hoursOverride.closes_at, opensAt: hoursOverride.opens_at ?? null }
+      : null);
 
-  const hoursUnknown = status.state === 'unknown';
+  const hoursUnknown = effective.state === 'unknown';
   const closedAllDay = !hoursUnknown && (ownerClosed || (!!todayRow && todayRow.is_closed && !status.overnight));
-  const isOpen = status.state === 'open' && !ownerClosed && !pastEarlyClose;
-  const effectiveClose = earlyClose ?? (status.closesAt ? `${status.closesAt}:00` : todayRow?.closes_at ?? null);
+  const isOpen = effective.state === 'open';
+  const effectiveClose = hoursOverride?.closes_at
+    ?? (effective.closesAt ? `${effective.closesAt}:00` : todayRow?.closes_at ?? null);
 
   // Status. Absence of hours data must never be rendered as a factual claim
   // that the business is closed — that is how a page tells customers a shop is
@@ -225,7 +231,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   if (hoursUnknown) { bigText = 'Hours not set'; subText = 'Check with the business'; }
   else if (closedAllDay) { bigText = 'Closed today'; subText = lead?.detail ?? 'Not open today'; }
   else if (isOpen) { bigText = 'Open now'; subText = 'Closes at '; accentText = pretty(effectiveClose); }
-  else if (status.opensAt) { bigText = 'Opens later'; subText = 'Opens at '; accentText = pretty(`${status.opensAt}:00`); }
+  else if (effective.opensAt) { bigText = 'Opens later'; subText = 'Opens at '; accentText = pretty(`${effective.opensAt}:00`); }
 
   // Block visibility
   const hoursBlock = enrichedConfig.blocks.find((b) => b.id === 'hours');
