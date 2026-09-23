@@ -177,3 +177,70 @@ describe('today’s override folded onto the schedule', () => {
     expect(applyOverride(unknown, { closesAt: '15:00' }).state).toBe('unknown');
   });
 });
+
+/**
+ * Both cases below were found by review, not by these tests — they are here so
+ * they cannot come back. The distinction that matters: one end of an override
+ * NARROWS the regular schedule, both ends REPLACE it.
+ */
+describe('partial override narrows, it never opens a closed shop', () => {
+  it('an early close at 3 does not make a 9-5 shop open at 8am', () => {
+    // 13:00 UTC = 08:00 Chicago, before the 09:00 opening.
+    const base = getBusinessStatus(new Date('2026-09-23T13:00:00Z'), 'America/Chicago', NINE_TO_FIVE);
+    expect(base.state).toBe('closed');
+    const s = applyOverride(base, { closesAt: '15:00' });
+    expect(s.state).toBe('closed');
+    expect(s.opensAt).toBe('09:00');
+  });
+
+  it('an early close still closes the shop once the new time passes', () => {
+    // 21:00 UTC = 16:00 Chicago, after a 15:00 early close.
+    const base = getBusinessStatus(new Date('2026-09-23T21:00:00Z'), 'America/Chicago', NINE_TO_FIVE);
+    expect(applyOverride(base, { closesAt: '15:00' }).state).toBe('closed');
+  });
+
+  it('an early close leaves the shop open before it, with the earlier time', () => {
+    const base = getBusinessStatus(new Date('2026-09-23T15:00:00Z'), 'America/Chicago', NINE_TO_FIVE); // 10am
+    const s = applyOverride(base, { closesAt: '15:00' });
+    expect(s.state).toBe('open');
+    expect(s.closesAt).toBe('15:00');
+  });
+
+  it('opening late does not open the shop before the later time', () => {
+    const base = getBusinessStatus(new Date('2026-09-23T15:00:00Z'), 'America/Chicago', NINE_TO_FIVE); // 10am
+    const s = applyOverride(base, { opensAt: '11:00' });
+    expect(s.state).toBe('closed');
+    expect(s.opensAt).toBe('11:00');
+  });
+});
+
+describe('full override replaces the schedule', () => {
+  // Sunday is closed in NINE_TO_FIVE.
+  const sundayAt = (utc: string) => getBusinessStatus(new Date(utc), 'America/Chicago', NINE_TO_FIVE);
+
+  it('custom hours 12-4 open a normally closed day, at 1pm', () => {
+    // Sunday 2026-09-20, 18:00 UTC = 13:00 Chicago.
+    const base = sundayAt('2026-09-20T18:00:00Z');
+    expect(base.state).toBe('closed');
+    const s = applyOverride(base, { opensAt: '12:00', closesAt: '16:00' });
+    expect(s.state).toBe('open');
+    expect(s.closesAt).toBe('16:00');
+  });
+
+  it('but not before those hours start', () => {
+    // Sunday 15:00 UTC = 10:00 Chicago.
+    const s = applyOverride(sundayAt('2026-09-20T15:00:00Z'), { opensAt: '12:00', closesAt: '16:00' });
+    expect(s.state).toBe('closed');
+    expect(s.opensAt).toBe('12:00');
+  });
+
+  it('and not after they end', () => {
+    // Sunday 22:00 UTC = 17:00 Chicago.
+    expect(applyOverride(sundayAt('2026-09-20T22:00:00Z'), { opensAt: '12:00', closesAt: '16:00' }).state).toBe('closed');
+  });
+
+  it('"closed today" still wins over custom hours', () => {
+    const s = applyOverride(sundayAt('2026-09-20T18:00:00Z'), { kind: 'closed', opensAt: '12:00', closesAt: '16:00' });
+    expect(s.state).toBe('closed');
+  });
+});

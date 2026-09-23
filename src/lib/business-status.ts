@@ -200,8 +200,27 @@ export function applyOverride(base: BusinessStatus, override: TodayOverride): Bu
   const closes = toMinutes(override.closesAt ?? null);
   if (opens === null && closes === null) return base;
 
-  // Unknown hours stay unknown — an override shouldn't invent a schedule.
+  // An override must never invent a schedule where there is none.
   if (base.state === 'unknown') return base;
+
+  // BOTH ends given = "different hours today". This is an explicit statement
+  // about today and replaces the weekly schedule outright, so it can open a
+  // business on a day it is normally closed.
+  if (opens !== null && closes !== null) {
+    const open = base.minutesNow >= opens && base.minutesNow < closes;
+    return {
+      ...base,
+      state: open ? 'open' : 'closed',
+      closesAt: open ? fromMinutes(closes) : null,
+      opensAt: !open && base.minutesNow < opens ? fromMinutes(opens) : null,
+    };
+  }
+
+  // ONE end given = "closing early" or "opening late". That narrows the regular
+  // schedule; it cannot open a business the schedule says is shut. Treating a
+  // partial override as a complete window made an early-close-at-3 report a
+  // 9-to-5 shop as OPEN at 8am, because 8am is simply "before 3".
+  if (base.state !== 'open') return base;
 
   const afterOpen = opens === null || base.minutesNow >= opens;
   const beforeClose = closes === null || base.minutesNow < closes;
@@ -210,7 +229,10 @@ export function applyOverride(base: BusinessStatus, override: TodayOverride): Bu
   return {
     ...base,
     state: open ? 'open' : 'closed',
-    closesAt: open && closes !== null ? fromMinutes(closes) : open ? base.closesAt : null,
+    // Only report the override's closing time if it is earlier than the usual one.
+    closesAt: open
+      ? (closes !== null ? fromMinutes(closes) : base.closesAt)
+      : null,
     opensAt: !open && opens !== null && base.minutesNow < opens ? fromMinutes(opens) : null,
   };
 }

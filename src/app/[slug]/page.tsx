@@ -217,8 +217,13 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
       ? { closesAt: hoursOverride.closes_at, opensAt: hoursOverride.opens_at ?? null }
       : null);
 
+  // Explicit hours for today beat the weekly schedule. Without this, a shop
+  // that is normally closed on Monday but opened 12-4 this Monday still showed
+  // "Closed today", because closedAllDay was read straight off the schedule
+  // and checked before the override.
+  const hasCustomHours = !!hoursOverride?.opens_at && !!hoursOverride?.closes_at;
   const hoursUnknown = effective.state === 'unknown';
-  const closedAllDay = !hoursUnknown && (ownerClosed || (!!todayRow && todayRow.is_closed && !status.overnight));
+  const closedAllDay = !hoursUnknown && (ownerClosed || (!hasCustomHours && !!todayRow && todayRow.is_closed && !status.overnight));
   const isOpen = effective.state === 'open';
   const effectiveClose = hoursOverride?.closes_at
     ?? (effective.closesAt ? `${effective.closesAt}:00` : todayRow?.closes_at ?? null);

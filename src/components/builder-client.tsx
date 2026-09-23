@@ -217,6 +217,16 @@ function getLiveStatus(
   const keys: WeekDay[] = ['sun','mon','tue','wed','thu','fri','sat'];
   const today = hours[keys[s.dayIndex]];
   if (override?.kind === 'closed') return { status:'closed', todayLabel:'Closed today' };
+  // Explicit hours for today override a normally-closed day; checking the
+  // schedule first made the preview say "Closed today" for a shop the owner
+  // had just opened 12-4.
+  const customToday = !!override?.opensAt && !!override?.closesAt;
+  if (customToday) {
+    return {
+      status: s.state==='open' ? 'open' : 'closed',
+      todayLabel: `Today ${fmt12(override!.opensAt!)} – ${fmt12(override!.closesAt!)}`,
+    };
+  }
   if (!today || today.closed) return { status:'closed', todayLabel:'Closed today' };
   const closeLabel = override?.closesAt ? fmt12(override.closesAt) : fmt12(today.close);
   const openLabel  = override?.opensAt  ? fmt12(override.opensAt)  : fmt12(today.open);
