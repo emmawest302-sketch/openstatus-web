@@ -1,0 +1,16 @@
+# Drop real captions in here, one per line, and run:
+#   node scripts/try-captions.mjs scripts/sample-captions.txt
+Closed today, see you tomorrow!
+Closing early at 3pm today
+CLOSED due to the storm
+Open late tonight til 10
+Just open 12-4 today
+Closed toe shoes required
+Open house this Saturday
+Closing down after 10 years, thank you everyone
+Closed for renovations until further notice
+We are closed Monday for the long weekend
+Kitchen closes at 9 but the bar is open til midnight
+New seasonal menu dropped, come try the pumpkin latte
+Sorry we are closed
+back open!
