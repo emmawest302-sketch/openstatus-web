@@ -1,4 +1,5 @@
 import PublicRatingRow from '@/components/public-rating-row';
+import { trackOpenStatusEvent } from '@/components/analytics-tracker';
 import type { ButtonStyle } from '@/lib/openstatus-page-config';
 import PublicShareButton from '@/components/public-share-button';
 
@@ -133,7 +134,8 @@ export default function PublicBioCard({
           alignItems: 'center', gap: 5, marginTop: 'clamp(10px, 3.4cqw, 13px)',
         }}>
           {websiteUrl && (
-            <a href={websiteUrl} target="_blank" rel="noreferrer" style={primaryAction(dark, buttonStyle)}>
+            <a href={websiteUrl} target="_blank" rel="noreferrer" style={primaryAction(dark, buttonStyle)}
+              onClick={() => trackOpenStatusEvent(businessId, 'block_click', 'website')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
               </svg>
@@ -142,7 +144,8 @@ export default function PublicBioCard({
           )}
 
           {directionsUrl && (
-            <a href={directionsUrl} target="_blank" rel="noreferrer" style={secondaryAction(dark, buttonStyle)}>
+            <a href={directionsUrl} target="_blank" rel="noreferrer" style={secondaryAction(dark, buttonStyle)}
+              onClick={() => trackOpenStatusEvent(businessId, 'directions_click', 'directions')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
               </svg>

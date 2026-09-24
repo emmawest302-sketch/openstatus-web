@@ -14,6 +14,7 @@ import { imageTreatment } from '@/lib/image-treatment';
 import { shortAddress } from '@/lib/address';
 import { localDay, activeOffers, newOfferId, MAX_OFFERS, OFFER_TITLE_MAX, OFFER_DESC_MAX, OFFER_CODE_MAX, type Offer } from '@/lib/offers';
 import { menuDestination } from '@/lib/menu';
+import { excludeFromAnalytics, resetAnalyticsAudience } from '@/components/analytics-tracker';
 import { externalUrl } from '@/lib/url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS, fontScaleStyle } from '@/lib/page-metrics';
 import { BUILDER_UI, BUILDER_FONT, BUILDER_TYPE, BUILDER_RADIUS } from '@/lib/builder-theme';
@@ -842,6 +843,114 @@ function ButtonStylePicker({ value, onChange }: { value: ButtonStyle; onChange:(
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * One row of the mobile Blocks list.
+ *
+ * Its own component so the drag handlers are created at component scope
+ * rather than manufactured for every row inside the parent's render. Nothing
+ * about the behaviour or the look changed in the move.
+ */
+function BlocksRow({
+  block, on, needsSetup, summary, movable, isDragging, anyDragging,
+  onTapAllowed, onOpen, onToggle, onDragBegin, onDragOver, onDragEnd,
+}: {
+  block: OpenStatusBlock;
+  on: boolean;
+  needsSetup: boolean;
+  summary: string;
+  movable: boolean;
+  isDragging: boolean;
+  anyDragging: boolean;
+  onTapAllowed: () => boolean;
+  onOpen: (id: string) => void;
+  onToggle: (id: string, next: boolean) => void;
+  onDragBegin: (id: string) => void;
+  onDragOver: (id: string, clientX: number, clientY: number) => void;
+  onDragEnd: () => void;
+}) {
+  return (
+    <div
+      data-block-id={block.id}
+      onClick={() => { if (!onTapAllowed()) return; onOpen(block.id); }}
+      className="flex items-center gap-3 px-3 py-3 rounded-[14px]"
+      style={{
+        background: BUILDER_UI.surface,
+        border: `1px solid ${isDragging ? BUILDER_UI.borderStrong : BUILDER_UI.border}`,
+        opacity: anyDragging && !isDragging ? 0.55 : on ? 1 : 0.62,
+        transform: isDragging ? 'scale(1.02)' : undefined,
+        boxShadow: isDragging ? '0 10px 26px rgba(10,10,10,0.14)' : undefined,
+        transition: 'transform .18s cubic-bezier(.32,.72,0,1), opacity .18s, box-shadow .18s',
+      }}
+    >
+      {/* The grip, and the only element here with touch-action:none. The
+          browser therefore never considers this gesture a scroll candidate,
+          which is what stops iOS cancelling the drag out from under us. */}
+      {movable ? (
+        <span
+          role="button"
+          aria-label={`Reorder ${block.title}`}
+          className="flex-shrink-0 grid place-items-center -ml-1"
+          style={{
+            width: 22, height: 32, cursor: 'grab',
+            touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none',
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch {/* not supported */}
+            onDragBegin(block.id);
+          }}
+          onPointerMove={(e) => {
+            if (!isDragging && !anyDragging) return;
+            e.preventDefault();
+            e.stopPropagation();
+            onDragOver(block.id, e.clientX, e.clientY);
+          }}
+          onPointerUp={(e) => { e.stopPropagation(); onDragEnd(); }}
+          onPointerCancel={onDragEnd}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <svg width="10" height="16" viewBox="0 0 10 16" fill={BUILDER_UI.quiet} aria-hidden="true">
+            <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
+            <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
+            <circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>
+          </svg>
+        </span>
+      ) : <span className="flex-shrink-0" style={{ width: 22 }}/>}
+
+      <span className="flex-shrink-0 grid place-items-center rounded-[10px]"
+        style={{ width: 32, height: 32, background: BUILDER_UI.surfaceSoft }}>
+        <BlockIcon id={block.id} size={15} color={BUILDER_UI.text}/>
+      </span>
+
+      <span className="flex-1 min-w-0">
+        <span className="block truncate" style={{ ...BUILDER_TYPE.cardTitle, color: BUILDER_UI.ink }}>{block.title}</span>
+        <span className="block truncate mt-0.5"
+          style={{ ...BUILDER_TYPE.helper, color: needsSetup ? BUILDER_UI.warning : BUILDER_UI.muted }}>
+          {summary}
+        </span>
+      </span>
+
+      {block.id !== 'hours' && (
+        <button
+          aria-label={`${on ? 'Hide' : 'Show'} ${block.title}`}
+          onClick={(e) => { e.stopPropagation(); onToggle(block.id, !on); }}
+          className="flex-shrink-0 rounded-full transition-colors"
+          style={{ width: 40, height: 24, padding: 2, background: on ? BUILDER_UI.ink : BUILDER_UI.surfacePressed }}
+        >
+          <span className="block rounded-full transition-transform"
+            style={{
+              width: 20, height: 20, background: '#FFFFFF',
+              transform: on ? 'translateX(16px)' : 'translateX(0)',
+              boxShadow: '0 1px 3px rgba(10,10,10,0.2)',
+            }}/>
+        </button>
+      )}
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
     </div>
   );
 }
@@ -2084,39 +2193,36 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[]);
 
   /**
-   * The grip. Starts a drag on the first movement, no hold required.
+   * Reordering, as three plain callbacks rather than a bag of handlers.
    *
-   * touch-action:none on the grip itself is the whole trick: the browser never
-   * considers the gesture a candidate for scrolling, so it never cancels the
-   * pointer stream out from under us the way it does on a plain long-press.
+   * This used to be `previewHandleProps(id)` — a function returning an object
+   * of event handlers, called for every row inside the list's `.map`. It
+   * worked, but React's compiler was right to object: the returned closures
+   * capture refs, so calling it during render is reading refs during render.
+   * The row owns its own handlers now and calls these from inside them, which
+   * is after render, where touching a ref is exactly what refs are for.
+   *
+   * touch-action:none still lives on the grip itself — that is the whole
+   * reason the gesture survives on iOS — it is just declared in BlocksRow now.
    */
-  const previewHandleProps = useCallback((id:string)=>({
-    style:{ touchAction:'none' as const, WebkitUserSelect:'none' as const, userSelect:'none' as const },
-    onPointerDown:(e:React.PointerEvent<HTMLElement>)=>{
-      if(!canDrag(id)) return;
-      e.stopPropagation();
-      e.preventDefault();
-      try{ e.currentTarget.setPointerCapture(e.pointerId); }catch{/* not supported */}
-      dragging.current=true;
-      setMDragId(id);
-      try{ navigator.vibrate?.(12); }catch{/* not supported */}
-    },
-    onPointerMove:(e:React.PointerEvent<HTMLElement>)=>{
-      if(!dragging.current) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const el=document.elementFromPoint(e.clientX,e.clientY) as HTMLElement|null;
-      const over=el?.closest('[data-block-id]') as HTMLElement|null;
-      const overId=over?.getAttribute('data-block-id');
-      const from=mDragId ?? id;
-      if(overId && overId!==from) swapBlocks(from,overId);
-    },
-    onPointerUp:(e:React.PointerEvent<HTMLElement>)=>{ e.stopPropagation(); endDrag(); },
-    onPointerCancel:endDrag,
-    // A drop lands as a click on whatever is underneath; without this it also
-    // opens that widget's editor.
-    onClick:(e:React.MouseEvent)=>{ e.stopPropagation(); },
-  }),[mDragId,endDrag,swapBlocks]);
+  const beginRowDrag = useCallback((id:string)=>{
+    if(!canDrag(id)) return;
+    dragging.current = true;
+    setMDragId(id);
+    try{ navigator.vibrate?.(12); }catch{/* not supported */}
+  },[]);
+
+  /** The dragged row's id is passed in, so there is no stale closure to get wrong. */
+  const dragRowOver = useCallback((draggedId:string, clientX:number, clientY:number)=>{
+    if(!dragging.current) return;
+    const el = document.elementFromPoint(clientX, clientY) as HTMLElement|null;
+    const over = el?.closest('[data-block-id]') as HTMLElement|null;
+    const overId = over?.getAttribute('data-block-id');
+    if(overId && overId !== draggedId) swapBlocks(draggedId, overId);
+  },[swapBlocks]);
+
+  /** A drop lands as a click on whatever is underneath. Suppress that one tap. */
+  const rowTapAllowed = useCallback(()=> !dragging.current && !suppressTap.current, []);
 
   /**
    * Long-press a widget to pick it up, then drag to rearrange — the iOS
@@ -2250,6 +2356,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     if(/^#[0-9a-fA-F]{6}$/.test(bg)) return bg.toUpperCase();
     // A page still carrying one of the retired animated wallpapers.
     return bg.startsWith('#')?bg.toUpperCase():'Custom';
+  },[]);
+
+  /**
+   * Nothing the owner does in here is customer behaviour.
+   *
+   * The preview renders the real public rows with the real business id, so
+   * every tap in it was being filed as a customer action. Declared before the
+   * preview can exist, and released on the way out so a public page opened
+   * afterwards in the same tab decides for itself.
+   */
+  useEffect(()=>{
+    excludeFromAnalytics();
+    return ()=>{ resetAnalyticsAudience(); };
   },[]);
 
   const [previewOpen,setPreviewOpen]=useState(true);
@@ -3341,6 +3460,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {(()=>{
                   const active = statusUpdates.filter(u=>u.status!=='needs_review');
                   const isOverridden = active.length>0;
+                  // An override is not the same as being shut. "Closed today" closes;
+                  // "different hours today" and "closing early" leave the shop open on a
+                  // changed schedule. The button said "I'm open again" for all three,
+                  // which is nonsense on the two where nobody ever closed. What the
+                  // action really does is throw today's exception away, so that is what
+                  // the label says when there is nothing to reopen from.
+                  const overrideClosed = active[0]?.kind === 'closed';
+                  const undoLabel = overrideClosed ? 'I\u2019m open again' : 'Back to my normal hours';
                   return (
                     <div className={`rounded-[22px] border px-7 py-8 mb-5 transition-colors ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E9E9E7] bg-[#F7F7F6]'}`}>
                       <p className="mb-4 text-[12px] font-medium text-[#777777]">What customers see today</p>
@@ -3364,7 +3491,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           disabled={statusPosting}
                           className="w-full sm:w-auto px-7 py-3 rounded-full bg-[#16A34A] text-white text-[14px] font-semibold hover:bg-[#15803D] transition-colors disabled:opacity-40"
                         >
-                          {statusPosting?'Working…':'I’m open again'}
+                          {statusPosting?'Working…':undoLabel}
                         </button>
                       ) : (
                         <button
@@ -4778,6 +4905,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {(()=>{
               const active = statusUpdates.filter(u=>u.status!=='needs_review');
               const isOverridden = active.length>0;
+              // See the note on the desktop card: an override is not a closure.
+              const overrideClosed = active[0]?.kind === 'closed';
+              const undoLabel = overrideClosed ? 'I\u2019m open again' : 'Back to my normal hours';
               return (
                 <div className={`rounded-[20px] border p-6 mt-4 ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E9E9E7] bg-[#F7F7F6]'}`}>
                   <p className="mb-4 text-[12px] font-medium text-[#777777]">What customers see today</p>
@@ -4796,7 +4926,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   {isOverridden ? (
                     <button onClick={reopenEverything} disabled={statusPosting}
                       className="w-full py-3.5 rounded-2xl bg-[#16A34A] text-white text-[15px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
-                      {statusPosting?'Working…':'I’m open again'}
+                      {statusPosting?'Working…':undoLabel}
                     </button>
                   ) : (
                     <button onClick={()=>postStatus('closed_today')} disabled={statusPosting}
@@ -4933,72 +5063,24 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </p>
 
             <div className="space-y-1.5">
-              {orderedBlocks.map(b=>{
-                const on = b.on !== false;
-                const needsSetup = on && !blockHasDestination(b);
-                const movable = canDrag(b.id);
-                const grip = movable ? previewHandleProps(b.id) : null;
-                const { style: gripStyle, ...gripRest } = grip ?? {};
-                return (
-                  <div key={b.id} data-block-id={b.id}
-                    onClick={()=>{ if(dragging.current||suppressTap.current) return; openBlockSheet(b.id); }}
-                    className="flex items-center gap-3 px-3 py-3 rounded-[14px]"
-                    style={{
-                      background: BUILDER_UI.surface,
-                      border:`1px solid ${mDragId===b.id?BUILDER_UI.borderStrong:BUILDER_UI.border}`,
-                      opacity: mDragId&&mDragId!==b.id ? 0.55 : on ? 1 : 0.62,
-                      transform: mDragId===b.id ? 'scale(1.02)' : undefined,
-                      boxShadow: mDragId===b.id ? '0 10px 26px rgba(10,10,10,0.14)' : undefined,
-                      transition:'transform .18s cubic-bezier(.32,.72,0,1), opacity .18s, box-shadow .18s',
-                    }}>
-
-                    {/* Grip. Six dots, quiet, and the only touch-action:none here. */}
-                    {movable ? (
-                      <span role="button" aria-label={`Reorder ${b.title}`} {...gripRest}
-                        className="flex-shrink-0 grid place-items-center -ml-1"
-                        style={{width:22, height:32, cursor:'grab', ...(gripStyle ?? {})}}>
-                        <svg width="10" height="16" viewBox="0 0 10 16" fill={BUILDER_UI.quiet} aria-hidden="true">
-                          <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
-                          <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
-                          <circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>
-                        </svg>
-                      </span>
-                    ) : <span className="flex-shrink-0" style={{width:22}}/>}
-
-                    <span className="flex-shrink-0 grid place-items-center rounded-[10px]"
-                      style={{width:32, height:32, background:BUILDER_UI.surfaceSoft}}>
-                      <BlockIcon id={b.id} size={15} color={BUILDER_UI.text}/>
-                    </span>
-
-                    <span className="flex-1 min-w-0">
-                      <span className="block truncate" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>{b.title}</span>
-                      <span className="block truncate mt-0.5"
-                        style={{...BUILDER_TYPE.helper, color: needsSetup?BUILDER_UI.warning:BUILDER_UI.muted}}>
-                        {blockSummary(b)}
-                      </span>
-                    </span>
-
-                    {b.id!=='hours'&&(
-                      <button
-                        aria-label={`${on?'Hide':'Show'} ${b.title}`}
-                        onClick={e=>{ e.stopPropagation(); updateBlock(b.id,{on:!on}); }}
-                        className="flex-shrink-0 rounded-full transition-colors"
-                        style={{
-                          width:40, height:24, padding:2,
-                          background: on?BUILDER_UI.ink:BUILDER_UI.surfacePressed,
-                        }}>
-                        <span className="block rounded-full transition-transform"
-                          style={{
-                            width:20, height:20, background:'#FFFFFF',
-                            transform: on?'translateX(16px)':'translateX(0)',
-                            boxShadow:'0 1px 3px rgba(10,10,10,0.2)',
-                          }}/>
-                      </button>
-                    )}
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
-                  </div>
-                );
-              })}
+              {orderedBlocks.map(b=>(
+                <BlocksRow
+                  key={b.id}
+                  block={b}
+                  on={b.on !== false}
+                  needsSetup={b.on !== false && !blockHasDestination(b)}
+                  summary={blockSummary(b)}
+                  movable={canDrag(b.id)}
+                  isDragging={mDragId === b.id}
+                  anyDragging={mDragId !== null}
+                  onTapAllowed={rowTapAllowed}
+                  onOpen={openBlockSheet}
+                  onToggle={(id,next)=>updateBlock(id,{on:next})}
+                  onDragBegin={beginRowDrag}
+                  onDragOver={dragRowOver}
+                  onDragEnd={endDrag}
+                />
+              ))}
             </div>
 
             <button onClick={()=>setMSheet('add')}

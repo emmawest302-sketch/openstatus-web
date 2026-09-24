@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
+import { summariseEvents } from '@/lib/analytics-summary';
 
 const EVENT_TYPES = new Set(['page_view','block_click','directions_click','social_click','share_click']);
 
@@ -55,41 +56,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: missing ? 'Analytics storage is not set up yet.' : error.message, needsSetup: missing }, { status: missing ? 503 : 500 });
   }
 
-  const events = rows ?? [];
-  const pageViews = events.filter((e) => e.event_type === 'page_view');
-  const uniqueVisitors = new Set(pageViews.map((e) => e.visitor_id).filter(Boolean)).size;
-  const blockCounts: Record<string, number> = {};
-  const sourceCounts: Record<string, number> = {};
-  const daily: Record<string, { views: number; clicks: number }> = {};
+  // Definitions live in lib/analytics-summary, with tests. They were inline
+  // here and had already drifted: "Directions" counted the map block only,
+  // while the header Directions button was not tracked at all.
+  const summary = summariseEvents(
+    (rows ?? []).map((r) => ({ ...r, referrer: sourceLabel(r.referrer) })),
+  );
 
-  for (const event of events) {
-    const day = event.created_at.slice(0, 10);
-    daily[day] ??= { views: 0, clicks: 0 };
-    if (event.event_type === 'page_view') {
-      daily[day].views += 1;
-      const source = sourceLabel(event.referrer);
-      sourceCounts[source] = (sourceCounts[source] || 0) + 1;
-    } else {
-      daily[day].clicks += 1;
-    }
-    if (event.block_id) blockCounts[event.block_id] = (blockCounts[event.block_id] || 0) + 1;
-  }
-
-  const metric = (id: string) => blockCounts[id] || 0;
-  const directions = metric('map') || events.filter((e) => e.event_type === 'directions_click').length;
-  const menu = metric('menu');
-  const orders = metric('order');
-  const topActions = Object.entries(blockCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, count]) => ({ id, count }));
-  const trafficSources = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([source, count]) => ({ source, count }));
-  const trend = Object.entries(daily).map(([date, values]) => ({ date, ...values }));
-
-  return NextResponse.json({
-    days,
-    metrics: { views: pageViews.length, uniqueVisitors, directions, menu, orders, clicks: events.length - pageViews.length },
-    topActions,
-    trafficSources,
-    trend,
-  });
+  return NextResponse.json({ days, ...summary });
 }
 
 /**

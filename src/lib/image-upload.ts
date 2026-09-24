@@ -46,61 +46,83 @@ export function fitDimensions(
   };
 }
 
-/** Decode with EXIF applied, falling back for browsers without the option. */
-async function decode(file: File): Promise<ImageBitmap | HTMLImageElement> {
+/**
+ * Decode, with EXIF orientation applied.
+ *
+ * The object URL is NOT revoked here. It used to be, in a `finally` that ran
+ * the moment the image finished loading — before the caller had drawn it to a
+ * canvas. Chrome tolerates that; Safari can hand back a blank frame, so an
+ * owner uploaded a logo and got a white square. The caller owns the URL now
+ * and releases it after the draw.
+ */
+async function decode(file: File): Promise<{
+  source: ImageBitmap | HTMLImageElement;
+  release: () => void;
+}> {
   if (typeof createImageBitmap === 'function') {
     try {
-      return await createImageBitmap(file, { imageOrientation: 'from-image' });
+      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      return { source: bitmap, release: () => bitmap.close() };
     } catch {/* HEIC on a browser that cannot decode it, or an old Safari */}
   }
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
-    img.decoding = 'sync';
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
       img.onerror = () => reject(new Error('That file could not be read as an image.'));
       img.src = url;
     });
-    return img;
-  } finally {
-    // Revoking immediately is safe: the bitmap is already decoded into the
-    // element, and holding the URL leaks for the life of the document.
+    return { source: img, release: () => URL.revokeObjectURL(url) };
+  } catch (e) {
     URL.revokeObjectURL(url);
+    throw e;
   }
 }
 
 /**
- * A JPEG, upright, small enough to upload. Returns a File so the caller's
+ * A small, upright image, ready to upload. Returns a File so the caller's
  * FormData code is unchanged.
+ *
+ * A logo keeps its transparency and stays a PNG: flattening a round mark onto
+ * white and calling it a JPEG puts a white square behind every avatar. A cover
+ * photo has no transparency worth keeping and is far larger, so it becomes a
+ * JPEG, which is the whole reason this function exists.
  */
 export async function prepareImageForUpload(
   file: File,
   kind: 'avatar' | 'header',
 ): Promise<File> {
-  const source = await decode(file);
-  const sw = 'width' in source ? source.width : 0;
-  const sh = 'height' in source ? source.height : 0;
-  const { width, height } = fitDimensions(sw, sh, MAX_EDGE[kind]);
-  if (!width || !height) throw new Error('That image has no size we can read.');
+  const { source, release } = await decode(file);
+  try {
+    const sw = source.width;
+    const sh = source.height;
+    const { width, height } = fitDimensions(sw, sh, MAX_EDGE[kind]);
+    if (!width || !height) throw new Error('That image has no size we can read.');
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('This browser would not let us resize that image.');
-  // White underneath, because a transparent PNG flattened onto nothing in a
-  // JPEG comes out black.
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, width, height);
-  ctx.drawImage(source as CanvasImageSource, 0, 0, width, height);
-  if ('close' in source) source.close();
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('This browser would not let us resize that image.');
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', 0.86),
-  );
-  if (!blob) throw new Error('That image could not be converted.');
+    const keepAlpha = kind === 'avatar';
+    if (!keepAlpha) {
+      // A transparent PNG flattened onto nothing comes out black in a JPEG.
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.drawImage(source as CanvasImageSource, 0, 0, width, height);
 
-  const base = file.name.replace(/\.[^.]+$/, '') || kind;
-  return new File([blob], `${base}.jpg`, { type: 'image/jpeg' });
+    const type = keepAlpha ? 'image/png' : 'image/jpeg';
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, type, keepAlpha ? undefined : 0.86),
+    );
+    if (!blob || blob.size === 0) throw new Error('That image could not be converted.');
+
+    const base = file.name.replace(/\.[^.]+$/, '') || kind;
+    return new File([blob], `${base}.${keepAlpha ? 'png' : 'jpg'}`, { type });
+  } finally {
+    release();
+  }
 }
