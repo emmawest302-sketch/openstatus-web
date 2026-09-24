@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 import PublishedBusinessBlocks from '@/components/published-business-blocks';
 import PublicSocialLinks from '@/components/public-social-links';
+import PublicBioCard from '@/components/public-bio-card';
 import { imageTreatment } from '@/lib/image-treatment';
 import PublicRatingRow from '@/components/public-rating-row';
 import AnalyticsTracker from '@/components/analytics-tracker';
@@ -270,6 +271,16 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const locationBlockOn = locationBlock?.on !== false && !!locationBlock && (!!mapAddress || !!locationBlock.googleUrl || !!locationBlock.appleMapsUrl);
 
   // Initials fallback
+  // Website and Directions are header actions now, not rows. Read them from
+  // the blocks so an owner's existing setup still feeds them, and fall back to
+  // the address when no location block has a link of its own.
+  const websiteBlock = enrichedConfig.blocks.find((b) => b.id === 'website');
+  const headerWebsiteUrl = websiteBlock?.url?.trim() || null;
+  const directionsTarget = (locationBlock?.address || business.address || '').trim();
+  const headerDirectionsUrl = directionsTarget
+    ? `https://maps.google.com/?q=${encodeURIComponent(directionsTarget)}`
+    : null;
+
   const initials = business.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p: string) => p[0]).join('').toUpperCase();
 
   // Glass card style
@@ -387,95 +398,30 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           }}/>
         )}
 
-        {/* ── Logo ── */}
-        <div style={{
-          display: 'flex', justifyContent: 'center',
-          marginTop: coverPhoto ? -38 : 0,
-          position: 'relative', zIndex: 10,
-        }}>
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatar} alt={`${business.name} logo`}
-              style={{
-                width: 80, height: 80, borderRadius: '50%',
-                border: '3px solid rgba(255,255,255,0.90)',
-                background: 'rgba(255,255,255,0.80)',
-                objectFit: 'cover',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
-                display: 'block',
-                backdropFilter: 'blur(20px)',
-              }}
-            />
-          ) : (
-            <div style={{
-              width: 80, height: 80, borderRadius: '50%',
-              border: '3px solid rgba(255,255,255,0.90)',
-              background: 'rgba(255,255,255,0.80)',
-              backdropFilter: 'blur(20px)',
-              display: 'grid', placeItems: 'center',
-              fontSize: 22, fontWeight: 800, color: themeColor,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
-            }}>
-              {initials}
-            </div>
-          )}
-        </div>
-
-        {/* ── Business name ── */}
-        <div style={{ textAlign: 'center', padding: '6px 16px 2px' }}>
-          <h1 style={{
-            fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em',
-            color: nameColor, lineHeight: 1, margin: 0,
-            fontFamily: pageFont,
-          }}>
-            {business.name}
-          </h1>
-          {shortAddress && (
-            <p style={{
-              // Address, tags and tagline used to sit at near-identical size
-              // and colour, so they blurred into one grey paragraph. Each now
-              // steps down in weight so the eye can tell them apart.
-              fontSize: 12.5, fontWeight: 500,
-              color: bgIsDark ? 'rgba(255,255,255,0.74)' : '#5A5A57',
-              marginTop: 7, lineHeight: 1.4,
-            }}>
-              {shortAddress}
-            </p>
-          )}
-          {(enrichedConfig.tags ?? []).length > 0 && (
-            <p style={{
-              maxWidth:440, margin:'6px auto 0', padding:'0 8px',
-              fontSize:12, fontWeight:400, lineHeight:1.55,
-              color:bgIsDark ? 'rgba(255,255,255,0.58)' : 'rgba(21,21,21,0.48)',
-            }}>
-              {(enrichedConfig.tags ?? []).filter(Boolean).join(' · ')}
-            </p>
-          )}
-          {business.tagline && (
-            <p style={{
-              fontSize: 10, fontWeight: 600, letterSpacing: '0.16em',
-              textTransform: 'uppercase', marginTop: 7,
-              color: bgIsDark ? 'rgba(255,255,255,0.52)' : 'rgba(21,21,21,0.42)',
-            }}>
-              {business.tagline}
-            </p>
-          )}
-          {/* Credibility sits with the identity it belongs to, not in a bar
-              of its own further down the page. */}
-          <PublicRatingRow businessId={business.id} placeId={business.place_id} dark={bgIsDark}/>
-
-          {/* The one thing we want a visitor to do. */}
-          <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
-            <PublicShareButton
-              businessName={business.name}
-              url={pageUrl(slug)}
-              businessId={business.id}
-              dark={bgIsDark}
-              accent={themeColor}
-            />
-          </div>
-        </div>
+        {/* ── Protected business bio ──
+             Identity on frosted glass rather than straight onto the cover
+             photo, so a dark interior shot or a bright window doesn't decide
+             whether the shop's own name is readable. Website and Directions
+             live in here too: every business has one, the other or neither,
+             and they're what a customer reaches for first — too important to
+             be blocks an owner can switch off or bury. */}
+        <PublicBioCard
+          businessName={business.name}
+          businessId={business.id}
+          slug={slug}
+          address={shortAddress || business.address}
+          tags={enrichedConfig.tags ?? []}
+          placeId={business.place_id}
+          websiteUrl={headerWebsiteUrl}
+          directionsUrl={headerDirectionsUrl}
+          shareUrl={pageUrl(slug)}
+          dark={bgIsDark}
+          accent={themeColor}
+          nameColor={nameColor}
+          pageFont={pageFont}
+          logo={avatar}
+          initials={initials}
+        />
 
         {/* ── Status: the reason this page exists, so it leads ──
              This used to sit third — below the name, the share button and the
@@ -576,10 +522,9 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         {/* ── Blocks ── */}
         <div style={{ padding: '8px 12px 36px', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-          {/* Location block */}
-          {locationBlockOn && locationBlock && (
-            <PublicLocationBlock block={locationBlock} businessId={business.id} themeColor={themeColor} dark={bgIsDark}/>
-          )}
+          {/* Location and Website used to be rows here. They are permanent
+              header actions now, so PublishedBusinessBlocks filters them out
+              and the map, when there is one, renders under the address. */}
 
           {/* All other blocks */}
           <PublishedBusinessBlocks

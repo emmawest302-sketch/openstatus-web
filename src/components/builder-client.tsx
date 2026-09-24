@@ -781,10 +781,13 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
         <div className="relative px-3 pb-5">
           {sortedBlocks.length===0
             ?<p className={`text-center text-[10px] py-8 ${sx}`}>Toggle blocks to see them here</p>
-            :<div className="grid grid-cols-2 gap-1.5">
+            :<div className="flex flex-col gap-1.5">
               {sortedBlocks.map(b=>{
-                const isSquare = b.size==='square' && b.id!=='hours';
-                const isHalf = (b.size==='half'||b.size==='square'||b.size==='third') && b.id!=='hours';
+                // One width for every feature, matching the live page. The
+                // size system is retired; these stay as consts so the preview's
+                // per-style branches keep compiling until they are reworked.
+                const isSquare = false;
+                const isHalf = false;
                 const cardBg = TOK.card;
                 const bdr = TOK.cardBorder;
 
@@ -942,7 +945,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
                 const { style: extraStyle, ...extraRest } = extra ?? {};
                 return (
                   <div key={b.id} data-block-id={b.id}
-                    className={`${isHalf?'col-span-1':'col-span-2'} grid ${onSelectBlock?'cursor-pointer':''}`}
+                    className={`${onSelectBlock?'cursor-pointer':''}`}
                     onClick={()=>onSelectBlock?.(b.id)}
                     {...extraRest}
                     style={{
@@ -1649,41 +1652,12 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
             </div>
           )}
 
-          {/* Widget size — shape thumbnails, photo-capable sizes flagged */}
-          {block.id!=='hours' && (()=>{
-            const cur: BlockSize = (block.size==='third'?'half':block.size) ?? 'full';
-            const SIZES: { key:BlockSize; label:string; ratio:string; span:number }[] = [
-              { key:'half',   label:'Small',  ratio:'2/1',  span:1 },
-              { key:'square', label:'Square', ratio:'1/1',  span:1 },
-              { key:'full',   label:'Large',  ratio:'16/10',span:2 },
-            ];
-            return (
-              <div className="pt-5 border-t border-[#F0F0F0]">
-                <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3">Size</p>
-                <div className="flex items-end gap-2.5">
-                  {SIZES.map(sz=>{
-                    const on = cur===sz.key;
-                    return (
-                      <button key={sz.key} onClick={()=>onUpdateBlock({size:sz.key})}
-                        className="flex flex-col items-center gap-1.5 group"
-                        style={{width:sz.span===2?86:44}}>
-                        <span className="w-full rounded-lg border-2 transition-all group-hover:scale-105 flex items-end justify-start p-1"
-                          style={{aspectRatio:sz.ratio,borderColor:on?'#0A0A0A':'#E9E9E7',background:on?'#EEEEEC':'#F7F7F6'}}>
-                          <span className="block w-1/2 h-[3px] rounded-full" style={{background:on?'#0A0A0A':'#D4D4D4'}}/>
-                        </span>
-                        <span className={`text-[10px] font-semibold ${on?'text-[#0A0A0A]':'text-[#858585]'}`}>{sz.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2.5 text-[10px] text-[#9A9A97]">
-                  {blockAllowsPhoto(cur)
-                    ? 'Square and Large can hold a cover photo.'
-                    : 'Small is text only — switch to Square or Large to add a photo.'}
-                </p>
-              </div>
-            );
-          })()}
+          {/* The size picker used to live here — Small / Square / Large.
+              It is gone deliberately. An owner sizing each feature was an
+              owner laying out a web page, and it produced holes where a small
+              block sat alone and mismatched heights where two disagreed, for a
+              choice no customer benefits from. The page has one shape now; the
+              owner chooses the feel in Style instead. */}
 
         </div>
       </div>

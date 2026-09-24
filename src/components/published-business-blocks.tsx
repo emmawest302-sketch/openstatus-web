@@ -3,7 +3,7 @@ import PublicLocationBlock from '@/components/public-location-block';
 import InstagramUpdatesBlock from '@/components/instagram-updates-block';
 import PublicGalleryBlock from '@/components/public-gallery-block';
 import type { OpenStatusPageConfig } from '@/lib/openstatus-page-config';
-import { computeSpans } from '@/lib/block-layout';
+import { HEADER_ACTION_IDS } from '@/lib/page-rows';
 
 type Props = {
   businessId: string;
@@ -29,26 +29,26 @@ export default function PublishedBusinessBlocks({
   const enabled = config.blocks.filter((block) =>
     block.on !== false &&
     block.id !== 'hours' &&
-    block.id !== 'location' &&
+    // Header actions, not rows. See HEADER_ACTION_IDS in lib/page-rows.
+    !HEADER_ACTION_IDS.has(block.id) &&
     // Retired. Social links render once, as the icon row above the footer.
     // As a block they appeared a second time on the same page.
     block.id !== 'socials' &&
     hasDestination(block)
   );
 
-  // Spans depend on what sits next to a block, so they are worked out for the
-  // whole list at once. See src/lib/block-layout.ts for the rule and its tests.
-  const spans = computeSpans(enabled);
-
+  // Every feature is one full-width row now. Owners used to size each block —
+  // half, square, third — which produced holes where a half sat alone and
+  // mismatched heights where two disagreed, for a choice no customer benefits
+  // from. The page has one shape; the owner chooses the feel instead.
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
-      {enabled.map((block, index) => {
-        const span = spans[index];
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {enabled.map((block) => {
 
         // Special renderers
         if (block.id === 'updates') {
           return (
-            <div key={block.id} style={{ gridColumn: 'span 6' }}>
+            <div key={block.id}>
               <InstagramUpdatesBlock businessId={businessId} />
             </div>
           );
@@ -56,18 +56,14 @@ export default function PublishedBusinessBlocks({
 
         if (block.id === 'gallery') {
           return (
-            <div key={block.id} style={{ gridColumn: `span ${span}` }}>
+            <div key={block.id}>
               <PublicGalleryBlock block={block} businessId={businessId} placeId={placeId}/>
             </div>
           );
         }
 
         return (
-          // display:grid so the card stretches to the row height. Without it a
-          // short link card sat at its natural height beside a tall photo card
-          // and left a dead gap under itself — the pair read as broken spacing
-          // rather than as two tiles.
-          <div key={block.id} style={{ gridColumn: `span ${span}`, display: 'grid' }}>
+          <div key={block.id}>
             <PublicActionBlock block={block} businessId={businessId} dark={dark}/>
           </div>
         );
