@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg } from '@/lib/page-theme';
 import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedule } from '@/lib/business-status';
 import { swapById, canDrag } from '@/lib/reorder';
 import { prepareImageForUpload } from '@/lib/image-upload';
+import { googlePlanForToday, pagePlanForToday, samePlan, describePlan, type GooglePeriod } from '@/lib/google-sync';
 import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
 import { shortAddress } from '@/lib/address';
@@ -2144,7 +2145,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [tagDraft,setTagDraft]=useState('');
   // Live open-state read back from Google. `status` is Google's own enum string,
   // which is also how we learn the vocabulary this account actually uses.
-  const [gStatus,setGStatus]=useState<{status:string|null;canReopen:boolean|null;isClosed:boolean}|null>(null);
+  const [gStatus,setGStatus]=useState<{status:string|null;canReopen:boolean|null;isClosed:boolean;specialHourPeriods?:GooglePeriod[]}|null>(null);
   const [gBusy,setGBusy]=useState(false);
   const [gMsg,setGMsg]=useState('');
 
@@ -2376,6 +2377,33 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     return body as Record<string, unknown>;
   }
 
+  /**
+   * Google's answer for today, next to ours.
+   *
+   * The push is one-way, so the two drift and nothing says so: a dated closure
+   * left on the listing after the page reopened is invisible from inside the
+   * product and perfectly visible on Google Maps. Reading it back and stating
+   * the difference is the only way an owner finds out before a customer does.
+   */
+  const googleMismatch = useMemo(()=>{
+    if(!googleConnected||!gStatus) return null;
+    const tz=bizTimeZone||'America/Chicago';
+    const [ty,tm,td]=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'})
+      .format(new Date()).split('-').map(Number);
+    const today={year:ty,month:tm,day:td};
+    const DAY_KEYS=['sun','mon','tue','wed','thu','fri','sat'] as const;
+    const weekdayAtShop=new Intl.DateTimeFormat('en-US',{weekday:'short',timeZone:tz})
+      .format(new Date()).toLowerCase().slice(0,3) as typeof DAY_KEYS[number];
+    const regular=config.weeklyHours?.[weekdayAtShop];
+    const google=googlePlanForToday(gStatus.specialHourPeriods,today,gStatus.isClosed);
+    const page=pagePlanForToday(todayOverride,regular?.closed?null:regular?.open);
+    if(samePlan(google,page)) return null;
+    return {today,google,page};
+  },[googleConnected,gStatus,bizTimeZone,config.weeklyHours,todayOverride]);
+
+  const [fixingGoogle,setFixingGoogle]=useState(false);
+  const [fixMsg,setFixMsg]=useState('');
+
   const loadGoogleStatus=useCallback(async()=>{
     if(!googleConnected) return;
     try{
@@ -2384,12 +2412,64 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       if(!token) return;
       const res=await fetch('/api/google/status',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
       if(!res.ok) return;
-      const b=await res.json() as {status:string|null;canReopen:boolean|null;isClosed:boolean};
+      const b=await res.json() as {status:string|null;canReopen:boolean|null;isClosed:boolean;specialHourPeriods?:GooglePeriod[]};
       setGStatus(b);
     }catch{/* non-fatal — the local status controls still work */}
   },[googleConnected]);
 
-  useEffect(()=>{ if(sidebarTab==='hours') void loadGoogleStatus(); },[sidebarTab,loadGoogleStatus]);
+  // Also on the dashboard, not just the Status tab. A listing that disagrees
+  // with the page is the kind of thing an owner should trip over on the screen
+  // they open every morning, not one they only visit to close early.
+  useEffect(()=>{
+    if(sidebarTab==='hours'||sidebarTab==='business') void loadGoogleStatus();
+  },[sidebarTab,loadGoogleStatus]);
+
+  /** Make Google say what the page says. The page is the source of truth. */
+  const makeGoogleMatch=async()=>{
+    if(!googleMismatch) return;
+    setFixingGoogle(true); setFixMsg('');
+    const {today,page}=googleMismatch;
+    try{
+      if(page.kind==='normal'){
+        await googleStatusRequest({action:'special_hours',periods:[],clearDates:[today],today});
+      } else if(page.kind==='closed'){
+        await googleStatusRequest({action:'special_hours',today,
+          periods:[{startDate:today,endDate:today,closed:true}]});
+      } else {
+        const [oh,om]=page.open.split(':').map(Number);
+        const [ch,cm]=page.close.split(':').map(Number);
+        await googleStatusRequest({action:'special_hours',today,
+          periods:[{startDate:today,endDate:today,openTime:{hours:oh,minutes:om},closeTime:{hours:ch,minutes:cm}}]});
+      }
+      await loadGoogleStatus();
+      setFixMsg('\u2713 Google now matches your page.');
+    }catch(e){ setFixMsg(e instanceof Error?e.message:'Google would not take the change.'); }
+    setFixingGoogle(false);
+    setTimeout(()=>setFixMsg(''),8000);
+  };
+
+  /**
+   * An element, not a component.
+   *
+   * Declaring a component inside render gives it a fresh identity every pass,
+   * so React unmounts and remounts it — which here would throw away the
+   * "Telling Google…" state in the middle of the request. An element has no
+   * such problem, and only one of the four call sites is ever mounted.
+   */
+  const googleMismatchCard = googleMismatch ? (
+    <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4 mt-3 mb-1">
+      <p className="text-[13px] font-semibold text-[#0A0A0A] mb-1">Google and your page disagree</p>
+      <p className="text-[12px] text-[#B54708] leading-relaxed mb-3">
+        Google is showing customers <strong>{describePlan(googleMismatch.google)}</strong>.
+        Your page is showing <strong>{describePlan(googleMismatch.page)}</strong>.
+      </p>
+      <button disabled={fixingGoogle} onClick={()=>void makeGoogleMatch()}
+        className="w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12.5px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+        {fixingGoogle?'Telling Google\u2026':'Make Google match my page'}
+      </button>
+      {fixMsg&&<p className={`text-[12px] mt-2 ${fixMsg.startsWith('\u2713')?'text-[#166534]':'text-[#EF4444]'}`}>{fixMsg}</p>}
+    </div>
+  ) : null;
 
   /**
    * Dated exception. Written to BOTH Google's specialHours and our own
@@ -3000,6 +3080,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </p>
                 </div>
 
+                {googleMismatchCard}
+
                 {/* Google recovery — only when Google itself reports the listing closed */}
                 {googleConnected&&gStatus?.isClosed&&(
                   <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4 mb-5">
@@ -3418,6 +3500,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     and then never again, while this tab is the thing they open
                     every week to see how the page is doing. They live in
                     Settings → Business info now, on phone and desktop both. */}
+
+                <div className="mb-5">{googleMismatchCard}</div>
 
                 {/* ── Google connection status ── */}
                 <div className={`mb-5 p-4 rounded-2xl border ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E9E9E7] bg-[#F7F7F6]'}`}>
@@ -4309,6 +4393,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </button>
             </div>
 
+            <div className="mb-3">{googleMismatchCard}</div>
+
             {/* Google connection — the desktop Business tab has had this card
                 for ages and the mobile one never did, so an owner working from
                 a phone had no way to see that Google was unconnected, and no
@@ -4359,6 +4445,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {/* ── STATUS page ── one decision: closed, or open. Everything else folds away. ── */}
         {sidebarTab==='hours'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
+
+            {googleMismatchCard}
 
             {googleConnected&&gStatus?.isClosed&&(
               <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4 mt-3">
