@@ -13,9 +13,11 @@ import AddToHomeScreen from '@/components/add-to-home-screen';
 import { imageTreatment } from '@/lib/image-treatment';
 import { shortAddress } from '@/lib/address';
 import { localDay, activeOffers, newOfferId, MAX_OFFERS, OFFER_TITLE_MAX, OFFER_DESC_MAX, OFFER_CODE_MAX, type Offer } from '@/lib/offers';
+import { menuDestination } from '@/lib/menu';
 import { externalUrl } from '@/lib/url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS, fontScaleStyle } from '@/lib/page-metrics';
-import { applyVibe } from '@/lib/page-vibes';
+import { BUILDER_UI, BUILDER_FONT, BUILDER_TYPE, BUILDER_RADIUS } from '@/lib/builder-theme';
+import { applyVibe, activeVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
@@ -285,7 +287,7 @@ function PillSelect({ options,selected,onSelect }: { options:string[]; selected:
     <div className="flex flex-wrap gap-1.5">
       {options.map(o=>(
         <button key={o} onClick={()=>onSelect(o)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#7C3AED] text-white font-semibold border-[#0A0A0A]':'border-[#E9E9E7] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#0A0A0A] text-white font-semibold border-[#0A0A0A]':'border-[#E9E9E7] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
           {o}
         </button>
       ))}
@@ -371,7 +373,7 @@ function ImageAppearanceControls({ config, onChange }: {
 
   const seg = (active: boolean) =>
     `flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-      active ? 'bg-[#7C3AED] text-white' : 'bg-[#F7F7F6] text-[#777777] hover:text-[#0A0A0A]'
+      active ? 'bg-[#0A0A0A] text-white' : 'bg-[#F7F7F6] text-[#777777] hover:text-[#0A0A0A]'
     }`;
 
   return (
@@ -384,7 +386,7 @@ function ImageAppearanceControls({ config, onChange }: {
         <input
           type="range" min={0} max={100} step={1} value={intensity}
           onChange={e=>onChange({ imageIntensity: Number(e.target.value) })}
-          className="w-full accent-[#7C3AED]"
+          className="w-full accent-[#0A0A0A]"
           aria-label="Image intensity"
         />
         <p className="text-[11px] text-[#9A9A97] mt-1">
@@ -607,7 +609,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
           borderRadius: 20,
           position: 'relative',
           ...(onSelectBlock ? { cursor: 'pointer' } : {}),
-          ...(selectedId === id ? { outline: '2px solid #7C3AED', outlineOffset: 3 } : {}),
+          ...(selectedId === id ? { outline: '2px solid #0A0A0A', outlineOffset: 3 } : {}),
           ...(extraStyle ?? {}),
         }}
       >
@@ -746,15 +748,98 @@ function LiveDesktopPreview(props: React.ComponentProps<typeof LivePhonePreview>
   );
 }
 
+/**
+ * The page's accent.
+ *
+ * Renamed from "theme colour", which sounded like it repainted the page and so
+ * nobody touched it. It is the one saturated colour a business gets: links,
+ * small icons, the share button. It deliberately cannot reach open/closed —
+ * a customer glancing at a page has to be able to trust green.
+ *
+ * The swatches are the accents from the presets, so an owner who liked
+ * Botanical's green but wanted Coastal's layout can have both.
+ */
+const ACCENT_SWATCHES = ['#0A0A0A','#786C5B','#5F765D','#608197','#A06E50','#C9B58B','#315DE8','#B3453C'];
+
+function AccentPicker({ value, onChange }: { value: string; onChange:(v:string)=>void }) {
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2.5">
+        {ACCENT_SWATCHES.map(c=>{
+          const active = value.toLowerCase() === c.toLowerCase();
+          return (
+            <button key={c} onClick={()=>onChange(c)} aria-label={c} title={c}
+              className="rounded-full transition-transform active:scale-90"
+              style={{
+                width:30, height:30, background:c,
+                border: active?`2px solid ${BUILDER_UI.ink}`:`1px solid ${BUILDER_UI.border}`,
+                boxShadow: active?`0 0 0 2px ${BUILDER_UI.surface} inset`:undefined,
+              }}/>
+          );
+        })}
+        {/* The real input, invisible, on top of the swatch — a synthetic click
+            on a hidden colour input never opens the picker on iOS. */}
+        <span className="relative" style={{width:30, height:30}}>
+          <span aria-hidden className="absolute inset-0 rounded-full grid place-items-center"
+            style={{border:`1px dashed ${BUILDER_UI.borderStrong}`, color:BUILDER_UI.quiet, fontSize:13}}>+</span>
+          <input type="color" aria-label="Custom accent colour"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            value={/^#[0-9a-fA-F]{6}$/.test(value)?value:'#0A0A0A'}
+            onChange={e=>onChange(e.target.value)}/>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Filled, outline or glass — for the whole page, not per button.
+ *
+ * Drawn as three miniature headers rather than three words, because "glass"
+ * means nothing until you have seen it on a photo.
+ */
+function ButtonStylePicker({ value, onChange }: { value: ButtonStyle; onChange:(v:ButtonStyle)=>void }) {
+  const sample = (style: ButtonStyle): React.CSSProperties =>
+    style === 'outline'
+      ? { background:'transparent', border:`1.5px solid ${BUILDER_UI.ink}`, color:BUILDER_UI.ink }
+      : style === 'glass'
+      ? { background:'rgba(255,255,255,0.86)', border:`1px solid ${BUILDER_UI.border}`, color:BUILDER_UI.ink, backdropFilter:'blur(8px)' }
+      : { background:BUILDER_UI.ink, border:'1px solid transparent', color:'#FFFFFF' };
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {BUTTON_STYLES.map(style=>{
+        const active = value === style;
+        return (
+          <button key={style} onClick={()=>onChange(style)}
+            className="flex flex-col items-center gap-2 px-2 py-3 rounded-[14px] transition-all active:scale-95"
+            style={{
+              background: BUILDER_UI.surface,
+              border: active?`1.5px solid ${BUILDER_UI.ink}`:`1px solid ${BUILDER_UI.border}`,
+              boxShadow: active?`0 0 0 1px ${BUILDER_UI.ink}`:undefined,
+            }}>
+            <span className="rounded-lg grid place-items-center w-full"
+              style={{height:34, background:'linear-gradient(160deg,#E5E4E0,#FAFAF8)'}}>
+              <span className="px-3 py-1 rounded-full" style={{...sample(style), fontSize:9, fontWeight:600}}>Website</span>
+            </span>
+            <span style={{...BUILDER_TYPE.helper, fontWeight:500, color:active?BUILDER_UI.ink:BUILDER_UI.muted}}>
+              {style.charAt(0).toUpperCase()+style.slice(1)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function NameColorPicker({ value, autoColor, onChange }: {
   value?: string; autoColor: string; onChange:(v:string|undefined)=>void;
 }) {
-  const SWATCHES = ['#FFFFFF','#0A0A0A','#7C3AED','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899'];
+  const SWATCHES = ['#FFFFFF','#0A0A0A','#0A0A0A','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899'];
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-2.5">
         <button onClick={()=>onChange(undefined)}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${!value?'bg-[#7C3AED] text-white border-[#0A0A0A]':'border-[#E9E9E7] text-[#777777] hover:border-[#0A0A0A]'}`}>
+          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${!value?'bg-[#0A0A0A] text-white border-[#0A0A0A]':'border-[#E9E9E7] text-[#777777] hover:border-[#0A0A0A]'}`}>
           Auto
         </button>
         {SWATCHES.map(c=>(
@@ -848,7 +933,7 @@ function CoverPhotoCrop({ src, position, onChange, onRemove }: {
         <span className="text-[10px] font-normal text-[#9A9A97] w-8 flex-shrink-0">Up</span>
         <input type="range" min={0} max={100} value={py}
           onChange={e=>onChange(`${px}% ${e.target.value}%`)}
-          className="flex-1 accent-[#7C3AED]" aria-label="Vertical crop position"/>
+          className="flex-1 accent-[#0A0A0A]" aria-label="Vertical crop position"/>
         <span className="text-[10px] font-normal text-[#9A9A97] w-10 flex-shrink-0 text-right">Down</span>
       </div>
     </div>
@@ -862,7 +947,7 @@ function TextStylePicker({ bold, italic, onToggle }: {
 }) {
   const btn = (on:boolean) =>
     `w-6 h-6 rounded-lg text-[11px] leading-none flex items-center justify-center border transition-colors ${
-      on ? 'bg-[rgba(124,58,237,0.07)] border-[#7C3AED] text-[#0A0A0A]' : 'bg-white border-[#E9E9E7] text-[#9A9A97] hover:border-[#DCDCD9]'
+      on ? 'bg-[rgba(124,58,237,0.07)] border-[#0A0A0A] text-[#0A0A0A]' : 'bg-white border-[#E9E9E7] text-[#9A9A97] hover:border-[#DCDCD9]'
     }`;
   return (
     <div className="flex items-center gap-1 mb-1.5">
@@ -1598,7 +1683,7 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
           <button onClick={onDone} className="text-[12px] text-[#858585] hover:text-[#0A0A0A] font-medium transition-colors">Skip</button>
           <div className="flex items-center gap-2">
             {step>0&&<button onClick={()=>setStep(s=>s-1)} className="px-4 py-1.5 text-[12px] font-semibold rounded-full border border-[#E0E0E0] text-[#6B6B6B] hover:border-[#0A0A0A] transition-colors">Back</button>}
-            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors">{isLast?'Done':'Next →'}</button>
+            <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#0A0A0A] text-white hover:bg-[#292926] transition-colors">{isLast?'Done':'Next →'}</button>
           </div>
         </div>
       </div>
@@ -1652,7 +1737,37 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'links'|'analytics'|'integrations';
+type SidebarTab = 'design'|'business'|'hours'|'settings'|'style'|'links'|'analytics'|'integrations'|'blocks'|'more';
+
+/**
+ * The five places a phone can be.
+ *
+ * `sidebarTab` stays the single source of truth — desktop and mobile share it,
+ * so switching devices mid-session lands you somewhere sensible — but the
+ * phone's names and groupings are its own. Desktop's Analytics and Settings
+ * both live under More here, and the desktop-only 'design' canvas resolves to
+ * Blocks rather than rendering nothing.
+ */
+type MobileTab = 'home'|'status'|'blocks'|'style'|'more';
+function toMobileTab(tab: SidebarTab): MobileTab {
+  if (tab === 'hours') return 'status';
+  if (tab === 'blocks' || tab === 'design' || tab === 'links') return 'blocks';
+  if (tab === 'style') return 'style';
+  if (tab === 'more' || tab === 'settings' || tab === 'analytics' || tab === 'integrations') return 'more';
+  return 'home';
+}
+
+/**
+ * How much smaller the page renders while you are editing it.
+ *
+ * The customer's page is 100%. This is a plain visual zoom-out of the SAME
+ * components — a transform, not a second set of sizes — so nothing can drift
+ * between the two. It exists because a phone editing a phone-sized page shows
+ * you one card at a time, and design decisions need more of the page than
+ * that. 0.88 buys back about a row and a half without making anything
+ * unreadable.
+ */
+const MOBILE_EDITOR_SCALE = 0.88;
 type HoursSubTab = 'special'|'status';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
@@ -1712,13 +1827,13 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
       <p className="text-[11px] text-[#858585]">Paste your Place ID (starts with ChIJ…) or a Google Maps link to pull in your hours automatically.</p>
       <div className="flex gap-2">
         <input value={placeInput} onChange={e=>setPlaceInput(e.target.value)} placeholder="ChIJ... or Google Maps URL" className="flex-1 text-[12px] border border-[#E9E9E7] rounded-xl px-3 py-2 outline-none focus:border-[#0A0A0A] bg-[#FAFAFA]"/>
-        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#6D28D9] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
+        <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#292926] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
       </div>
       {syncMsg&&<p className={`text-[11px] font-medium ${syncMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{syncMsg}</p>}
       <div className="border-t border-[#EBEBEB] pt-3 mt-1">
         {googleConnected?(
           <div className="space-y-2">
-            <div className="flex items-center gap-1.5 text-[11px] text-[#7C3AED] font-medium">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#0A0A0A] font-medium">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Auto-syncs to Google on every Save
             </div>
@@ -1765,47 +1880,27 @@ function BuilderSparkline({data,color}:{data:number[];color:string}){
  * How much room the floating bottom nav occupies, measured from the bottom of
  * the viewport, before the safe-area inset.
  *
- * The nav is a detached pill now rather than a bar welded to the edge, so it
+ * The nav is a detached pill, so it takes more room than its own height: the
  * is taller than its own height: 58 for the pill, 12 for the gap under it.
  * Every fixed thing above it — the sheets, the edit canvas, the toolbar, the
  * coach line — measures from here. It was six separate literals of `56px`
  * before, which is a thing that stays in sync right up until it doesn't.
  */
-const NAV_SPACE = 70;
+const NAV_BAR_HEIGHT = 58;
+const NAV_BAR_GAP = 12;
+const NAV_SPACE = NAV_BAR_HEIGHT + NAV_BAR_GAP;
 
-function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, onHeight }: {
+function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   maxVh?: number;
-  /** false = no scrim, so you can still see the widget you're editing change. */
+  /** false = no scrim, so you can watch the page change behind the sheet. */
   dim?: boolean;
-  /**
-   * The sheet's actual rendered height, so the canvas above can give way by
-   * exactly that much.
-   *
-   * The canvas used to shrink by a flat 48vh whatever the sheet turned out to
-   * be. A short sheet — the colour swatches are one row — left a two-hundred
-   * pixel band of page background between the bottom of the page and the top
-   * of the sheet, which reads as a big grey window swallowing the preview.
-   */
-  onHeight?: (h: number) => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open || !onHeight) return;
-    const el = panelRef.current;
-    if (!el) return;
-    const report = () => onHeight(el.getBoundingClientRect().height);
-    report();
-    const ro = new ResizeObserver(report);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [open, onHeight, children]);
 
   useEffect(() => {
     if (open) {
@@ -1828,14 +1923,13 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, o
           onClick={onClose}
           style={{
             position: 'fixed', inset: 0, zIndex: 44,
-            background: 'rgba(10,10,10,0.22)',
+            background: 'rgba(10,10,10,0.18)',
             opacity: shown ? 1 : 0,
             transition: 'opacity .22s ease',
           }}
         />
       )}
       <div
-        ref={panelRef}
         role="dialog"
         aria-modal={dim ? true : undefined}
         aria-label={title}
@@ -1843,22 +1937,22 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, o
           position: 'fixed', left: 0, right: 0, zIndex: 45,
           bottom: `calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
           background: '#fff',
-          borderTopLeftRadius: 26, borderTopRightRadius: 26,
-          boxShadow: '0 -10px 44px rgba(0,0,0,0.18)',
+          borderTopLeftRadius: BUILDER_RADIUS.sheet, borderTopRightRadius: BUILDER_RADIUS.sheet,
+          boxShadow: '0 -12px 32px rgba(10,10,10,0.10)',
           maxHeight: `${maxVh}vh`,
           display: 'flex', flexDirection: 'column',
           // A fixed pixel fallback on top of the percentage, so a short sheet
           // still clears the nav it sits above.
           transform: shown ? 'translateY(0)' : 'translateY(calc(100% + 96px))',
           transition: 'transform .3s cubic-bezier(.32,.72,0,1)',
-          fontFamily: 'var(--font-poppins), system-ui, sans-serif',
+          fontFamily: BUILDER_FONT,
         }}
       >
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 8px', flexShrink: 0 }}>
-          <div style={{ position: 'absolute', left: '50%', top: 6, transform: 'translateX(-50%)', width: 36, height: 4, borderRadius: 2, background: '#E4E7EC' }} />
-          <p style={{ fontSize: 15, fontWeight: 600, color: '#0A0A0A', margin: 0, letterSpacing: '-0.02em' }}>{title}</p>
+          <div style={{ position: 'absolute', left: '50%', top: 7, transform: 'translateX(-50%)', width: 32, height: 3, borderRadius: 2, background: BUILDER_UI.borderStrong }} />
+          <p style={{ ...BUILDER_TYPE.sectionTitle, color: BUILDER_UI.ink, margin: 0 }}>{title}</p>
           <button type="button" onClick={onClose} aria-label="Close"
-            style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: '#F2F4F7', color: '#777777', fontSize: 15, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>
+            style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: BUILDER_UI.surfaceSoft, color: BUILDER_UI.muted, fontSize: 15, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>
             ×
           </button>
         </div>
@@ -1888,7 +1982,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // The header Save writes the PAGE config. Business and Settings have their own
   // save buttons for their own fields, so showing this one there invited people
   // to press it and believe their phone number had been saved.
-  const showSaveButton = sidebarTab==='design' || sidebarTab==='style';
+  const showSaveButton = sidebarTab==='design' || sidebarTab==='style' || sidebarTab==='blocks';
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>('mobile');
   const [previewKey,setPreviewKey]=useState(0);
   const [quickAction,setQuickAction]=useState<string|null>(null);
@@ -1926,7 +2020,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // ─────────────────────────────────────────────────────────────────────────
 
   /** Which small sheet is up over the phone canvas. null = just the canvas. */
-  type MSheetKind = null | 'block' | 'add' | 'vibe' | 'font' | 'color' | 'background';
+  // 'color' was the business-name colour and is now folded into 'accent'.
+  type MSheetKind = null | 'block' | 'add' | 'vibe' | 'cover' | 'background' | 'accent' | 'buttons' | 'font';
   const [mSheet,setMSheet] = useState<MSheetKind>(null);
 
   /** Widget currently picked up by a long press on the phone canvas. */
@@ -2143,7 +2238,46 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[idealContentWidth]);
   const [previewWidth,setPreviewWidth]=useState(0); // unused for layout now, kept for compat
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
-  const [sheetH,setSheetH]=useState(320);
+  const localBusinessSlugRef=useRef<string|null>(business?.slug??null);
+  useEffect(()=>{ localBusinessSlugRef.current=localBusiness?.slug??null; },[localBusiness?.slug]);
+  /** What to call the current background on the Style overview row. */
+  const backgroundLabel=useCallback((bg:string)=>{
+    const gradient=BG_DESIGNS.find(g=>g.css===bg);
+    if(gradient) return gradient.label;
+    if(/^#[0-9a-fA-F]{6}$/.test(bg)) return bg.toUpperCase();
+    // A page still carrying one of the retired animated wallpapers.
+    return bg.startsWith('#')?bg.toUpperCase():'Custom';
+  },[]);
+
+  const blocksListRef=useRef<HTMLDivElement>(null);
+  /**
+   * Open a block's editor, having first moved the block out from under it.
+   *
+   * The sheet covers the bottom half of the screen. Tapping the last row and
+   * then editing a thing you can no longer see is the single most annoying
+   * way for a sheet to behave, so the row scrolls to the top of the list as
+   * the sheet comes up. The scroll and the sheet animate together, which
+   * reads as the row leading you to its editor rather than two things moving.
+   */
+  const openBlockSheet=useCallback((id:string)=>{
+    setOpenId(id);
+    setMSheet('block');
+    const list=blocksListRef.current;
+    const row=list?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(id)}"]`);
+    if(list&&row) list.scrollTo({ top: list.scrollTop + row.getBoundingClientRect().top - list.getBoundingClientRect().top - 8, behavior:'smooth' });
+  },[]);
+
+  const [linkCopied,setLinkCopied]=useState(false);
+  /** Copy the live link. Clipboard can be refused, so never claim success. */
+  const copyLiveLink=useCallback(async()=>{
+    const slug=localBusinessSlugRef.current;
+    if(!slug) return;
+    try{
+      await navigator.clipboard.writeText(`${SITE_URL}/${slug}`);
+      setLinkCopied(true);
+      setTimeout(()=>setLinkCopied(false),2000);
+    }catch{/* blocked; the link is on screen to read */}
+  },[]);
   const [bizInfoOpen,setBizInfoOpen]=useState(false);
   const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:normalizeCategory(business?.category)??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
   const [slugEdit,setSlugEdit]=useState(business?.slug??'');
@@ -2245,10 +2379,42 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     return { kind: active.kind, closesAt: active.closes_at, opensAt: active.opens_at ?? null };
   })();
   const bizTimeZone = localBusiness?.timezone ?? null;
+
+  /**
+   * The second line on a Blocks row.
+   *
+   * A management list is only worth having if it tells you the state of each
+   * thing without opening it. "Needs setup" is the important one: a row that
+   * is switched on but has nowhere to go does not publish, and before this
+   * the only way to discover that was to notice it missing from the live page.
+   */
+  const blockSummary = useCallback((b: OpenStatusBlock): string => {
+    if (b.id === 'hours') return 'Always on \u2014 the reason the page exists';
+    if (b.id === 'gallery') {
+      const n = googlePhotos.length;
+      return n ? `${n} photo${n === 1 ? '' : 's'}` : 'From your Google listing';
+    }
+    if (b.id === 'reviews') {
+      const n = b.reviewCount ?? 0;
+      return n ? `${n} Google review${n === 1 ? '' : 's'}` : 'From your Google listing';
+    }
+    if (b.id === 'offers') {
+      const n = activeOffers(b.offers ?? [], localDay(new Date(), bizTimeZone || 'America/Chicago')).length;
+      return n ? `${n} running` : 'No offers yet';
+    }
+    if (!blockHasDestination(b)) return 'Needs setup';
+    if (b.id === 'menu') return menuDestination(b) ? 'Linked' : 'Needs setup';
+    return b.provider
+      ? (b.provider.charAt(0).toUpperCase() + b.provider.slice(1))
+      : 'Linked';
+  }, [googlePhotos.length, bizTimeZone]);
+
+
   const {status:liveStatus,todayLabel}=getLiveStatus(config.weeklyHours, bizTimeZone, todayOverride);
   const hours = config.weeklyHours??{...DEFAULT_WEEK_HOURS};
   const showEditPanel = !!openBlock && sidebarTab==='design';
   const isEditSubTab = ['design','style'].includes(sidebarTab);
+  const mobileTab = toMobileTab(sidebarTab);
 
   function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
     setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));
@@ -2260,7 +2426,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       ...c,
       blocks:[...c.blocks,{
         id, title:'New link', sub:'', icon:'', on:true, tone:'default',
-        url:'', size:'full', color:'#7C3AED',
+        url:'', size:'full', color:'#0A0A0A',
       }],
     }));
     setOpenId(id);
@@ -2921,7 +3087,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <strong className="font-semibold text-white">{undoBlock.title}</strong> removed
           </span>
           <button onClick={undoRemove}
-            className="px-3 py-1.5 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors">
+            className="px-3 py-1.5 rounded-full bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors">
             Undo
           </button>
         </div>
@@ -2945,7 +3111,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               Email us and a real person will get back to you. Tell us what you were trying to do and we&apos;ll sort it out.
             </p>
             <a href="mailto:info@openstatus.co?subject=OpenStatus%20help"
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[13px] font-semibold hover:bg-[#6D28D9] transition-colors">
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[13px] font-semibold hover:bg-[#292926] transition-colors">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
               Email info@openstatus.co
             </a>
@@ -2976,7 +3142,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               style={{color:sidebarTab===key?'#0A0A0A':'#777777',fontWeight:sidebarTab===key?600:500}}>
               {/* A hairline accent is enough to mark the page. */}
               {sidebarTab===key&&(
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-4 rounded-full" style={{background:'#7C3AED'}}/>
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-4 rounded-full" style={{background:'#0A0A0A'}}/>
               )}
               <span style={{color:sidebarTab===key?'#0A0A0A':'#9A9A97'}}>{icon}</span>
               {label}
@@ -2995,11 +3161,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           )}
           <button
             onClick={async()=>{ await supabase.auth.signOut(); window.location.href='/login'; }}
-            className="w-full flex items-center gap-2 text-[11px] font-normal text-[#777777] hover:text-[#6D28D9] transition-colors">
+            className="w-full flex items-center gap-2 text-[11px] font-normal text-[#777777] hover:text-[#0A0A0A] transition-colors">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Log out
           </button>
-          <button onClick={()=>setHelpOpen(true)} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#777777] hover:text-[#6D28D9] transition-colors">
+          <button onClick={()=>setHelpOpen(true)} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#777777] hover:text-[#0A0A0A] transition-colors">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Help
           </button>
@@ -3107,7 +3273,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </p>
                     <button disabled={gBusy||gStatus.canReopen===false}
                       onClick={()=>void googleReopen()}
-                      className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                      className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
                       {gBusy?'Asking Google…':'Ask Google to reopen'}
                     </button>
                   </div>
@@ -3203,7 +3369,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                         </select>
                         <button onClick={()=>postStatus('custom_hours')} disabled={statusPosting||todayClose<=todayOpen}
-                          className="px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                          className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
                           {statusPosting?'…':'Set'}
                         </button>
                       </div>
@@ -3227,7 +3393,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={11} color="#858585"/></div>
                         </div>
                         <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
-                          className="px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                          className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
                           {statusPosting?'…':'Set'}
                         </button>
                       </div>
@@ -3245,7 +3411,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
                         <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
-                          className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                          className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
                           {statusPosting?'…':'Add note'}
                         </button>
                       </div>
@@ -3275,8 +3441,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                               }
                               void googleCloseDates(from,to,`Closed ${label.toLowerCase()}`);
                             }}
-                            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] hover:border-[#7C3AED] transition-colors disabled:opacity-40">
-                            <LucideCalendar size={13} color="#7C3AED"/>
+                            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] hover:border-[#0A0A0A] transition-colors disabled:opacity-40">
+                            <LucideCalendar size={13} color="#3F3F3C"/>
                             <span className="text-[12px] font-semibold text-[#0A0A0A]">{label}</span>
                           </button>
                         ))}
@@ -3466,7 +3632,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       {[
                         {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
                         {label:'Directions',value:analyticsData.metrics.directions,color:'#2563EB',data:(analyticsData.trend??[]).map(t=>t.clicks)},
-                        {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',data:(analyticsData.trend??[]).map(t=>t.views)},
+                        {label:'Menu taps',value:analyticsData.metrics.menu,color:'#0A0A0A',data:(analyticsData.trend??[]).map(t=>t.views)},
                         {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
                       ].map(({label,value,color,data})=>(
                         <div key={label} className="rounded-2xl border border-[#E9E9E7] bg-white p-3.5">
@@ -3707,10 +3873,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       onChange={e=>setTagDraft(e.target.value.slice(0,24))}
                       onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); addCustomTag(); } }}
                       placeholder="Add your own…"
-                      className="flex-1 min-w-0 bg-white border border-[#E9E9E7] rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-[#7C3AED] transition-colors"/>
+                      className="flex-1 min-w-0 bg-white border border-[#E9E9E7] rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                     <button onClick={addCustomTag}
                       disabled={!tagDraft.trim()||(config.tags??[]).length>=3||(config.tags??[]).includes(tagDraft.trim())}
-                      className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                      className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
                       Add
                     </button>
                   </div>
@@ -3721,7 +3887,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       {(config.tags??[]).map(tag=>(
                         <button key={`sel-${tag}`}
                           onClick={()=>setConfig(c=>({...c,tags:(c.tags??[]).filter(t=>t!==tag)}))}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium bg-[#7C3AED] text-white">
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium bg-[#0A0A0A] text-white">
                           {tag}
                           <LucideX size={9} color="currentColor"/>
                         </button>
@@ -3741,7 +3907,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             return {...c, tags: cur.includes(tag) ? cur.filter(t=>t!==tag) : (cur.length>=3?cur:[...cur,tag])};
                           })}
                           className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
-                            sel ? 'bg-[#7C3AED] text-white border-[#0A0A0A]'
+                            sel ? 'bg-[#0A0A0A] text-white border-[#0A0A0A]'
                                 : full ? 'border-[#E9E9E7] text-[#D0D5DD] cursor-not-allowed'
                                        : 'border-[#E9E9E7] text-[#777777] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'
                           }`}>
@@ -3810,7 +3976,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <div className="flex gap-1 p-1 rounded-full bg-[#F7F7F6]">
                     {[7,30,90].map(d=>(
                       <button key={d} onClick={()=>setAnalyticsDays(d)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${analyticsDays===d?'bg-white text-[#6D28D9] shadow-sm':'text-[#9A9A97] hover:text-[#0A0A0A]'}`}>
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${analyticsDays===d?'bg-white text-[#0A0A0A] shadow-sm':'text-[#9A9A97] hover:text-[#0A0A0A]'}`}>
                         {d} days
                       </button>
                     ))}
@@ -3837,7 +4003,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   const actionRate = m.views ? Math.round((m.clicks/m.views)*100) : 0;
                   const TILES = [
                     {label:'Page views',      value:m.views,          color:'#12B76A'},
-                    {label:'Unique visitors', value:m.uniqueVisitors, color:'#7C3AED'},
+                    {label:'Unique visitors', value:m.uniqueVisitors, color:'#0A0A0A'},
                     {label:'Directions',      value:m.directions,     color:'#2563EB'},
                     {label:'Menu taps',       value:m.menu,           color:'#D97706'},
                   ];
@@ -3866,7 +4032,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             <div className="flex items-end gap-[3px]" style={{height:150}}>
                               {trend.map(t=>(
                                 <div key={t.date} className="group relative flex-1 min-w-[3px] h-full flex items-end">
-                                  <div className="w-full rounded-t-[3px] bg-[#7C3AED]/80 group-hover:bg-[#6D28D9] transition-colors"
+                                  <div className="w-full rounded-t-[3px] bg-[#0A0A0A]/80 group-hover:bg-[#292926] transition-colors"
                                     style={{height:`${Math.max(2,(t.views/maxV)*100)}%`}}/>
                                   <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded-lg bg-[#0A0A0A] px-2 py-1 text-[10px] text-white">
                                     {t.date}: {t.views}
@@ -3890,7 +4056,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                   <div key={id} className="flex items-center gap-2.5">
                                     <span className="text-[12px] text-[#0A0A0A] w-24 truncate capitalize">{id}</span>
                                     <div className="flex-1 h-2 bg-[#F7F7F6] rounded-full overflow-hidden">
-                                      <div className="h-full bg-[#7C3AED] rounded-full" style={{width:`${Math.round((count/topMax)*100)}%`}}/>
+                                      <div className="h-full bg-[#0A0A0A] rounded-full" style={{width:`${Math.round((count/topMax)*100)}%`}}/>
                                     </div>
                                     <span className="text-[11px] text-[#777777] w-8 text-right tabular-nums">{count}</span>
                                   </div>
@@ -3994,7 +4160,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                     <div className="flex items-center gap-3 pt-0.5">
                       <button onClick={saveBizInfo} disabled={bizSaving||!bizEdit.name.trim()}
-                        className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                        className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
                         {bizSaving?'Saving…':bizSaved?'✓ Saved':'Save'}
                       </button>
                       {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
@@ -4043,7 +4209,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                     <div className="flex items-center gap-2">
                       <button onClick={saveSlug} disabled={slugSaving||!slugEdit||slugEdit===localBusiness?.slug}
-                        className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                        className="px-4 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
                         {slugSaving?'Saving…':'Update link'}
                       </button>
                       {localBusiness?.slug&&(
@@ -4193,7 +4359,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
                           }}
                           disabled={googleSyncStatus==='syncing'}
-                          className="w-full py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] disabled:opacity-50 transition-colors"
+                          className="w-full py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] disabled:opacity-50 transition-colors"
                         >
                           {googleSyncStatus==='syncing'?'Syncing…':'Sync hours to Google now'}
                         </button>
@@ -4316,152 +4482,188 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            ══════════════════════════════════════════════════════════ */}
 
       {/* ── TOP BAR ── names the section you're in; Save only where it means something */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/92 backdrop-blur-md border-b border-[#E9E9E7] flex items-center justify-between px-4 gap-3"
-        style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)',fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
-        <span className="text-[#0A0A0A] font-semibold text-[17px] tracking-[-0.03em] truncate">
-          {isEditSubTab?'Edit page'
-            :sidebarTab==='business'?'Business'
-            :sidebarTab==='hours'?'Status'
-            :sidebarTab==='analytics'?'Analytics'
-            :sidebarTab==='settings'?'Settings'
-            :'OpenStatus'}
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 gap-3"
+        style={{
+          display:isMobile?"flex":"none",
+          height:'calc(52px + env(safe-area-inset-top))',
+          paddingTop:'env(safe-area-inset-top)',
+          background:'rgba(255,255,255,0.92)',
+          backdropFilter:'blur(20px) saturate(160%)',
+          WebkitBackdropFilter:'blur(20px) saturate(160%)',
+          borderBottom:`1px solid ${BUILDER_UI.border}`,
+          fontFamily:BUILDER_FONT,
+        }}>
+        <span className="truncate" style={{...BUILDER_TYPE.screenTitle, color:BUILDER_UI.ink}}>
+          {mobileTab==='home'?'Home'
+            :mobileTab==='status'?'Status'
+            :mobileTab==='blocks'?'Blocks'
+            :mobileTab==='style'?'Style'
+            :'More'}
         </span>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {business?.slug&&isEditSubTab&&(
+          {/* The page is no longer the editing surface on a phone, so a way to
+              go and look at it belongs everywhere, not only in the editor. */}
+          {business?.slug&&(
             <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-              className="text-[12px] font-medium text-[#777777] px-2 py-1">View ↗</a>
+              className="px-2 py-1" style={{...BUILDER_TYPE.helper, fontWeight:500, color:BUILDER_UI.muted}}>View ↗</a>
           )}
           {showSaveButton?(
             <button onClick={save} disabled={saving}
-              className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#F0FDF4] text-[#15803D]':saving?'bg-[#F7F7F6] text-[#9A9A97]':'bg-[#0A0A0A] text-white'}`}>
+              className="px-4 py-1.5 rounded-full transition-all"
+              style={{
+                ...BUILDER_TYPE.button,
+                background: saved?BUILDER_UI.successSoft : saving?BUILDER_UI.surfaceSoft : BUILDER_UI.ink,
+                color:      saved?BUILDER_UI.success     : saving?BUILDER_UI.quiet       : '#FFFFFF',
+              }}>
               {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
             </button>
-          ):sidebarTab==='hours'?(
-            <span className="text-[11px] text-[#9A9A97]">Goes live right away</span>
+          ):mobileTab==='status'?(
+            <span style={{...BUILDER_TYPE.helper, color:BUILDER_UI.quiet}}>Goes live right away</span>
           ):null}
         </div>
       </div>
 
-      {/* ══ FULL PAGES ══ Business, Status, Analytics and Settings are real pages,
-           not sheets over the canvas. The nav stays put underneath them. */}
-      <div className="fixed left-0 right-0 z-20 bg-white flex flex-col"
+      {/* ══ FULL PAGES ══
+           All five destinations are real pages now. There is no canvas mode
+           and no floating edit toolbar: a phone had a bottom nav, a toolbar, a
+           coach pill and a sheet all competing for the same thumb, and the
+           page being edited was the smallest thing on screen. */}
+      <div className="fixed left-0 right-0 z-20 flex flex-col"
         style={{
-          display: isMobile && !isEditSubTab ? 'flex' : 'none',
+          display: isMobile ? 'flex' : 'none',
           top:'calc(52px + env(safe-area-inset-top))',
           bottom:`calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
-          fontFamily:'var(--font-poppins), system-ui, sans-serif',
+          background: BUILDER_UI.app,
+          fontFamily: BUILDER_FONT,
         }}>
 
-{/* ── BUSINESS tab content ── */}
-        {sidebarTab==='business'&&(
-          <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
-            {/* A dashboard should greet you and then tell you something.
-                "Business" told her nothing she did not already know. */}
-            <div className="pt-2 pb-4">
-              <h2 className="text-[24px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.03em]">
-                Hello, {localBusiness?.name?.trim()||'there'}
-              </h2>
-              <p className="text-[13px] text-[#777777] mt-1">
-                {analyticsData
-                  ? 'Here\u2019s how your page has been doing.'
-                  : 'Here\u2019s your page at a glance.'}
+{/* ══ HOME ══
+             A dashboard answers "is everything alright?" in one screen and
+             then gets out of the way. The old Business tab tried to be that
+             AND the place you typed your phone number, which is why it felt
+             cluttered: the thing you check daily was buried under the things
+             you set once. */}
+        {mobileTab==='home'&&(
+          <div className="flex-1 overflow-y-auto px-4 pb-8" style={{scrollbarWidth:'none'}}>
+
+            {/* ── Status, the reason the product exists ── */}
+            <div className="mt-3 rounded-[18px] p-4"
+              style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+              <p className="truncate" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.muted}}>
+                {localBusiness?.name?.trim()||'Your business'}
               </p>
+              <div className="flex items-center gap-2.5 mt-2">
+                <span style={{
+                  width:9, height:9, borderRadius:'50%', flexShrink:0,
+                  background: todayOverride ? BUILDER_UI.warning
+                    : liveStatus==='open' ? BUILDER_UI.success : BUILDER_UI.quiet,
+                }}/>
+                <span style={{...BUILDER_TYPE.majorStatus, color:BUILDER_UI.ink}}>
+                  {liveStatus==='open'?'Open now':'Closed'}
+                </span>
+              </div>
+              <p className="mt-1" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>{todayLabel}</p>
+              <button onClick={()=>setSidebarTab('hours' as SidebarTab)}
+                className="mt-3 w-full py-2.5 rounded-xl active:scale-[0.99] transition-transform"
+                style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink}}>
+                Change today&apos;s status
+              </button>
             </div>
-            {/* Analytics snapshot - mobile */}
-            {analyticsData&&(
-              <div className="mb-4">
-                <p className="text-[10px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Check out these numbers — last 30 days</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
-                    {label:'Directions',value:analyticsData.metrics.directions,color:'#2563EB',data:(analyticsData.trend??[]).map(t=>t.clicks)},
-                    {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',data:(analyticsData.trend??[]).map((_,i)=>i%3===0?analyticsData.metrics.menu:0)},
-                    {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
-                  ].map(({label,value,color,data})=>(
-                    <div key={label} className="rounded-2xl border border-[#E9E9E7] bg-white p-3">
-                      <div className="flex items-start justify-between mb-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="flex-shrink-0 w-5 h-5 rounded-lg flex items-center justify-center"
-                            style={{background:`${color}14`,color}}>
-                            {METRIC_ICONS[label]}
-                          </span>
-                          <p className="text-[10px] font-normal text-[#9A9A97] truncate">{label}</p>
-                        </div>
-                        <BuilderSparkline data={data} color={color}/>
-                      </div>
-                      <p className="text-[20px] font-semibold text-[#0A0A0A] leading-none">{value.toLocaleString()}</p>
-                    </div>
-                  ))}
+
+            {googleMismatchCard}
+
+            {/* ── Google, as a row. It only earns a card when it needs you. ── */}
+            <button
+              onClick={()=>{ if(!googleConnected) window.location.href='/connect/google'; }}
+              disabled={googleConnected}
+              className="mt-2.5 w-full flex items-center gap-3 px-3.5 py-3 rounded-[14px] text-left"
+              style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" className="flex-shrink-0"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              <span className="flex-1 min-w-0" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Google Business</span>
+              <span style={{...BUILDER_TYPE.body, color:googleConnected?BUILDER_UI.success:BUILDER_UI.warning}}>
+                {googleConnected?'Connected':'Not connected'}
+              </span>
+              {!googleConnected&&(
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              )}
+            </button>
+
+            {/* ── The link itself ── */}
+            {localBusiness?.slug&&(
+              <div className="mt-2.5 px-3.5 py-3 rounded-[14px]"
+                style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+                <p className="truncate" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>
+                  {SITE_DOMAIN}/{localBusiness.slug}
+                </p>
+                <div className="flex items-center gap-2 mt-2.5">
+                  <button onClick={()=>void copyLiveLink()}
+                    className="flex-1 py-2 rounded-lg active:scale-[0.98] transition-transform"
+                    style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink}}>
+                    {linkCopied?'Copied':'Copy'}
+                  </button>
+                  <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 py-2 rounded-lg text-center"
+                    style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink}}>
+                    View
+                  </a>
                 </div>
               </div>
             )}
 
-            {/* Hours & Status */}
-            <div className="mb-3 p-3 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7]">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-[13px] font-semibold text-[#0A0A0A]">Hours & Status</p>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F7F7F6] text-[#777777]'}`}>
-                  {liveStatus==='open'?'● Open now':'● Closed'}
-                </span>
+            {/* ── A snapshot, not a dashboard. The full view is under More. ── */}
+            <div className="mt-2.5 px-3.5 py-3.5 rounded-[14px]"
+              style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+              <div className="flex items-baseline justify-between">
+                <p style={{...BUILDER_TYPE.helper, color:BUILDER_UI.muted}}>Last 30 days</p>
+                <button onClick={()=>setSidebarTab('analytics' as SidebarTab)}
+                  style={{...BUILDER_TYPE.helper, fontWeight:500, color:BUILDER_UI.muted}}>
+                  All analytics ›
+                </button>
               </div>
-              <p className="text-[12px] text-[#777777] mb-2">{todayLabel}</p>
-              <button onClick={()=>setSidebarTab('hours' as SidebarTab)}
-                className="text-[12px] font-semibold text-[#777777] hover:text-[#0A0A0A] underline underline-offset-2">
-                Edit hours →
-              </button>
-            </div>
-
-            <div className="mb-3">{googleMismatchCard}</div>
-
-            {/* Google connection — the desktop Business tab has had this card
-                for ages and the mobile one never did, so an owner working from
-                a phone had no way to see that Google was unconnected, and no
-                way to connect it. She found out when a closure silently only
-                reached her own page. */}
-            <div className={`mb-3 p-3.5 rounded-2xl border ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#FEC84B] bg-[#FFFCF5]'}`}>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white border border-[#E9E9E7] flex items-center justify-center flex-shrink-0">
-                  <svg width="17" height="17" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Google Business</p>
-                  <p className="text-[11.5px] text-[#777777] mt-0.5">
-                    {googleConnected
-                      ?'Hours, photos and reviews are in sync.'
-                      :'Not connected — closures only change your page.'}
-                  </p>
-                </div>
-                {googleConnected&&(
-                  <span className="flex-shrink-0 px-2 py-1 rounded-full bg-[#BBF7D0] text-[#166534] text-[10px] font-semibold">On</span>
-                )}
-              </div>
-              {!googleConnected&&(
-                <Link href="/connect/google"
-                  className="mt-3 flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12.5px] font-semibold active:scale-[0.98] transition-transform">
-                  Connect Google Business
-                </Link>
+              {analyticsData?(
+                <>
+                  <div className="flex items-baseline gap-6 mt-2.5">
+                    <div>
+                      <p style={{fontSize:24, fontWeight:600, letterSpacing:'-0.03em', color:BUILDER_UI.ink, lineHeight:1}}>
+                        {analyticsData.metrics.views.toLocaleString()}
+                      </p>
+                      <p className="mt-1" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.muted}}>views</p>
+                    </div>
+                    <div>
+                      <p style={{fontSize:24, fontWeight:600, letterSpacing:'-0.03em', color:BUILDER_UI.ink, lineHeight:1}}>
+                        {(analyticsData.metrics.clicks+analyticsData.metrics.directions).toLocaleString()}
+                      </p>
+                      <p className="mt-1" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.muted}}>actions</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 space-y-1.5" style={{borderTop:`1px solid ${BUILDER_UI.border}`}}>
+                    {[
+                      {label:'Directions', value:analyticsData.metrics.directions},
+                      {label:'Menu',       value:analyticsData.metrics.menu},
+                      {label:'Links',      value:analyticsData.metrics.clicks},
+                    ].map(({label,value})=>(
+                      <div key={label} className="flex items-center justify-between">
+                        <span style={{...BUILDER_TYPE.body, color:BUILDER_UI.text}}>{label}</span>
+                        <span style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted, fontVariantNumeric:'tabular-nums'}}>{value.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ):(
+                <p className="mt-2" style={{...BUILDER_TYPE.body, color:BUILDER_UI.quiet}}>
+                  {analyticsLoading?'Loading\u2026':'Nothing yet \u2014 share your link to start counting.'}
+                </p>
               )}
             </div>
 
-            {/* Reviews & rating */}
-            <ReviewsCard block={allBlocks.find(b=>b.id==='location')} placeId={config.placeId} onUpdateBlock={u=>updateBlock('location',u)}/>
-
-            <button onClick={()=>setSidebarTab('settings' as SidebarTab)}
-              className="mt-3 w-full flex items-center gap-3 p-3.5 rounded-2xl border border-[#E9E9E7] bg-[#F7F7F6] text-left active:scale-[0.99] transition-transform">
-              <div className="w-9 h-9 rounded-xl bg-white border border-[#E9E9E7] flex items-center justify-center flex-shrink-0">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-[#0A0A0A]">Add OpenStatus to your home screen</p>
-                <p className="text-[11.5px] text-[#777777] mt-0.5">One tap to close early, change a photo, post a notice.</p>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-
+            <div className="mt-2.5">
+              <ReviewsCard block={allBlocks.find(b=>b.id==='location')} placeId={config.placeId} onUpdateBlock={u=>updateBlock('location',u)}/>
+            </div>
           </div>
         )}
+
         {/* ── STATUS page ── one decision: closed, or open. Everything else folds away. ── */}
-        {sidebarTab==='hours'&&(
+        {mobileTab==='status'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
 
             {googleMismatchCard}
@@ -4476,7 +4678,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </p>
                 <button disabled={gBusy||gStatus.canReopen===false}
                   onClick={()=>void googleReopen()}
-                  className="w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+                  className="w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
                   {gBusy?'Asking Google…':'Ask Google to reopen'}
                 </button>
               </div>
@@ -4549,7 +4751,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </select>
                   </div>
                   <button onClick={()=>postStatus('custom_hours')} disabled={statusPosting||todayClose<=todayOpen}
-                    className="mt-2.5 w-full py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+                    className="mt-2.5 w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
                     {statusPosting?'…':'Set today\u2019s hours'}
                   </button>
                 </div>
@@ -4563,7 +4765,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                     </select>
                     <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
-                      className="px-4 py-2.5 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
+                      className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
                       {statusPosting?'…':'Set'}
                     </button>
                   </div>
@@ -4578,7 +4780,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
                     <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
-                      className="px-4 py-2 rounded-full bg-[#7C3AED] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
+                      className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
                       {statusPosting?'…':'Add note'}
                     </button>
                   </div>
@@ -4607,7 +4809,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           void googleCloseDates(from,to,`Closed ${label.toLowerCase()}`);
                         }}
                         className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] active:scale-95 transition-transform disabled:opacity-40">
-                        <LucideCalendar size={13} color="#7C3AED"/>
+                        <LucideCalendar size={13} color="#3F3F3C"/>
                         <span className="text-[12px] font-semibold text-[#0A0A0A]">{label}</span>
                       </button>
                     ))}
@@ -4623,15 +4825,162 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           </div>
         )}
 
+{/* ══ BLOCKS ══
+             A management list, not a canvas. Every row says what it is, what
+             state it is in, and whether it is on — which is the whole job.
+             Dragging happens here now rather than on the preview: a list has
+             one axis, so a drag can only mean one thing, and the grip is the
+             only thing on the row with touch-action:none so the browser never
+             mistakes the gesture for a scroll. */}
+        {mobileTab==='blocks'&&(
+          <div ref={blocksListRef} className="flex-1 overflow-y-auto px-4 pb-8" style={{scrollbarWidth:'none', touchAction: mDragId?'none':undefined}}>
+            <p className="pt-3 pb-2.5" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
+              What sits on your page, in order. Website and directions are buttons under your
+              name, not rows — they live in Business info.
+            </p>
+
+            <div className="space-y-1.5">
+              {orderedBlocks.map(b=>{
+                const on = b.on !== false;
+                const needsSetup = on && !blockHasDestination(b);
+                const movable = canDrag(b.id);
+                const grip = movable ? previewHandleProps(b.id) : null;
+                const { style: gripStyle, ...gripRest } = grip ?? {};
+                return (
+                  <div key={b.id} data-block-id={b.id}
+                    onClick={()=>{ if(dragging.current||suppressTap.current) return; openBlockSheet(b.id); }}
+                    className="flex items-center gap-3 px-3 py-3 rounded-[14px]"
+                    style={{
+                      background: BUILDER_UI.surface,
+                      border:`1px solid ${mDragId===b.id?BUILDER_UI.borderStrong:BUILDER_UI.border}`,
+                      opacity: mDragId&&mDragId!==b.id ? 0.55 : on ? 1 : 0.62,
+                      transform: mDragId===b.id ? 'scale(1.02)' : undefined,
+                      boxShadow: mDragId===b.id ? '0 10px 26px rgba(10,10,10,0.14)' : undefined,
+                      transition:'transform .18s cubic-bezier(.32,.72,0,1), opacity .18s, box-shadow .18s',
+                    }}>
+
+                    {/* Grip. Six dots, quiet, and the only touch-action:none here. */}
+                    {movable ? (
+                      <span role="button" aria-label={`Reorder ${b.title}`} {...gripRest}
+                        className="flex-shrink-0 grid place-items-center -ml-1"
+                        style={{width:22, height:32, cursor:'grab', ...(gripStyle ?? {})}}>
+                        <svg width="10" height="16" viewBox="0 0 10 16" fill={BUILDER_UI.quiet} aria-hidden="true">
+                          <circle cx="2" cy="3" r="1.3"/><circle cx="8" cy="3" r="1.3"/>
+                          <circle cx="2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/>
+                          <circle cx="2" cy="13" r="1.3"/><circle cx="8" cy="13" r="1.3"/>
+                        </svg>
+                      </span>
+                    ) : <span className="flex-shrink-0" style={{width:22}}/>}
+
+                    <span className="flex-shrink-0 grid place-items-center rounded-[10px]"
+                      style={{width:32, height:32, background:BUILDER_UI.surfaceSoft}}>
+                      <BlockIcon id={b.id} size={15} color={BUILDER_UI.text}/>
+                    </span>
+
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>{b.title}</span>
+                      <span className="block truncate mt-0.5"
+                        style={{...BUILDER_TYPE.helper, color: needsSetup?BUILDER_UI.warning:BUILDER_UI.muted}}>
+                        {blockSummary(b)}
+                      </span>
+                    </span>
+
+                    {b.id!=='hours'&&(
+                      <button
+                        aria-label={`${on?'Hide':'Show'} ${b.title}`}
+                        onClick={e=>{ e.stopPropagation(); updateBlock(b.id,{on:!on}); }}
+                        className="flex-shrink-0 rounded-full transition-colors"
+                        style={{
+                          width:40, height:24, padding:2,
+                          background: on?BUILDER_UI.ink:BUILDER_UI.surfacePressed,
+                        }}>
+                        <span className="block rounded-full transition-transform"
+                          style={{
+                            width:20, height:20, background:'#FFFFFF',
+                            transform: on?'translateX(16px)':'translateX(0)',
+                            boxShadow:'0 1px 3px rgba(10,10,10,0.2)',
+                          }}/>
+                      </button>
+                    )}
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button onClick={()=>setMSheet('add')}
+              className="mt-3 w-full py-3 rounded-[14px] active:scale-[0.99] transition-transform"
+              style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink, border:`1px solid ${BUILDER_UI.border}`}}>
+              + Add a block
+            </button>
+          </div>
+        )}
+
+{/* ══ STYLE ══
+             A page of settings with the page itself at the top, so a change
+             to the background is visible the instant it happens rather than
+             after a trip back out of a sheet. The preview is the real public
+             components at MOBILE_EDITOR_SCALE — a transform, not a second
+             renderer — clipped to a window rather than scaled to fit, because
+             a whole page shrunk to 200px tells you nothing about type. */}
+        {mobileTab==='style'&&(
+          <div className="flex-1 overflow-y-auto" style={{scrollbarWidth:'none'}}>
+
+            <div className="mx-4 mt-3 rounded-[16px] overflow-hidden"
+              style={{height:230, border:`1px solid ${BUILDER_UI.border}`, background:BUILDER_UI.surface}}>
+              <div style={{
+                width:`${100/MOBILE_EDITOR_SCALE}%`,
+                transform:`scale(${MOBILE_EDITOR_SCALE})`,
+                transformOrigin:'top left',
+                pointerEvents:'none',
+              }}>
+                <LivePhonePreview key={previewKey} business={localBusiness} config={config}
+                  timeZone={bizTimeZone} override={todayOverride}/>
+              </div>
+            </div>
+
+            <div className="px-4 pt-4 pb-8 space-y-1.5">
+              {([
+                {key:'vibe'       as const, label:'Presets',    value: activeVibe(config)?.label ?? 'Custom'},
+                {key:'cover'      as const, label:'Cover',      value: config.bgImage ? 'Photo set' : 'None'},
+                {key:'background' as const, label:'Background', value: backgroundLabel(config.bg)},
+                {key:'accent'     as const, label:'Accent',     value: (config.themeColor ?? '#0A0A0A').toUpperCase(), swatch: config.themeColor ?? '#0A0A0A'},
+                {key:'buttons'    as const, label:'Buttons',    value: (config.buttonStyle ?? 'filled').replace(/^./,c=>c.toUpperCase())},
+                {key:'font'       as const, label:'Typography', value: `${FONT_OPTIONS.find(f=>f.family===config.font)?.label ?? 'Inter'} \u00b7 ${(config.fontScale ?? 'standard').replace(/^./,c=>c.toUpperCase())}`},
+              ]).map(({key,label,value,swatch})=>(
+                <button key={key} onClick={()=>setMSheet(key)}
+                  className="w-full flex items-center gap-3 px-3.5 py-3.5 rounded-[14px] text-left active:scale-[0.99] transition-transform"
+                  style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+                  {swatch&&(
+                    <span className="flex-shrink-0 rounded-full"
+                      style={{width:18, height:18, background:swatch, border:`1px solid ${BUILDER_UI.border}`}}/>
+                  )}
+                  <span className="flex-1 min-w-0" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>{label}</span>
+                  <span className="truncate" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted, maxWidth:150, textAlign:'right'}}>{value}</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
 {/* ── ANALYTICS mobile tab ── */}
-        {sidebarTab==='analytics'&&(
+        {mobileTab==='more'&&sidebarTab==='analytics'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
+            {/* Analytics sits one level inside More, so it needs a way back
+                that is not the browser's. */}
+            <button onClick={()=>setSidebarTab('settings' as SidebarTab)}
+              className="flex items-center gap-1.5 pt-3 -ml-1 px-1 py-1"
+              style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              More
+            </button>
             <div className="flex items-center justify-between pt-1 pb-3">
-              <h2 className="text-[20px] font-semibold text-[#0A0A0A]">Analytics</h2>
+              <h2 style={{...BUILDER_TYPE.screenTitle, color:BUILDER_UI.ink}}>Analytics</h2>
               <div className="flex gap-1.5">
                 {[7,30,90].map(d=>(
                   <button key={d} onClick={()=>setAnalyticsDays(d)}
-                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#7C3AED] text-white':'bg-[#F7F7F6] text-[#777777]'}`}>
+                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#0A0A0A] text-white':'bg-[#F7F7F6] text-[#777777]'}`}>
                     {d}d
                   </button>
                 ))}
@@ -4702,9 +5051,21 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           </div>
         )}
 {/* ── SETTINGS tab ── */}
-        {sidebarTab==='settings'&&(
+        {mobileTab==='more'&&sidebarTab!=='analytics'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-semibold text-[#0A0A0A] pt-1 pb-3">Settings</h2>
+            {/* Analytics used to be a whole bottom tab for a number most owners
+                look at once a week. It lives here, one tap in, and Home carries
+                the snapshot that answers the daily question. */}
+            <button onClick={()=>setSidebarTab('analytics' as SidebarTab)}
+              className="mt-3 w-full flex items-center gap-3 px-3.5 py-3.5 rounded-[14px] text-left"
+              style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+              <span className="flex-shrink-0 grid place-items-center rounded-[10px]" style={{width:32,height:32,background:BUILDER_UI.surfaceSoft}}>
+                <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.text} strokeWidth={1.9} strokeLinecap="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+              </span>
+              <span className="flex-1" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Analytics</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+
             {/* Your link */}
             {business?.slug&&(
               <div className="mb-4 p-4 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7]">
@@ -4798,7 +5159,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
                     {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">✓ Saved</p>}
                     <button onClick={saveBizInfo} disabled={bizSaving}
-                      className="ml-auto rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold px-4 py-2 active:scale-95 transition-transform disabled:opacity-40">
+                      className="ml-auto rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold px-4 py-2 active:scale-95 transition-transform disabled:opacity-40">
                       {bizSaving?'Saving…':'Save'}
                     </button>
                   </div>
@@ -4830,98 +5191,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       </div>{/* end of the full-page container */}
 
-      {/* ══ EDIT CANVAS ══ the phone page itself is the editing surface.
-           Tap a widget to edit it, press and hold to pick it up and rearrange. */}
-      <div className="fixed left-0 right-0 overflow-y-auto"
-        style={{
-          display: isMobile && isEditSubTab ? 'block' : 'none',
-          top:'calc(52px + env(safe-area-inset-top))',
-          // The canvas gives way when a sheet opens, so the widget you're editing
-          // stays on screen above it instead of hiding behind it.
-          bottom: mSheet
-            ? `calc(${Math.round(sheetH)}px + ${NAV_SPACE}px + env(safe-area-inset-bottom))`
-            : `calc(${NAV_SPACE + 60}px + env(safe-area-inset-bottom))`,
-          transition:'bottom .3s cubic-bezier(.32,.72,0,1)',
-          // No grid, no grey, no 340px card floating in the middle of a
-          // 390px screen. On a phone the page IS the canvas: it runs edge to
-          // edge at its real width, so what she is editing is the size and
-          // shape customers actually get, and opening a sheet reveals more
-          // page rather than a slab of backdrop.
-          backgroundColor:'#FFFFFF',
-          touchAction: mDragId ? 'none' : undefined,
-        }}>
-        <div className="min-h-full" style={{position:'relative'}}>
-          <div style={{position:'absolute',top:10,right:10,zIndex:10}}>
-            <button onClick={e=>{e.stopPropagation();setPreviewKey(k=>k+1);}} title="Refresh preview"
-              style={{display:'flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,0.85)',backdropFilter:'blur(8px)',border:'1px solid rgba(0,0,0,0.08)',boxShadow:'0 2px 8px rgba(0,0,0,0.12)',cursor:'pointer'}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#292929" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-            </button>
-          </div>
+      {/*
+        The edit canvas, the floating edit toolbar and the coach pill all used
+        to live here.
 
-          <div className="w-full">
-            <LivePhonePreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}
-              selectedId={mSheet==='block'?openId:null}
-              onSelectBlock={id=>{ if(dragging.current||suppressTap.current) return; setOpenId(id); setSidebarTab('design'); setMSheet('block'); }}
-              blockProps={previewBlockProps}
-              dragHandleProps={previewHandleProps}/>
-          </div>
-          {/* The toolbar floats over the canvas, so the last row needs room to
-              scroll clear of it or it reads as a page that has been cut off. */}
-          <div style={{height:24}}/>
-        </div>
-      </div>
-
-      {/* Coach line — a pill over the page, not a white strip under it */}
-      <div className="fixed left-0 right-0 z-30 flex justify-center pointer-events-none"
-        style={{
-          display: isMobile && isEditSubTab && !mSheet ? 'flex' : 'none',
-          bottom:`calc(${NAV_SPACE + 74}px + env(safe-area-inset-bottom))`,
-        }}>
-        <span className="px-3 py-1.5 rounded-full text-[11px] font-medium text-white"
-          style={{background:mDragId?'rgba(124,58,237,0.92)':'rgba(10,10,10,0.68)',backdropFilter:'blur(6px)'}}>
-          {mDragId?'Drag to rearrange, let go to drop':'Tap a widget to edit · drag ≡ to move it'}
-        </span>
-      </div>
-
-      {/* ══ EDIT TOOLBAR ══ replaces the full-screen Blocks/Style sheet */}
-      <div className="fixed left-0 right-0 z-40 flex justify-center px-3"
-        style={{
-          display: isMobile ? 'flex' : 'none',
-          bottom:`calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
-          paddingBottom:8,
-          transform:isEditSubTab?'translateY(0)':'translateY(calc(100% + 12px))',
-          opacity:isEditSubTab?1:0,
-          pointerEvents:isEditSubTab?'auto':'none',
-          transition:'transform .25s cubic-bezier(.32,.72,0,1), opacity .2s ease',
-        }}>
-        <div className="flex w-full max-w-[430px] p-1 gap-1"
-          style={{
-            background:'rgba(255,255,255,0.92)',
-            backdropFilter:'blur(20px) saturate(160%)',
-            WebkitBackdropFilter:'blur(20px) saturate(160%)',
-            border:'1px solid rgba(10,10,10,0.05)',
-            borderRadius:22,
-            boxShadow:'0 10px 34px rgba(10,10,10,0.14), 0 2px 6px rgba(10,10,10,0.05)',
-          }}>
-          {([
-            {key:'add'        as const, label:'Block',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>},
-            {key:'vibe'       as const, label:'Vibe',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M18 16l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"/></svg>},
-            {key:'font'       as const, label:'Font',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>},
-            {key:'color'      as const, label:'Color',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>},
-            {key:'background' as const, label:'Photos',     svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>},
-          ]).map(({key,label,svg})=>(
-            <button key={key}
-              onClick={()=>{ setSidebarTab('design'); setOpenId(null); setMSheet(m=>m===key?null:key); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10.5px] font-semibold transition-all active:scale-95 ${mSheet===key?'bg-[#ECECEA] text-[#0A0A0A]':'text-[#777777]'}`}>
-              {svg}{label}
-            </button>
-          ))}
-        </div>
-      </div>
+        The canvas was a full-bleed preview you tapped to edit. On top of it
+        sat a five-button toolbar, and on top of THAT a permanent pill
+        explaining the gesture. Four layers of chrome over the one thing the
+        owner came to look at, and a bottom nav underneath all of it. Blocks
+        and Style are real destinations now, each with its own list, so none
+        of the three has a job. The preview lives at the top of Style, and
+        "View ↗" in the top bar opens the real page.
+      */}
 
       {/* ══ SMALL SHEETS ══ one per toolbar button, plus the per-widget editor */}
 
-      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={52} dim={false} onHeight={setSheetH}>
+      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={52} dim={false}>
         {openBlock&&canDrag(openBlock.id)&&(()=>{
           const rows=orderedBlocks.filter(b=>b.id!=='hours');
           const i=rows.findIndex(b=>b.id===openBlock.id);
@@ -4952,7 +5237,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={46} onHeight={setSheetH}>
+      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={46}>
         {/*
           There are seven blocks. Filtering seven things into six categories was
           never going to help, and two of those tabs ("Social", "More") mapped to
@@ -4982,7 +5267,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   aria-label={isOn?`Turn off ${def.title}`:`Turn on ${def.title}`}
                   aria-pressed={!!isOn}
                   className={`w-9 h-9 -mr-1 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform`}>
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center border ${isOn?'bg-[#7C3AED] border-[#7C3AED]':'border-[#D0D5DD] bg-white'}`}>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center border ${isOn?'bg-[#0A0A0A] border-[#0A0A0A]':'border-[#D0D5DD] bg-white'}`}>
                     {isOn
                       ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                       : <span className="text-[13px] leading-none text-[#9A9A97]">+</span>}
@@ -5002,78 +5287,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </button>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Vibe" onClose={()=>setMSheet(null)} maxVh={56} dim={false} onHeight={setSheetH}>
-        <p className="text-[11.5px] text-[#777777] mb-3">
-          Sets your background, font, name colour and photo treatment together. Font and Colour
-          are still there if you want to change one part afterwards.
+      {/* ══ STYLE SHEETS ══ one focused editor each, opened from the Style
+           list. No scrim: the page is right above them and the whole point is
+           watching it change. */}
+
+      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Presets" onClose={()=>setMSheet(null)} maxVh={62} dim={false}>
+        <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
+          A whole look in one tap — background, type, colour and how loud a photo is allowed to be.
+          Change any part of it afterwards.
         </p>
         <VibePicker config={config} onPick={v=>setConfig(c=>applyVibe(c,v))}/>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={46} dim={false} onHeight={setSheetH}>
-        <p className="text-[11.5px] text-[#777777] mb-3">Changes every bit of text on your page.</p>
-        <div className="grid grid-cols-2 gap-2.5">
-          {FONT_OPTIONS.map(opt=>{
-            const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
-            return (
-              <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
-                className={`flex flex-col items-start px-3 py-3 rounded-2xl border transition-all active:scale-95 ${isActive?'border-[#7C3AED] bg-[rgba(124,58,237,0.07)]':'border-[#E9E9E7] bg-white'}`}>
-                <span className={`text-[19px] leading-tight ${isActive?'text-[#6D28D9]':'text-[#0A0A0A]'}`} style={{fontFamily:opt.family}}>Aa</span>
-                <span className={`text-[10px] font-semibold mt-1 ${isActive?'text-[#7C3AED]':'text-[#9A9A97]'}`}>{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </MobileSheet>
-
-      <MobileSheet open={isMobile&&mSheet==='color'} title="Business name colour" onClose={()=>setMSheet(null)} maxVh={44} dim={false} onHeight={setSheetH}>
-        <p className="text-[11.5px] text-[#777777] mb-3">Pick a colour that reads clearly on your background.</p>
-        <NameColorPicker
-          value={config.nameColor}
-          autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
-          onChange={v=>setConfig(c=>({...c,nameColor:v}))}
-        />
-      </MobileSheet>
-
-      {/*
-        Logo and cover photo had no mobile home at all: both lived only in the
-        desktop Style tab, so an owner setting up on a phone — which is most of
-        them — could not put their own face on their own page. They belong
-        beside the page background, because all three are the same decision:
-        what this page looks like before anyone reads a word of it.
-      */}
-      <MobileSheet open={isMobile&&mSheet==='background'} title="Photos & background" onClose={()=>setMSheet(null)} maxVh={64} dim={false} onHeight={setSheetH}>
-
-        <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Logo</p>
-        <div className="flex items-center gap-3 mb-1">
-          {localBusiness?.avatar_url
-            ?// eslint-disable-next-line @next/next/no-img-element
-             <img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                className="w-14 h-14 rounded-full object-cover border border-[#E9E9E7] flex-shrink-0" alt="Logo"/>
-            :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
-          }
-          <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
-            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-              const file=e.target.files?.[0];if(!file)return;
-              setLogoUploading(true);setLogoUploadError('');
-              try{
-                const ref=await uploadAsset(file,'avatar');
-                if(localBusiness?.id){
-                  await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                  setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                }
-              }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-              finally{setLogoUploading(false);e.target.value='';}
-            }}/>
-            <span className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12.5px] font-semibold text-[#0A0A0A] active:scale-95 transition-transform">
-              <LucideImage size={13} color="#777777"/>
-              {logoUploading?'Uploading…':localBusiness?.avatar_url?'Change logo':'Upload logo'}
-            </span>
-          </label>
-        </div>
-        {logoUploadError&&<p className="text-[11px] text-red-500 mb-1">{logoUploadError}</p>}
-
-        <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mt-5 mb-2">Cover photo</p>
+      <MobileSheet open={isMobile&&mSheet==='cover'} title="Cover" onClose={()=>setMSheet(null)} maxVh={64} dim={false}>
         {config.bgImage&&(
           <CoverPhotoCrop
             src={config.bgImage}
@@ -5094,77 +5320,183 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
               finally{setBgUploading(false);e.target.value='';}
             }}/>
-            <span className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12.5px] font-semibold text-[#0A0A0A] active:scale-95 transition-transform">
-              <LucideImage size={13} color="#777777"/>
-              {bgUploading?'Uploading…':config.bgImage?'Replace photo':'Upload photo'}
+            <span className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl active:scale-95 transition-transform"
+              style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink, border:`1px solid ${BUILDER_UI.border}`}}>
+              <LucideImage size={13} color={BUILDER_UI.muted}/>
+              {bgUploading?'Uploading\u2026':config.bgImage?'Replace photo':'Upload photo'}
             </span>
           </label>
           {googlePhotos.map((url,i)=>(
             <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-              className={`relative w-11 h-11 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#E9E9E7]'}`}>
+              className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0"
+              style={{border:`2px solid ${config.bgImage===url?BUILDER_UI.ink:BUILDER_UI.border}`}}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={url} className="w-full h-full object-cover" alt=""/>
             </button>
           ))}
         </div>
-        {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
-        {googlePhotos.length>0&&<p className="text-[10.5px] text-[#9A9A97] mt-2">Tap one of your Google photos, or upload your own.</p>}
+        {bgUploadError&&<p className="mt-1.5" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.danger}}>{bgUploadError}</p>}
+        {googlePhotos.length>0&&<p className="mt-2" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.quiet}}>Tap one of your Google photos, or upload your own.</p>}
 
-        {/* Fade, blur and overlay were desktop-only too, so a cover photo that
-            drowned the business name could not be turned down from a phone. */}
         {config.bgImage&&(
-          <div className="mt-4">
+          <div className="mt-5 pt-4" style={{borderTop:`1px solid ${BUILDER_UI.border}`}}>
             <ImageAppearanceControls config={config} onChange={u=>setConfig(c=>({...c,...u}))}/>
           </div>
         )}
 
-        <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mt-5 mb-2">Page background</p>
-        <p className="text-[11.5px] text-[#777777] mb-3">Your widgets lighten or darken automatically to stay readable.</p>
+        <div className="mt-5 pt-4" style={{borderTop:`1px solid ${BUILDER_UI.border}`}}>
+          <p className="mb-2" style={{...BUILDER_TYPE.sectionTitle, color:BUILDER_UI.ink}}>Logo</p>
+          <div className="flex items-center gap-3">
+            {localBusiness?.avatar_url
+              ?// eslint-disable-next-line @next/next/no-img-element
+               <img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                  className="w-14 h-14 rounded-full object-cover flex-shrink-0" style={{border:`1px solid ${BUILDER_UI.border}`}} alt="Logo"/>
+              :<div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{background:BUILDER_UI.surfaceSoft}}><LucideImage size={18} color={BUILDER_UI.quiet}/></div>
+            }
+            <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
+              <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                const file=e.target.files?.[0];if(!file)return;
+                setLogoUploading(true);setLogoUploadError('');
+                try{
+                  const ref=await uploadAsset(file,'avatar');
+                  if(localBusiness?.id){
+                    await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                    setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                  }
+                }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                finally{setLogoUploading(false);e.target.value='';}
+              }}/>
+              <span className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl active:scale-95 transition-transform"
+                style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink, border:`1px solid ${BUILDER_UI.border}`}}>
+                <LucideImage size={13} color={BUILDER_UI.muted}/>
+                {logoUploading?'Uploading\u2026':localBusiness?.avatar_url?'Change logo':'Upload logo'}
+              </span>
+            </label>
+          </div>
+          {logoUploadError&&<p className="mt-1.5" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.danger}}>{logoUploadError}</p>}
+        </div>
+      </MobileSheet>
+
+      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={56} dim={false}>
+        <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
+          Your cards lighten or darken automatically to stay readable on whatever you pick.
+        </p>
         <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
       </MobileSheet>
 
+      {/* Accent, not "business name colour". It is one decision that reaches
+          the name, the links and the small details — and deliberately does NOT
+          reach open/closed, which stays green because green means open. */}
+      <MobileSheet open={isMobile&&mSheet==='accent'} title="Accent" onClose={()=>setMSheet(null)} maxVh={54} dim={false}>
+        <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
+          Used on links, small icons and the share button. Open and closed keep their own
+          colours, so nobody has to guess what green means.
+        </p>
+        <AccentPicker
+          value={config.themeColor ?? '#0A0A0A'}
+          onChange={v=>setConfig(c=>({...c,themeColor:v}))}
+        />
+        <p className="mt-5 mb-2" style={{...BUILDER_TYPE.sectionTitle, color:BUILDER_UI.ink}}>Business name</p>
+        <NameColorPicker
+          value={config.nameColor}
+          autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
+          onChange={v=>setConfig(c=>({...c,nameColor:v}))}
+        />
+      </MobileSheet>
 
-      {/* ── BOTTOM NAV ── always visible, on every page.
-           A floating pill rather than a bar ruled off from the content: it
-           reads as something sitting on top of the page, which is what it is,
-           and it stops the nav looking like the bottom edge of the page the
-           owner is editing. Icons only — the labels were 9px, which is not a
-           size anyone reads, and the five shapes here are all standard. */}
+      <MobileSheet open={isMobile&&mSheet==='buttons'} title="Buttons" onClose={()=>setMSheet(null)} maxVh={44} dim={false}>
+        <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
+          How Website, Directions and Share are drawn. One choice for all three.
+        </p>
+        <ButtonStylePicker
+          value={config.buttonStyle ?? 'filled'}
+          onChange={v=>setConfig(c=>({...c,buttonStyle:v}))}
+        />
+      </MobileSheet>
+
+      <MobileSheet open={isMobile&&mSheet==='font'} title="Typography" onClose={()=>setMSheet(null)} maxVh={62} dim={false}>
+        <div className="grid grid-cols-2 gap-2">
+          {FONT_OPTIONS.map(opt=>{
+            const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
+            return (
+              <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
+                className="flex flex-col items-start px-3 py-3 rounded-[14px] transition-all active:scale-95"
+                style={{
+                  background: BUILDER_UI.surface,
+                  border: isActive?`1.5px solid ${BUILDER_UI.ink}`:`1px solid ${BUILDER_UI.border}`,
+                  boxShadow: isActive?`0 0 0 1px ${BUILDER_UI.ink}`:undefined,
+                }}>
+                <span style={{fontFamily:opt.family, fontSize:20, lineHeight:1.1, color:BUILDER_UI.ink}}>Aa</span>
+                <span className="mt-1.5" style={{...BUILDER_TYPE.helper, fontWeight:500, color:isActive?BUILDER_UI.ink:BUILDER_UI.muted}}>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-5 mb-2" style={{...BUILDER_TYPE.sectionTitle, color:BUILDER_UI.ink}}>Size</p>
+        <p className="mb-2.5" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.muted}}>
+          Moves the whole page together, not just the text.
+        </p>
+        <div className="flex gap-1.5">
+          {FONT_SCALES.map(sc=>{
+            const isActive=(config.fontScale ?? 'standard')===sc;
+            return (
+              <button key={sc} onClick={()=>setConfig(c=>({...c,fontScale:sc}))}
+                className="flex-1 py-2.5 rounded-xl transition-all active:scale-95"
+                style={{
+                  ...BUILDER_TYPE.button,
+                  background: isActive?BUILDER_UI.ink:BUILDER_UI.surfaceSoft,
+                  color: isActive?'#FFFFFF':BUILDER_UI.text,
+                }}>
+                {sc.charAt(0).toUpperCase()+sc.slice(1)}
+              </button>
+            );
+          })}
+        </div>
+      </MobileSheet>
+
+
+      {/* ── BOTTOM NAV ── the one navigation system on a phone.
+           Quieter than it was: no purple, no oversized selected pill, labels
+           back at a size someone can actually read. Five destinations, each a
+           real page, and nothing else floating over the content. */}
       <nav className="fixed z-40 flex items-stretch"
         style={{
           display:isMobile?"flex":"none",
-          left:12, right:12,
-          bottom:'calc(12px + env(safe-area-inset-bottom))',
-          height:58,
-          borderRadius:999,
-          background:'rgba(255,255,255,0.92)',
+          left:NAV_BAR_GAP, right:NAV_BAR_GAP,
+          bottom:`calc(${NAV_BAR_GAP}px + env(safe-area-inset-bottom))`,
+          height:NAV_BAR_HEIGHT,
+          borderRadius:BUILDER_RADIUS.pill,
+          background:'rgba(255,255,255,0.94)',
           backdropFilter:'blur(20px) saturate(160%)',
           WebkitBackdropFilter:'blur(20px) saturate(160%)',
-          border:'1px solid rgba(10,10,10,0.05)',
-          boxShadow:'0 10px 34px rgba(10,10,10,0.14), 0 2px 6px rgba(10,10,10,0.05)',
-          fontFamily:'var(--font-poppins), system-ui, sans-serif',
+          border:`1px solid ${BUILDER_UI.border}`,
+          boxShadow:'0 6px 20px rgba(10,10,10,0.07), 0 1px 3px rgba(10,10,10,0.04)',
+          fontFamily:BUILDER_FONT,
         }}>
         {([
-          {key:'business'  as SidebarTab, label:'Business',  active:sidebarTab==='business',
-           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
-          {key:'hours'     as SidebarTab, label:'Status',    active:sidebarTab==='hours',
-           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>},
-          {key:'analytics' as SidebarTab, label:'Analytics', active:sidebarTab==='analytics',
-           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>},
-          {key:'design'    as SidebarTab, label:'Edit',      active:isEditSubTab,
-           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>},
-          {key:'settings'  as SidebarTab, label:'Settings',  active:sidebarTab==='settings',
-           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>},
-        ]).map(({key,label,active,svg})=>(
-          <button key={label} aria-label={label} aria-current={active?'page':undefined}
-            onClick={()=>{ setSidebarTab(key); setMSheet(null); setOpenId(null); }}
-            className="relative flex-1 flex items-center justify-center active:scale-95 transition-transform">
-            {active&&<span className="absolute w-[52px] h-[38px] rounded-[13px] bg-[#EDEDEB]"/>}
-            <span className="relative z-10" style={{color:active?'#6D28D9':'#9A9A97'}}>
-              {svg}
-            </span>
-          </button>
-        ))}
+          {key:'business' as SidebarTab, tab:'home'   as MobileTab, label:'Home',
+           svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
+          {key:'hours'    as SidebarTab, tab:'status' as MobileTab, label:'Status',
+           svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>},
+          {key:'blocks'   as SidebarTab, tab:'blocks' as MobileTab, label:'Blocks',
+           svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.6"/><rect x="3" y="12.5" width="18" height="5" rx="1.6"/><line x1="7" y1="21" x2="17" y2="21"/></svg>},
+          {key:'style'    as SidebarTab, tab:'style'  as MobileTab, label:'Style',
+           svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".6" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".6" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".6" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".6" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>},
+          {key:'settings' as SidebarTab, tab:'more'   as MobileTab, label:'More',
+           svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>},
+        ]).map(({key,tab,label,svg})=>{
+          const active = mobileTab===tab;
+          return (
+            <button key={label} aria-label={label} aria-current={active?'page':undefined}
+              onClick={()=>{ setSidebarTab(key); setMSheet(null); setOpenId(null); }}
+              className="relative flex-1 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform">
+              {active&&<span className="absolute rounded-[12px]" style={{width:46, height:30, top:6, background:BUILDER_UI.surfacePressed}}/>}
+              <span className="relative z-10" style={{color:active?BUILDER_UI.ink:'#8B8B87'}}>{svg}</span>
+              <span className="relative z-10" style={{...BUILDER_TYPE.navLabel, color:active?BUILDER_UI.ink:'#8B8B87'}}>{label}</span>
+            </button>
+          );
+        })}
       </nav>
 
 
@@ -5274,7 +5606,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
                   }
                 }}
-                className="flex-1 py-2.5 rounded-full bg-[#7C3AED] text-white text-[13px] font-semibold hover:bg-[#6D28D9] transition-colors">
+                className="flex-1 py-2.5 rounded-full bg-[#0A0A0A] text-white text-[13px] font-semibold hover:bg-[#292926] transition-colors">
                 {quickAction==='open-today'?'Open & Sync to Google'
                 :googleConnected?'Update & Sync to Google'
                 :'Update Hours'}
