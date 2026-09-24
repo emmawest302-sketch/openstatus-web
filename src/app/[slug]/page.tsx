@@ -100,11 +100,11 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const admin = getAdminClient();
   // Try full query; fall back gracefully if optional columns (timezone, place_id) don't exist yet
-  type BizRow = { id: string; user_id: string; name: string; tagline: string | null; avatar_url: string | null; header_url: string | null; timezone: string | null; place_id: string | null; address: string | null };
+  type BizRow = { id: string; user_id: string; name: string; tagline: string | null; avatar_url: string | null; header_url: string | null; timezone: string | null; place_id: string | null; address: string | null; website: string | null };
   let business: BizRow | null = null;
   const { data: fullData, error: fullError } = await admin
     .from('businesses')
-    .select('id,user_id,name,tagline,avatar_url,header_url,timezone,place_id,address')
+    .select('id,user_id,name,tagline,avatar_url,header_url,timezone,place_id,address,website')
     .eq('slug', slug.toLowerCase())
     .maybeSingle();
   if (fullError) {
@@ -115,7 +115,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
       .eq('slug', slug.toLowerCase())
       .maybeSingle();
     if (!basicData) notFound();
-    business = { ...(basicData as Omit<BizRow, 'timezone'|'place_id'|'address'>), timezone: null, place_id: null, address: null };
+    business = { ...(basicData as Omit<BizRow, 'timezone'|'place_id'|'address'|'website'>), timezone: null, place_id: null, address: null, website: null };
   } else {
     business = fullData as BizRow | null;
   }
@@ -269,7 +269,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   // A map is only meaningful with a real address. `sub` is the block's caption
   // ("Get directions"), never an address — using it made every page render a
   // zoom-1 map of the whole world.
-  const mapAddress = (locationBlock?.address || business.address || '').trim();
+  const mapAddress = (business.address || locationBlock?.address || '').trim();
 
   // Street and town only — the postcode and the country are noise to a local
   // customer and wrap the line onto a second row. See lib/address.
@@ -281,9 +281,15 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   // Website and Directions are header actions now, not rows. Read them from
   // the blocks so an owner's existing setup still feeds them, and fall back to
   // the address when no location block has a link of its own.
+  //
+  // The business's own Website field is the source of truth. It used to read
+  // the retired `website` block only, so an owner could fill Website in under
+  // Business, see it saved, and get no Website button on their page — the two
+  // fields looked like the same thing and were not. The block is still read as
+  // a fallback for pages configured before Website left the row list.
   const websiteBlock = enrichedConfig.blocks.find((b) => b.id === 'website');
-  const headerWebsiteUrl = websiteBlock?.url?.trim() || null;
-  const directionsTarget = (locationBlock?.address || business.address || '').trim();
+  const headerWebsiteUrl = (business.website || '').trim() || websiteBlock?.url?.trim() || null;
+  const directionsTarget = (business.address || locationBlock?.address || '').trim();
   const headerDirectionsUrl = directionsTarget
     ? `https://maps.google.com/?q=${encodeURIComponent(directionsTarget)}`
     : null;

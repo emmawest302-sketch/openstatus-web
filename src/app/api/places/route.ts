@@ -35,7 +35,17 @@ export async function GET(req: NextRequest) {
         next: { revalidate: 3600 },
       }
     );
-    if (!res.ok) return NextResponse.json({ reviews: [], rating: null, reviewCount: 0, url: null });
+    if (!res.ok) {
+      // Swallowing this made "my reviews aren't showing" unanswerable. The
+      // reviews field is on a pricier Places SKU than rating, so a key that
+      // happily returns a star score can still refuse the words — and the
+      // owner has no way to tell that apart from "nobody has reviewed me".
+      const detail = await res.json().catch(() => ({})) as { error?: { message?: string } };
+      return NextResponse.json({
+        reviews: [], rating: null, reviewCount: 0, url: null,
+        error: detail?.error?.message ?? `Google Places returned ${res.status}`,
+      });
+    }
 
     const data = await res.json() as {
       rating?: number;

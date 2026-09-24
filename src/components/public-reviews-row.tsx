@@ -15,7 +15,10 @@ import PublicRow from '@/components/public-row';
  *
  * The header already carries the score. This row carries the words, which are
  * what someone actually reads before deciding, and it opens in place — a link
- * straight out to Google is a customer we hand back.
+ * straight out to Google is a customer we hand back. When Google has a rating
+ * but nobody has written anything, the row still appears with the score and
+ * links out, because an owner with a real 5.0 seeing no row at all concludes
+ * the feature is broken.
  */
 
 type Review = {
@@ -59,9 +62,15 @@ export default function PublicReviewsRow({ block, businessId, placeId, dark = fa
   const fallbackUrl = block.googleUrl?.trim() || block.yelpUrl?.trim() || block.tripAdvisorUrl?.trim() || '';
   const outbound = url || fallbackUrl;
 
-  // Nothing worth a row. Better an absent row than one that opens onto
-  // "no reviews yet" under a business's own name.
-  if (reviews.length === 0) return null;
+  // A rating with no written reviews is common and completely normal — plenty
+  // of people tap five stars and never type anything. Hiding the row in that
+  // case meant an owner with a real 5.0 saw nothing at all and assumed the
+  // feature was broken. Show the score and send them to Google for the rest.
+  const hasWords = reviews.length > 0;
+  const hasScore = rating !== null && count > 0;
+
+  // Only now is there genuinely nothing to say.
+  if (!hasWords && !hasScore) return null;
 
   const ink = dark ? '#FFFFFF' : '#0A0A0A';
   const muted = dark ? 'rgba(255,255,255,0.58)' : 'rgba(21,21,21,0.50)';
@@ -77,6 +86,20 @@ export default function PublicReviewsRow({ block, businessId, placeId, dark = fa
   const subtitle = rating !== null
     ? `${rating.toFixed(1)} · ${count.toLocaleString()} on Google`
     : `${reviews.length} on Google`;
+
+  // Nothing to expand into, so the row navigates instead — and takes the
+  // outbound arrow rather than a chevron that would open an empty panel.
+  if (!hasWords) {
+    return (
+      <PublicRow
+        id={block.id} businessId={businessId} icon={icon}
+        title={block.title?.trim() || 'Reviews'}
+        subtitle={subtitle}
+        href={outbound || null}
+        dark={dark} accent={accent}
+      />
+    );
+  }
 
   return (
     <PublicRow

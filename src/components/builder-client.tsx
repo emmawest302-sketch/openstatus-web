@@ -15,7 +15,7 @@ import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
-import { publishedBlocks } from '@/lib/page-rows';
+import { publishedBlocks, HEADER_ACTION_IDS } from '@/lib/page-rows';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicHoursRow from '@/components/public-hours-row';
 import PublicBlockRow from '@/components/public-block-row';
@@ -43,7 +43,6 @@ import {
   LucideCalendar,
   LucideChevronRight,
   LucideClock,
-  LucideFileText,
   LucideGlobe,
   LucideGrip,
   LucideImage,
@@ -534,43 +533,6 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
 }
 
 // Photo upload field
-function PdfField({ label, value, onChange }: { label:string; value:string; onChange:(v:string)=>void }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); };
-    reader.readAsDataURL(file);
-  }
-  return (
-    <div>
-      <FieldLabel>{label}</FieldLabel>
-      {value
-        ? (
-          <div className="flex items-center gap-3 rounded-xl border border-[#E9E9E7] bg-[#F4F5F6] px-4 py-3">
-            <LucideFileText size={18} color="#0A0A0A"/>
-            <span className="text-sm text-[#0A0A0A] font-medium flex-1 truncate">PDF uploaded</span>
-            <button onClick={()=>onChange('')} className="text-[11px] text-[#858585] hover:text-[#0A0A0A] transition-colors font-medium">Remove</button>
-          </div>
-        )
-        : (
-          <div>
-            <div
-              onClick={()=>fileRef.current?.click()}
-              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F4F5F6] h-20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
-              <LucideFileText size={18} color="#858585"/>
-              <p className="text-[12px] text-[#858585]">Upload PDF</p>
-            </div>
-            <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handleFile}/>
-          </div>
-        )
-      }
-    </div>
-  );
-}
-
-// Time select
 function TimeSelect({ value,onChange }: { value:string; onChange:(v:string)=>void }) {
   const times:string[]=[];
   for(let h=0;h<24;h++) for(const m of [0,30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
@@ -631,9 +593,13 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   const activeBlocks = publishedBlocks(config.blocks);
   const hoursOn = config.blocks.find(b => b.id === 'hours')?.on !== false;
 
-  // Header actions, read from the blocks that used to render them as rows.
-  const websiteUrl = config.blocks.find(b => b.id === 'website')?.url?.trim() || null;
-  const addr = (config.blocks.find(b => b.id === 'location')?.address || config.location || '').trim();
+  // Header actions. Same precedence as the live page: the business's own
+  // Website and Address fields first, the retired blocks only as a fallback
+  // for pages configured before those stopped being rows.
+  const websiteUrl = (business?.website || '').trim()
+    || config.blocks.find(b => b.id === 'website')?.url?.trim()
+    || null;
+  const addr = (business?.address || config.blocks.find(b => b.id === 'location')?.address || config.location || '').trim();
   const directionsUrl = addr ? `https://maps.google.com/?q=${encodeURIComponent(addr)}` : null;
   // Directions uses the full address; the card shows the short one, same as
   // the live page. The preview used to print Google's whole string, postcode
@@ -961,6 +927,53 @@ function StarRating({ value, size=14 }: { value:number; size?:number }) {
   );
 }
 
+/**
+ * What Google actually returns for this place's reviews.
+ *
+ * "My reviews aren't showing up" has three completely different causes — no
+ * Google place linked, nobody has written one yet, or the API key's plan
+ * doesn't include review text — and the page looks identical in all three.
+ * This asks the same endpoint the public row asks and says which it is.
+ */
+function ReviewsProbe({ businessId, placeId }: { businessId?: string; placeId?: string }) {
+  const [state,setState] = useState<{n:number;count:number;error?:string}|null>(null);
+  const [busy,setBusy] = useState(false);
+
+  const check = useCallback(async () => {
+    if(!businessId) return;
+    setBusy(true);
+    try{
+      const r = await fetch(`/api/places?businessId=${businessId}&type=reviews`);
+      const d = await r.json() as { reviews?:unknown[]; reviewCount?:number; error?:string };
+      setState({ n:(d.reviews??[]).length, count:d.reviewCount??0, error:d.error });
+    }catch{
+      setState({ n:0, count:0, error:'Could not reach the server' });
+    }finally{ setBusy(false); }
+  },[businessId]);
+
+  if(!placeId) return null;
+
+  return (
+    <div className="mt-2.5">
+      <button onClick={()=>void check()} disabled={busy}
+        className="text-[11px] font-semibold text-[#777777] hover:text-[#0A0A0A] underline underline-offset-2 disabled:opacity-40">
+        {busy?'Checking…':'Check what Google returns'}
+      </button>
+      {state && (
+        <p className="text-[11px] mt-1.5 leading-relaxed text-[#777777]">
+          {state.error
+            ? <span className="text-red-500">Google said: {state.error}</span>
+            : state.n > 0
+              ? <>Found {state.n} written {state.n===1?'review':'reviews'}{state.count?` of ${state.count.toLocaleString()} total`:''}. The row will show {Math.min(state.n,3)}.</>
+              : state.count > 0
+                ? <>You have {state.count.toLocaleString()} {state.count===1?'rating':'ratings'} but no written reviews yet, so the row shows your score and links to Google.</>
+                : <>Google has no reviews for this place yet. The row stays hidden until it does.</>}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ReviewsCard({ block,placeId,onUpdateBlock }: {
   block:OpenStatusBlock|undefined;
   placeId?:string;
@@ -1020,8 +1033,10 @@ function ReviewsCard({ block,placeId,onUpdateBlock }: {
 }
 
 // ── Block edit panel (inline right of blocks, no modal) ───────────────────────
-function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,timeZone,override }: {
+function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,onClose,timeZone,override }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
+  /** For the rows that read live data from the business's Google listing. */
+  businessId?:string;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
   onUpdateConfig:(u:Partial<OpenStatusPageConfig>)=>void;
   onClose:()=>void;
@@ -1172,38 +1187,23 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
           {block.id==='menu' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="menu" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  onClick={()=>onUpdateBlock({menuType:'pdf'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='pdf'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
-                  <LucideFileText size={20} color={block.menuType==='pdf'?'#0A0A0A':'#858585'}/>
-                  <span className="text-[11px] font-semibold text-[#0A0A0A]">Upload PDF</span>
-                </button>
-                <button
-                  onClick={()=>onUpdateBlock({menuType:'photos'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='photos'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
-                  <LucideImage size={20} color={block.menuType==='photos'?'#0A0A0A':'#858585'}/>
-                  <span className="text-[11px] font-semibold text-[#0A0A0A]">Photos</span>
-                </button>
-                <button
-                  onClick={()=>onUpdateBlock({menuType:'url'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='url'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
-                  <LucideGlobe size={20} color={block.menuType==='url'?'#0A0A0A':'#858585'}/>
-                  <span className="text-[11px] font-semibold text-[#0A0A0A]">Link</span>
-                </button>
+              {/* This used to offer PDF / Photos / Link. Three ways to attach a
+                  menu is three ways to get it wrong, and the PDF path stored
+                  the whole file as a data URL inside the page config. A link
+                  is the one every business already has. */}
+              <div>
+                <FieldLabel>Menu link</FieldLabel>
+                <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/>
+                <p className="mt-1 text-[10px] text-black/35">
+                  Wherever your menu already lives — your site, a Google Doc, a Toast or Square page.
+                  Without a link this block won&apos;t publish.
+                </p>
               </div>
-              {block.menuType==='pdf'&&<PdfField label="PDF file" value={block.menuFile??''} onChange={v=>onUpdateBlock({menuFile:v})}/>}
-              {block.menuType==='photos'&&(
-                <div>
-                  <FieldLabel>Photo gallery URL</FieldLabel>
-                  <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Link to your photo gallery or album…"/>
-                </div>
-              )}
-              {block.menuType==='url'&&(
-                <div>
-                  <FieldLabel>Menu link</FieldLabel>
-                  <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/>
-                </div>
+              {!!block.menuFile && !block.url?.trim() && (
+                <p className="rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] px-3 py-2.5 text-[11.5px] text-[#777777] leading-relaxed">
+                  You have a PDF uploaded from before. It still opens on your page — paste a link
+                  above whenever you want to replace it.
+                </p>
               )}
             </div>
           )}
@@ -1289,8 +1289,9 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
                   </p>
                 )}
               <p className="text-[11px] text-[#9A9A97] leading-relaxed">
-                No reviews on Google yet? The row hides itself until there are some.
+                No written reviews yet? The row still shows your score and links to Google.
               </p>
+              <ReviewsProbe businessId={businessId} placeId={config.placeId}/>
             </div>
           )}
 
@@ -1335,11 +1336,19 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
 }
 
 // ── Block picker (command palette style) ──────────────────────────────────────
+/**
+ * Website and Directions are not in here.
+ *
+ * They are permanent header actions — the two things a customer reaches for
+ * first — so they live in the bio card, not the row list. They were still
+ * being offered as blocks, which meant an owner could add "Website", drag it
+ * around, and watch it never appear on their page. Their values are edited
+ * under Business, where the rest of the business's details are.
+ */
 const PICKER_CATEGORIES = [
-  { label:'Essential',      ids:['hours','location'] },
+  { label:'Essential',      ids:['hours'] },
   { label:'Food & Beverage',ids:['menu','order'] },
   { label:'Engagement',     ids:['book','reviews','gallery','updates'] },
-  { label:'Contact',        ids:['website'] },
 ];
 
 function BlockPicker({ blocks, onAdd, onClose }: {
@@ -1962,7 +1971,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[]);
 
   const allBlocks = config.blocks;
-  const orderedBlocks = [...allBlocks.filter(b=>b.id==='hours'),...allBlocks.filter(b=>b.id!=='hours')];
+  // Website and Directions still live in the config — they hold the values the
+  // page header reads — but they are not rows, so they are not in the list the
+  // owner reorders. Leaving them in meant dragging a block that never appeared
+  // on the page and switching off a button that stayed on.
+  const rowBlocks = allBlocks.filter(b=>!HEADER_ACTION_IDS.has(b.id));
+  const orderedBlocks = [...rowBlocks.filter(b=>b.id==='hours'),...rowBlocks.filter(b=>b.id!=='hours')];
   const activeBlocks = orderedBlocks.filter(b=>b.on);
   const openBlock = allBlocks.find(b=>b.id===openId)??null;
   // What the owner has set for today, if anything. Passed into every preview so
@@ -2955,6 +2969,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {/* Block edit panel — slides in when a block is open */}
                 {showEditPanel&&openBlock?(
                   <BlockEditPanel
+                    businessId={localBusiness?.id}
                     block={openBlock} config={config} timeZone={bizTimeZone} override={todayOverride}
                     onUpdateBlock={u=>updateBlock(openBlock.id,u)}
                     onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
@@ -3228,6 +3243,47 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                      type where socials is an array. The normalizer converts
                      between them on load. Two types with one name is asking
                      for trouble, but it is not this change's job to fix. */}
+                {/* ── Contact & location ──────────────────────────────────
+                     Website and Directions are the two permanent buttons in
+                     the page header, so they are edited here with the rest of
+                     the business's details rather than as blocks. They used to
+                     be blocks an owner could add, drag and switch off, and
+                     switching one off did nothing because the header ignored
+                     it — while the Website field on this tab, which looked
+                     like the same thing, never reached the header at all. */}
+                <div className="mb-5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-0.5">Contact &amp; location</p>
+                  <p className="text-[12px] text-[#777777] mb-3.5">
+                    These are the Website and Directions buttons under your business name.
+                    Leave one blank and that button doesn&apos;t show.
+                  </p>
+                  <div className="space-y-2.5">
+                    <div>
+                      <FieldLabel>Website</FieldLabel>
+                      <Input value={bizEdit.website} onChange={v=>setBizEdit(b=>({...b,website:v}))} placeholder="https://yoursite.com"/>
+                    </div>
+                    <div>
+                      <FieldLabel>Address</FieldLabel>
+                      <Input value={bizEdit.address} onChange={v=>setBizEdit(b=>({...b,address:v}))} placeholder="123 Main St, City, State"/>
+                      <p className="mt-1 text-[10px] text-black/35">
+                        Shown under your name, shortened to street and town. Directions opens the full address in Maps.
+                      </p>
+                    </div>
+                    <div>
+                      <FieldLabel>Phone</FieldLabel>
+                      <Input value={bizEdit.phone} onChange={v=>setBizEdit(b=>({...b,phone:v}))} placeholder="+1 (555) 000-0000"/>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 mt-3">
+                    <button onClick={saveBizInfo} disabled={bizSaving}
+                      className="rounded-xl bg-[#7C3AED] text-white text-[11.5px] font-semibold px-4 py-2 hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
+                      {bizSaving?'Saving…':'Save'}
+                    </button>
+                    {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">&#10003; Saved</p>}
+                    {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
+                  </div>
+                </div>
+
                 <div className="mb-5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
                   <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-0.5">Social links</p>
                   <p className="text-[12px] text-[#777777] mb-3.5">Shown as icons near the bottom of your page. Clear a field to remove it.</p>
@@ -4499,6 +4555,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={46} dim={false}>
         {openBlock&&(
           <BlockEditPanel
+            businessId={localBusiness?.id}
             block={openBlock} config={config} timeZone={bizTimeZone} override={todayOverride}
             onUpdateBlock={u=>updateBlock(openBlock.id,u)}
             onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
@@ -4518,7 +4575,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             tapping an already-on block open its editor, so there was no way to
             turn a block OFF from here at all. */}
         <div className="space-y-1.5">
-          {DEFAULT_BLOCKS.map(def=>{
+          {DEFAULT_BLOCKS.filter(def=>!HEADER_ACTION_IDS.has(def.id)).map(def=>{
             const isOn = allBlocks.find(b=>b.id===def.id)?.on;
             return (
               <div key={def.id}

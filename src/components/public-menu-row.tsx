@@ -2,19 +2,14 @@
 
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import PublicRow from '@/components/public-row';
+import { menuDestination } from '@/lib/menu';
 
 /**
  * The menu row.
  *
- * A menu arrives in three shapes and the owner picks one in the builder: a
- * link to their own page, a PDF they uploaded, or a link to a photo album.
- * Only the first of those was ever read on the published page — the row took
- * its destination from `url` alone, so an owner who uploaded a PDF got a row
- * that looked tappable and did nothing. That is the single worst thing a row
- * can do, because the customer blames the restaurant, not us.
- *
- * All three go somewhere now, and the row says which kind it is, so nobody
- * taps a PDF expecting a web page on a phone with no signal.
+ * A menu is a link. Resolving which link — and keeping the PDFs uploaded
+ * before that was true — lives in lib/menu, where it has tests. The row says
+ * when it is a PDF, so nobody taps one expecting a web page.
  */
 
 type Props = {
@@ -24,23 +19,9 @@ type Props = {
   accent?: string;
 };
 
-export function menuDestination(block: OpenStatusBlock): { href: string; kind: 'pdf' | 'photos' | 'url' } | null {
-  const url = block.url?.trim() ?? '';
-  const file = block.menuFile?.trim() ?? '';
-
-  if (block.menuType === 'pdf') return file ? { href: file, kind: 'pdf' } : null;
-  if (block.menuType === 'photos') return url ? { href: url, kind: 'photos' } : null;
-  // 'url', and anything older that predates menuType. A PDF uploaded before
-  // the type existed still lives in menuFile, so fall back to it rather than
-  // dropping the row.
-  if (url) return { href: url, kind: 'url' };
-  return file ? { href: file, kind: 'pdf' } : null;
-}
-
-const SUBTITLE: Record<'pdf' | 'photos' | 'url', string> = {
+const SUBTITLE: Record<'pdf' | 'link', string> = {
   pdf: 'Opens a PDF',
-  photos: 'Photo menu',
-  url: 'Tap to view',
+  link: 'Tap to view',
 };
 
 export default function PublicMenuRow({ block, businessId, dark = false, accent }: Props) {
