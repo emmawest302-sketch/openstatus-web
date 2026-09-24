@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import OwnerQuickStatus from '@/components/owner-quick-status';
 import PublishedBusinessBlocks from '@/components/published-business-blocks';
 import PublicSocialLinks from '@/components/public-social-links';
 import { imageTreatment } from '@/lib/image-treatment';
@@ -616,7 +615,13 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         </Link>
       </div>
 
-      <OwnerQuickStatus businessId={business.id} businessName={business.name}/>
+      {/* The owner bar used to live here. It checked for a Supabase session
+          and rendered nothing without one — and an owner almost always reaches
+          their own page by tapping the link in their Instagram bio, which
+          opens in Instagram's own webview with a separate cookie jar and no
+          session. So it was invisible in the one place it was most needed,
+          while still being a floating bar over a page meant to look clean.
+          Owner controls move to a private link instead. */}
     </div>
     </>
   );

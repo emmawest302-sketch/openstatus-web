@@ -1,3 +1,4 @@
+import { brandGlyph } from '@/lib/brand-icons';
 /**
  * Icon components for the builder.
  *
@@ -116,15 +117,23 @@ export function IconYouTube({ size=22 }: { size?: number }) {
     </svg>
   );
 }
-export function SocialIcon({ platform, size=22 }: { platform:string; size?:number }) {
-  switch(platform) {
-    case 'instagram': return <IconInstagram size={size}/>;
-    case 'tiktok':    return <IconTikTok size={size}/>;
-    case 'facebook':  return <IconFacebook size={size}/>;
-    case 'twitter':   return <IconTwitterX size={size}/>;
-    case 'youtube':   return <IconYouTube size={size}/>;
-    default:          return <LucideGlobe size={size} color="#858585"/>;
-  }
+/**
+ * Social marks, monochrome.
+ *
+ * These used to be hand-traced glyphs in full brand colour — five saturated
+ * logos in a row at the foot of a page whose whole job is to show off one
+ * business's own colours. They also disagreed with the public page, which was
+ * already rendering them in a single ink. Official paths, one colour, both
+ * surfaces the same.
+ */
+export function SocialIcon({ platform, size=22, color='currentColor' }: { platform:string; size?:number; color?:string }) {
+  const glyph = brandGlyph(platform);
+  if (!glyph) return <LucideGlobe size={size} color={color==='currentColor'?'#858585':color}/>;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-label={glyph.title} role="img">
+      <path d={glyph.path}/>
+    </svg>
+  );
 }
 
 // ── Brand provider icons ──────────────────────────────────────────────────────

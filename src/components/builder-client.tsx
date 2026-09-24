@@ -2220,7 +2220,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // contentMaxWidth: how wide the editor panel can grow. Drag handle shrinks it to give more room to preview.
   // SIDEBAR_W + PREVIEW_MIN must always fit, or the panels overflow the viewport
   // and the sidebar appears to sit on top of the content.
-  const SIDEBAR_W = 220, PREVIEW_MIN = 300;
+  // PREVIEW_MIN has to clear the phone itself (340) plus the stage's 24px
+  // gutters, or maxWidth:100% quietly scales the preview down and the page
+  // renders smaller than it really is. It was 300, so once the editor column
+  // was allowed to grow to 760 the phone shrank to about 250.
+  const SIDEBAR_W = 220, PREVIEW_MIN = 400;
   const idealContentWidth = useCallback((vw:number)=>
     Math.max(320, Math.min(780, Math.min(
       Math.round((vw - SIDEBAR_W) * 0.55),     // preferred split
