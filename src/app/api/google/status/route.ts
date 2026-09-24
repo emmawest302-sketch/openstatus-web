@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mergeSpecialPeriods, type SpecialPeriod, type GDate } from '@/lib/special-hours';
 import { getAdminClient } from '@/lib/supabaseAdmin';
+import { OWNER_COOKIE, readOwnerSession } from '@/lib/owner-link';
 
 /**
  * Google Business Profile open-state + special hours.
@@ -42,19 +43,35 @@ async function refreshAccessToken(refresh: string, clientId: string, clientSecre
 
 /** Resolve caller -> their business -> a valid Google access token. */
 async function resolveGoogle(req: NextRequest) {
+  const admin = getAdminClient();
+
+  // A Supabase session (the builder) or the owner-link cookie (the phone).
+  // See the note in api/status: an owner on their phone has no Supabase
+  // session, so requiring one locked them out of their own controls.
   const auth = req.headers.get('authorization') ?? '';
   const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!jwt) return { error: 'Not signed in', status: 401 as const };
 
-  const admin = getAdminClient();
-  const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-  if (userErr || !userData.user) return { error: 'Not signed in', status: 401 as const };
+  let ownerBusinessId: string | null = null;
+  if (!jwt) {
+    const session = readOwnerSession(req.cookies.get(OWNER_COOKIE)?.value);
+    if (!session) return { error: 'Not signed in', status: 401 as const };
+    ownerBusinessId = session.businessId;
+  }
 
-  const { data: business } = await admin
+  let userId: string | null = null;
+  if (jwt) {
+    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+    if (userErr || !userData.user) return { error: 'Not signed in', status: 401 as const };
+    userId = userData.user.id;
+  }
+
+  const query = admin
     .from('businesses')
-    .select('id, google_location_id')
-    .eq('user_id', userData.user.id)
-    .single();
+    .select('id, google_location_id');
+  const { data: business } = await (ownerBusinessId
+    ? query.eq('id', ownerBusinessId)
+    : query.eq('user_id', userId!)
+  ).single();
 
   if (!business) return { error: 'No business found', status: 404 as const };
   if (!business.google_location_id) {

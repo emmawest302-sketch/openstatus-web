@@ -7,6 +7,9 @@ export const RESERVED = new Set([
   'logout','new','openstatus','password','pricing','privacy','profile',
   'register','reset','root','settings','setup','signin','signup','static',
   'status','support','team','terms','test','update','upgrade','user','www',
+  // Owner-side routes. A business claiming /me or /s would take over the
+  // owner's own controls, so these are spoken for before anyone asks.
+  'me','my','owner','today','s','go','link','open','closed','hours','share',
 ]);
 
 export type HandleCheck = {

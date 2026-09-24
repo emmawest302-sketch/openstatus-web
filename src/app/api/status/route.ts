@@ -1,19 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
+import { OWNER_COOKIE, readOwnerSession } from '@/lib/owner-link';
 
+/**
+ * Two ways to be the owner here.
+ *
+ * A Supabase session, which is how the builder calls this. Or the owner-link
+ * cookie, which is how the phone does — a shop owner tapping their own link
+ * has no Supabase session, because they arrived through an installed shortcut
+ * or an Instagram webview with its own cookie jar.
+ *
+ * Both resolve to the same business, so everything below this is unchanged.
+ */
 async function getBusiness(req: NextRequest) {
+  const admin = getAdminClient();
+
   const auth = req.headers.get('authorization') ?? '';
   const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!jwt) return null;
 
-  const admin = getAdminClient();
-  const { data: userData, error: userError } = await admin.auth.getUser(jwt);
-  if (userError || !userData.user) return null;
+  if (jwt) {
+    const { data: userData, error: userError } = await admin.auth.getUser(jwt);
+    if (userError || !userData.user) return null;
+
+    const { data: business } = await admin
+      .from('businesses')
+      .select('id, timezone')
+      .eq('user_id', userData.user.id)
+      .maybeSingle();
+
+    return business ? { admin, businessId: business.id, timezone: business.timezone } : null;
+  }
+
+  const session = readOwnerSession(req.cookies.get(OWNER_COOKIE)?.value);
+  if (!session) return null;
 
   const { data: business } = await admin
     .from('businesses')
     .select('id, timezone')
-    .eq('user_id', userData.user.id)
+    .eq('id', session.businessId)
     .maybeSingle();
 
   return business ? { admin, businessId: business.id, timezone: business.timezone } : null;

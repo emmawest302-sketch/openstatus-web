@@ -7,6 +7,7 @@ import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
 import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedule } from '@/lib/business-status';
 import { swapById, canDrag } from '@/lib/reorder';
+import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
 import {
   BlockIcon,
@@ -3567,6 +3568,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </a>
                   </div>
                 )}
+
+                <OwnerLinkCard/>
 
                 {/* ── Social links ──
                      These used to live inside a "Follow us" block, which also
