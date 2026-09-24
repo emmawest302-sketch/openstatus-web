@@ -17,18 +17,20 @@ export type Ordered = { id: string };
 export const PINNED_IDS = new Set(['hours']);
 
 /**
- * Only custom links reorder.
+ * Everything except the hours hero reorders.
  *
- * Built-in rows sit in a fixed hierarchy now (see lib/page-rows): hours, then
- * what a customer decides with, then what they act on. Letting an owner drag
- * those was a choice that changed nothing on the published page once the page
- * started sorting by that hierarchy — the block moved in the builder and
- * snapped back on the live site, which is the worst kind of control.
+ * This was briefly restricted to custom links only, on the reasoning that a
+ * fixed hierarchy is a product decision. It is not: a florist wants photos
+ * high, a takeaway wants the menu high, and neither is wrong. The reason the
+ * restriction existed was that the builder and the published page disagreed
+ * about order, so a dragged block snapped back on the live site. That is fixed
+ * in lib/page-rows by making the owner's saved order the only order — so the
+ * honest fix is to let them drag again, not to take the handle away.
  *
- * Custom links have no natural order, so they keep the owner's.
+ * Hours stays pinned first. It is the reason the page exists.
  */
 export function canDrag(id: string): boolean {
-  return !PINNED_IDS.has(id) && id.startsWith('custom-');
+  return !PINNED_IDS.has(id);
 }
 
 /**

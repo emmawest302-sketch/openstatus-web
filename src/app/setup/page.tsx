@@ -8,6 +8,7 @@ import { savePageConfig } from '@/lib/page-config-store';
 import { detectTimeZone, isValidTimeZone } from '@/lib/timezone';
 import { DEFAULT_WEEK_HOURS } from '@/components/builder/constants';
 import { normaliseHandle, HANDLE_MAX } from '@/lib/handles';
+import { SITE_DOMAIN } from '@/lib/site';
 
 // ─── SLUG UTILS ───────────────────────────────────────────────────────────────
 
@@ -774,7 +775,7 @@ export default function SetupPage() {
                 background: '#fff', overflow: 'hidden',
               }}>
                 <span style={{ padding: '14px 4px 14px 16px', fontSize: 14, color: '#858585', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  openstatus.co/
+                  {SITE_DOMAIN}/
                 </span>
                 <input
                   type="text"

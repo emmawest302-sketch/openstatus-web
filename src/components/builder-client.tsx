@@ -17,7 +17,7 @@ import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
-import { publishedBlocks, blockHasDestination, rowRank, isCustomRow, HEADER_ACTION_IDS } from '@/lib/page-rows';
+import { publishedBlocks, blockHasDestination, HEADER_ACTION_IDS } from '@/lib/page-rows';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicBanner from '@/components/public-banner';
 import PublicHoursRow from '@/components/public-hours-row';
@@ -415,7 +415,6 @@ function ImageAppearanceControls({ config, onChange }: {
 function PageBackgroundPicker({ value, onChange, dark=false }: {
   value: string; onChange:(v:string, anim?:string, speed?:number)=>void; dark?:boolean;
 }) {
-  const wheelRef = useRef<HTMLInputElement>(null);
   const border = dark ? '#E9E9E7' : '#E9E9E7';
   const accent = dark ? '#0A0A0A' : '#0A0A0A';
   const [tab,setTab] = useState<'color'|'design'>('color');
@@ -442,16 +441,17 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
             ))}
           </div>
           {/* colour wheel */}
-          <button onClick={()=>wheelRef.current?.click()}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors hover:bg-[#F7F7F6]"
+          {/* Same as above: the finger has to land on the real input, or iOS
+              never opens the wheel. */}
+          <span className="relative inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border"
             style={{borderColor:border}}>
-            <span className="w-5 h-5 rounded-full flex-shrink-0" style={{background:'conic-gradient(#ef4444,#f59e0b,#eab308,#22c55e,#06b6d4,#3b82f6,#8b5cf6,#ec4899,#ef4444)'}}/>
-            <span className="text-[12px] font-semibold text-[#0A0A0A]">Pick any color</span>
-          </button>
-          <input ref={wheelRef} type="color"
-            value={/^#[0-9a-fA-F]{6}$/.test(value)?value:'#ffffff'}
-            onChange={e=>onChange(e.target.value)}
-            className="sr-only" aria-label="Custom background color"/>
+            <span aria-hidden className="w-5 h-5 rounded-full flex-shrink-0" style={{background:'conic-gradient(#ef4444,#f59e0b,#eab308,#22c55e,#06b6d4,#3b82f6,#8b5cf6,#ec4899,#ef4444)'}}/>
+            <span aria-hidden className="text-[12px] font-semibold text-[#0A0A0A]">Pick any color</span>
+            <input type="color" aria-label="Custom background color"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              value={/^#[0-9a-fA-F]{6}$/.test(value)?value:'#ffffff'}
+              onChange={e=>onChange(e.target.value)}/>
+          </span>
         </>
       )}
 
@@ -701,7 +701,6 @@ function LiveDesktopPreview(props: React.ComponentProps<typeof LivePhonePreview>
 function NameColorPicker({ value, autoColor, onChange }: {
   value?: string; autoColor: string; onChange:(v:string|undefined)=>void;
 }) {
-  const wheelRef = useRef<HTMLInputElement>(null);
   const SWATCHES = ['#FFFFFF','#0A0A0A','#7C3AED','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899'];
   return (
     <div>
@@ -715,13 +714,24 @@ function NameColorPicker({ value, autoColor, onChange }: {
             className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
             style={{background:c,borderColor:value===c?'#0A0A0A':'#E9E9E7'}}/>
         ))}
-        <button onClick={()=>wheelRef.current?.click()} title="Custom color"
-          className="w-7 h-7 rounded-full border-2 border-dashed border-[#D4D4D4] flex items-center justify-center hover:border-[#0A0A0A] transition-colors">
-          <span className="text-[11px] text-[#9A9A97]">+</span>
-        </button>
-        <input ref={wheelRef} type="color" className="sr-only" aria-label="Custom business name color"
-          value={/^#[0-9a-fA-F]{6}$/.test(value??'')?value:autoColor}
-          onChange={e=>onChange(e.target.value)}/>
+        {/*
+          The real colour input sits on top, invisible, at full size.
+
+          It used to be .sr-only with a button calling .click() on it. A
+          synthetic click on a clipped input does not open the colour picker on
+          iOS Safari — the wheel simply never appeared, and there was no error
+          to see. Letting the finger land on the actual input is the only way
+          that works on a phone, and it costs nothing on desktop.
+        */}
+        <span className="relative w-7 h-7 flex-shrink-0">
+          <span aria-hidden className="absolute inset-0 rounded-full border-2 border-dashed border-[#D4D4D4] flex items-center justify-center">
+            <span className="text-[11px] text-[#9A9A97]">+</span>
+          </span>
+          <input type="color" title="Custom color" aria-label="Custom business name color"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            value={/^#[0-9a-fA-F]{6}$/.test(value??'')?value:autoColor}
+            onChange={e=>onChange(e.target.value)}/>
+        </span>
       </div>
       <p className="text-[10px] text-[#9A9A97]">
         {value ? 'Custom color.' : `Auto — currently ${autoColor==='#FFFFFF'?'white':'black'}, based on your background.`}
@@ -1867,6 +1877,32 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[]);
 
   /**
+   * Move a row one place up or down.
+   *
+   * Press-and-hold is a lovely gesture and it is not a reliable one: iOS fires
+   * pointercancel the instant it decides a touch is a scroll, which kills the
+   * hold before it completes and leaves an owner pressing a widget that never
+   * lifts. Two arrows in the widget's own editor always work, on every device,
+   * and they are the thing someone actually finds. The drag stays for the
+   * people it works for.
+   *
+   * Moves are computed over ROWS only — hours is pinned first and the two
+   * header actions are not on the page as rows at all, so stepping over them
+   * would look like a press that did nothing.
+   */
+  const moveBlock = useCallback((id:string, dir:-1|1)=>{
+    setConfig(c=>{
+      const rows=c.blocks.filter(b=>!HEADER_ACTION_IDS.has(b.id)&&b.id!=='hours');
+      const i=rows.findIndex(b=>b.id===id);
+      if(i<0) return c;
+      const j=i+dir;
+      if(j<0||j>=rows.length) return c;
+      const next=swapById(c.blocks,id,rows[j].id);
+      return next===c.blocks?c:{...c,blocks:next};
+    });
+  },[]);
+
+  /**
    * Long-press a widget to pick it up, then drag to rearrange — the iOS
    * home-screen gesture. We reorder live as the finger crosses each neighbour
    * rather than computing drop gaps, which keeps it correct in the two-column
@@ -1989,6 +2025,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[idealContentWidth]);
   const [previewWidth,setPreviewWidth]=useState(0); // unused for layout now, kept for compat
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
+  const [bizInfoOpen,setBizInfoOpen]=useState(false);
   const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:normalizeCategory(business?.category)??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
   const [slugEdit,setSlugEdit]=useState(business?.slug??'');
   const [slugSaving,setSlugSaving]=useState(false);
@@ -2056,14 +2093,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // owner reorders. Leaving them in meant dragging a block that never appeared
   // on the page and switching off a button that stayed on.
   const rowBlocks = allBlocks.filter(b=>!HEADER_ACTION_IDS.has(b.id));
-  // Same hierarchy the published page uses, so the list an owner reads top to
-  // bottom is the page they are about to publish. This used to be "hours, then
-  // whatever order it was saved in", which stopped matching the moment the
-  // page started sorting.
+  // Saved order, with hours pinned to the top — exactly what publishedBlocks
+  // does, so the list an owner reads top to bottom is the page they publish.
   const orderedBlocks = [...rowBlocks].sort((a,b)=>{
-    if (isCustomRow(a.id) !== isCustomRow(b.id)) return isCustomRow(a.id) ? 1 : -1;
-    if (isCustomRow(a.id)) return 0;                  // customs keep owner order
-    return rowRank(a.id) - rowRank(b.id);
+    const pin = (id:string)=> id==='hours' ? 0 : 1;
+    return pin(a.id) - pin(b.id);
   });
   const activeBlocks = orderedBlocks.filter(b=>b.on);
   const openBlock = allBlocks.find(b=>b.id===openId)??null;
@@ -2434,17 +2468,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     }catch{}
     setStatusLoading(false);
   };
-  const clearStatus=async()=>{
-    setStatusPosting(true);
-    try{
-      const {data:s}=await supabase.auth.getSession();
-      const token=s?.session?.access_token;
-      if(!token){setStatusPosting(false);return;}
-      await fetch('/api/status',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({action:'clear'})});
-      await loadStatusUpdates();
-    }catch{}
-    setStatusPosting(false);
-  };
   // Escape hatch: clears every owner closure, re-publishes the weekly hours to the
   // table the public page reads, and reopens the Google listing if it is closed.
   // Needed because a failed hours save used to leave a page stuck on "closed"
@@ -2464,6 +2487,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       try{ await syncHoursToDb(business.id, config.weeklyHours); }
       catch(e){ problems.push(e instanceof Error?e.message:'hours did not republish'); }
     }
+    // Closing today wrote a DATED specialHours period on the Google listing.
+    // Clearing the OpenStatus row does nothing to that, so the page reopened
+    // while Google stayed shut until midnight. This is the exact undo of what
+    // postStatus('closed_today') writes.
+    if(googleConnected){
+      try{
+        const tz=bizTimeZone||'America/Chicago';
+        const [ty,tm,td]=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'})
+          .format(new Date()).split('-').map(Number);
+        const todayDate={year:ty,month:tm,day:td};
+        await googleStatusRequest({action:'special_hours',periods:[],clearDates:[todayDate],today:todayDate});
+      }catch(e){ problems.push(e instanceof Error?e.message:'Google kept today\u2019s closure'); }
+    }
+    // CLOSED_TEMPORARILY is a separate flag from today's dated period.
     if(googleConnected&&gStatus?.isClosed&&gStatus.canReopen!==false){
       try{ await googleReopen(); }
       catch{ problems.push('Google would not reopen — try the Temporarily closed tab'); }
@@ -2541,29 +2578,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
     await loadStatusUpdates();
     if(pageOk) setStatusNote('');
-    setStatusPosting(false);
-  };
-
-  /**
-   * Undo today's change in both places: clear the OpenStatus update and wipe
-   * today's Google specialHours period so the listing falls back to the
-   * regular week immediately rather than at midnight.
-   */
-  const clearStatusEverywhere=async()=>{
-    setStatusPosting(true);setGMsg('');
-    await clearStatus();
-    if(googleConnected){
-      try{
-        const tz=bizTimeZone||'America/Chicago';
-        const [ty,tm,td]=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'})
-          .format(new Date()).split('-').map(Number);
-        const todayDate={year:ty,month:tm,day:td};
-        await googleStatusRequest({action:'special_hours',periods:[],clearDates:[todayDate],today:todayDate});
-        setGMsg('✓ Back to your regular hours on your page and Google');
-      }catch(e){ setGMsg(e instanceof Error?e.message:'Cleared your page, but Google failed'); }
-    } else {
-      setGMsg('✓ Back to your regular hours');
-    }
     setStatusPosting(false);
   };
 
@@ -2788,7 +2802,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <span className="min-w-0 flex-1">
               <span className="block text-[12px] font-semibold text-[#0A0A0A] truncate leading-tight">{business?.name??'Your business'}</span>
               <span className="block text-[10.5px] text-[#9A9A97] leading-tight">
-                {business?.slug ? `openstatus.co/${business.slug}` : 'Not published yet'}
+                {business?.slug ? `${SITE_DOMAIN}/${business.slug}` : 'Not published yet'}
               </span>
             </span>
           </div>
@@ -3279,87 +3293,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 <OwnerLinkCard/>
 
-                {/* ── Social links ──
-                     These used to live inside a "Follow us" block, which also
-                     rendered its own list of links on the page — so the same
-                     links showed up twice, once as a block and once as the icon
-                     row above the footer. The block is gone and they live here.
-
-                     Note the builder's config keeps socials as a record keyed
-                     by platform; lib/openstatus-page-config.ts keeps its own
-                     type where socials is an array. The normalizer converts
-                     between them on load. Two types with one name is asking
-                     for trouble, but it is not this change's job to fix. */}
-                {/* ── Contact & location ──────────────────────────────────
-                     Website and Directions are the two permanent buttons in
-                     the page header, so they are edited here with the rest of
-                     the business's details rather than as blocks. They used to
-                     be blocks an owner could add, drag and switch off, and
-                     switching one off did nothing because the header ignored
-                     it — while the Website field on this tab, which looked
-                     like the same thing, never reached the header at all. */}
-                <div className="mb-5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
-                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-0.5">Contact &amp; location</p>
-                  <p className="text-[12px] text-[#777777] mb-3.5">
-                    These are the Website and Directions buttons under your business name.
-                    Leave one blank and that button doesn&apos;t show.
-                  </p>
-                  <div className="space-y-2.5">
-                    <div>
-                      <FieldLabel>Website</FieldLabel>
-                      <Input value={bizEdit.website} onChange={v=>setBizEdit(b=>({...b,website:v}))} placeholder="https://yoursite.com"/>
-                    </div>
-                    <div>
-                      <FieldLabel>Address</FieldLabel>
-                      <Input value={bizEdit.address} onChange={v=>setBizEdit(b=>({...b,address:v}))} placeholder="123 Main St, City, State"/>
-                      <p className="mt-1 text-[10px] text-black/35">
-                        Shown under your name, shortened to street and town.
-                      </p>
-                    </div>
-                    <div>
-                      <FieldLabel>Directions link (optional)</FieldLabel>
-                      <Input
-                        value={config.directionsUrl ?? ''}
-                        onChange={v=>setConfig(c=>({...c,directionsUrl:v}))}
-                        placeholder="Paste your Google or Apple Maps link…"
-                      />
-                      <p className="mt-1 text-[10px] text-black/35">
-                        Leave blank and the button searches Maps for your address, which opens
-                        whichever maps app your customer already uses. Paste a link only if you
-                        want a specific listing.
-                      </p>
-                    </div>
-                    <div>
-                      <FieldLabel>Phone</FieldLabel>
-                      <Input value={bizEdit.phone} onChange={v=>setBizEdit(b=>({...b,phone:v}))} placeholder="+1 (555) 000-0000"/>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 mt-3">
-                    <button onClick={saveBizInfo} disabled={bizSaving}
-                      className="rounded-xl bg-[#7C3AED] text-white text-[11.5px] font-semibold px-4 py-2 hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
-                      {bizSaving?'Saving…':'Save'}
-                    </button>
-                    {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">&#10003; Saved</p>}
-                    {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
-                  </div>
-                </div>
-
-                <div className="mb-5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
-                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-0.5">Social links</p>
-                  <p className="text-[12px] text-[#777777] mb-3.5">Shown as icons near the bottom of your page. Clear a field to remove it.</p>
-                  <div className="space-y-2.5">
-                    {SOCIAL_PLATFORMS.map(({key,label})=>(
-                      <div key={key} className="flex items-center gap-3">
-                        <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
-                        <Input
-                          value={config.socials?.[key] ?? ''}
-                          onChange={v=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:v}}))}
-                          placeholder={`${label} URL…`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {/* Business details and social links used to sit here. They are
+                    settings, not a dashboard: an owner types them once at setup
+                    and then never again, while this tab is the thing they open
+                    every week to see how the page is doing. They live in
+                    Settings → Business info now, on phone and desktop both. */}
 
                 {/* ── Google connection status ── */}
                 <div className={`mb-5 p-4 rounded-2xl border ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E9E9E7] bg-[#F7F7F6]'}`}>
@@ -3784,21 +3722,90 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <p className="text-[#777777] text-[13px] mt-1">Your business, your link, your account.</p>
                 </div>
 
-                {/* ── Business name ── */}
+                {/* ── Business info ──
+                     Everything a customer reads about the business, in one
+                     card, edited once. Website and Address are the two
+                     permanent buttons under the business name in the page
+                     header — leave one blank and that button does not show. */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Business name</p>
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Business info</p>
                   <div className="rounded-2xl border border-[#E9E9E7] p-4 bg-white space-y-3">
-                    <input value={bizEdit.name} onChange={e=>setBizEdit(bz=>({...bz,name:e.target.value}))}
-                      placeholder="Your business name"
-                      className="w-full bg-white border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                    <div className="flex items-center gap-2">
+                    <div>
+                      <FieldLabel>Name</FieldLabel>
+                      <Input value={bizEdit.name} onChange={v=>setBizEdit(b=>({...b,name:v}))} placeholder="Your business name"/>
+                      <p className="mt-1 text-[10px] text-black/35">Shown at the top of your page.</p>
+                    </div>
+                    <div>
+                      <FieldLabel>Category</FieldLabel>
+                      <select value={bizEdit.category} onChange={e=>setBizEdit(b=>({...b,category:e.target.value}))}
+                        className="w-full bg-white border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer">
+                        <option value="">— Select —</option>
+                        {CATEGORIES.map(c=>(<option key={c.id} value={c.id}>{c.label}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <FieldLabel>Website</FieldLabel>
+                      <Input value={bizEdit.website} onChange={v=>setBizEdit(b=>({...b,website:v}))} placeholder="https://yoursite.com"/>
+                    </div>
+                    <div>
+                      <FieldLabel>Address</FieldLabel>
+                      <Input value={bizEdit.address} onChange={v=>setBizEdit(b=>({...b,address:v}))} placeholder="123 Main St, City, State"/>
+                      <p className="mt-1 text-[10px] text-black/35">
+                        Shown under your name, shortened to street and town.
+                      </p>
+                    </div>
+                    <div>
+                      <FieldLabel>Directions link (optional)</FieldLabel>
+                      <Input
+                        value={config.directionsUrl ?? ''}
+                        onChange={v=>setConfig(c=>({...c,directionsUrl:v}))}
+                        placeholder="Paste your Google or Apple Maps link…"
+                      />
+                      <p className="mt-1 text-[10px] text-black/35">
+                        Leave blank and the button searches Maps for your address, which opens
+                        whichever maps app your customer already uses.
+                      </p>
+                    </div>
+                    <div>
+                      <FieldLabel>Phone</FieldLabel>
+                      <Input value={bizEdit.phone} onChange={v=>setBizEdit(b=>({...b,phone:v}))} placeholder="+1 (555) 000-0000"/>
+                    </div>
+                    <div className="flex items-center gap-3 pt-0.5">
                       <button onClick={saveBizInfo} disabled={bizSaving||!bizEdit.name.trim()}
                         className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
-                        {bizSaving?'Saving…':bizSaved?'✓ Saved':'Save name'}
+                        {bizSaving?'Saving…':bizSaved?'✓ Saved':'Save'}
                       </button>
+                      {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
                     </div>
-                    {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
-                    <p className="text-[11px] text-[#9A9A97]">This is the name shown at the top of your page.</p>
+                  </div>
+                </div>
+
+                {/* ── Social links ──
+                     These used to live inside a "Follow us" block, which also
+                     rendered its own list of links on the page — so the same
+                     links showed up twice. The block is gone and they live
+                     here, beside the rest of the details an owner fills in once.
+
+                     Note the builder's config keeps socials as a record keyed
+                     by platform; lib/openstatus-page-config.ts keeps its own
+                     type where socials is an array. The normalizer converts
+                     between them on load. */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Social links</p>
+                  <div className="rounded-2xl border border-[#E9E9E7] p-4 bg-white">
+                    <p className="text-[12px] text-[#777777] mb-3.5">Shown as icons near the bottom of your page. Clear a field to remove it.</p>
+                    <div className="space-y-2.5">
+                      {SOCIAL_PLATFORMS.map(({key,label})=>(
+                        <div key={key} className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
+                          <Input
+                            value={config.socials?.[key] ?? ''}
+                            onChange={v=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:v}}))}
+                            placeholder={`${label} URL…`}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -4126,11 +4133,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 {/* ── BUSINESS tab content ── */}
         {sidebarTab==='business'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-semibold text-[#0A0A0A] pt-1 pb-3">Business</h2>
+            {/* A dashboard should greet you and then tell you something.
+                "Business" told her nothing she did not already know. */}
+            <div className="pt-2 pb-4">
+              <h2 className="text-[24px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.03em]">
+                Hello, {localBusiness?.name?.trim()||'there'}
+              </h2>
+              <p className="text-[13px] text-[#777777] mt-1">
+                {analyticsData
+                  ? 'Here\u2019s how your page has been doing.'
+                  : 'Here\u2019s your page at a glance.'}
+              </p>
+            </div>
             {/* Analytics snapshot - mobile */}
             {analyticsData&&(
               <div className="mb-4">
-                <p className="text-[10px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Last 30 days</p>
+                <p className="text-[10px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Check out these numbers — last 30 days</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
@@ -4174,87 +4192,18 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {/* Reviews & rating */}
             <ReviewsCard block={allBlocks.find(b=>b.id==='location')} placeId={config.placeId} onUpdateBlock={u=>updateBlock('location',u)}/>
 
-            {/* Social Profiles */}
-            <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Social Profiles</p>
-            <div className="space-y-2 mb-3">
-              {[
-                {key:'instagram', label:'Instagram', placeholder:'@username or full URL'},
-                {key:'tiktok',    label:'TikTok',    placeholder:'@username or full URL'},
-                {key:'facebook',  label:'Facebook',  placeholder:'Page URL'},
-                {key:'twitter',   label:'Twitter / X',placeholder:'@username or full URL'},
-                {key:'youtube',   label:'YouTube',   placeholder:'Channel URL'},
-              ].map(({key,label,placeholder})=>(
-                <div key={key} className="flex items-center gap-2 bg-[#F7F7F6] rounded-xl border border-[#E9E9E7] px-3 py-2">
-                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">{label}</span>
-                  <input value={(config.socials??{})[key]??''}
-                    onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
-                    placeholder={placeholder}
-                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
-                </div>
-              ))}
-            </div>
+            <button onClick={()=>setSidebarTab('settings' as SidebarTab)}
+              className="mt-3 w-full flex items-center gap-3 p-3.5 rounded-2xl border border-[#E9E9E7] bg-[#F7F7F6] text-left active:scale-[0.99] transition-transform">
+              <div className="w-9 h-9 rounded-xl bg-white border border-[#E9E9E7] flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-[#0A0A0A]">Put your controls on your home screen</p>
+                <p className="text-[11.5px] text-[#777777] mt-0.5">One tap to close early. No password.</p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
 
-            {/* ── Business Profile inline editor ── */}
-            <div className="mb-3">
-              <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Business Profile</p>
-              <div className="rounded-2xl border border-[#E9E9E7] bg-[#F7F7F6] overflow-hidden divide-y divide-[#E9E9E7]">
-                {/* Name */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Name</span>
-                  <input value={bizEdit.name} onChange={e=>setBizEdit(b=>({...b,name:e.target.value}))}
-                    placeholder="Business name"
-                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
-                </div>
-                {/* Category */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Category</span>
-                  <select value={bizEdit.category} onChange={e=>setBizEdit(b=>({...b,category:e.target.value}))}
-                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none appearance-none cursor-pointer">
-                    <option value="">— Select —</option>
-                    {CATEGORIES.map(c=>(
-                      <option key={c.id} value={c.id}>{c.label}</option>
-                    ))}
-                  </select>
-                </div>
-                {/* Phone */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Phone</span>
-                  <input value={bizEdit.phone} onChange={e=>setBizEdit(b=>({...b,phone:e.target.value}))}
-                    placeholder="+1 (555) 000-0000" type="tel"
-                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
-                </div>
-                {/* Website */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Website</span>
-                  <input value={bizEdit.website} onChange={e=>setBizEdit(b=>({...b,website:e.target.value}))}
-                    placeholder="https://yoursite.com" type="url"
-                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
-                </div>
-                {/* Address */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Address</span>
-                  <input value={bizEdit.address} onChange={e=>setBizEdit(b=>({...b,address:e.target.value}))}
-                    placeholder="123 Main St, City, State"
-                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
-                </div>
-                {/* Directions — a button and a link. Blank searches the address. */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Directions</span>
-                  <input value={config.directionsUrl ?? ''} onChange={e=>setConfig(c=>({...c,directionsUrl:e.target.value}))}
-                    placeholder="Maps link (optional)" type="url"
-                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
-                </div>
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
-                {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">✓ Saved</p>}
-                {!bizSaveError&&!bizSaved&&<span/>}
-                <button onClick={saveBizInfo} disabled={bizSaving}
-                  className="ml-auto rounded-xl bg-[#7C3AED] text-white text-[11px] font-semibold px-4 py-2 hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
-                  {bizSaving?'Saving…':'Save'}
-                </button>
-              </div>
-            </div>
           </div>
         )}
         {/* ── STATUS page ── one decision: closed, or open. Everything else folds away. ── */}
@@ -4514,15 +4463,88 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
 
+            {/* Getting the controls onto a home screen had no mobile route at
+                all: this card lived only in the desktop Business tab, which is
+                display:none on a phone. So an owner setting up on the device
+                she wanted the icon on was shown nothing. The card already knows
+                it is on a phone and offers the link rather than a QR code. */}
+            <OwnerLinkCard/>
+
             {/* Settings menu */}
             <div className="space-y-2">
-              <button onClick={()=>setSidebarTab('business')} className="flex items-center gap-3 p-3.5 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7] w-full text-left">
+              {/* This used to be a chevron that dropped you on the Business
+                  dashboard and left you hunting for the fields. The fields are
+                  here now, which is what the row always said it would do. */}
+              <button onClick={()=>setBizInfoOpen(v=>!v)} className="flex items-center gap-3 p-3.5 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7] w-full text-left">
                 <div className="w-9 h-9 rounded-xl bg-[#E9E9E7] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 </div>
                 <span className="text-[13px] font-semibold text-[#0A0A0A] flex-1">Edit business info</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{transform:bizInfoOpen?'rotate(90deg)':'none',transition:'transform .18s'}}>
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
               </button>
+
+              {bizInfoOpen&&(
+                <div className="rounded-2xl border border-[#E9E9E7] bg-white overflow-hidden divide-y divide-[#E9E9E7]">
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Name</span>
+                    <input value={bizEdit.name} onChange={e=>setBizEdit(b=>({...b,name:e.target.value}))}
+                      placeholder="Business name"
+                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Category</span>
+                    <select value={bizEdit.category} onChange={e=>setBizEdit(b=>({...b,category:e.target.value}))}
+                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none appearance-none cursor-pointer">
+                      <option value="">— Select —</option>
+                      {CATEGORIES.map(c=>(<option key={c.id} value={c.id}>{c.label}</option>))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Phone</span>
+                    <input value={bizEdit.phone} onChange={e=>setBizEdit(b=>({...b,phone:e.target.value}))}
+                      placeholder="+1 (555) 000-0000" type="tel"
+                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Website</span>
+                    <input value={bizEdit.website} onChange={e=>setBizEdit(b=>({...b,website:e.target.value}))}
+                      placeholder="https://yoursite.com" type="url"
+                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Address</span>
+                    <input value={bizEdit.address} onChange={e=>setBizEdit(b=>({...b,address:e.target.value}))}
+                      placeholder="123 Main St, City, State"
+                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2.5">
+                    <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Directions</span>
+                    <input value={config.directionsUrl ?? ''} onChange={e=>setConfig(c=>({...c,directionsUrl:e.target.value}))}
+                      placeholder="Maps link (optional)" type="url"
+                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                  </div>
+                  {SOCIAL_PLATFORMS.map(({key,label})=>(
+                    <div key={key} className="flex items-center gap-2 px-3 py-2.5">
+                      <span className="flex-shrink-0 w-5"><SocialIcon platform={key} size={17}/></span>
+                      <input value={config.socials?.[key] ?? ''}
+                        onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
+                        placeholder={`${label} link…`}
+                        className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-3 px-3 py-3">
+                    {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
+                    {bizSaved&&<p className="text-[11px] text-emerald-600 font-semibold">✓ Saved</p>}
+                    <button onClick={saveBizInfo} disabled={bizSaving}
+                      className="ml-auto rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold px-4 py-2 active:scale-95 transition-transform disabled:opacity-40">
+                      {bizSaving?'Saving…':'Save'}
+                    </button>
+                  </div>
+                </div>
+              )}
               <a href="mailto:info@openstatus.co?subject=Help" className="flex items-center gap-3 p-3.5 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7]">
                 <div className="w-9 h-9 rounded-xl bg-[#E9E9E7] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
@@ -4561,32 +4583,44 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             ? 'calc(48vh + 56px + env(safe-area-inset-bottom))'
             : 'calc(112px + env(safe-area-inset-bottom))',
           transition:'bottom .3s cubic-bezier(.32,.72,0,1)',
-          backgroundColor:'#F1F2F3',
-          backgroundImage:'linear-gradient(rgba(10,10,10,0.030) 1px,transparent 1px),linear-gradient(90deg,rgba(10,10,10,0.030) 1px,transparent 1px)',
-          backgroundSize:'24px 24px',
+          // No grid, no grey, no 340px card floating in the middle of a
+          // 390px screen. On a phone the page IS the canvas: it runs edge to
+          // edge at its real width, so what she is editing is the size and
+          // shape customers actually get, and opening a sheet reveals more
+          // page rather than a slab of backdrop.
+          backgroundColor:'#FFFFFF',
           touchAction: mDragId ? 'none' : undefined,
         }}>
-        <div className="min-h-full flex items-start justify-center py-3 px-2" style={{position:'relative'}}>
-          <div style={{position:'absolute',top:12,right:12,zIndex:10}}>
+        <div className="min-h-full" style={{position:'relative'}}>
+          <div style={{position:'absolute',top:10,right:10,zIndex:10}}>
             <button onClick={e=>{e.stopPropagation();setPreviewKey(k=>k+1);}} title="Refresh preview"
               style={{display:'flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,0.85)',backdropFilter:'blur(8px)',border:'1px solid rgba(0,0,0,0.08)',boxShadow:'0 2px 8px rgba(0,0,0,0.12)',cursor:'pointer'}}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#292929" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             </button>
           </div>
 
-          <div className="w-full rounded-[24px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.16)]"
-            style={{maxWidth:340,marginLeft:'auto',marginRight:'auto'}}>
+          <div className="w-full">
             <LivePhonePreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}
               selectedId={mSheet==='block'?openId:null}
               onSelectBlock={id=>{ if(dragging.current||suppressTap.current) return; setOpenId(id); setSidebarTab('design'); setMSheet('block'); }}
               blockProps={previewBlockProps}/>
           </div>
+          {/* The toolbar floats over the canvas, so the last row needs room to
+              scroll clear of it or it reads as a page that has been cut off. */}
+          <div style={{height:24}}/>
         </div>
+      </div>
 
-        {/* Coach line — the hold gesture isn't discoverable on its own */}
-        <p className="text-center text-[11px] text-[#8B5CF6] pb-4 pt-1 font-medium">
+      {/* Coach line — a pill over the page, not a white strip under it */}
+      <div className="fixed left-0 right-0 z-30 flex justify-center pointer-events-none"
+        style={{
+          display: isMobile && isEditSubTab && !mSheet ? 'flex' : 'none',
+          bottom:'calc(126px + env(safe-area-inset-bottom))',
+        }}>
+        <span className="px-3 py-1.5 rounded-full text-[11px] font-medium text-white"
+          style={{background:mDragId?'rgba(124,58,237,0.92)':'rgba(10,10,10,0.68)',backdropFilter:'blur(6px)'}}>
           {mDragId?'Drag to rearrange, let go to drop':'Tap a widget to edit · hold to move it'}
-        </p>
+        </span>
       </div>
 
       {/* ══ EDIT TOOLBAR ══ replaces the full-screen Blocks/Style sheet */}
@@ -4606,7 +4640,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {key:'vibe'       as const, label:'Vibe',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M18 16l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"/></svg>},
             {key:'font'       as const, label:'Font',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>},
             {key:'color'      as const, label:'Color',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>},
-            {key:'background' as const, label:'Background', svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>},
+            {key:'background' as const, label:'Photos',     svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>},
           ]).map(({key,label,svg})=>(
             <button key={key}
               onClick={()=>{ setSidebarTab('design'); setOpenId(null); setMSheet(m=>m===key?null:key); }}
@@ -4619,7 +4653,25 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {/* ══ SMALL SHEETS ══ one per toolbar button, plus the per-widget editor */}
 
-      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={46} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={52} dim={false}>
+        {openBlock&&canDrag(openBlock.id)&&(()=>{
+          const rows=orderedBlocks.filter(b=>b.id!=='hours');
+          const i=rows.findIndex(b=>b.id===openBlock.id);
+          const arrow=(dir:-1|1,disabled:boolean,label:string,path:string)=>(
+            <button type="button" aria-label={label} disabled={disabled}
+              onClick={()=>moveBlock(openBlock.id,dir)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-white border border-[#E9E9E7] text-[12px] font-semibold text-[#0A0A0A] active:scale-95 transition-transform disabled:opacity-35">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d={path}/></svg>
+              {label}
+            </button>
+          );
+          return (
+            <div className="flex items-center gap-2 mb-3 p-1.5 rounded-2xl bg-[#F7F7F6] border border-[#E9E9E7]">
+              {arrow(-1,i<=0,'Move up','M12 19V5M5 12l7-7 7 7')}
+              {arrow(1,i<0||i>=rows.length-1,'Move down','M12 5v14M19 12l-7 7-7-7')}
+            </div>
+          );
+        })()}
         {openBlock&&(
           <BlockEditPanel
             businessId={localBusiness?.id}
@@ -4715,7 +4767,82 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         />
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={50} dim={false}>
+      {/*
+        Logo and cover photo had no mobile home at all: both lived only in the
+        desktop Style tab, so an owner setting up on a phone — which is most of
+        them — could not put their own face on their own page. They belong
+        beside the page background, because all three are the same decision:
+        what this page looks like before anyone reads a word of it.
+      */}
+      <MobileSheet open={isMobile&&mSheet==='background'} title="Photos & background" onClose={()=>setMSheet(null)} maxVh={64} dim={false}>
+
+        <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Logo</p>
+        <div className="flex items-center gap-3 mb-1">
+          {localBusiness?.avatar_url
+            ?// eslint-disable-next-line @next/next/no-img-element
+             <img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                className="w-14 h-14 rounded-full object-cover border border-[#E9E9E7] flex-shrink-0" alt="Logo"/>
+            :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+          }
+          <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
+            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+              const file=e.target.files?.[0];if(!file)return;
+              setLogoUploading(true);setLogoUploadError('');
+              try{
+                const ref=await uploadAsset(file,'avatar');
+                if(localBusiness?.id){
+                  await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                  setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                }
+              }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+              finally{setLogoUploading(false);e.target.value='';}
+            }}/>
+            <span className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12.5px] font-semibold text-[#0A0A0A] active:scale-95 transition-transform">
+              <LucideImage size={13} color="#777777"/>
+              {logoUploading?'Uploading…':localBusiness?.avatar_url?'Change logo':'Upload logo'}
+            </span>
+          </label>
+        </div>
+        {logoUploadError&&<p className="text-[11px] text-red-500 mb-1">{logoUploadError}</p>}
+
+        <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mt-5 mb-2">Cover photo</p>
+        {config.bgImage&&(
+          <CoverPhotoCrop
+            src={config.bgImage}
+            position={config.bgImagePosition}
+            onChange={pos=>setConfig(c=>({...c,bgImagePosition:pos}))}
+            onRemove={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
+          />
+        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
+            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+              const file=e.target.files?.[0];if(!file)return;
+              setBgUploading(true);setBgUploadError('');
+              try{
+                const ref=await uploadAsset(file,'header');
+                const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
+                setConfig(c=>({...c,bgImage:bgUrl}));
+              }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+              finally{setBgUploading(false);e.target.value='';}
+            }}/>
+            <span className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12.5px] font-semibold text-[#0A0A0A] active:scale-95 transition-transform">
+              <LucideImage size={13} color="#777777"/>
+              {bgUploading?'Uploading…':config.bgImage?'Replace photo':'Upload photo'}
+            </span>
+          </label>
+          {googlePhotos.map((url,i)=>(
+            <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+              className={`relative w-11 h-11 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#E9E9E7]'}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} className="w-full h-full object-cover" alt=""/>
+            </button>
+          ))}
+        </div>
+        {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
+        {googlePhotos.length>0&&<p className="text-[10.5px] text-[#9A9A97] mt-2">Tap one of your Google photos, or upload your own.</p>}
+
+        <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mt-5 mb-2">Page background</p>
         <p className="text-[11.5px] text-[#777777] mb-3">Your widgets lighten or darken automatically to stay readable.</p>
         <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
       </MobileSheet>

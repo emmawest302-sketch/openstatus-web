@@ -56,7 +56,7 @@ describe('publishedBlocks — the one filter the page and the preview share', ()
   });
 
   it('keeps self-contained rows with no link at all', () => {
-    const rows = publishedBlocks([{ id: 'updates', on: true }, { id: 'gallery', on: true }]);
+    const rows = publishedBlocks([{ id: 'gallery', on: true }, { id: 'updates', on: true }]);
     expect(rows.map(r => r.id)).toEqual(['gallery', 'updates']);
   });
 
@@ -83,16 +83,16 @@ describe('publishedBlocks — the one filter the page and the preview share', ()
     expect(publishedBlocks([{ id: 'menu', url: 'https://x.test' }])).toHaveLength(1);
   });
 
-  it('overrides the saved order for built-ins', () => {
-    // This used to assert the opposite. Built-in order is a product decision
-    // now, so a config saved when owners could drag them is re-sorted rather
-    // than honoured.
+  it('publishes built-ins in the order the owner saved them', () => {
+    // A florist wants photos at the top and a takeaway wants the menu there.
+    // Whatever order the builder saved is the order that goes live — there is
+    // no second opinion applied on the way out.
     const rows = publishedBlocks([
       { id: 'book', on: true, url: 'https://b.test' },
       { id: 'menu', on: true, url: 'https://m.test' },
       { id: 'order', on: true, url: 'https://o.test' },
     ]);
-    expect(rows.map(r => r.id)).toEqual(['menu', 'order', 'book']);
+    expect(rows.map(r => r.id)).toEqual(['book', 'menu', 'order']);
   });
 
   it('never publishes a row a customer could tap into nothing', () => {
@@ -110,28 +110,28 @@ describe('publishedBlocks — the one filter the page and the preview share', ()
 const L = (...ids: string[]): RowSource[] =>
   ids.map(id => ({ id, on: true, url: 'https://x.test' }));
 
-describe('ordering', () => {
+describe('ordering \u2014 the owner\u2019s, and nobody else\u2019s', () => {
 
-  it('puts built-ins in hierarchy order however they were saved', () => {
+  it('is the saved order, exactly', () => {
     const saved = L('reviews', 'order', 'menu', 'offers', 'shop', 'book', 'gallery');
     expect(publishedBlocks(saved).map(b => b.id))
-      .toEqual(['gallery', 'menu', 'offers', 'shop', 'order', 'book', 'reviews']);
+      .toEqual(['reviews', 'order', 'menu', 'offers', 'shop', 'book', 'gallery']);
   });
 
-  it('slots a row an old config never had into the right place', () => {
-    // No migration needed: a config saved before Offers existed still puts
-    // Offers between Menu and Shop the moment the owner turns it on.
+  it('does not reshuffle a page whose owner has never touched the order', () => {
+    // ROW_ORDER is what a NEW page starts in (see DEFAULT_BLOCKS); it is not
+    // re-applied afterwards, or dragging a row would be undone on publish.
     const saved = L('menu', 'order', 'offers');
-    expect(publishedBlocks(saved).map(b => b.id)).toEqual(['menu', 'offers', 'order']);
+    expect(publishedBlocks(saved).map(b => b.id)).toEqual(['menu', 'order', 'offers']);
   });
 
-  it('keeps custom links in the owner\u2019s order, after the built-ins', () => {
+  it('lets a custom link sit above a built-in if that is where it was put', () => {
     const saved = L('custom-z', 'reviews', 'custom-a', 'menu');
     expect(publishedBlocks(saved).map(b => b.id))
-      .toEqual(['menu', 'reviews', 'custom-z', 'custom-a']);
+      .toEqual(['custom-z', 'reviews', 'custom-a', 'menu']);
   });
 
-  it('never returns hours \u2014 the page renders it itself', () => {
+  it('never returns hours \u2014 the page renders it itself, pinned to the top', () => {
     expect(publishedBlocks(L('hours', 'menu')).map(b => b.id)).toEqual(['menu']);
   });
 });
@@ -153,8 +153,8 @@ describe('shop as a row', () => {
     expect(blockHasDestination({ id: 'shop', url: 'https://shop.test' })).toBe(true);
   });
 
-  it('sits between offers and ordering', () => {
+  it('publishes wherever the owner put it', () => {
     const rows = publishedBlocks(L('order', 'shop', 'offers'));
-    expect(rows.map(b => b.id)).toEqual(['offers', 'shop', 'order']);
+    expect(rows.map(b => b.id)).toEqual(['order', 'shop', 'offers']);
   });
 });

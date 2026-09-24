@@ -7,15 +7,15 @@
  * never called from anywhere — dead code with a passing test suite, which is
  * worse than no code, because it reads as the answer.
  *
- * There is one function now. Built-in rows sit in a fixed hierarchy, because
- * the order is a product decision and not something an owner benefits from
- * relitigating: hours first (the reason the page exists), then what a customer
- * decides with, then what they act on, then what they read. Custom links keep
- * the owner's own order among themselves, at the end, because nobody else can
- * know what those are for.
+ * There is one function now, and the order it returns is the order that was
+ * saved. ROW_ORDER below is the order a NEW page starts in, not a hierarchy
+ * re-imposed on every publish — imposing it meant an owner could drag a row in
+ * the builder and watch it snap back on the live site, which is worse than
+ * having no handle at all. Hours is the one exception: it is pinned to the top
+ * and rendered by the page itself.
  */
 
-/** Built-in rows, top to bottom. Anything not listed sorts after them. */
+/** The order a new page starts in. Owners reorder from here. */
 export const ROW_ORDER = [
   'hours',
   'gallery',   // shown as "Photos"
@@ -88,7 +88,7 @@ export function blockHasDestination(b: RowSource): boolean {
     .some((v) => !!v && v.trim().length > 0);
 }
 
-/** Position in the fixed hierarchy. Custom links sort after every built-in. */
+/** Position in the starting order. Kept for the block picker's own sorting. */
 export function rowRank(id: string): number {
   const i = (ROW_ORDER as readonly string[]).indexOf(id);
   return i === -1 ? ROW_ORDER.length : i;
@@ -98,26 +98,19 @@ export function rowRank(id: string): number {
  * The one list of rows a published page shows.
  *
  * Both the live page and the builder preview call this, so they cannot drift.
- * Built-ins come back in hierarchy order regardless of how they happen to sit
- * in the saved config — which also means an old config written before a row
- * existed slots the new row into the right place without a migration.
+ *
+ * Order is the order of the saved array, full stop. ROW_ORDER is the *default*
+ * a page starts life in, not a hierarchy imposed afterwards — sorting by rank
+ * here meant an owner could drag a row in the builder and watch it snap back
+ * on the live site, which is worse than no handle at all. One source of truth,
+ * and it belongs to the owner.
  */
 export function publishedBlocks<T extends RowSource>(blocks: T[]): T[] {
-  const visible = blocks.filter((b) =>
+  return blocks.filter((b) =>
     b.on !== false &&
     b.id !== 'hours' &&
     !HEADER_ACTION_IDS.has(b.id) &&
     !RETIRED_ROW_IDS.has(b.id) &&
     blockHasDestination(b)
   );
-
-  const builtIns = visible.filter((b) => !isCustomRow(b.id));
-  // Stable within a rank, so two blocks that somehow share one keep their
-  // saved order rather than flipping between renders.
-  builtIns.sort((a, b) => rowRank(a.id) - rowRank(b.id));
-
-  // Custom links keep the owner's order, after everything built in.
-  const customs = visible.filter((b) => isCustomRow(b.id));
-
-  return [...builtIns, ...customs];
 }

@@ -18,10 +18,10 @@ function GoogleLogo() {
   );
 }
 
-function MetaLogo() {
+function AppleLogo() {
   return (
     <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true">
-      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/>
+      <path d="M16.36 12.78c-.02-2.3 1.88-3.4 1.96-3.45-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3-.79-1.55.02-2.97.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74s1.78.74 3 .72c1.24-.02 2.02-1.13 2.78-2.24.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.41-3.69zM14.1 5.9c.63-.77 1.06-1.83.94-2.9-.91.04-2.01.61-2.67 1.37-.59.68-1.1 1.76-.96 2.8 1.01.08 2.05-.52 2.69-1.27z"/>
     </svg>
   );
 }
@@ -35,6 +35,18 @@ function EmailIcon() {
   );
 }
 
+/**
+ * Apple Sign In is off until it is configured.
+ *
+ * Meta lived here and never worked: the button was wired to the provider but
+ * nothing had been set up behind it, so every tap ended at a Supabase error.
+ * Rather than repeat that with Apple, the button only renders once
+ * NEXT_PUBLIC_APPLE_AUTH is set to "1", which is the signal that the provider
+ * has actually been turned on in Supabase with a real Apple Services ID. An
+ * auth button that does not authenticate is worse than one less option.
+ */
+const APPLE_ENABLED = process.env.NEXT_PUBLIC_APPLE_AUTH === '1';
+
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function SignupPage() {
@@ -43,7 +55,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<'google' | 'meta' | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -63,8 +75,8 @@ export default function SignupPage() {
 
   const busy = loading || oauthLoading !== null;
 
-  const handleOAuth = async (provider: 'google' | 'facebook') => {
-    setOauthLoading(provider === 'google' ? 'google' : 'meta');
+  const handleOAuth = async (provider: 'google' | 'apple') => {
+    setOauthLoading(provider);
     setError('');
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -149,16 +161,17 @@ export default function SignupPage() {
             {oauthLoading === 'google' ? 'Opening…' : 'Continue with Google'}
           </button>
 
-          {/* Meta — outlined */}
+          {APPLE_ENABLED && (
           <button
-            onClick={() => handleOAuth('facebook')}
+            onClick={() => handleOAuth('apple')}
             disabled={busy}
             className={btnBase}
-            style={{ background: '#fff', border: '1.5px solid #EBEBEA', color: '#0A0A0A' }}
+            style={{ background: '#0A0A0A', color: '#FFFFFF' }}
           >
-            <MetaLogo />
-            {oauthLoading === 'meta' ? 'Opening…' : 'Continue with Meta'}
+            <AppleLogo />
+            {oauthLoading === 'apple' ? 'Opening…' : 'Continue with Apple'}
           </button>
+          )}
 
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>

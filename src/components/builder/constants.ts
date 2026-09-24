@@ -127,20 +127,23 @@ export const DEFAULT_WEEK_HOURS: WeeklyHours = {
   sun:{ open:'10:00',close:'16:00',closed:false },
 };
 export const DEFAULT_BLOCKS: OpenStatusBlock[] = [
+  // This list IS the starting order of a new page, and the owner reorders it
+  // from there — lib/page-rows publishes whatever order is saved. So it opens
+  // in the order that suits most businesses: the reason they are here, then
+  // what a customer decides with, then what they act on, then what they read.
   { id:'hours',   title:'Hours & status',        sub:'Live open / closed status',  icon:'clock',on:true, tone:'default',color:'#059669',size:'full' },
-  { id:'location',title:'Location & directions', sub:'Tap for directions',          icon:'pin',  on:true, tone:'default',color:'#2563eb',size:'full' },
-  { id:'menu',    title:'Menu',                  sub:'Tap to view',                icon:'menu', on:false,tone:'default',color:'#d97706',menuType:'url',size:'full' },
-  { id:'order',   title:'Online ordering',       sub:'DoorDash, Uber Eats & more', icon:'bag',  on:false,tone:'default',color:'#dc2626',size:'full' },
-  { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'full' },
-  { id:'website', title:'Website',               sub:'Link to your site',          icon:'globe',  on:false,tone:'default',color:'#0891b2',size:'full' },
-  // Photos, Reviews and Updates render themselves from the business's Google
-  // listing or connected Instagram, so they have no URL to fill in. They were
-  // missing from this list entirely, which meant the picker couldn't offer
-  // them AND the config merge deleted them from any page that had one saved.
   { id:'gallery', title:'Photos',                sub:'Your Google photos',         icon:'image',  on:false,tone:'default',color:'#0d9488',size:'full' },
-  { id:'reviews', title:'Reviews',               sub:'Recent Google reviews',      icon:'star',   on:false,tone:'default',color:'#ca8a04',size:'full' },
+  { id:'menu',    title:'Menu',                  sub:'Tap to view',                icon:'menu', on:false,tone:'default',color:'#d97706',menuType:'url',size:'full' },
   { id:'offers',  title:'Offers',                sub:'Deals running right now',    icon:'tag',    on:false,tone:'default',color:'#c2410c',size:'full' },
   { id:'shop',    title:'Shop',                  sub:'Shop online',                icon:'bag',    on:false,tone:'default',color:'#4338ca',size:'full' },
+  { id:'order',   title:'Online ordering',       sub:'DoorDash, Uber Eats & more', icon:'bag',  on:false,tone:'default',color:'#dc2626',size:'full' },
+  { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'full' },
+  { id:'reviews', title:'Reviews',               sub:'Recent Google reviews',      icon:'star',   on:false,tone:'default',color:'#ca8a04',size:'full' },
+  // Not rows. These two hold the values the page HEADER reads (the Website
+  // button and the Directions button), so they stay in the config and stay out
+  // of the reorderable list. See HEADER_ACTION_IDS in lib/page-rows.
+  { id:'location',title:'Location & directions', sub:'Tap for directions',          icon:'pin',  on:true, tone:'default',color:'#2563eb',size:'full' },
+  { id:'website', title:'Website',               sub:'Link to your site',          icon:'globe',  on:false,tone:'default',color:'#0891b2',size:'full' },
   // 'updates' (Instagram posts) is deliberately absent. The block renders, but
   // nothing in the app can create the Meta token it reads and no job populates
   // the posts table — there is no Connect Instagram button and no cron. So it

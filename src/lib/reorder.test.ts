@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { swapById, canDrag } from './reorder';
 
-// Only custom links reorder now, so the generic fixtures use custom ids.
+// Everything but the pinned hours hero reorders; the fixtures keep the
+// custom- prefix because that is the shape most of these tests started with.
 const list = (...ids: string[]) => ids.map((id) => ({ id: id.length === 1 ? `custom-${id}` : id }));
 const c = (id: string) => `custom-${id}`;
 const ids = (l: { id: string }[]) => l.map((x) => x.id);
@@ -37,11 +38,10 @@ describe('swapById', () => {
     expect(swapById(start, 'menu', 'hours')).toBe(start);
   });
 
-  it('refuses to move a built-in row', () => {
-    // Built-ins sit in a fixed hierarchy. Letting one drag moved it in the
-    // builder and snapped it back on the live page.
-    const start = list('menu', 'order');
-    expect(swapById(start, 'menu', 'order')).toBe(start);
+  it('moves a built-in row, because owners asked for their own order', () => {
+    // The live page publishes the saved order now, so a dragged built-in
+    // stays where it was dropped instead of snapping back.
+    expect(ids(swapById(list('menu', 'order'), 'menu', 'order'))).toEqual(['order', 'menu']);
   });
 
   it('leaves custom links draggable around the pinned and the fixed', () => {
@@ -57,8 +57,8 @@ describe('swapById', () => {
 
   it('knows what can be dragged', () => {
     expect(canDrag('custom-1a2b')).toBe(true);
+    expect(canDrag('menu')).toBe(true);
+    expect(canDrag('offers')).toBe(true);
     expect(canDrag('hours')).toBe(false);
-    expect(canDrag('menu')).toBe(false);
-    expect(canDrag('offers')).toBe(false);
   });
 });

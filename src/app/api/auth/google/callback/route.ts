@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
+import { SITE_URL } from '@/lib/site';
 
 function redirectUri(): string {
   const base =
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://openstatus-web-nu.vercel.app';
+    SITE_URL;
   return base.replace(/\/$/, '') + '/api/auth/google/callback';
 }
 

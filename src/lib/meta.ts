@@ -1,5 +1,6 @@
 // Meta / Instagram Graph API helpers. Server-side only: several of these
 // use META_APP_SECRET, which must never reach the browser.
+import { SITE_URL } from '@/lib/site';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
@@ -16,7 +17,7 @@ export const META_SCOPES = [
 
 export function getRedirectUri(): string {
   const base =
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://openstatus-web-nu.vercel.app';
+    SITE_URL;
   return base.replace(/\/$/, '') + '/api/auth/meta/callback';
 }
 
