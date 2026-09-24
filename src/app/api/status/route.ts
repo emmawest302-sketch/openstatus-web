@@ -125,6 +125,23 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ isOwner: true, updates: data ?? [] });
 }
 
+/**
+ * Kinds the page treats the same way, so one can stand in for the other.
+ *
+ * Only 'closed' changes how a customer reads the page; every other value means
+ * "today has its own window". That is why 'closed' is not a fallback for
+ * anything — swapping into it would turn "closing early at 3" into "shut".
+ */
+const KIND_ALTERNATIVE: Record<string, string | undefined> = {
+  hours: 'other',
+  other: 'hours',
+};
+
+function isKindConstraintError(message: string): boolean {
+  return /status_updates_kind_check/i.test(message)
+    || (/check constraint/i.test(message) && /\bkind\b/i.test(message));
+}
+
 export async function POST(req: NextRequest) {
   const actor = await getBusiness(req);
   if (!actor) {
@@ -275,6 +292,34 @@ export async function POST(req: NextRequest) {
         .insert(row)
         .select('id')
         .single());
+    }
+
+    // The table's kind check constraint predates the values this route writes.
+    // 'hours' was introduced when an early close stopped being filed as
+    // 'closed' — correct for the page, but nothing widened the constraint, so
+    // every "closing early" from every owner has been failing at the database.
+    //
+    // The fallback only ever swaps between kinds the page treats identically:
+    // anything that is not 'closed' is read as "there is a window today, use
+    // closes_at / opens_at". Falling back to 'closed' is deliberately NOT an
+    // option — it would tell customers a shop that is open until 3 is shut.
+    if (error && isKindConstraintError(error.message)) {
+      const alternative = KIND_ALTERNATIVE[row.kind as string];
+      if (alternative) {
+        row.kind = alternative;
+        ({ data, error } = await actor.admin
+          .from('status_updates')
+          .insert(row)
+          .select('id')
+          .single());
+      }
+      if (error && isKindConstraintError(error.message)) {
+        return NextResponse.json({
+          error:
+            'Your database is still rejecting this kind of update. Run ' +
+            'supabase_migration_status_kind.sql in the Supabase SQL editor and try again.',
+        }, { status: 503 });
+      }
     }
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
