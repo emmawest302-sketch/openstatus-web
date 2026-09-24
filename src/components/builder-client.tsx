@@ -4,14 +4,14 @@ import Link from 'next/link';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
-import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
+import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg } from '@/lib/page-theme';
 import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedule } from '@/lib/business-status';
 import { swapById, canDrag } from '@/lib/reorder';
 import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
-import { HEADER_ACTION_IDS } from '@/lib/page-rows';
+import { publishedBlocks } from '@/lib/page-rows';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicHoursRow from '@/components/public-hours-row';
 import PublicActionBlock from '@/components/public-action-block';
@@ -48,7 +48,7 @@ import {
   LucidePin,
   LucideShare,
   LucideShoppingBag,
-  LucideStar,
+  
   LucideThumbsDown,
   LucideThumbsUp,
   LucideX,
@@ -92,7 +92,6 @@ function hoursRowInvalid(d?: { open:string; close:string; closed:boolean }): boo
   return toMin(d.close) <= toMin(d.open);
 }
 
-function blockAllowsPhoto(size?: BlockSize) { return size !== 'half' && size !== 'third'; }
 // These blocks are their own content — they don't need a link to be useful.
 const SELF_CONTAINED_BLOCKS = new Set(['hours','location','updates','gallery']);
 // A block with no destination is excluded from the published page, so the
@@ -180,7 +179,6 @@ function getLiveStatus(
     todayLabel: `Today ${openLabel} – ${closeLabel}`,
   };
 }
-function starsToPercent(stars: number) { return Math.round((stars/5)*100); }
 
 export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfig {
   const r = (raw ?? {}) as Record<string,unknown>;
@@ -571,49 +569,6 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
 }
 
 // Photo upload field
-function PhotoField({ label, value, onChange, placeholder, hint }: {
-  label: string; value: string; onChange: (v:string)=>void;
-  placeholder?: string; hint?: string;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => { if (ev.target?.result) onChange(ev.target.result as string); };
-    reader.readAsDataURL(file);
-  }
-  return (
-    <div>
-      <FieldLabel>{label}</FieldLabel>
-      {hint && <p className="text-xs text-[#858585] mb-3 leading-snug">{hint}</p>}
-      {value
-        ? (
-          <div className="relative group rounded-xl overflow-hidden border border-[#E9E9E7]">
-            <img src={value} className="w-full h-32 object-cover" alt=""/>
-            <button onClick={()=>onChange('')}
-              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <LucideX size={12} color="white"/>
-            </button>
-          </div>
-        )
-        : (
-          <div>
-            <div
-              onClick={()=>fileRef.current?.click()}
-              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F4F5F6] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
-              <LucideImage size={18} color="#858585"/>
-              <p className="text-[12px] text-[#858585]">Click to upload</p>
-            </div>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile}/>
-          </div>
-        )
-      }
-    </div>
-  );
-}
-
-// PDF upload field
 function PdfField({ label, value, onChange }: { label:string; value:string; onChange:(v:string)=>void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -706,7 +661,9 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   const accent = config.themeColor || '#DB6B8F';
   const pageFont = config.font ?? 'Inter, system-ui, sans-serif';
 
-  const activeBlocks = config.blocks.filter(b => b.on && !HEADER_ACTION_IDS.has(b.id) && b.id !== 'hours');
+  // Same filter the published page runs. The preview used to have its own,
+  // looser one, so it showed rows the live page then dropped.
+  const activeBlocks = publishedBlocks(config.blocks);
   const hoursOn = config.blocks.find(b => b.id === 'hours')?.on !== false;
 
   // Header actions, read from the blocks that used to render them as rows.
@@ -762,7 +719,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   return (
     <div style={{ width:'100%', background: config.bg || '#F7F7F5', fontFamily: pageFont }}>
       {config.bgImage && (
-        <div style={{ position:'relative', height:190, overflow:'hidden' }}>
+        <div style={{ position:'relative', height:230, overflow:'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={config.bgImage} alt="" style={{
             width:'100%', height:'100%', objectFit:'cover',
@@ -831,208 +788,26 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   );
 }
 
-// ── Desktop page preview (matches [slug]/page.tsx layout) ─────────────────────
-function LiveDesktopPreview({ business,config,timeZone,override,selectedId,onSelectBlock,blockProps }: {
-  business:Business|null; config:OpenStatusPageConfig; timeZone?:string|null; override?:TodayOverride;
-  selectedId?:string|null;
-  onSelectBlock?:(id:string)=>void;
-  blockProps?:(id:string)=>{ style?:React.CSSProperties } & React.DOMAttributes<HTMLDivElement> & Record<string,unknown>;
-}) {
-  const isDark = isDarkBg(config.bg);
-  const DTOK = surfaceTokens(config.bg);
-  const bg = config.bg || '#F7F7F5';
-  const { status, todayLabel } = getLiveStatus(config.weeklyHours, timeZone, override);
-  const activeBlocks = config.blocks.filter(b => b.on);
-  const sortedBlocks = [
-    ...activeBlocks.filter(b => b.id === 'hours'),
-    ...activeBlocks.filter(b => b.id !== 'hours'),
-  ];
-  const locBlock = config.blocks.find(b => b.id === 'location');
-  const reviewPct = locBlock?.reviewStars && locBlock.reviewStars > 0 ? starsToPercent(locBlock.reviewStars) : null;
-  const coverPhoto = config.bgImage || business?.avatar_url;
-  const themeColor = '#DB6B8F';
-  const initials = (business?.name ?? 'B').split(/\s+/).filter(Boolean).slice(0,2).map((p:string)=>p[0]).join('').toUpperCase();
-
-  // hex to rgb helper for fade gradient
-  function hexToRgb(hex: string) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? { r:parseInt(result[1],16), g:parseInt(result[2],16), b:parseInt(result[3],16) } : { r:247,g:247,b:245 };
-  }
-  const { r,g,b: bv } = hexToRgb(bg);
-  const fadeGradient = `linear-gradient(to bottom, rgba(${r},${g},${bv},0) 0%, rgba(${r},${g},${bv},0.35) 48%, ${bg} 100%)`;
-
-  const glass: React.CSSProperties = {
-    background: DTOK.card,
-    backdropFilter: 'blur(24px) saturate(130%)',
-    WebkitBackdropFilter: 'blur(24px) saturate(130%)',
-    border: `1px solid ${DTOK.cardBorder}`,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-    borderRadius: 20,
-    padding: '14px 16px',
-  };
-
-  const tx = isDark ? '#fff' : '#151515';
-  const sx = isDark ? 'rgba(255,255,255,0.5)' : '#8A8A86';
-
+// ── Desktop page preview ──────────────────────────────────────────────────────
+/**
+ * This used to be ~180 lines of its own markup: its own cover, its own logo,
+ * its own name, its own block rows. It was the last parallel implementation of
+ * the business page, and it drifted — coloured social icons, a stale vote
+ * score, the old floating header — so an owner designing on a laptop was
+ * looking at a page that no longer existed.
+ *
+ * It renders the same tree as the phone preview and the live page now. Desktop
+ * differs only in how wide the column is allowed to get, which the live page
+ * already handles with its own max-width.
+ */
+function LiveDesktopPreview(props: React.ComponentProps<typeof LivePhonePreview>) {
   return (
-    <div
-      data-os-bg-anim={config.bgAnim?'':undefined}
-      style={{
-        minHeight: '100%',
-        background: bg,
-        fontFamily: config.font ?? 'Inter, system-ui, sans-serif',
-        fontSize: 14,
-        animation: bgAnimationStyle(config.bgAnim, config.bgAnimSpeed),
-      }}
-    >
-      <style>{BG_KEYFRAMES}</style>
-      <style>{`[data-block-id],[data-block-id] *{-webkit-user-drag:none;user-select:none;-webkit-user-select:none}`}</style>
-      <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>
-
-        {/* Cover photo */}
-        {coverPhoto ? (
-          <div style={{ position:'relative', height:260, overflow:'hidden' }}>
-            <img src={coverPhoto} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:config.bgImagePosition??'center 60%', display:'block' }}/>
-            <div style={{ position:'absolute', inset:0, background:fadeGradient }}/>
-          </div>
-        ) : (
-          <div style={{ height:60, background:'rgba(0,0,0,0.04)' }}/>
-        )}
-
-        {/* Logo */}
-        <div style={{ display:'flex', justifyContent:'center', marginTop: coverPhoto ? -40 : 0, position:'relative', zIndex:10 }}>
-          {business?.avatar_url && !business.avatar_url.startsWith('storage:') ? (
-            <img src={business.avatar_url} alt="" style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', objectFit:'cover', boxShadow:'0 8px 32px rgba(0,0,0,0.10)', display:'block' }}/>
-          ) : (
-            <div style={{ width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.90)', background:'rgba(255,255,255,0.80)', display:'grid', placeItems:'center', fontSize:24, fontWeight:800, color:themeColor, boxShadow:'0 8px 32px rgba(0,0,0,0.10)' }}>
-              {initials}
-            </div>
-          )}
-        </div>
-
-        {/* Business name */}
-        <div style={{ textAlign:'center', padding:'8px 20px 4px' }}>
-          <h1 style={{ fontSize:32, fontWeight:800, letterSpacing:'-0.03em', color:tx, lineHeight:1, margin:0, fontFamily:config.font??'Georgia, "Times New Roman", serif' }}>
-            {business?.name ?? 'Your Business'}
-          </h1>
-          {business?.tagline && (
-            <p style={{ fontSize:10, fontWeight:500, letterSpacing:'0.15em', textTransform:'uppercase', color:sx, marginTop:6 }}>
-              {business.tagline}
-            </p>
-          )}
-          {!!config.tags?.length && (
-            <p style={{ fontSize:11, fontWeight:500, lineHeight:1.6, color:sx, marginTop:8 }}>
-              {config.tags.filter(Boolean).join(' · ')}
-            </p>
-          )}
-          {!!locBlock?.reviewStars && locBlock.reviewStars > 0 && (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, marginTop:8 }}>
-              <LucideStar size={11} color="#FBBC04" filled/>
-              <span style={{ fontSize:12, fontWeight:700, color:tx }}>{locBlock.reviewStars.toFixed(1)}</span>
-              {!!locBlock?.reviewCount && locBlock.reviewCount>0 && (
-                <span style={{ fontSize:11, color:sx }}>
-                  · {locBlock.reviewCount.toLocaleString()} Google {locBlock.reviewCount===1?'review':'reviews'}
-                </span>
-              )}
-            </div>
-          )}
-          <div style={{ display:'flex', justifyContent:'center', marginTop:12 }}>
-            <span style={{
-              display:'inline-flex', alignItems:'center', gap:7, padding:'9px 16px', borderRadius:999,
-              fontSize:12.5, fontWeight:650,
-              background:isDark?'rgba(255,255,255,0.14)':'rgba(0,0,0,0.05)',
-              border:isDark?'1px solid rgba(255,255,255,0.25)':'1px solid rgba(0,0,0,0.10)',
-              color:isDark?'#FFFFFF':'rgba(0,0,0,0.78)',
-            }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
-              Share this place
-            </span>
-          </div>
-        </div>
-
-        {/* Blocks */}
-        <div style={{ padding:'10px 14px 32px', display:'flex', flexDirection:'column', gap:10 }}>
-          {sortedBlocks.length === 0 ? (
-            <p style={{ textAlign:'center', fontSize:12, color:sx, padding:'24px 0' }}>Toggle blocks to see them here</p>
-          ) : sortedBlocks.map(b => {
-            const extra = blockProps?.(b.id);
-            const { style: extraStyle, ...extraRest } = extra ?? {};
-            return (
-            <div key={b.id} data-block-id={b.id}
-              onClick={()=>onSelectBlock?.(b.id)}
-              {...extraRest}
-              style={{
-                ...glass,
-                ...(onSelectBlock?{cursor:'pointer'}:{}),
-                ...(selectedId===b.id?{outline:'2px solid #7C3AED',outlineOffset:2}:{}),
-                ...(extraStyle ?? {}),
-              }}>
-              <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ width:40, height:40, borderRadius:'50%', flexShrink:0, background: isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
-                  <BlockIcon id={b.id} size={18} color={DTOK.icon(b.color)}/>
-                </div>
-                <div style={{ flex:1 }}>
-                  <p style={{ fontSize:15, fontWeight:700, color:tx, margin:0, letterSpacing:'-0.01em' }}>
-                    {b.id === 'hours' ? (status === 'open' ? 'Open now' : 'Closed now') : b.title}
-                  </p>
-                  <p style={{ fontSize:12, color:sx, margin:0, marginTop:2 }}>
-                    {b.id === 'hours' ? todayLabel : b.sub}
-                  </p>
-                </div>
-                {b.url && (
-                  <div style={{ fontSize:11, color:isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.3)', flexShrink:0 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                  </div>
-                )}
-              </div>
-            </div>
-            );
-          })}
-        </div>
-
-        {/* Social icons */}
-        {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).length > 0 && (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'0 0 16px' }}>
-            {SOCIAL_PLATFORMS.filter(p => config.socials && config.socials[p.key]).map(p => (
-              <div key={p.key} style={{ width:40, height:40, borderRadius:'50%', display:'grid', placeItems:'center', background: isDark?'rgba(255,255,255,0.10)':'rgba(0,0,0,0.06)' }}>
-                <SocialIcon platform={p.key} size={16}/>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Footer */}
-        <p style={{ textAlign:'center', fontSize:10, letterSpacing:'0.15em', textTransform:'uppercase', color:'rgba(0,0,0,0.22)', paddingBottom:24 }}>
-          Powered by OpenStatus
-        </p>
-      </div>
+    <div style={{ maxWidth: 560, margin: '0 auto', width: '100%' }}>
+      <LivePhonePreview {...props}/>
     </div>
   );
 }
 
-// Cover-photo field that hides itself when the block is too small to show one.
-function CoverPhotoField({ block, onUpdateBlock, label='Cover photo', hint }: {
-  block: OpenStatusBlock;
-  onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
-  label?: string; hint?: string;
-}) {
-  if (!blockAllowsPhoto(block.size)) {
-    return (
-      <div className="rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] px-3.5 py-3">
-        <p className="text-[11px] font-normal text-[#777777]">{label} needs a bigger block</p>
-        <p className="text-[10px] text-[#9A9A97] mt-0.5">
-          Set the size below to <strong className="text-[#777777] font-semibold">Square</strong> or <strong className="text-[#777777] font-semibold">Large</strong>.
-          {block.coverPhoto ? ' Your photo is saved and comes back when you do.' : ''}
-        </p>
-      </div>
-    );
-  }
-  return <PhotoField label={label} value={block.coverPhoto??''} onChange={v=>onUpdateBlock({coverPhoto:v})} hint={hint}/>;
-}
-
-// ── Business name colour ─────────────────────────────────────────────────────
-// Defaults to automatic (light text on dark backgrounds) so the name can never
-// disappear; the owner can override with a swatch or any custom colour.
 function NameColorPicker({ value, autoColor, onChange }: {
   value?: string; autoColor: string; onChange:(v:string|undefined)=>void;
 }) {
@@ -1355,8 +1130,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
           {/* ── CUSTOM LINK ── */}
           {block.id.startsWith('custom-') && (
             <div className="space-y-5">
-              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock}
-                hint="Optional photo shown behind the link."/>
               <div>
                 <FieldLabel>Where it goes</FieldLabel>
                 <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/>
@@ -1420,7 +1193,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
           {block.id==='menu' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="menu" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock} hint="Optional banner photo shown at the top of the menu block."/>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={()=>onUpdateBlock({menuType:'pdf'})}
@@ -1461,7 +1233,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
           {block.id==='order' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="order" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock} hint="Optional photo shown behind the block."/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1478,7 +1249,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
           {block.id==='book' && (
             <div className="space-y-5">
               <BlockStylePicker blockId="book" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock}/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1500,7 +1270,6 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
               {block.id==='website'&&(
                 <>
                   <BlockStylePicker blockId="website" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-                  <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock}/>
                   <div><FieldLabel>Website URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
                 </>
               )}

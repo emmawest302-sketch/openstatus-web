@@ -49,6 +49,10 @@ export type RowSource = {
   url?: string;
   menuFile?: string;
   menuType?: string;
+  googleUrl?: string;
+  appleMapsUrl?: string;
+  yelpUrl?: string;
+  tripAdvisorUrl?: string;
 };
 
 export type RowData = {
@@ -138,4 +142,50 @@ export type RowAffordance = 'expand' | 'leave';
 
 export function affordanceFor(id: RowId): RowAffordance {
   return id === 'order' || id === 'book' || id === 'custom' ? 'leave' : 'expand';
+}
+
+
+/**
+ * Blocks that open something of their own rather than linking away. They earn
+ * a row without a URL, because the row *is* the content.
+ */
+export const SELF_CONTAINED_IDS = new Set(['updates', 'gallery']);
+
+/**
+ * Social links render once, as the icon row above the footer. As a block they
+ * appeared a second time on the same page.
+ */
+export const RETIRED_ROW_IDS = new Set(['socials']);
+
+/**
+ * Does tapping this row do anything?
+ *
+ * This used to look at `url` and `menuFile` only, which quietly dropped every
+ * block that stores its destination somewhere else — a Reviews row pointing at
+ * Google, a listing with only a Yelp link. The owner switched the block on,
+ * saw it in the builder, and it never appeared on the page, with nothing
+ * anywhere to say why.
+ */
+export function blockHasDestination(b: RowSource): boolean {
+  if (SELF_CONTAINED_IDS.has(b.id)) return true;
+  return [b.url, b.menuFile, b.googleUrl, b.appleMapsUrl, b.yelpUrl, b.tripAdvisorUrl]
+    .some((v) => !!v && v.trim().length > 0);
+}
+
+/**
+ * The one list of rows a published page shows, in the owner's order.
+ *
+ * Both the live page and the builder preview call this. They used to each
+ * carry their own copy of the filter, and the copies disagreed — the preview
+ * showed rows the page then refused to publish, so an owner would design
+ * against something their customers never saw.
+ */
+export function publishedBlocks<T extends RowSource>(blocks: T[]): T[] {
+  return blocks.filter((b) =>
+    b.on !== false &&
+    b.id !== 'hours' &&
+    !HEADER_ACTION_IDS.has(b.id) &&
+    !RETIRED_ROW_IDS.has(b.id) &&
+    blockHasDestination(b)
+  );
 }

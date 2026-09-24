@@ -46,15 +46,16 @@ export default function PublicHoursRow({
 
   return (
     <div style={{
-      borderRadius: 20,
+      borderRadius: 18,
       overflow: 'hidden',
-      // A live shop gets a green cast; everything else stays neutral so the
-      // colour still means something when it appears.
-      background: live
-        ? (dark ? 'rgba(22,163,74,0.12)' : 'rgba(22,163,74,0.055)')
-        : (dark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.86)'),
+      // The card used to be filled green when the shop was open. At this size
+      // that is a slab of colour the width of the screen, and it made the
+      // collapsed card look like an opened panel. The green now lives on the
+      // border, the icon and the Live pill — enough to mean something, not
+      // enough to become the page's background.
+      background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.86)',
       border: live
-        ? `1px solid ${dark ? 'rgba(34,197,94,0.30)' : 'rgba(22,163,74,0.20)'}`
+        ? `1px solid ${dark ? 'rgba(34,197,94,0.34)' : 'rgba(22,163,74,0.26)'}`
         : `1px solid ${hairline}`,
       boxShadow: dark ? '0 6px 20px rgba(0,0,0,0.20)' : '0 4px 16px rgba(10,10,10,0.04)',
       backdropFilter: 'blur(20px) saturate(130%)',
@@ -66,17 +67,17 @@ export default function PublicHoursRow({
         aria-expanded={open}
         style={{ all: 'unset', display: 'block', width: '100%', cursor: 'pointer', boxSizing: 'border-box' }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '17px 17px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 15px' }}>
           <span style={{
-            width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+            width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
             display: 'grid', placeItems: 'center',
             background: live
               ? (dark ? 'rgba(34,197,94,0.18)' : 'rgba(22,163,74,0.10)')
               : (dark ? 'rgba(255,255,255,0.08)' : 'rgba(10,10,10,0.04)'),
             color: live ? green : muted,
           }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
           </span>
@@ -88,29 +89,26 @@ export default function PublicHoursRow({
                 fontSize: 10, fontWeight: 750, letterSpacing: '0.09em',
                 color: green, textTransform: 'uppercase',
                 background: dark ? 'rgba(34,197,94,0.16)' : 'rgba(22,163,74,0.10)',
-                padding: '3px 8px', borderRadius: 999, marginBottom: 6,
+                padding: '2px 7px', borderRadius: 999, marginBottom: 4,
               }}>
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: green }}/>
                 Live hours
               </span>
             )}
             <span style={{
-              display: 'block', fontSize: 21, fontWeight: 800, letterSpacing: '-0.03em',
-              color: ink, lineHeight: 1.15,
+              display: 'block', fontSize: 19, fontWeight: 800, letterSpacing: '-0.03em',
+              color: ink, lineHeight: 1.1,
             }}>
               {headline}
             </span>
-            <span style={{ display: 'block', fontSize: 14, color: dark ? 'rgba(255,255,255,0.72)' : 'rgba(21,21,21,0.62)', marginTop: 3 }}>
+            <span style={{ display: 'block', fontSize: 13.5, color: dark ? 'rgba(255,255,255,0.72)' : 'rgba(21,21,21,0.62)', marginTop: 2, lineHeight: 1.3 }}>
               {detail}
               {accent && <strong style={{ color: live ? green : ink, fontWeight: 750 }}>{accent}</strong>}
             </span>
-            <span style={{ display: 'block', fontSize: 11.5, color: muted, marginTop: 5 }}>
-              Updated in real time
-            </span>
           </span>
 
-          <span style={{ flexShrink: 0, color: muted, paddingTop: 4 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          <span style={{ flexShrink: 0, color: muted }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"
               style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease' }}>
               <polyline points="6 9 12 15 18 9"/>
@@ -120,9 +118,9 @@ export default function PublicHoursRow({
 
         {note && (
           <div style={{
-            margin: '0 17px 15px', padding: '10px 13px', borderRadius: 13,
+            margin: '0 15px 12px', padding: '8px 11px', borderRadius: 11,
             background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(10,10,10,0.035)',
-            fontSize: 12.5, color: dark ? 'rgba(255,255,255,0.88)' : 'rgba(21,21,21,0.78)',
+            fontSize: 12, lineHeight: 1.35, color: dark ? 'rgba(255,255,255,0.88)' : 'rgba(21,21,21,0.78)',
           }}>
             <strong style={{ fontWeight: 650 }}>{note.headline}</strong>
             {note.detail && <span style={{ display: 'block', color: muted, marginTop: 2 }}>{note.detail}</span>}
@@ -131,17 +129,23 @@ export default function PublicHoursRow({
       </button>
 
       {open && (
-        <div style={{ borderTop: `1px solid ${hairline}`, padding: '4px 17px 14px' }}>
+        <div style={{ borderTop: `1px solid ${hairline}`, padding: '4px 15px 12px' }}>
           {/* Today and tomorrow first: that is what someone is deciding with.
               The full week is underneath for the rare person who needs it. */}
           {today && <Line row={today} ink={ink} muted={muted} green={green} live={live} emphasis/>}
           {tomorrow && <Line row={tomorrow} ink={ink} muted={muted} green={green} live={false}/>}
 
           {week.length > 0 && (
-            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${hairline}` }}>
+            <div style={{ marginTop: 9, paddingTop: 9, borderTop: `1px solid ${hairline}` }}>
               {week.map((row) => <Line key={row.label} row={row} ink={ink} muted={muted} green={green} live={false}/>)}
             </div>
           )}
+
+          {/* Used to sit in the collapsed header, where it was a third line of
+              small grey text nobody reads before deciding whether to walk in. */}
+          <p style={{ fontSize: 11, color: muted, margin: '10px 0 0', textAlign: 'center' }}>
+            Updated in real time
+          </p>
         </div>
       )}
     </div>

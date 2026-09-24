@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveRows, affordanceFor, ROW_ORDER, HEADER_ACTION_IDS, type RowSource } from './page-rows';
+import { resolveRows, affordanceFor, publishedBlocks, blockHasDestination, ROW_ORDER, HEADER_ACTION_IDS, type RowSource } from './page-rows';
 
 const ids = (rows: ReturnType<typeof resolveRows>) => rows.map(r => r.block?.id ?? r.id);
 
@@ -123,5 +123,71 @@ describe('the model itself', () => {
   it('never returns a row twice for one page', () => {
     const rows = ids(resolveRows(FULL, { photoCount: 3, reviewCount: 5 }));
     expect(new Set(rows).size).toBe(rows.length);
+  });
+});
+
+describe('publishedBlocks — the one filter the page and the preview share', () => {
+  it('keeps a block whose destination is a plain url', () => {
+    expect(publishedBlocks([{ id: 'menu', on: true, url: 'https://x.test/menu' }])).toHaveLength(1);
+  });
+
+  it('keeps a Reviews block that only has a Google link', () => {
+    // This is the regression: the old filter looked at url and menuFile only,
+    // so an owner switched Reviews on, saw it in the builder, and it never
+    // appeared on the page.
+    const rows = publishedBlocks([{ id: 'reviews', on: true, googleUrl: 'https://maps.google.com/x' }]);
+    expect(rows.map(r => r.id)).toEqual(['reviews']);
+  });
+
+  it('keeps a listing that only has Yelp or TripAdvisor', () => {
+    expect(publishedBlocks([{ id: 'reviews', on: true, yelpUrl: 'https://yelp.com/x' }])).toHaveLength(1);
+    expect(publishedBlocks([{ id: 'reviews', on: true, tripAdvisorUrl: 'https://ta.com/x' }])).toHaveLength(1);
+  });
+
+  it('keeps self-contained rows with no link at all', () => {
+    const rows = publishedBlocks([{ id: 'updates', on: true }, { id: 'gallery', on: true }]);
+    expect(rows.map(r => r.id)).toEqual(['updates', 'gallery']);
+  });
+
+  it('drops a block that goes nowhere', () => {
+    expect(publishedBlocks([{ id: 'order', on: true, url: '   ' }])).toEqual([]);
+  });
+
+  it('drops hours, header actions and retired rows', () => {
+    const rows = publishedBlocks([
+      { id: 'hours', on: true },
+      { id: 'website', on: true, url: 'https://x.test' },
+      { id: 'location', on: true, url: 'https://maps.test' },
+      { id: 'socials', on: true, url: 'https://instagram.test' },
+      { id: 'book', on: true, url: 'https://resy.test' },
+    ]);
+    expect(rows.map(r => r.id)).toEqual(['book']);
+  });
+
+  it('drops anything switched off', () => {
+    expect(publishedBlocks([{ id: 'menu', on: false, url: 'https://x.test' }])).toEqual([]);
+  });
+
+  it('treats a missing `on` as on, the way a legacy save does', () => {
+    expect(publishedBlocks([{ id: 'menu', url: 'https://x.test' }])).toHaveLength(1);
+  });
+
+  it('keeps the owner order', () => {
+    const rows = publishedBlocks([
+      { id: 'book', on: true, url: 'https://b.test' },
+      { id: 'menu', on: true, url: 'https://m.test' },
+      { id: 'order', on: true, url: 'https://o.test' },
+    ]);
+    expect(rows.map(r => r.id)).toEqual(['book', 'menu', 'order']);
+  });
+
+  it('never publishes a row a customer could tap into nothing', () => {
+    const noisy: RowSource[] = [
+      { id: 'menu', on: true, url: '' },
+      { id: 'order', on: true },
+      { id: 'custom-1', on: true, url: '\n  ' },
+    ];
+    expect(publishedBlocks(noisy)).toEqual([]);
+    expect(noisy.every(b => !blockHasDestination(b))).toBe(true);
   });
 });

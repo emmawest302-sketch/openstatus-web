@@ -62,119 +62,36 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
   const CARD_BORDER = dark ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.82)';
   const TEXT = dark ? '#FFFFFF' : '#151515';
   const TEXT_MUTED = dark ? 'rgba(255,255,255,0.64)' : '#8A8A86';
-  const href = safeUrl(block.url);
+  // A Reviews row keeps its destination in googleUrl, a listing might only
+  // have Yelp. Reading block.url alone made those rows tappable-looking and
+  // inert.
+  const href = safeUrl(block.url || block.googleUrl || block.yelpUrl || block.tripAdvisorUrl || block.appleMapsUrl);
   const [hovered, setHovered] = useState(false);
-  // Photos only render in the bigger sizes — mirrors the builder preview, so a
-  // block the owner set to Small never shows a sliver of a photo on the live page.
-  const photoOk = block.size !== 'half' && block.size !== 'third';
-  const hasCoverPhoto = !!block.coverPhoto && photoOk;
 
-  // ── Photo card (square tile with background image) ──────────────
-  if (hasCoverPhoto) {
-    const photoCard = (
-      <div
-        style={{
-          position: 'relative',
-          aspectRatio: block.size === 'square' ? '1 / 1' : '16 / 10',
-          borderRadius: 18,
-          overflow: 'hidden',
-          boxShadow: hovered
-            ? '0 12px 36px rgba(0,0,0,0.18)'
-            : '0 8px 30px rgba(0,0,0,0.10)',
-          transform: hovered ? 'translateY(-2px) scale(1.01)' : 'translateY(0) scale(1)',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          cursor: href ? 'pointer' : 'default',
-        }}
-      >
-        {/* Background photo */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={block.coverPhoto}
-          alt={block.title || ''}
-          style={{
-            position: 'absolute', inset: 0,
-            width: '100%', height: '100%',
-            objectFit: 'cover',
-          }}
-        />
-        {/* Gradient overlay so text is readable */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 55%, rgba(0,0,0,0) 100%)',
-        }}/>
-        {/* Text at bottom */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          padding: '10px 12px',
-        }}>
-          <div style={{
-            fontSize: 13, fontWeight: block.titleBold ? 800 : 700,
-            fontStyle: block.titleItalic ? 'italic' : 'normal', color: '#fff',
-            lineHeight: 1.2, letterSpacing: '-0.01em',
-          }}>
-            {block.title}
-          </div>
-          {block.sub && (
-            <div style={{
-              fontSize: 10, color: 'rgba(255,255,255,0.78)',
-              marginTop: 2, lineHeight: 1.3,
-            }}>
-              {block.sub}
-            </div>
-          )}
-        </div>
-        {/* Arrow icon top-right if has link */}
-        {href && (
-          <div style={{
-            position: 'absolute', top: 8, right: 8,
-            width: 24, height: 24, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.22)',
-            backdropFilter: 'blur(8px)',
-            display: 'grid', placeItems: 'center',
-          }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-              stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </div>
-        )}
-      </div>
-    );
-
-    if (!href) return photoCard;
-
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        style={{ display: 'block', height: '100%', textDecoration: 'none' }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
-      >
-        {photoCard}
-      </a>
-    );
-  }
+  // Blocks used to be able to carry their own cover photo, which rendered the
+  // row as a 16:10 or 1:1 photo tile. Three of those in a row is most of a
+  // phone screen, and it made every page a different height and shape. The
+  // page has one row now; the photo lives on the cover or in the gallery.
 
   // ── Standard card (no photo) ─────────────────────────────────────
-  const iconColor = '#111111';
-  const iconBg = 'rgba(0,0,0,0.05)';
+  // These were hardcoded black on a light grey, which on a dark page put a
+  // black glyph inside a nearly-black circle.
+  const iconColor = dark ? '#FFFFFF' : '#111111';
+  const iconBg = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.05)';
+  const chevron = dark ? 'rgba(255,255,255,0.40)' : 'rgba(0,0,0,0.28)';
 
   const card = (
     <div
       style={{
-        display: 'flex', alignItems: 'center', gap: 11,
-        // Fills the grid row so a link card pairs cleanly with a taller photo
-        // card. alignItems:center keeps the contents vertically centred rather
-        // than stranded at the top of a stretched tile.
-        height: '100%', boxSizing: 'border-box',
+        display: 'flex', alignItems: 'center', gap: 12,
+        // Every row is the same height, so a list of them reads as a list
+        // rather than a pile of differently-sized cards.
+        minHeight: 78, boxSizing: 'border-box',
         background: CARD,
         border: `1px solid ${CARD_BORDER}`,
         backdropFilter: 'blur(24px) saturate(130%)',
         WebkitBackdropFilter: 'blur(24px) saturate(130%)',
-        borderRadius: 18, padding: '11px 14px',
+        borderRadius: 16, padding: '13px 15px',
         boxShadow: hovered
           ? '0 12px 36px rgba(0,0,0,0.10)'
           : '0 8px 30px rgba(0,0,0,0.06)',
@@ -185,7 +102,7 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
     >
       {/* Icon circle */}
       <div style={{
-        width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+        width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
         background: iconBg, display: 'grid', placeItems: 'center',
       }}>
         <BlockIcon id={block.id} color={iconColor}/>
@@ -197,7 +114,7 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
           cut with an ellipsis, never broken mid-word. */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 13, color: TEXT, lineHeight: 1.35,
+          fontSize: 14.5, color: TEXT, lineHeight: 1.3,
           fontWeight: block.titleBold ? 800 : 600,
           fontStyle: block.titleItalic ? 'italic' : 'normal',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -206,7 +123,7 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
         </div>
         {block.sub && (
           <div style={{
-            fontSize: 11, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35,
+            fontSize: 12, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35,
             fontWeight: block.subBold ? 700 : 400,
             fontStyle: block.subItalic ? 'italic' : 'normal',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
@@ -220,7 +137,7 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
       {/* Chevron */}
       {href && (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="rgba(0,0,0,0.28)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          stroke={chevron} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
           style={{
             flexShrink: 0,
             transform: hovered ? 'translateX(2px)' : 'translateX(0)',
@@ -239,7 +156,7 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
       href={href}
       target="_blank"
       rel="noreferrer"
-      style={{ display: 'block', height: '100%', textDecoration: 'none' }}
+      style={{ display: 'block', textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}

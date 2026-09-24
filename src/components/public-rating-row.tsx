@@ -45,35 +45,21 @@ export default function PublicRatingRow({ businessId, placeId, dark = false }: P
     <div
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 7, marginTop: 9,
+        gap: 5, marginTop: 8,
       }}
       aria-label={`Rated ${rating.toFixed(1)} out of 5 from ${reviewCount} Google reviews`}
     >
-      <span style={{ display: 'flex', alignItems: 'center', gap: 1.5 }} aria-hidden="true">
-        {[0, 1, 2, 3, 4].map((i) => {
-          const fill = Math.max(0, Math.min(1, rating - i)); // partial star for 4.5
-          return (
-            <span key={i} style={{ position: 'relative', width: 12, height: 12, display: 'inline-block' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" style={{ position: 'absolute', inset: 0 }}
-                fill={dark ? 'rgba(255,255,255,0.22)' : '#E4E4E7'}>
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
-              </svg>
-              {fill > 0 && (
-                <span style={{ position: 'absolute', inset: 0, width: `${fill * 100}%`, overflow: 'hidden' }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#FBBC04">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
-                  </svg>
-                </span>
-              )}
-            </span>
-          );
-        })}
-      </span>
+      {/* One star, not five. Five little stars is a rating widget — it reads
+          as something you can tap, it costs 70px of width, and the number
+          beside it already says everything the stars were drawing. */}
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="#FBBC04" aria-hidden="true" style={{ flexShrink: 0 }}>
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
+      </svg>
 
-      <span style={{ fontSize: 12.5, fontWeight: 700, color: strong, letterSpacing: '-0.01em' }}>
+      <span style={{ fontSize: 13, fontWeight: 700, color: strong, letterSpacing: '-0.01em' }}>
         {rating.toFixed(1)}
       </span>
-      <span style={{ fontSize: 12, color: muted, fontWeight: 400 }}>
+      <span style={{ fontSize: 12.5, color: muted, fontWeight: 400 }}>
         · {reviewCount.toLocaleString()} Google {reviewCount === 1 ? 'review' : 'reviews'}
       </span>
     </div>

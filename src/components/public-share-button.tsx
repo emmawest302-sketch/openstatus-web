@@ -110,10 +110,10 @@ export default function PublicShareButton({
         onMouseLeave={() => setHovered(false)}
         aria-label={`Share ${businessName}`}
         style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '10px 18px', borderRadius: 999,
-          fontSize: 13.5, fontWeight: 650, letterSpacing: '-0.01em',
-          cursor: 'pointer',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          padding: '9px 10px', borderRadius: 999,
+          fontSize: 12.5, fontWeight: 650, letterSpacing: '-0.01em',
+          whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer',
           backdropFilter: 'blur(20px) saturate(130%)',
           WebkitBackdropFilter: 'blur(20px) saturate(130%)',
           boxShadow: hovered ? '0 8px 24px rgba(0,0,0,0.12)' : '0 4px 14px rgba(0,0,0,0.07)',
@@ -122,15 +122,16 @@ export default function PublicShareButton({
           ...pill,
         }}
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"
           style={{
+            flexShrink: 0,
             transform: hovered ? 'translate(1.5px,-1.5px)' : 'none',
             transition: 'transform .16s ease',
           }}>
           <path d="M7 17 17 7"/><path d="M8 7h9v9"/>
         </svg>
-        Share this place
+        Share
       </button>
 
       {open && (

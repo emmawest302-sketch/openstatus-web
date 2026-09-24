@@ -372,7 +372,10 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
         {/* ── Cover photo ── */}
         {coverPhoto ? (
-          <div style={{ position: 'relative', height: 280, overflow: 'hidden', borderRadius: '0 0 0 0' }}>
+          // 280px was a desktop hero on a phone: it pushed the name, the
+          // address and the hours below the fold on a 390px screen. The cover
+          // is scene-setting, not the content.
+          <div style={{ position: 'relative', height: 230, overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverPhoto}
@@ -403,7 +406,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           // as a deliberate header instead. The solid base is the fallback if
           // color-mix isn't supported.
           <div style={{
-            height: 96,
+            height: 84,
             width: '100vw', marginLeft: 'calc(50% - 50vw)',
             background: bgIsDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.022)',
             backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${themeColor} 18%, transparent) 0%, transparent 100%)`,

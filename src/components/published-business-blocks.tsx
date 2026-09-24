@@ -1,41 +1,31 @@
 import PublicActionBlock from '@/components/public-action-block';
-import PublicLocationBlock from '@/components/public-location-block';
 import InstagramUpdatesBlock from '@/components/instagram-updates-block';
 import PublicGalleryBlock from '@/components/public-gallery-block';
 import type { OpenStatusPageConfig } from '@/lib/openstatus-page-config';
-import { HEADER_ACTION_IDS } from '@/lib/page-rows';
+import { publishedBlocks } from '@/lib/page-rows';
 
+/**
+ * businessName, location and themeColor used to be threaded through here for
+ * a location row this component no longer renders — Directions is a header
+ * action now. They stay in the props so the page's call site doesn't have to
+ * change, but nothing reads them.
+ */
 type Props = {
   businessId: string;
-  businessName: string;
-  location: string;
+  businessName?: string;
+  location?: string;
   config: OpenStatusPageConfig;
-  themeColor: string;
+  themeColor?: string;
   placeId?: string | null;
   dark?: boolean;
 };
 
 export default function PublishedBusinessBlocks({
-  businessId, businessName, location, config, themeColor, placeId, dark = false,
+  businessId, config, placeId, dark = false,
 }: Props) {
-  // Skip hours and location — those are handled inline in the page.
-  // Also drop blocks with nothing to open: a tappable row that goes nowhere
-  // (or, worse, borrows another block's link) is a broken promise to the
-  // customer. These render in the builder with a "Needs setup" badge instead.
-  const SELF_CONTAINED = new Set(['updates', 'gallery']);
-  const hasDestination = (b: { id: string; url?: string; menuFile?: string }) =>
-    SELF_CONTAINED.has(b.id) || !!(b.url && b.url.trim()) || !!(b.menuFile && b.menuFile.trim());
-
-  const enabled = config.blocks.filter((block) =>
-    block.on !== false &&
-    block.id !== 'hours' &&
-    // Header actions, not rows. See HEADER_ACTION_IDS in lib/page-rows.
-    !HEADER_ACTION_IDS.has(block.id) &&
-    // Retired. Social links render once, as the icon row above the footer.
-    // As a block they appeared a second time on the same page.
-    block.id !== 'socials' &&
-    hasDestination(block)
-  );
+  // One shared filter, in lib/page-rows, so the builder preview and this page
+  // cannot disagree about which rows publish.
+  const enabled = publishedBlocks(config.blocks);
 
   // Every feature is one full-width row now. Owners used to size each block —
   // half, square, third — which produced holes where a half sat alone and
