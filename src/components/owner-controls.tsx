@@ -22,6 +22,8 @@ type Props = {
   closesAt: string | null;
   opensAt: string | null;
   hasOverride: boolean;
+  /** From a home-screen shortcut: open straight into that time picker. */
+  initialPick?: 'close' | 'open' | null;
 };
 
 const TIMES = ['12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
@@ -36,12 +38,14 @@ function pretty(hhmm: string | null): string {
 }
 
 export default function OwnerControls({
-  businessName, slug, state, closesAt, opensAt, hasOverride,
+  businessName, slug, state, closesAt, opensAt, hasOverride, initialPick = null,
 }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [picking, setPicking] = useState<'close' | 'open' | null>(null);
+  // Long-pressing the home screen icon and choosing "Close early" should land
+  // on the times, not on the menu that leads to the times.
+  const [picking, setPicking] = useState<'close' | 'open' | null>(initialPick);
 
   const send = useCallback(async (
     label: string,

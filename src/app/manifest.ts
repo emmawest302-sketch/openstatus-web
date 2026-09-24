@@ -10,6 +10,10 @@ import type { MetadataRoute } from 'next';
  *
  * start_url is /me rather than the token link, so no secret ends up baked
  * into a home screen shortcut.
+ *
+ * An owner installing from /me gets a per-business manifest instead — see
+ * app/me/manifest.webmanifest — so their icon carries their own shop's name.
+ * This one is the fallback for everywhere else.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -25,7 +29,11 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      // The "any" icon has transparent rounded corners. Declaring it maskable
+      // too meant Android cropped those corners into its own circle and cut
+      // the artwork; the maskable file is opaque and full-bleed with the mark
+      // inside the safe zone.
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }
