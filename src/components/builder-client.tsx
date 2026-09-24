@@ -9,6 +9,14 @@ import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedu
 import { swapById, canDrag } from '@/lib/reorder';
 import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
+// The preview renders the published page's own components, so the two cannot
+// drift. See the note on LivePhonePreview.
+import { HEADER_ACTION_IDS } from '@/lib/page-rows';
+import PublicBioCard from '@/components/public-bio-card';
+import PublicHoursRow from '@/components/public-hours-row';
+import PublicActionBlock from '@/components/public-action-block';
+import PublicSocialLinks from '@/components/public-social-links';
+import type { OpenStatusBlock as LibBlock } from '@/lib/openstatus-page-config';
 import {
   BlockIcon,
   IconAcuity,
@@ -664,314 +672,161 @@ function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
 }
 
 // ── Screen preview (no phone frame) ───────────────────────────────────────────
+/**
+ * The preview.
+ *
+ * It renders the same components the published page does — PublicBioCard,
+ * PublicHoursRow, PublicActionBlock, PublicSocialLinks — rather than its own
+ * copy of them.
+ *
+ * It used to be a parallel implementation, and everything that can go wrong
+ * with that did: it showed a "(100%)" score from a voting system the page no
+ * longer had, drew social icons in brand colours while the page drew them in
+ * one ink, sized blocks by a grid the page had stopped using, and kept the old
+ * floating header for a day after the page grew a frosted bio card. Every one
+ * of those was the owner being shown a page their customers would never see.
+ *
+ * So there is one implementation now. The preview's job is to supply the same
+ * props from builder-shaped config, and to layer the editing affordances —
+ * selection outline, click-to-edit, drag — on top without touching what is
+ * underneath.
+ */
 function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,timeZone,override }: {
   business:Business|null;
   config:OpenStatusPageConfig;
   selectedId?:string|null;
   onSelectBlock?:(id:string)=>void;
-  /** So the preview's Hours block agrees with the live page. */
   timeZone?:string|null;
   override?:TodayOverride;
-  /** Mobile-only hook for long-press drag. Returns extra DOM props per block. */
+  /** Long-press drag hook. Returns extra DOM props per block. */
   blockProps?:(id:string)=>{ style?:React.CSSProperties } & React.DOMAttributes<HTMLDivElement> & Record<string,unknown>;
 }) {
-  const activeBlocks = config.blocks.filter(b=>b.on);
-  // Hours always first in preview
-  const sortedBlocks = [
-    ...activeBlocks.filter(b=>b.id==='hours'),
-    ...activeBlocks.filter(b=>b.id!=='hours'),
-  ];
   const isDark = isDarkBg(config.bg);
-  const tx = isDark?'text-white':'text-[#0A0A0A]';
-  const sx = isDark?'text-white/55':'text-[#6B6B6B]';
-  const { status, todayLabel } = getLiveStatus(config.weeklyHours, timeZone, override);
-  const TOK = surfaceTokens(config.bg);
-  // Bold / italic are per-block, so every place a title or subtitle is drawn has
-  // to honour them — previously only the generic fallback did, which is why the
-  // toggles looked dead on most blocks.
-  const tStyle = (b:OpenStatusBlock):React.CSSProperties =>
-    ({ fontWeight: b.titleBold?800:undefined, fontStyle: b.titleItalic?'italic':undefined });
-  const sStyle = (b:OpenStatusBlock):React.CSSProperties =>
-    ({ fontWeight: b.subBold?700:undefined, fontStyle: b.subItalic?'italic':undefined });
-  const locBlock = config.blocks.find(b=>b.id==='location');
-  const reviewPct = locBlock?.reviewStars&&locBlock.reviewStars>0 ? starsToPercent(locBlock.reviewStars) : null;
+  const { status } = getLiveStatus(config.weeklyHours, timeZone, override);
+  const accent = config.themeColor || '#DB6B8F';
+  const pageFont = config.font ?? 'Inter, system-ui, sans-serif';
 
-  return (
-    <div style={{ width:'100%' }}>
-      <style>{BG_KEYFRAMES}</style>
-      <style>{`[data-block-id],[data-block-id] *{-webkit-user-drag:none;user-select:none;-webkit-user-select:none}`}</style>
+  const activeBlocks = config.blocks.filter(b => b.on && !HEADER_ACTION_IDS.has(b.id) && b.id !== 'hours');
+  const hoursOn = config.blocks.find(b => b.id === 'hours')?.on !== false;
+
+  // Header actions, read from the blocks that used to render them as rows.
+  const websiteUrl = config.blocks.find(b => b.id === 'website')?.url?.trim() || null;
+  const addr = (config.blocks.find(b => b.id === 'location')?.address || config.location || '').trim();
+  const directionsUrl = addr ? `https://maps.google.com/?q=${encodeURIComponent(addr)}` : null;
+
+  const avatar = business?.avatar_url?.startsWith('storage:') && business?.id
+    ? `/api/assets?businessId=${business.id}&kind=avatar`
+    : business?.avatar_url ?? null;
+  const initials = (business?.name ?? 'B').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+
+  const DAY_KEYS: WeekDay[] = ['sun','mon','tue','wed','thu','fri','sat'];
+  const DAY_LABELS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const todayIdx = new Date().getDay();
+  const dayRow = (i: number, label: string) => {
+    const d = config.weeklyHours?.[DAY_KEYS[i]];
+    return {
+      label,
+      hours: !d || d.closed ? 'Closed' : `${fmt12(d.open)} – ${fmt12(d.close)}`,
+      isToday: i === todayIdx,
+      closed: !d || d.closed,
+    };
+  };
+
+  const cover = imageTreatment({
+    intensity: config.imageIntensity, blur: config.imageBlur,
+    overlay: config.imageOverlay, pageIsDark: isDark,
+  });
+
+  /** Selection outline and drag handles, wrapped around a real page component. */
+  const editable = (id: string, node: React.ReactNode) => {
+    const extra = blockProps?.(id);
+    const { style: extraStyle, ...extraRest } = extra ?? {};
+    return (
       <div
-        className="relative rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/8"
-        data-os-bg-anim={config.bgAnim?'':undefined}
+        key={id}
+        data-block-id={id}
+        onClick={() => onSelectBlock?.(id)}
+        {...extraRest}
         style={{
-          background: config.bg || '#F7F7F5',
-          minHeight: 560,
-          width: '100%',
-          fontFamily: config.font ?? 'Inter, system-ui, sans-serif',
-          animation: bgAnimationStyle(config.bgAnim, config.bgAnimSpeed),
+          borderRadius: 20,
+          ...(onSelectBlock ? { cursor: 'pointer' } : {}),
+          ...(selectedId === id ? { outline: '2px solid #7C3AED', outlineOffset: 3 } : {}),
+          ...(extraStyle ?? {}),
         }}
       >
-        {/* Photo header — constrained 148px, fades into page bg */}
-        {config.bgImage && (
-          (()=>{
-            const t=imageTreatment({
-              intensity:config.imageIntensity, blur:config.imageBlur,
-              overlay:config.imageOverlay, pageIsDark:isDark,
-            });
-            return (
-              <div style={{ position:'relative', height:190, overflow:'hidden' }}>
-                <img src={config.bgImage} alt="" style={{
-                  width:'100%', height:'100%', objectFit:'cover',
-                  objectPosition:config.bgImagePosition??'center 60%', display:'block',
-                  opacity:t.opacity,
-                  filter:t.blur?`blur(${t.blur}px)`:undefined,
-                  transform:t.scale!==1?`scale(${t.scale})`:undefined,
-                }}/>
-                {t.overlay&&<div style={{ position:'absolute', inset:0, background:t.overlay }}/>}
-                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${solidBg(config.bg)} 100%)` }}/>
-              </div>
-            );
-          })()
-        )}
-
-        {/* Hero header */}
-        <div className="relative px-4 pb-3 text-center" style={{ marginTop: config.bgImage ? -28 : 0, paddingTop: config.bgImage ? 0 : 32 }}>
-          {business?.avatar_url
-            ?<img src={business.avatar_url?.startsWith('storage:')&&business.id?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url??''} className={`w-12 h-12 rounded-full mx-auto mb-2 object-cover ${config.bgImage?'border-2 border-white/70 shadow-lg':''}`} alt=""/>
-            :<div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-[10px] font-black tracking-tight ${isDark?'bg-white/10 text-white':'bg-black/8 text-black'}`}>
-              {(business?.name??'B').slice(0,1).toUpperCase()}
-            </div>
-          }
-          <p className="font-bold text-[13px]" style={{fontFamily:config.font??'Inter, system-ui, sans-serif',color:config.nameColor??(isDark?'#FFFFFF':'#0A0A0A')}}>{business?.name??'Your Business'}</p>
-          {config.location && <p className={`text-[9px] truncate px-2 mt-0.5 ${sx}`}>{config.location}</p>}
-
-          {(config.tags??[]).length>0 && (
-            <TagsRow tags={config.tags??[]} isDark={isDark}/>
-          )}
-
-          {/* Rating: the Google score only. The percentage that used to sit
-              here came from the anonymous thumbs, which the public page no
-              longer has. */}
-          {!!locBlock?.reviewStars && locBlock.reviewStars > 0 && (
-            <div className="flex items-center justify-center gap-1.5 mt-2">
-              <LucideStar size={9} color="#FBBC04" filled/>
-              <span className={`text-[9px] font-bold ${isDark?'text-white/90':'text-black/85'}`}>
-                {locBlock.reviewStars.toFixed(1)}
-              </span>
-              {!!locBlock?.reviewCount&&locBlock.reviewCount>0&&(
-                <span className={`text-[8.5px] ${sx}`}>
-                  · {locBlock.reviewCount.toLocaleString()} Google {locBlock.reviewCount===1?'review':'reviews'}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Share is a real action on the live page, so it looks like one here. */}
-          <div className="flex justify-center mt-2.5">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-semibold ${
-              isDark?'bg-white/14 text-white border border-white/25':'bg-black/5 text-black/75 border border-black/10'
-            }`}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
-              Share this place
-            </span>
-          </div>
-        </div>
-
-        {/* Blocks — support half/full layout */}
-        <div className="relative px-3 pb-5">
-          {sortedBlocks.length===0
-            ?<p className={`text-center text-[10px] py-8 ${sx}`}>Toggle blocks to see them here</p>
-            :<div className="flex flex-col gap-1.5">
-              {sortedBlocks.map(b=>{
-                // One width for every feature, matching the live page. The
-                // size system is retired; these stay as consts so the preview's
-                // per-style branches keep compiling until they are reworked.
-                const isSquare = false;
-                const isHalf = false;
-                const cardBg = TOK.card;
-                const bdr = TOK.cardBorder;
-
-                const bStyle = b.blockStyle ?? (b.id==='hours'?'minimal':b.id==='location'?'place':'brand');
-                const inner = (() => {
-
-                  // ── HOURS ──
-                  if(b.id==='hours') {
-                    if(bStyle==='clock') return (
-                      <div className="rounded-2xl px-3 py-2.5 border text-center" style={{ background:cardBg, borderColor:bdr }}>
-                        <div className="flex justify-center mb-1.5"><ClockFace size={46} color={b.color??'#059669'}/></div>
-                        <p className={`text-[10px] font-bold ${tx}`}>{status==='open'?'Open now':'Closed'}</p>
-                        <p className={`text-[8px] ${sx}`}>{todayLabel}</p>
-                      </div>
-                    );
-                    if(bStyle==='hero') return (
-                      <div className="rounded-2xl px-4 py-4 text-center" style={{ background: status==='open'?`linear-gradient(135deg,${b.color??'#059669'},#10b981)`:`linear-gradient(135deg,#374151,#6b7280)` }}>
-                        <p className="text-white font-black text-[20px] tracking-tight">{status==='open'?'OPEN':'CLOSED'}</p>
-                        <p className="text-white/65 text-[8px] mt-0.5">{todayLabel}</p>
-                      </div>
-                    );
-                    // default minimal
-                    return (
-                      <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
-                        <BlockIcon id={b.id} size={12} color={TOK.icon(b.color)}/>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-[10px] font-bold ${tx}`}>{status==='open'?'Open now':'Closed'}</p>
-                          <p className={`text-[8px] ${sx}`}>Tap for hours</p>
-                        </div>
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-400':'bg-red-400'}`}/>
-                      </div>
-                    );
-                  }
-
-                  // ── LOCATION ──
-                  if(b.id==='location') {
-                    // Address comes from the block's own address field, never from
-                    // `sub` — `sub` is the caption ("Get directions") and using it
-                    // made the map query that literal string.
-                    const addr = (b.address || b.sub || '').trim();
-                    const hasAddr = !!addr && !/^(get|tap for) directions$/i.test(addr);
-                    const mapsHref = hasAddr ? `https://maps.google.com/?q=${encodeURIComponent(addr)}` : '#';
-
-                    // Minimal layout — compact row
-                    if(bStyle==='minimal') return (
-                      <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
-                        <LucidePin size={10} color={TOK.icon(b.color)}/>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-[10px] font-semibold ${tx} truncate`} style={tStyle(b)}>{b.title}</p>
-                          {hasAddr&&!isHalf&&<p className={`text-[8px] ${sx} truncate`}>{addr}</p>}
-                        </div>
-                        <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
-                      </a>
-                    );
-
-                    // Place layout (default) — embedded map, only with a real address
-                    if(hasAddr) return (
-                      <div className="col-span-2 rounded-2xl overflow-hidden border" style={{borderColor:bdr}}>
-                        <div className="relative w-full overflow-hidden" style={{height:120}}>
-                          <iframe
-                            src={(b.lat&&b.lng)
-                              ?`https://maps.google.com/maps?q=${b.lat},${b.lng}&z=15&output=embed&hl=en`
-                              :`https://maps.google.com/maps?q=${encodeURIComponent(addr)}&z=15&output=embed&hl=en`}
-                            className="absolute inset-0 w-full h-full border-0" loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade" title="map"/>
-                        </div>
-                        <div className="flex items-center justify-between gap-2 px-2.5 py-2" style={{background:cardBg}}>
-                          <p className={`text-[9px] font-semibold truncate ${tx}`}>{addr}</p>
-                          <span className="flex-shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold text-white" style={{background:b.color||'#1A1A18'}}>Directions →</span>
-                        </div>
-                      </div>
-                    );
-
-                    // No address yet — prompt in the builder rather than a world map
-                    return (
-                      <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border border-dashed" style={{ borderColor:bdr }}>
-                        <LucidePin size={10} color={TOK.icon(b.color)}/>
-                        <p className={`text-[9px] ${sx} flex-1`}>Add your address to show a map</p>
-                      </div>
-                    );
-                  }
-
-                  if(b.id==='menu') {
-                    if(bStyle==='dark') return (
-                      <div className="rounded-2xl px-3 py-3 border" style={{ background:'#0A0A0A', borderColor:'#1A1A1A' }}>
-                        <div className="flex items-center gap-2">
-                          <BlockIcon id="menu" size={12} color="white"/>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-semibold text-white truncate" style={tStyle(b)}>{b.title}</p>
-                            {!isHalf&&<p className="text-[8px] text-white/40 truncate" style={sStyle(b)}>{b.sub}</p>}
-                          </div>
-                          <span className="text-white/20 text-xs">›</span>
-                        </div>
-                      </div>
-                    );
-                    // Photo — cover image fills the card
-                    if(bStyle==='photo' && b.coverPhoto) return (
-                      <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio: isSquare ? '1/1' : '16/10' }}>
-                        <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
-                        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
-                        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
-                          <p className="text-[9px] font-bold truncate" style={{ color:'#fff', ...tStyle(b) }}>{b.title}</p>
-                          {!isHalf&&<p className="text-[7px] truncate" style={{ color:'rgba(255,255,255,0.75)', ...sStyle(b) }}>{b.sub}</p>}
-                        </div>
-                      </div>
-                    );
-                    // Card (default) — banner photo above a titled row
-                    return (
-                      <div className="rounded-2xl overflow-hidden border" style={{ borderColor:bdr, background:cardBg }}>
-                        {b.coverPhoto&&<img src={b.coverPhoto} className="w-full h-[54px] object-cover" alt=""/>}
-                        <div className="flex items-center gap-2 px-2.5 py-2.5">
-                          <BlockIcon id="menu" size={10} color={TOK.icon(b.color)}/>
-                          <div className="min-w-0 flex-1">
-                            <p className={`text-[10px] font-semibold ${tx} truncate`} style={tStyle(b)}>{b.title}</p>
-                            {!isHalf&&<p className={`text-[8px] ${sx} truncate`} style={sStyle(b)}>{b.sub}</p>}
-                          </div>
-                          <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // ── Generic fallback (cover photo or simple row) ──
-                  if(b.coverPhoto && blockAllowsPhoto(b.size)) return (
-                    <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio: isSquare ? '1/1' : '16/10' }}>
-                      <img src={b.coverPhoto} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }} alt=""/>
-                      <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 60%, transparent 100%)' }}/>
-                      <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'6px 8px' }}>
-                        <p className={`text-[9px] font-bold truncate`} style={{ color:'#fff', ...tStyle(b) }}>{b.title}</p>
-                        {b.sub&&<p className={`text-[7px] truncate`} style={{ color:'rgba(255,255,255,0.75)', ...sStyle(b) }}>{b.sub}</p>}
-                      </div>
-                      {b.url&&<div style={{ position:'absolute', top:5, right:5, width:14, height:14, borderRadius:'50%', background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                      </div>}
-                    </div>
-                  );
-
-
-                  return (
-                    <div className="flex items-center gap-2 rounded-2xl px-2.5 py-2.5 border" style={{ background:cardBg, borderColor:bdr }}>
-                      <BlockIcon id={b.id} size={10} color={TOK.icon(b.color)}/>
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-[10px] ${tx} truncate`}
-                          style={{fontWeight:b.titleBold?800:600,fontStyle:b.titleItalic?'italic':'normal'}}>{b.title}</p>
-                        {!isHalf&&<p className={`text-[8px] ${sx} truncate`}
-                          style={{fontWeight:b.subBold?700:400,fontStyle:b.subItalic?'italic':'normal'}}>{b.sub}</p>}
-                      </div>
-                      <span className={`text-xs flex-shrink-0 ${isDark?'text-white/20':'text-black/20'}`}>›</span>
-                    </div>
-                  );
-                })();
-
-                const isSelected = selectedId === b.id;
-                const extra = blockProps?.(b.id);
-                const { style: extraStyle, ...extraRest } = extra ?? {};
-                return (
-                  <div key={b.id} data-block-id={b.id}
-                    className={`${onSelectBlock?'cursor-pointer':''}`}
-                    onClick={()=>onSelectBlock?.(b.id)}
-                    {...extraRest}
-                    style={{
-                      ...(isSelected?{ outline:'2px solid #7C3AED', borderRadius:16, outlineOffset:2 }:{}),
-                      ...(extraStyle ?? {}),
-                    }}
-                  >
-                    {inner}
-                  </div>
-                );
-              })}
-            </div>
-          }
-        </div>
+        {node}
       </div>
-      {/* Social icon row */}
-      {SOCIAL_PLATFORMS.filter(p=>config.socials&&config.socials[p.key]).length>0&&(
-        <div className="flex items-center justify-center gap-3 mt-4 pb-1">
-          {SOCIAL_PLATFORMS.filter(p=>config.socials&&config.socials[p.key]).map(p=>(
-            <div key={p.key} className={`w-7 h-7 rounded-full flex items-center justify-center ${isDark?'bg-white/10':'bg-black/6'}`}>
-              <SocialIcon platform={p.key} size={15}/>
-            </div>
-          ))}
+    );
+  };
+
+  return (
+    <div style={{ width:'100%', background: config.bg || '#F7F7F5', fontFamily: pageFont }}>
+      {config.bgImage && (
+        <div style={{ position:'relative', height:190, overflow:'hidden' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={config.bgImage} alt="" style={{
+            width:'100%', height:'100%', objectFit:'cover',
+            objectPosition: config.bgImagePosition ?? 'center 60%', display:'block',
+            opacity: cover.opacity,
+            filter: cover.blur ? `blur(${cover.blur}px)` : undefined,
+            transform: cover.scale !== 1 ? `scale(${cover.scale})` : undefined,
+          }}/>
+          {cover.overlay && <div style={{ position:'absolute', inset:0, background: cover.overlay }}/>}
         </div>
       )}
-      <p className="text-center text-[11px] text-[#858585] mt-4 font-medium">{SITE_DOMAIN}/…</p>
+
+      <div style={{ padding: '0 12px' }}>
+        <PublicBioCard
+          businessName={business?.name ?? 'Your business'}
+          businessId={business?.id ?? ''}
+          slug={business?.slug ?? ''}
+          address={addr || null}
+          tags={config.tags ?? []}
+          placeId={null}
+          websiteUrl={websiteUrl}
+          directionsUrl={directionsUrl}
+          shareUrl={business?.slug ? `${SITE_URL}/${business.slug}` : SITE_URL}
+          dark={isDark}
+          accent={accent}
+          nameColor={config.nameColor ?? (isDark ? '#FFFFFF' : '#151515')}
+          pageFont={pageFont}
+          logo={avatar}
+          initials={initials}
+        />
+      </div>
+
+      <div style={{ padding: '14px 12px 18px', display:'flex', flexDirection:'column', gap:10 }}>
+        {hoursOn && editable('hours', (
+          <PublicHoursRow
+            state={status === 'open' ? 'open' : 'closed'}
+            headline={status === 'open' ? 'Open now' : 'Closed'}
+            detail={status === 'open' ? 'Closes at ' : 'Tap for hours'}
+            accent={status === 'open' ? (dayRow(todayIdx,'x').hours.split(' – ')[1] ?? null) : null}
+            today={dayRow(todayIdx, 'Today')}
+            tomorrow={dayRow((todayIdx + 1) % 7, 'Tomorrow')}
+            week={DAY_LABELS.map((n,i)=>dayRow(i,n))}
+            dark={isDark}
+          />
+        ))}
+
+        {activeBlocks.map(b => editable(b.id, (
+          <PublicActionBlock
+            block={b as unknown as LibBlock}
+            businessId={business?.id ?? ''}
+            dark={isDark}
+          />
+        )))}
+
+        {activeBlocks.length === 0 && !hoursOn && (
+          <p style={{ textAlign:'center', fontSize:11, padding:'26px 0', color: isDark?'rgba(255,255,255,0.5)':'#9A9A97' }}>
+            Turn on features to see them here
+          </p>
+        )}
+      </div>
+
+      <PublicSocialLinks businessId={business?.id ?? ''} socials={config.socials ?? {}}/>
+
+      <p className="text-center text-[11px] text-[#858585] mt-2 pb-2 font-medium">{SITE_DOMAIN}/…</p>
     </div>
   );
 }
