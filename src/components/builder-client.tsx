@@ -7,6 +7,7 @@ import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg } from '@/lib/page-theme';
 import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedule } from '@/lib/business-status';
 import { swapById, canDrag } from '@/lib/reorder';
+import { prepareImageForUpload } from '@/lib/image-upload';
 import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
 import { shortAddress } from '@/lib/address';
@@ -515,7 +516,7 @@ function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
  * selection outline, click-to-edit, drag — on top without touching what is
  * underneath.
  */
-function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,timeZone,override }: {
+function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,dragHandleProps,timeZone,override }: {
   business:Business|null;
   config:OpenStatusPageConfig;
   selectedId?:string|null;
@@ -524,6 +525,16 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   override?:TodayOverride;
   /** Long-press drag hook. Returns extra DOM props per block. */
   blockProps?:(id:string)=>{ style?:React.CSSProperties } & React.DOMAttributes<HTMLDivElement> & Record<string,unknown>;
+  /**
+   * Props for a visible grip on each movable row.
+   *
+   * Press-and-hold is the gesture everyone reaches for and the one iOS refuses
+   * to give us: Safari fires pointercancel the moment it decides a touch on a
+   * scrollable area is a scroll, which is well before a 320ms hold completes.
+   * A grip with touch-action:none cannot be mistaken for a scroll, so the drag
+   * starts on the first move and keeps working. Only passed on the phone.
+   */
+  dragHandleProps?:(id:string)=>{ style?:React.CSSProperties } & React.DOMAttributes<HTMLElement>;
 }) {
   const isDark = isDarkBg(config.bg);
   const { status } = getLiveStatus(config.weeklyHours, timeZone, override);
@@ -576,6 +587,8 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   const editable = (id: string, node: React.ReactNode) => {
     const extra = blockProps?.(id);
     const { style: extraStyle, ...extraRest } = extra ?? {};
+    const grip = dragHandleProps && canDrag(id) ? dragHandleProps(id) : null;
+    const { style: gripStyle, ...gripRest } = grip ?? {};
     return (
       <div
         key={id}
@@ -584,12 +597,32 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
         {...extraRest}
         style={{
           borderRadius: 20,
+          position: 'relative',
           ...(onSelectBlock ? { cursor: 'pointer' } : {}),
           ...(selectedId === id ? { outline: '2px solid #7C3AED', outlineOffset: 3 } : {}),
           ...(extraStyle ?? {}),
         }}
       >
         {node}
+        {grip && (
+          <span
+            role="button"
+            aria-label="Drag to reorder"
+            {...gripRest}
+            style={{
+              position: 'absolute', top: 6, right: 6, zIndex: 3,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 34, height: 26, borderRadius: 9,
+              background: 'rgba(10,10,10,0.55)', backdropFilter: 'blur(4px)',
+              cursor: 'grab',
+              ...(gripStyle ?? {}),
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round">
+              <line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/>
+            </svg>
+          </span>
+        )}
       </div>
     );
   };
@@ -1713,7 +1746,19 @@ function BuilderSparkline({data,color}:{data:number[];color:string}){
  * header floating over the nav bar, unpressable, on phone and desktop alike.
  * It now unmounts when closed and animates in on mount.
  */
-function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }: {
+/**
+ * How much room the floating bottom nav occupies, measured from the bottom of
+ * the viewport, before the safe-area inset.
+ *
+ * The nav is a detached pill now rather than a bar welded to the edge, so it
+ * is taller than its own height: 58 for the pill, 12 for the gap under it.
+ * Every fixed thing above it — the sheets, the edit canvas, the toolbar, the
+ * coach line — measures from here. It was six separate literals of `56px`
+ * before, which is a thing that stays in sync right up until it doesn't.
+ */
+const NAV_SPACE = 70;
+
+function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, onHeight }: {
   open: boolean;
   title: string;
   onClose: () => void;
@@ -1721,9 +1766,31 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }:
   maxVh?: number;
   /** false = no scrim, so you can still see the widget you're editing change. */
   dim?: boolean;
+  /**
+   * The sheet's actual rendered height, so the canvas above can give way by
+   * exactly that much.
+   *
+   * The canvas used to shrink by a flat 48vh whatever the sheet turned out to
+   * be. A short sheet — the colour swatches are one row — left a two-hundred
+   * pixel band of page background between the bottom of the page and the top
+   * of the sheet, which reads as a big grey window swallowing the preview.
+   */
+  onHeight?: (h: number) => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || !onHeight) return;
+    const el = panelRef.current;
+    if (!el) return;
+    const report = () => onHeight(el.getBoundingClientRect().height);
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, onHeight, children]);
 
   useEffect(() => {
     if (open) {
@@ -1753,12 +1820,13 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }:
         />
       )}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal={dim ? true : undefined}
         aria-label={title}
         style={{
           position: 'fixed', left: 0, right: 0, zIndex: 45,
-          bottom: 'calc(56px + env(safe-area-inset-bottom))',
+          bottom: `calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
           background: '#fff',
           borderTopLeftRadius: 26, borderTopRightRadius: 26,
           boxShadow: '0 -10px 44px rgba(0,0,0,0.18)',
@@ -1903,6 +1971,41 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[]);
 
   /**
+   * The grip. Starts a drag on the first movement, no hold required.
+   *
+   * touch-action:none on the grip itself is the whole trick: the browser never
+   * considers the gesture a candidate for scrolling, so it never cancels the
+   * pointer stream out from under us the way it does on a plain long-press.
+   */
+  const previewHandleProps = useCallback((id:string)=>({
+    style:{ touchAction:'none' as const, WebkitUserSelect:'none' as const, userSelect:'none' as const },
+    onPointerDown:(e:React.PointerEvent<HTMLElement>)=>{
+      if(!canDrag(id)) return;
+      e.stopPropagation();
+      e.preventDefault();
+      try{ e.currentTarget.setPointerCapture(e.pointerId); }catch{/* not supported */}
+      dragging.current=true;
+      setMDragId(id);
+      try{ navigator.vibrate?.(12); }catch{/* not supported */}
+    },
+    onPointerMove:(e:React.PointerEvent<HTMLElement>)=>{
+      if(!dragging.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const el=document.elementFromPoint(e.clientX,e.clientY) as HTMLElement|null;
+      const over=el?.closest('[data-block-id]') as HTMLElement|null;
+      const overId=over?.getAttribute('data-block-id');
+      const from=mDragId ?? id;
+      if(overId && overId!==from) swapBlocks(from,overId);
+    },
+    onPointerUp:(e:React.PointerEvent<HTMLElement>)=>{ e.stopPropagation(); endDrag(); },
+    onPointerCancel:endDrag,
+    // A drop lands as a click on whatever is underneath; without this it also
+    // opens that widget's editor.
+    onClick:(e:React.MouseEvent)=>{ e.stopPropagation(); },
+  }),[mDragId,endDrag,swapBlocks]);
+
+  /**
    * Long-press a widget to pick it up, then drag to rearrange — the iOS
    * home-screen gesture. We reorder live as the finger crosses each neighbour
    * rather than computing drop gaps, which keeps it correct in the two-column
@@ -2025,6 +2128,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[idealContentWidth]);
   const [previewWidth,setPreviewWidth]=useState(0); // unused for layout now, kept for compat
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
+  const [sheetH,setSheetH]=useState(320);
   const [bizInfoOpen,setBizInfoOpen]=useState(false);
   const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:normalizeCategory(business?.category)??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
   const [slugEdit,setSlugEdit]=useState(business?.slug??'');
@@ -2078,13 +2182,29 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     const {data:s}=await supabase.auth.getSession();
     const token=s.session?.access_token;
     if(!token)throw new Error('Session expired. Sign in again.');
+    // Resize, re-orient and re-encode before it leaves the phone. See
+    // lib/image-upload: this is what stops a 5MB HEIC being rejected by the
+    // platform before our route runs, and what stops a portrait photo going
+    // out sideways in every shared link.
+    const ready=await prepareImageForUpload(file,kind);
     const form=new FormData();
     form.append('kind',kind);
-    form.append('file',file);
+    form.append('file',ready);
     const res=await fetch('/api/assets',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:form});
-    const data=await res.json();
-    if(!res.ok)throw new Error(data.error??'Upload failed');
-    return data.reference as string;
+    // Never assume the body is JSON. A rejection from the platform rather than
+    // from the route comes back as HTML or as nothing at all, and res.json()
+    // on that throws Safari's "The string did not match the expected pattern."
+    // — which is what an owner was shown instead of a reason.
+    const raw=await res.text();
+    let data:{reference?:string;error?:string}={};
+    try{ data=raw?JSON.parse(raw) as typeof data:{}; }catch{/* not JSON */}
+    if(!res.ok){
+      throw new Error(data.error
+        ?? (res.status===413?'That photo is too large — try a smaller one.'
+        : `Upload failed (${res.status}).`));
+    }
+    if(!data.reference) throw new Error('Upload finished but returned nothing to save.');
+    return data.reference;
   },[]);
 
   const allBlocks = config.blocks;
@@ -4126,7 +4246,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         style={{
           display: isMobile && !isEditSubTab ? 'flex' : 'none',
           top:'calc(52px + env(safe-area-inset-top))',
-          bottom:'calc(56px + env(safe-area-inset-bottom))',
+          bottom:`calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
           fontFamily:'var(--font-poppins), system-ui, sans-serif',
         }}>
 
@@ -4212,10 +4332,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 )}
               </div>
               {!googleConnected&&(
-                <a href="/connect/google"
+                <Link href="/connect/google"
                   className="mt-3 flex items-center justify-center w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12.5px] font-semibold active:scale-[0.98] transition-transform">
                   Connect Google Business
-                </a>
+                </Link>
               )}
             </div>
 
@@ -4610,8 +4730,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           // The canvas gives way when a sheet opens, so the widget you're editing
           // stays on screen above it instead of hiding behind it.
           bottom: mSheet
-            ? 'calc(48vh + 56px + env(safe-area-inset-bottom))'
-            : 'calc(112px + env(safe-area-inset-bottom))',
+            ? `calc(${Math.round(sheetH)}px + ${NAV_SPACE}px + env(safe-area-inset-bottom))`
+            : `calc(${NAV_SPACE + 60}px + env(safe-area-inset-bottom))`,
           transition:'bottom .3s cubic-bezier(.32,.72,0,1)',
           // No grid, no grey, no 340px card floating in the middle of a
           // 390px screen. On a phone the page IS the canvas: it runs edge to
@@ -4633,7 +4753,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <LivePhonePreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}
               selectedId={mSheet==='block'?openId:null}
               onSelectBlock={id=>{ if(dragging.current||suppressTap.current) return; setOpenId(id); setSidebarTab('design'); setMSheet('block'); }}
-              blockProps={previewBlockProps}/>
+              blockProps={previewBlockProps}
+              dragHandleProps={previewHandleProps}/>
           </div>
           {/* The toolbar floats over the canvas, so the last row needs room to
               scroll clear of it or it reads as a page that has been cut off. */}
@@ -4645,11 +4766,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="fixed left-0 right-0 z-30 flex justify-center pointer-events-none"
         style={{
           display: isMobile && isEditSubTab && !mSheet ? 'flex' : 'none',
-          bottom:'calc(126px + env(safe-area-inset-bottom))',
+          bottom:`calc(${NAV_SPACE + 74}px + env(safe-area-inset-bottom))`,
         }}>
         <span className="px-3 py-1.5 rounded-full text-[11px] font-medium text-white"
           style={{background:mDragId?'rgba(124,58,237,0.92)':'rgba(10,10,10,0.68)',backdropFilter:'blur(6px)'}}>
-          {mDragId?'Drag to rearrange, let go to drop':'Tap a widget to edit · hold to move it'}
+          {mDragId?'Drag to rearrange, let go to drop':'Tap a widget to edit · drag ≡ to move it'}
         </span>
       </div>
 
@@ -4657,14 +4778,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       <div className="fixed left-0 right-0 z-40 flex justify-center px-3"
         style={{
           display: isMobile ? 'flex' : 'none',
-          bottom:'calc(56px + env(safe-area-inset-bottom))',
+          bottom:`calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
           paddingBottom:8,
           transform:isEditSubTab?'translateY(0)':'translateY(calc(100% + 12px))',
           opacity:isEditSubTab?1:0,
           pointerEvents:isEditSubTab?'auto':'none',
           transition:'transform .25s cubic-bezier(.32,.72,0,1), opacity .2s ease',
         }}>
-        <div className="flex w-full max-w-[420px] bg-white/92 backdrop-blur border border-[#E9E9E7] rounded-2xl p-1 gap-1 shadow-[0_6px_24px_rgba(124,58,237,0.16)]">
+        <div className="flex w-full max-w-[430px] p-1 gap-1"
+          style={{
+            background:'rgba(255,255,255,0.92)',
+            backdropFilter:'blur(20px) saturate(160%)',
+            WebkitBackdropFilter:'blur(20px) saturate(160%)',
+            border:'1px solid rgba(10,10,10,0.05)',
+            borderRadius:22,
+            boxShadow:'0 10px 34px rgba(10,10,10,0.14), 0 2px 6px rgba(10,10,10,0.05)',
+          }}>
           {([
             {key:'add'        as const, label:'Block',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>},
             {key:'vibe'       as const, label:'Vibe',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M18 16l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"/></svg>},
@@ -4683,7 +4812,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {/* ══ SMALL SHEETS ══ one per toolbar button, plus the per-widget editor */}
 
-      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={52} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={52} dim={false} onHeight={setSheetH}>
         {openBlock&&canDrag(openBlock.id)&&(()=>{
           const rows=orderedBlocks.filter(b=>b.id!=='hours');
           const i=rows.findIndex(b=>b.id===openBlock.id);
@@ -4714,7 +4843,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={46}>
+      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={46} onHeight={setSheetH}>
         {/*
           There are seven blocks. Filtering seven things into six categories was
           never going to help, and two of those tabs ("Social", "More") mapped to
@@ -4764,7 +4893,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </button>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Vibe" onClose={()=>setMSheet(null)} maxVh={56} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Vibe" onClose={()=>setMSheet(null)} maxVh={56} dim={false} onHeight={setSheetH}>
         <p className="text-[11.5px] text-[#777777] mb-3">
           Sets your background, font, name colour and photo treatment together. Font and Colour
           are still there if you want to change one part afterwards.
@@ -4772,7 +4901,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <VibePicker config={config} onPick={v=>setConfig(c=>applyVibe(c,v))}/>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={46} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={46} dim={false} onHeight={setSheetH}>
         <p className="text-[11.5px] text-[#777777] mb-3">Changes every bit of text on your page.</p>
         <div className="grid grid-cols-2 gap-2.5">
           {FONT_OPTIONS.map(opt=>{
@@ -4788,7 +4917,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='color'} title="Business name colour" onClose={()=>setMSheet(null)} maxVh={44} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='color'} title="Business name colour" onClose={()=>setMSheet(null)} maxVh={44} dim={false} onHeight={setSheetH}>
         <p className="text-[11.5px] text-[#777777] mb-3">Pick a colour that reads clearly on your background.</p>
         <NameColorPicker
           value={config.nameColor}
@@ -4804,7 +4933,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         beside the page background, because all three are the same decision:
         what this page looks like before anyone reads a word of it.
       */}
-      <MobileSheet open={isMobile&&mSheet==='background'} title="Photos & background" onClose={()=>setMSheet(null)} maxVh={64} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='background'} title="Photos & background" onClose={()=>setMSheet(null)} maxVh={64} dim={false} onHeight={setSheetH}>
 
         <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Logo</p>
         <div className="flex items-center gap-3 mb-1">
@@ -4872,33 +5001,59 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
         {googlePhotos.length>0&&<p className="text-[10.5px] text-[#9A9A97] mt-2">Tap one of your Google photos, or upload your own.</p>}
 
+        {/* Fade, blur and overlay were desktop-only too, so a cover photo that
+            drowned the business name could not be turned down from a phone. */}
+        {config.bgImage&&(
+          <div className="mt-4">
+            <ImageAppearanceControls config={config} onChange={u=>setConfig(c=>({...c,...u}))}/>
+          </div>
+        )}
+
         <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mt-5 mb-2">Page background</p>
         <p className="text-[11.5px] text-[#777777] mb-3">Your widgets lighten or darken automatically to stay readable.</p>
         <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
       </MobileSheet>
 
 
-      {/* ── BOTTOM NAV ── always visible, on every page */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-[#E9E9E7] flex items-stretch"
-        style={{display:isMobile?"flex":"none", paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))', fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
+      {/* ── BOTTOM NAV ── always visible, on every page.
+           A floating pill rather than a bar ruled off from the content: it
+           reads as something sitting on top of the page, which is what it is,
+           and it stops the nav looking like the bottom edge of the page the
+           owner is editing. Icons only — the labels were 9px, which is not a
+           size anyone reads, and the five shapes here are all standard. */}
+      <nav className="fixed z-40 flex items-stretch"
+        style={{
+          display:isMobile?"flex":"none",
+          left:12, right:12,
+          bottom:'calc(12px + env(safe-area-inset-bottom))',
+          height:58,
+          borderRadius:999,
+          background:'rgba(255,255,255,0.92)',
+          backdropFilter:'blur(20px) saturate(160%)',
+          WebkitBackdropFilter:'blur(20px) saturate(160%)',
+          border:'1px solid rgba(10,10,10,0.05)',
+          boxShadow:'0 10px 34px rgba(10,10,10,0.14), 0 2px 6px rgba(10,10,10,0.05)',
+          fontFamily:'var(--font-poppins), system-ui, sans-serif',
+        }}>
         {([
           {key:'business'  as SidebarTab, label:'Business',  active:sidebarTab==='business',
-           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
+           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
           {key:'hours'     as SidebarTab, label:'Status',    active:sidebarTab==='hours',
-           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>},
+           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>},
           {key:'analytics' as SidebarTab, label:'Analytics', active:sidebarTab==='analytics',
-           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>},
+           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>},
           {key:'design'    as SidebarTab, label:'Edit',      active:isEditSubTab,
-           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>},
+           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>},
           {key:'settings'  as SidebarTab, label:'Settings',  active:sidebarTab==='settings',
-           svg:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>},
+           svg:<svg width={21} height={21} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>},
         ]).map(({key,label,active,svg})=>(
-          <button key={label}
+          <button key={label} aria-label={label} aria-current={active?'page':undefined}
             onClick={()=>{ setSidebarTab(key); setMSheet(null); setOpenId(null); }}
-            className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:opacity-70 transition-opacity">
-            {active&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-11 h-7 rounded-xl bg-[#ECECEA]"/>}
-            <span className="relative z-10" style={{color:active?'#6D28D9':'#9A9A97'}}>{svg}</span>
-            <span className={`text-[9px] font-medium leading-none relative z-10 ${active?'text-[#6D28D9]':'text-[#9A9A97]'}`}>{label}</span>
+            className="relative flex-1 flex items-center justify-center active:scale-95 transition-transform">
+            {active&&<span className="absolute w-[52px] h-[38px] rounded-[13px] bg-[#EDEDEB]"/>}
+            <span className="relative z-10" style={{color:active?'#6D28D9':'#9A9A97'}}>
+              {svg}
+            </span>
           </button>
         ))}
       </nav>

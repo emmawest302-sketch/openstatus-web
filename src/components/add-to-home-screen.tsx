@@ -57,7 +57,17 @@ function readPlatform(): 'ios' | 'other' {
   return iOS ? 'ios' : 'other';
 }
 
-export default function AddToHomeScreen({ businessName }: { businessName?: string }) {
+export default function AddToHomeScreen({ businessName, blurb }: {
+  businessName?: string;
+  /**
+   * What the icon will be, in the caller's words.
+   *
+   * The default describes the hours controls, which is what /me installs. The
+   * same component runs at the end of setup, where the icon is the whole app
+   * and "no password" would be a lie — the builder does ask for one.
+   */
+  blurb?: string;
+}) {
   const standalone = useSyncExternalStore(subscribeDisplayMode, readStandalone, () => false);
   const platform = useSyncExternalStore<'ios' | 'other' | 'server'>(
     NEVER_CHANGES, readPlatform, () => 'server',
@@ -136,8 +146,7 @@ export default function AddToHomeScreen({ businessName }: { businessName?: strin
     <div style={card}>
       <p style={heading}>Keep this on your home screen</p>
       <p style={{ ...body, margin: '5px 0 0' }}>
-        {businessName ? `${businessName}'s hours, ` : 'Your hours, '}
-        one tap away — no password, no app store.
+        {blurb ?? `${businessName ? `${businessName}'s hours, ` : 'Your hours, '}one tap away — no password, no app store.`}
       </p>
 
       {mode === 'prompt' && (

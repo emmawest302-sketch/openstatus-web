@@ -1,26 +1,31 @@
 import type { MetadataRoute } from 'next';
 
 /**
- * Makes the owner page installable.
+ * Makes OpenStatus itself installable.
  *
- * Adding /me to the home screen is what gets the icon sitting next to
- * Instagram, keeps the session alive, and — on iOS — is the only way web push
- * is allowed at all. So the install is not a nicety, it is the delivery
- * mechanism for every alert we ever want to send.
+ * This started life pointing at /me, on the theory that an owner wants a
+ * single-purpose hours widget on their home screen and nothing else. In
+ * practice they want their whole shop: hours today, yes, but also the photo
+ * they need to swap and the offer that ends on Sunday. Two icons for one
+ * product is a thing to explain; one is a thing to use. So the app installs
+ * as the app, opening on the builder.
  *
- * start_url is /me rather than the token link, so no secret ends up baked
- * into a home screen shortcut.
+ * Three manifests, each for a different thing being installed:
+ *   - this one        — OpenStatus, the owner's app        → /builder
+ *   - me/…            — the quick hours controls, named after the business,
+ *                       for an owner who was handed the phone link
+ *   - [slug]/…        — a customer adding a shop's page    → /<slug>
  *
- * An owner installing from /me gets a per-business manifest instead — see
- * app/me/manifest.webmanifest — so their icon carries their own shop's name.
- * This one is the fallback for everywhere else.
+ * A page that wants one of the other two overrides `manifest` in its own
+ * metadata; everything else lands here.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'OpenStatus',
     short_name: 'OpenStatus',
     description: 'Change your hours everywhere, in one tap.',
-    start_url: '/me',
+    start_url: '/builder',
+    id: '/',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 /**
  * Four buttons, and nothing else.
@@ -315,7 +316,7 @@ export default function OwnerControls({
             Closing today changes this page straight away. It won&apos;t change what Google
             shows until you connect your Business Profile.
           </p>
-          <a href="/connect/google" style={gBtn}>Connect Google Business</a>
+          <Link href="/connect/google" style={gBtn}>Connect Google Business</Link>
           <button type="button" onClick={() => router.refresh()} style={gQuiet}>
             Already connected? Check again
           </button>

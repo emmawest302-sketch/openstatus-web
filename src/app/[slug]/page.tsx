@@ -71,6 +71,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
       metadataBase: new URL(SITE_URL),
       alternates: { canonical: pageUrl(slug) },
+      // Override the root manifest, whose start_url is the owner's app. A
+      // customer adding this shop to their home screen should get the shop.
+      manifest: `/${slug.toLowerCase()}/manifest.webmanifest`,
       openGraph: {
         type: 'website',
         url: pageUrl(slug),

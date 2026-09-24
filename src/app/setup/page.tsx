@@ -9,6 +9,7 @@ import { detectTimeZone, isValidTimeZone } from '@/lib/timezone';
 import { DEFAULT_WEEK_HOURS } from '@/components/builder/constants';
 import { normaliseHandle, HANDLE_MAX } from '@/lib/handles';
 import { SITE_DOMAIN } from '@/lib/site';
+import AddToHomeScreen from '@/components/add-to-home-screen';
 
 // ─── SLUG UTILS ───────────────────────────────────────────────────────────────
 
@@ -209,7 +210,7 @@ export default function SetupPage() {
   // Step state — 4 steps total
   // 1: Find on Google, 2: Confirm name+slug, 3: Category, 4: Tags
   const [step, setStep] = useState(1);
-  const TOTAL_STEPS = 4;
+  const TOTAL_STEPS = 5;
 
   // Step 1: Google Places search
   const [placeQuery, setPlaceQuery] = useState('');
@@ -499,7 +500,12 @@ export default function SetupPage() {
     }
 
     setSaving(false);
-    router.push('/builder?new=1');
+    // The page is built and live at this point. One more screen before the
+    // builder, because the moment right after setup is the only moment an
+    // owner will ever willingly follow home-screen instructions — and an icon
+    // next to Instagram is the difference between a tool they use every
+    // morning and one they remember they have.
+    setStep(5);
   };
 
   // ── Computed ──
@@ -992,8 +998,55 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* Back button */}
-        {step > 1 && (
+        {step === 5 && (
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Step 5 of {TOTAL_STEPS}
+            </p>
+            <h1 style={{
+              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
+              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
+              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
+            }}>
+              Your page<br />is live
+            </h1>
+            <p style={{ fontSize: 14, color: '#858585', marginBottom: 22, lineHeight: 1.5 }}>
+              {slug
+                ? <>It&apos;s at <strong style={{ color: '#0A0A0A' }}>{SITE_DOMAIN}/{slug}</strong>. Put OpenStatus on your home screen and it opens in one tap — hours, photos, offers, all of it.</>
+                : <>Put OpenStatus on your home screen and it opens in one tap — hours, photos, offers, all of it.</>}
+            </p>
+
+            <AddToHomeScreen
+              businessName={name.trim() || undefined}
+              blurb="Your page, your hours and your editor, in one icon next to Instagram."
+            />
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
+              <button onClick={() => router.push('/builder?new=1')} style={primaryBtn}>
+                <span>Open my builder</span>
+                <span>→</span>
+              </button>
+              {slug && (
+                <a
+                  href={`/${slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    textAlign: 'center', fontSize: 13, color: '#858585',
+                    padding: '8px 0', textDecoration: 'none',
+                    fontFamily: 'var(--font-poppins), system-ui, sans-serif',
+                  }}
+                >
+                  See my live page ↗
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Back button — not on the last step, where setup has already run and
+            going back would offer to run it a second time. */}
+        {step > 1 && step < 5 && (
           <button
             onClick={() => setStep(s => s - 1)}
             style={{
