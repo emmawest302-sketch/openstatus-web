@@ -2523,7 +2523,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       // google listing
       if(googleConnected){
         try{
-          await googleStatusRequest({action:'special_hours',periods:[{startDate:d(from),endDate:d(to),closed:true}]});
+          await googleStatusRequest({action:'special_hours',periods:[{startDate:d(from),endDate:d(to),closed:true}],today:d(new Date())});
           googleOk=true;
         }catch(e){ if(!firstError) firstError=e instanceof Error?e.message:'Could not update Google'; }
       }
@@ -2777,7 +2777,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               const [ch,cm] = closeStr.split(':').map(Number);
               return { startDate:d, endDate:d, openTime:{hours:oh,minutes:om}, closeTime:{hours:ch,minutes:cm} };
             })();
-        await googleStatusRequest({action:'special_hours',periods:[period]});
+        await googleStatusRequest({action:'special_hours',periods:[period],today:period.startDate});
         googleOk=true;
       }catch(e){ if(!firstError) firstError=e instanceof Error?e.message:'Could not update Google'; }
     }
@@ -2809,7 +2809,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     await clearStatus();
     if(googleConnected){
       try{
-        await googleStatusRequest({action:'special_hours',periods:[]});
+        const tz=bizTimeZone||'America/Chicago';
+        const [ty,tm,td]=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'})
+          .format(new Date()).split('-').map(Number);
+        const todayDate={year:ty,month:tm,day:td};
+        await googleStatusRequest({action:'special_hours',periods:[],clearDates:[todayDate],today:todayDate});
         setGMsg('✓ Back to your regular hours on your page and Google');
       }catch(e){ setGMsg(e instanceof Error?e.message:'Cleared your page, but Google failed'); }
     } else {

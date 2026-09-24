@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { mergeSpecialPeriods, type SpecialPeriod, type GDate } from '@/lib/special-hours';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 
 /**
@@ -154,13 +155,7 @@ export async function GET(req: NextRequest) {
   });
 }
 
-type SpecialPeriod = {
-  startDate: { year: number; month: number; day: number };
-  endDate: { year: number; month: number; day: number };
-  openTime?: { hours: number; minutes: number };
-  closeTime?: { hours: number; minutes: number };
-  closed?: boolean;
-};
+// Shape and merge rules live in lib/special-hours, with tests.
 
 export async function POST(req: NextRequest) {
   const r = await resolveGoogle(req);
@@ -168,7 +163,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null) as
     | { action: 'reopen' | 'close_temporarily' }
-    | { action: 'special_hours'; periods: SpecialPeriod[] }
+    | { action: 'special_hours'; periods: SpecialPeriod[]; clearDates?: GDate[]; today?: GDate }
     | null;
   if (!body?.action) return NextResponse.json({ error: 'Missing action' }, { status: 400 });
 
@@ -181,12 +176,37 @@ export async function POST(req: NextRequest) {
     });
 
   // ── Dated exceptions. These expire on their own. ──
+  //
+  // A PATCH on specialHours REPLACES the array; Google does not merge it. So
+  // this reads what is already there and writes the whole list back, changing
+  // only the dates we mean to change. Sending just today's closure used to
+  // delete every holiday the business had entered, and "back to normal" sent
+  // an empty array, which deleted all of them at once.
   if (body.action === 'special_hours') {
-    const periods = Array.isArray(body.periods) ? body.periods : [];
+    const incoming = Array.isArray(body.periods) ? body.periods : [];
+    const clearDates = Array.isArray(body.clearDates) ? body.clearDates : [];
+
+    let existing: SpecialPeriod[] = [];
+    const current = await fetch(`${BASE}/${r.locationName}?readMask=specialHours`, {
+      headers: { Authorization: `Bearer ${r.accessToken}` },
+      cache: 'no-store',
+    });
+    if (current.ok) {
+      const cur = await current.json().catch(() => ({})) as
+        { specialHours?: { specialHourPeriods?: SpecialPeriod[] } };
+      existing = cur.specialHours?.specialHourPeriods ?? [];
+    } else if (incoming.length === 0) {
+      // Nothing to add, and we cannot see what is already there. Writing now
+      // would wipe the lot, so refuse rather than destroy.
+      return googleError(current.status, await current.json().catch(() => ({})));
+    }
+
+    const periods = mergeSpecialPeriods({ existing, incoming, clearDates, today: body.today });
+
     const res = await patch('specialHours', { specialHours: { specialHourPeriods: periods } });
     const out = await res.json().catch(() => ({}));
     if (!res.ok) return googleError(res.status, out);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, periods: periods.length });
   }
 
   // ── Reopen (recovery only) ──
