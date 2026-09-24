@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 import PublishedBusinessBlocks from '@/components/published-business-blocks';
 import { shortAddress } from '@/lib/address';
+import { shareImageUrl } from '@/lib/share-image';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
 import PublicSocialLinks from '@/components/public-social-links';
 import PublicBioCard from '@/components/public-bio-card';
@@ -32,34 +33,51 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const admin = getAdminClient();
     const { data: biz } = await admin
       .from('businesses')
-      .select('id,name,tagline,address,avatar_url,header_url')
+      .select('id,user_id,name,tagline,address,avatar_url,header_url')
       .eq('slug', slug.toLowerCase())
       .maybeSingle();
 
     if (!biz) return { title: 'Page not found — OpenStatus' };
 
-    const b = biz as { id: string; name: string; tagline: string | null; address: string | null; avatar_url: string | null; header_url: string | null };
-    const place = (b.address ?? '').split(',').slice(1, 3).join(',').trim();
+    const b = biz as {
+      id: string; user_id: string; name: string;
+      tagline: string | null; address: string | null;
+      avatar_url: string | null; header_url: string | null;
+    };
+
+    // The cover lives in the page config, not on the businesses row. Reading
+    // the row alone is what put owners' logos into their text previews.
+    const config = await loadPublishedPageConfig(b.user_id, b.id).catch(() => null);
+
+    // "Columbia, TN" — not "Columbia, TN 38401", which is what slicing the
+    // raw Google string gave. shortAddress already knows where the postcode is.
+    const place = shortAddress(b.address).split(',').slice(1).map(p => p.trim()).filter(Boolean).join(', ');
     const title = place ? `${b.name} — ${place}` : b.name;
     const description = b.tagline?.trim()
       || (b.address ? `${b.name} · ${b.address}. Live hours and status.` : `${b.name} — live hours, status and links.`);
 
-    const img = b.header_url || b.avatar_url;
-    const ogImage = img
-      ? (img.startsWith('http') ? img : `${SITE_URL}/api/assets?businessId=${b.id}&kind=${b.header_url ? 'header' : 'avatar'}`)
-      : undefined;
+    const ogImage = shareImageUrl({
+      siteUrl: SITE_URL,
+      businessId: b.id,
+      bgImage: config?.bgImage,
+      headerUrl: b.header_url,
+      avatarUrl: b.avatar_url,
+    });
 
     return {
       title,
       description,
+      metadataBase: new URL(SITE_URL),
       alternates: { canonical: pageUrl(slug) },
       openGraph: {
         type: 'website',
         url: pageUrl(slug),
         title,
         description,
-        siteName: 'OpenStatus',
-        ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+        // The shop's name, not ours. Several clients print site_name above the
+        // title, and "OpenStatus" there reads as though the link is to us.
+        siteName: b.name,
+        ...(ogImage ? { images: [{ url: ogImage, alt: `${b.name}` }] } : {}),
       },
       twitter: {
         card: ogImage ? 'summary_large_image' : 'summary',
@@ -69,7 +87,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       },
     };
   } catch {
-    return {};
+    // Returning {} here inherits the root layout's title, so a page that hits
+    // this path is shared as "OpenStatus — the link in bio for small
+    // businesses". The business's own name is the one thing we can still be
+    // sure of, so say that much.
+    return { title: slug, openGraph: { title: slug, siteName: slug } };
   }
 }
 

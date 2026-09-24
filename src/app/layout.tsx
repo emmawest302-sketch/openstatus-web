@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
+import { SITE_URL } from '@/lib/site';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -10,6 +11,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
+  // Without this, relative og:image values are emitted as-is and a scraper has
+  // nothing to resolve them against.
+  metadataBase: new URL(SITE_URL),
   title: 'OpenStatus — the link in bio for small businesses',
   other: {
     'facebook-domain-verification': 'ylhwtdpq7osfq3efgjf4fmvdsfkord',

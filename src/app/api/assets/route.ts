@@ -55,7 +55,10 @@ export async function GET(req: NextRequest) {
   return new NextResponse(await data.arrayBuffer(), {
     headers: {
       'Content-Type': data.type || 'application/octet-stream',
-      'Cache-Control': 'private, max-age=86400, immutable',
+      // Was 'private', which buys nothing — this GET has no auth — while
+      // stopping every shared cache from storing it and giving link scrapers
+      // a reason to skip the image entirely.
+      'Cache-Control': 'public, max-age=86400, immutable',
       'X-Content-Type-Options': 'nosniff',
     },
   });
