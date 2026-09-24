@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { assetUrl } from '@/lib/asset-url';
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
@@ -572,7 +573,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   const displayAddr = shortAddress(addr);
 
   const avatar = business?.avatar_url?.startsWith('storage:') && business?.id
-    ? `/api/assets?businessId=${business.id}&kind=avatar`
+    ? assetUrl(business.id, 'avatar', business.avatar_url)
     : business?.avatar_url ?? null;
   const initials = (business?.name ?? 'B').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
 
@@ -3343,7 +3344,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           <div className="flex items-center gap-2.5 pt-3 mt-1 border-t border-[#E9E9E7]">
             {business?.avatar_url
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={business.avatar_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url}
+              ? <img src={assetUrl(business.id, 'avatar', business.avatar_url) ?? ''}
                   alt="" className="w-7 h-7 rounded-lg object-cover flex-shrink-0"/>
               : <span className="w-7 h-7 rounded-lg bg-[#ECECEA] grid place-items-center text-[10px] font-bold text-[#777777] flex-shrink-0">
                   {(business?.name??'?').slice(0,2).toUpperCase()}
@@ -3985,7 +3986,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                               setBgUploading(true);setBgUploadError('');
                               try{
                                 const ref=await uploadAsset(file,'header');
-                                const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
+                                const bgUrl=assetUrl(localBusiness?.id, 'header', ref) ?? ref;
                                 setConfig(c=>({...c,bgImage:bgUrl}));
                               }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
                               finally{setBgUploading(false);e.target.value='';}
@@ -4018,7 +4019,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         <div className="flex items-center gap-4">
                           {localBusiness?.avatar_url
                             ?// eslint-disable-next-line @next/next/no-img-element
-                             <img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                             <img src={assetUrl(localBusiness.id, 'avatar', localBusiness.avatar_url) ?? ''}
                                 className="w-14 h-14 rounded-full object-cover flex-shrink-0" style={{border:`1px solid ${BUILDER_UI.border}`}} alt="Logo"/>
                             :<div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{background:BUILDER_UI.surfaceSoft}}><LucideImage size={18} color={BUILDER_UI.quiet}/></div>
                           }
@@ -4665,7 +4666,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </p>
                   {localBusiness?.slug&&(
                     <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-[#6d28d9] hover:text-[#4c1d95] transition-colors">
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-[#292926] hover:text-[#0A0A0A] transition-colors">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       View live page
                     </a>
@@ -4677,7 +4678,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   title="Refresh preview"
                   className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center shadow-sm hover:bg-white transition-colors border border-white/50"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#292926" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 </button>
               </div>
             </>
@@ -5548,7 +5549,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           <div className="flex items-center gap-3">
             {localBusiness?.avatar_url
               ?// eslint-disable-next-line @next/next/no-img-element
-               <img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+               <img src={assetUrl(localBusiness.id, 'avatar', localBusiness.avatar_url) ?? ''}
                   className="w-14 h-14 rounded-full object-cover flex-shrink-0" style={{border:`1px solid ${BUILDER_UI.border}`}} alt="Logo"/>
               :<div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{background:BUILDER_UI.surfaceSoft}}><LucideImage size={18} color={BUILDER_UI.quiet}/></div>
             }

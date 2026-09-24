@@ -12,7 +12,7 @@ import { normalizeOpenStatusPageConfig, type OpenStatusPageConfig } from './open
 const FULL = {
   blocks: [
     { id: 'menu', title: 'Menu', sub: 'See the menu', icon: '', on: true, tone: 'glass',
-      url: 'https://example.com/menu', size: 'square', color: '#7C3AED',
+      url: 'https://example.com/menu', size: 'square', color: '#0A0A0A',
       menuType: 'photos', menuFile: 'menu.jpg' },
     { id: 'offers', title: 'Offers', sub: '', icon: '', on: true, tone: 'glass',
       offers: [{ id: 'o1', title: '10% off', code: 'WELCOME10', expiresAt: '2026-11-30', on: true }] },

@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import OpenStatusMark from '@/components/openstatus-mark';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BuilderClient from '@/components/builder-client';
@@ -42,12 +43,7 @@ function dbHoursToWeekly(rows: DbHoursRow[]): Record<WeeklyKey, { open:string; c
 const LoadingScreen = () => (
   <main className="grid min-h-screen place-items-center" style={{ background: '#F7F7F5', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}>
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-      <svg viewBox="0 0 100 100" width="28" height="28">
-        <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
-        <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
-        <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
-        <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
-      </svg>
+      <OpenStatusMark size={28}/>
       <p style={{ fontSize: 13, color: '#858585' }}>Loading your builder…</p>
     </div>
   </main>

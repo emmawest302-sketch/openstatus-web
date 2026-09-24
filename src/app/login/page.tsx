@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import OpenStatusMark from '@/components/openstatus-mark';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -115,12 +116,7 @@ export default function LoginPage() {
     >
       {/* Mark / wordmark */}
       <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40, textDecoration: 'none' }}>
-        <svg viewBox="0 0 100 100" width="26" height="26" aria-hidden="true">
-          <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
-          <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
-          <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
-          <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
-        </svg>
+        <OpenStatusMark size={26}/>
         <span style={{ fontSize: 17, fontWeight: 700, color: '#0A0A0A', letterSpacing: '-0.02em' }}>OpenStatus</span>
       </Link>
 

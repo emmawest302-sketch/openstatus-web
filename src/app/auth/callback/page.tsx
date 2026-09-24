@@ -1,17 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+import OpenStatusMark from '@/components/openstatus-mark';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 function Mark() {
   return (
-    <svg viewBox="0 0 100 100" width="27" height="27">
-      <circle cx="50" cy="50" r="48" />
-      <circle cx="50" cy="50" r="21" fill="#F7F7F3" />
-      <circle cx="50" cy="44" r="7.4" />
-      <path d="M45.2 50.2h9.6l2.2 16.3H43z" />
-    </svg>
+    <OpenStatusMark size={27}/>
   );
 }
 

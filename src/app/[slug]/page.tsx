@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { assetUrl } from '@/lib/asset-url';
 import Link from 'next/link';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 import PublishedBusinessBlocks from '@/components/published-business-blocks';
@@ -193,7 +194,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
 
   // Image URLs
   const avatar = typeof business.avatar_url === 'string' && business.avatar_url.startsWith('storage:')
-    ? `/api/assets?businessId=${business.id}&kind=avatar` : business.avatar_url;
+    ? assetUrl(business.id, 'avatar', business.avatar_url) : business.avatar_url;
   const headerFromDb = typeof business.header_url === 'string' && business.header_url.startsWith('storage:')
     ? `/api/assets?businessId=${business.id}&kind=header` : business.header_url;
   const coverPhoto = enrichedConfig.bgImage || headerFromDb;

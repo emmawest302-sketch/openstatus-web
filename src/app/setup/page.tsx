@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import OpenStatusMark from '@/components/openstatus-mark';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { OpenStatusBlock, OpenStatusPageConfig, OpenStatusSocial, WeeklyHours } from '@/lib/openstatus-page-config';
@@ -566,12 +567,7 @@ export default function SetupPage() {
   if (loading) {
     return (
       <main style={{ ...base, justifyContent: 'center', gap: 12 }}>
-        <svg viewBox="0 0 100 100" width="28" height="28">
-          <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
-          <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
-          <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
-          <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
-        </svg>
+        <OpenStatusMark size={28}/>
         <p style={{ fontSize: 13, color: '#858585', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}>
           Setting up your account…
         </p>
@@ -584,12 +580,7 @@ export default function SetupPage() {
       <div style={card}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32 }}>
-          <svg viewBox="0 0 100 100" width="24" height="24" aria-hidden="true">
-            <circle cx="50" cy="50" r="48" fill="#0A0A0A"/>
-            <circle cx="50" cy="50" r="21" fill="#F7F7F5"/>
-            <circle cx="50" cy="44" r="7.4" fill="#0A0A0A"/>
-            <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#0A0A0A"/>
-          </svg>
+          <OpenStatusMark size={24}/>
           <span style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', letterSpacing: '-0.02em' }}>OpenStatus</span>
         </div>
 

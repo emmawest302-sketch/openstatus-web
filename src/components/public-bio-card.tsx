@@ -1,5 +1,5 @@
 import PublicRatingRow from '@/components/public-rating-row';
-import { trackOpenStatusEvent } from '@/components/analytics-tracker';
+import PublicTrackedLink from '@/components/public-tracked-link';
 import type { ButtonStyle } from '@/lib/openstatus-page-config';
 import PublicShareButton from '@/components/public-share-button';
 
@@ -134,23 +134,23 @@ export default function PublicBioCard({
           alignItems: 'center', gap: 5, marginTop: 'clamp(10px, 3.4cqw, 13px)',
         }}>
           {websiteUrl && (
-            <a href={websiteUrl} target="_blank" rel="noreferrer" style={primaryAction(dark, buttonStyle)}
-              onClick={() => trackOpenStatusEvent(businessId, 'block_click', 'website')}>
+            <PublicTrackedLink href={websiteUrl} businessId={businessId}
+              eventType="block_click" blockId="website" style={primaryAction(dark, buttonStyle)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
               </svg>
               Website
-            </a>
+            </PublicTrackedLink>
           )}
 
           {directionsUrl && (
-            <a href={directionsUrl} target="_blank" rel="noreferrer" style={secondaryAction(dark, buttonStyle)}
-              onClick={() => trackOpenStatusEvent(businessId, 'directions_click', 'directions')}>
+            <PublicTrackedLink href={directionsUrl} businessId={businessId}
+              eventType="directions_click" blockId="directions" style={secondaryAction(dark, buttonStyle)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
               </svg>
               Directions
-            </a>
+            </PublicTrackedLink>
           )}
 
           <PublicShareButton
@@ -190,11 +190,18 @@ const actionBase: React.CSSProperties = {
 /**
  * Three ways to draw the same button.
  *
- * `filled` is the default and what the page has always looked like: a solid
- * primary, a soft secondary. `outline` drops the fills so the cover photo
- * carries the header. `glass` leans on the same frosted material as the card
- * itself. The primary stays visibly primary in all three — a style choice
- * should not flatten the hierarchy of what to tap first.
+ * The distinction has to be STRUCTURAL, not a nudge to a fill opacity. The
+ * first attempt varied only the alpha of a white fill, so on a frosted card
+ * over a photo the secondary button looked the same in all three modes and
+ * the owner reported that the setting "only works on the Website button". It
+ * was working; it just could not be seen.
+ *
+ *   filled   solid, opaque, with a shadow — objects sitting on the card
+ *   outline  no fill at all, a definite border — the card shows through
+ *   glass    translucent and blurred, a white hairline — frosted
+ *
+ * The primary stays visibly primary in all three: a style choice should not
+ * flatten which thing to tap first.
  */
 function primaryAction(dark: boolean, style: ButtonStyle): React.CSSProperties {
   const ink = dark ? '#FFFFFF' : '#0A0A0A';
@@ -206,12 +213,12 @@ function primaryAction(dark: boolean, style: ButtonStyle): React.CSSProperties {
   };
   if (style === 'glass') return {
     ...actionBase,
-    background: dark ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.94)',
-    color: dark ? '#FFFFFF' : '#0A0A0A',
-    border: dark ? '1px solid rgba(255,255,255,0.32)' : '1px solid rgba(10,10,10,0.10)',
-    backdropFilter: 'blur(18px) saturate(140%)',
-    WebkitBackdropFilter: 'blur(18px) saturate(140%)',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.10)',
+    background: dark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.55)',
+    color: ink,
+    border: dark ? '1px solid rgba(255,255,255,0.40)' : '1px solid rgba(255,255,255,0.95)',
+    backdropFilter: 'blur(16px) saturate(150%)',
+    WebkitBackdropFilter: 'blur(16px) saturate(150%)',
+    boxShadow: '0 4px 14px rgba(0,0,0,0.10)',
   };
   return {
     ...actionBase,
@@ -227,20 +234,24 @@ function secondaryAction(dark: boolean, style: ButtonStyle): React.CSSProperties
     ...actionBase,
     background: 'transparent',
     color: ink,
-    border: dark ? '1px solid rgba(255,255,255,0.32)' : '1px solid rgba(10,10,10,0.22)',
+    // Strong enough to read as a drawn edge on a busy cover photo. At 0.22 it
+    // disappeared against the card and looked like no change at all.
+    border: dark ? '1.5px solid rgba(255,255,255,0.55)' : '1.5px solid rgba(10,10,10,0.42)',
   };
   if (style === 'glass') return {
     ...actionBase,
-    background: dark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.62)',
+    background: dark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.42)',
     color: ink,
-    border: dark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.80)',
-    backdropFilter: 'blur(18px) saturate(140%)',
-    WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+    border: dark ? '1px solid rgba(255,255,255,0.26)' : '1px solid rgba(255,255,255,0.85)',
+    backdropFilter: 'blur(16px) saturate(150%)',
+    WebkitBackdropFilter: 'blur(16px) saturate(150%)',
   };
   return {
     ...actionBase,
-    background: dark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.86)',
+    // Opaque, so "filled" reads as a solid object next to the outline variant.
+    background: dark ? 'rgba(255,255,255,0.16)' : '#FFFFFF',
     color: ink,
-    border: dark ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(10,10,10,0.09)',
+    border: dark ? '1px solid rgba(255,255,255,0.24)' : '1px solid rgba(10,10,10,0.08)',
+    boxShadow: dark ? undefined : '0 2px 8px rgba(10,10,10,0.06)',
   };
 }

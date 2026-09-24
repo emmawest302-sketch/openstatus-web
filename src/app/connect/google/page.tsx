@@ -73,7 +73,7 @@ export default function ConnectGoogle() {
         {/* ── Just connected: show big success state ── */}
         {justConnected ? (
           <div className="text-center">
-            <div className="w-16 h-16 rounded-full bg-[#F5F3FF] flex items-center justify-center mx-auto mb-5">
+            <div className="w-16 h-16 rounded-full bg-[#F5F5F3] flex items-center justify-center mx-auto mb-5">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
@@ -130,7 +130,7 @@ export default function ConnectGoogle() {
             </div>
 
             {connected ? (
-              <div className="mt-4 rounded-2xl bg-[#F5F3FF] px-5 py-4">
+              <div className="mt-4 rounded-2xl bg-[#F5F5F3] px-5 py-4">
                 <p className="text-[#0A0A0A] font-medium">Your Google listing is connected</p>
                 <p className="mt-1 text-sm text-[#4A4842]">Hours changes will sync automatically.</p>
               </div>

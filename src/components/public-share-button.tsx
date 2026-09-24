@@ -91,39 +91,41 @@ export default function PublicShareButton({
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const ink = dark ? '#FFFFFF' : '#151515';
+
+  // Same three shapes as the two buttons beside it. Share keeps the accent as
+  // its TEXT colour in every mode — it is the one action we actively want a
+  // visitor to take — but it never keeps a fill the others have dropped, or
+  // the row stops reading as a set.
   const pill: React.CSSProperties =
     buttonStyle === 'outline'
       ? {
           background: hovered ? (dark ? 'rgba(255,255,255,0.08)' : 'rgba(10,10,10,0.04)') : 'transparent',
-          border: dark ? '1px solid rgba(255,255,255,0.32)' : '1px solid rgba(10,10,10,0.22)',
-          color: ink,
+          border: dark ? '1.5px solid rgba(255,255,255,0.55)' : `1.5px solid color-mix(in srgb, ${accent} 55%, transparent)`,
+          color: dark ? '#FFFFFF' : accent,
         }
       : buttonStyle === 'glass'
       ? {
           background: dark
-            ? (hovered ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)')
-            : (hovered ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.62)'),
-          border: dark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.80)',
-          color: ink,
-          backdropFilter: 'blur(18px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+            ? (hovered ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.12)')
+            : (hovered ? 'rgba(255,255,255,0.58)' : 'rgba(255,255,255,0.42)'),
+          border: dark ? '1px solid rgba(255,255,255,0.26)' : '1px solid rgba(255,255,255,0.85)',
+          color: dark ? '#FFFFFF' : accent,
+          backdropFilter: 'blur(16px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(16px) saturate(150%)',
         }
       : dark
       ? {
-          background: hovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.14)',
-          border: '1px solid rgba(255,255,255,0.28)',
+          background: hovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.16)',
+          border: '1px solid rgba(255,255,255,0.24)',
           color: '#FFFFFF',
         }
       : {
-          // Share is the one thing we actively want a visitor to do, so on a
-          // light page it still carries a tint of the owner's accent. Accent
-          // as emphasis is fine; accent as a status colour is not.
           background: hovered
             ? `color-mix(in srgb, ${accent} 18%, #FFFFFF)`
             : `color-mix(in srgb, ${accent} 10%, #FFFFFF)`,
           border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
           color: accent,
+          boxShadow: '0 2px 8px rgba(10,10,10,0.06)',
         };
 
   return (

@@ -21,6 +21,8 @@ type CustomerDetail = {
 };
 
 import Link from 'next/link';
+import OpenStatusMark from '@/components/openstatus-mark';
+import { assetUrl } from '@/lib/asset-url';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -38,12 +40,7 @@ type EditState = {
 
 function Mark() {
   return (
-    <svg width="26" height="26" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="48" fill="#7C3AED"/>
-      <circle cx="50" cy="50" r="21" fill="#FFFFFF"/>
-      <circle cx="50" cy="44" r="7.4" fill="#7C3AED"/>
-      <path d="M45.2 50.2h9.6l2.2 16.3H43z" fill="#7C3AED"/>
-    </svg>
+    <OpenStatusMark size={26}/>
   );
 }
 
@@ -252,14 +249,14 @@ export default function AdminPage() {
               onChange={e => { setPasscodeEntry(e.target.value); setPasscodeError(''); }}
               onKeyDown={e => { if (e.key === 'Enter' && passcodeEntry && !passcodeBusy) void submitPasscode(); }}
               placeholder="••••••••••••••••"
-              className="w-full rounded-[12px] border border-[#E4E7EC] bg-[#F9FAFB] px-3.5 py-2.5 text-sm tracking-[0.2em] text-[#111] outline-none placeholder:tracking-normal placeholder:text-[#C0C6D0] focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
+              className="w-full rounded-[12px] border border-[#E4E7EC] bg-[#F9FAFB] px-3.5 py-2.5 text-sm tracking-[0.2em] text-[#111] outline-none placeholder:tracking-normal placeholder:text-[#C0C6D0] focus:border-[#0A0A0A] focus:ring-2 focus:ring-[#F1F1EF]"
               autoFocus
             />
             {passcodeError && <p className="mt-2 text-[12px] text-[#DC2626]">{passcodeError}</p>}
             <button
               onClick={() => void submitPasscode()}
               disabled={passcodeBusy || !passcodeEntry}
-              className="mt-3 w-full rounded-[12px] bg-[#7C3AED] py-2.5 text-sm font-semibold text-white transition hover:bg-[#6D28D9] disabled:opacity-40"
+              className="mt-3 w-full rounded-[12px] bg-[#0A0A0A] py-2.5 text-sm font-semibold text-white transition hover:bg-[#292926] disabled:opacity-40"
             >
               {passcodeBusy ? 'Checking…' : 'Unlock'}
             </button>
@@ -277,7 +274,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        <a href="/login" className="mt-4 inline-block text-[12px] font-medium text-[#7C3AED] hover:text-[#6D28D9]">
+        <a href="/login" className="mt-4 inline-block text-[12px] font-medium text-[#0A0A0A] hover:text-[#292926]">
           Or sign in with an admin email
         </a>
       </div>
@@ -324,7 +321,7 @@ export default function AdminPage() {
                   <input
                     value={editRow[key]}
                     onChange={e => setEditRow(prev => prev ? { ...prev, [key]: e.target.value } : prev)}
-                    className="w-full rounded-[12px] border border-[#E4E7EC] bg-[#F5F6F8] px-3 py-2 text-sm text-[#111] outline-none placeholder:text-[#C0C6D0] focus:border-[#7C3AED]"
+                    className="w-full rounded-[12px] border border-[#E4E7EC] bg-[#F5F6F8] px-3 py-2 text-sm text-[#111] outline-none placeholder:text-[#C0C6D0] focus:border-[#0A0A0A]"
                   />
                 </div>
               ))}
@@ -340,7 +337,7 @@ export default function AdminPage() {
               <button
                 onClick={saveEdit}
                 disabled={saving}
-                className="flex-1 rounded-[12px] bg-[#7C3AED] py-2.5 text-sm font-semibold text-white hover:bg-[#6D28D9] disabled:opacity-50"
+                className="flex-1 rounded-[12px] bg-[#0A0A0A] py-2.5 text-sm font-semibold text-white hover:bg-[#292926] disabled:opacity-50"
               >
                 {saving ? 'Saving…' : 'Save changes'}
               </button>
@@ -420,7 +417,7 @@ export default function AdminPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name, email or slug…"
-            className="w-full rounded-[14px] border border-[#E4E7EC] bg-[#F5F6F8] px-4 py-3 text-sm text-[#111] outline-none placeholder:text-[#C0C6D0] focus:border-[#7C3AED] focus:ring-2 focus:ring-[#EDE9FE]"
+            className="w-full rounded-[14px] border border-[#E4E7EC] bg-[#F5F6F8] px-4 py-3 text-sm text-[#111] outline-none placeholder:text-[#C0C6D0] focus:border-[#0A0A0A] focus:ring-2 focus:ring-[#F1F1EF]"
           />
         </div>
 
@@ -441,7 +438,7 @@ export default function AdminPage() {
                     <div className="flex items-center gap-2">
                       {r.avatar_url ? (
                         <img
-                          src={r.avatar_url.startsWith('storage:') ? `/api/assets?businessId=${r.id}&kind=avatar` : r.avatar_url}
+                          src={assetUrl(r.id, 'avatar', r.avatar_url) ?? ''}
                           className="h-7 w-7 rounded-full object-cover"
                           alt=""
                         />
@@ -451,7 +448,7 @@ export default function AdminPage() {
                         </div>
                       )}
                       <button onClick={() => setDetailId(r.id)} className="text-left">
-                        <div className="font-semibold leading-tight hover:text-[#6D28D9] transition-colors">{r.name}</div>
+                        <div className="font-semibold leading-tight hover:text-[#292926] transition-colors">{r.name}</div>
                         {r.tagline && <div className="text-[10px] text-[#98A2B3] leading-tight truncate max-w-[140px]">{r.tagline}</div>}
                       </button>
                     </div>
@@ -466,14 +463,14 @@ export default function AdminPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[#EEF0F3]">
-                        <div className="h-full rounded-full bg-[#7C3AED]" style={{ width: `${r.completion}%` }}/>
+                        <div className="h-full rounded-full bg-[#0A0A0A]" style={{ width: `${r.completion}%` }}/>
                       </div>
                       <span className="text-xs text-[#667085]">{r.completion}%</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     {r.has_hours
-                      ? <span className="text-[#7C3AED] text-xs">✓</span>
+                      ? <span className="text-[#0A0A0A] text-xs">✓</span>
                       : <span className="text-[#C0C6D0] text-xs">—</span>
                     }
                   </td>
@@ -497,7 +494,7 @@ export default function AdminPage() {
                       )}
                       <button
                         onClick={() => setDetailId(r.id)}
-                        className="rounded-full bg-[#7C3AED] px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-[#6D28D9] transition"
+                        className="rounded-full bg-[#0A0A0A] px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-[#292926] transition"
                         title="Open customer record"
                       >
                         Open
@@ -679,7 +676,7 @@ export default function AdminPage() {
                 </a>
                 {detail.owner?.email && (
                   <a href={`mailto:${detail.owner.email}`}
-                    className="flex-1 rounded-xl bg-[#7C3AED] py-2.5 text-center text-xs font-semibold text-white hover:bg-[#6D28D9]">
+                    className="flex-1 rounded-xl bg-[#0A0A0A] py-2.5 text-center text-xs font-semibold text-white hover:bg-[#292926]">
                     Email them
                   </a>
                 )}

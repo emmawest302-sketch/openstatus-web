@@ -168,7 +168,7 @@ export const DEFAULT_BLOCKS: OpenStatusBlock[] = [
   { id:'offers',  title:'Offers',                sub:'Deals running right now',    icon:'tag',    on:false,tone:'default',color:'#c2410c',size:'full' },
   { id:'shop',    title:'Shop',                  sub:'Shop online',                icon:'bag',    on:false,tone:'default',color:'#4338ca',size:'full' },
   { id:'order',   title:'Online ordering',       sub:'DoorDash, Uber Eats & more', icon:'bag',  on:false,tone:'default',color:'#dc2626',size:'full' },
-  { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'full' },
+  { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#0A0A0A',size:'full' },
   { id:'reviews', title:'Reviews',               sub:'Recent Google reviews',      icon:'star',   on:false,tone:'default',color:'#ca8a04',size:'full' },
   // Not rows. These two hold the values the page HEADER reads (the Website
   // button and the Directions button), so they stay in the config and stay out

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import OpenStatusMark from '@/components/openstatus-mark';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -14,16 +15,7 @@ import { supabase } from '@/lib/supabase';
 // Keyhole knocked straight out of a solid disc. The older version layered a
 // light disc and a dark keyhole inside the black circle, which muddied the
 // shape at small sizes — a single white cut-out reads cleanly down to 16px.
-function OpenStatusMark({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true" style={{ display: 'block', flexShrink: 0 }}>
-      <circle cx="50" cy="50" r="50" fill="#0A0A0A" />
-      {/* keyhole: bow + tapered stem, one colour so it reads as one shape */}
-      <circle cx="50" cy="41" r="12.5" fill="#FFFFFF" />
-      <path d="M43.4 49.5h13.2l3.1 22.6a1.6 1.6 0 0 1-1.6 1.8H41.9a1.6 1.6 0 0 1-1.6-1.8z" fill="#FFFFFF" />
-    </svg>
-  );
-}
+
 
 function GoogleLogo({ size = 18 }: { size?: number }) {
   return (
@@ -53,9 +45,11 @@ const ICON: Record<string, React.ReactNode> = {
   share: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
 };
 
-const PURPLE = '#7C3AED';
-const PURPLE_DEEP = '#6D28D9';
-const TINT = '#F5F3FF';
+// Was PURPLE / PURPLE_DEEP / TINT. The product is black, white and stone now;
+// colour belongs to the businesses, not to us.
+const ACCENT = '#0A0A0A';
+const ACCENT_DEEP = '#292926';
+const TINT = '#F5F5F3';
 const INK = '#111111';
 const MUTED = '#667085';
 const LINE = '#EBEBEA';
@@ -197,7 +191,7 @@ export default function HomePage() {
             ))}
             <Link href="/signup" style={{
               fontSize: 14, fontWeight: 600, color: '#FFFFFF', textDecoration: 'none',
-              background: PURPLE, borderRadius: 999, padding: isMobile ? '8px 16px' : '9px 20px',
+              background: ACCENT, borderRadius: 999, padding: isMobile ? '8px 16px' : '9px 20px',
             }}>
               Get started
             </Link>
@@ -206,7 +200,7 @@ export default function HomePage() {
       </header>
 
       {/* ── Hero ── */}
-      {/* Soft purple→green wash. Kept very low opacity so it reads as light in
+      {/* Soft neutral→green wash. Kept very low opacity so it reads as light in
           the room rather than a coloured panel, and the page stays white. */}
       <section style={{ position: 'relative', padding: isMobile ? '56px 0 12px' : '96px 0 24px', overflow: 'hidden' }}>
         <div aria-hidden="true" style={{
@@ -225,7 +219,7 @@ export default function HomePage() {
               lineHeight: 1.04, letterSpacing: '-0.035em', margin: '0 0 20px',
             }}>
               Everything customers<br/>need, in one link that&apos;s<br/>
-              <span style={{ color: PURPLE }}>always right.</span>
+              <span style={{ color: ACCENT }}>always right.</span>
             </h1>
             <p style={{ fontSize: 17, lineHeight: 1.6, color: MUTED, maxWidth: 480, margin: '0 0 28px' }}>
               Your hours, menu, ordering, directions and reviews — on one page that
@@ -234,7 +228,7 @@ export default function HomePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 34 }}>
               <Link href="/signup" style={{
                 fontSize: 15, fontWeight: 600, color: '#FFFFFF', textDecoration: 'none',
-                background: PURPLE, borderRadius: 999, padding: '13px 26px',
+                background: ACCENT, borderRadius: 999, padding: '13px 26px',
               }}>
                 Create your page — free
               </Link>
@@ -296,7 +290,7 @@ export default function HomePage() {
             <p style={{ fontSize: 12, color: MUTED, marginTop: 16, textAlign: 'center' }}>
               <Link href="/forgot-password" style={{ color: '#858585', textDecoration: 'none' }}>Forgot your password?</Link>
               <span style={{ margin: '0 8px', color: '#D0D5DD' }}>·</span>
-              New here? <Link href="/signup" style={{ color: PURPLE_DEEP, fontWeight: 600, textDecoration: 'none' }}>Create an account</Link>
+              New here? <Link href="/signup" style={{ color: ACCENT_DEEP, fontWeight: 600, textDecoration: 'none' }}>Create an account</Link>
             </p>
           </div>
         </div>
@@ -326,7 +320,7 @@ export default function HomePage() {
                 <span style={{
                   display: 'inline-flex', width: 36, height: 36, borderRadius: 11,
                   alignItems: 'center', justifyContent: 'center',
-                  background: TINT, color: PURPLE, marginBottom: 14,
+                  background: TINT, color: ACCENT, marginBottom: 14,
                 }}>
                   {ICON[icon]}
                 </span>
@@ -354,17 +348,17 @@ export default function HomePage() {
               { name: 'Pro', price: 'Coming soon', note: 'For when you want it to do more.', points: ['Remove OpenStatus branding', 'Full visitor analytics', 'Priority support'], cta: 'Start free for now', primary: true },
             ].map((plan) => (
               <div key={plan.name} style={{
-                border: `1px solid ${plan.primary ? '#DDD6FE' : LINE}`,
+                border: `1px solid ${plan.primary ? '#D8D8D3' : LINE}`,
                 background: plan.primary ? TINT : '#FFFFFF',
                 borderRadius: 22, padding: 24,
               }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: plan.primary ? PURPLE_DEEP : MUTED, margin: '0 0 6px' }}>{plan.name}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: plan.primary ? ACCENT_DEEP : MUTED, margin: '0 0 6px' }}>{plan.name}</p>
                 <p style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', margin: '0 0 4px' }}>{plan.price}</p>
                 <p style={{ fontSize: 13, color: MUTED, margin: '0 0 18px' }}>{plan.note}</p>
                 <div style={{ display: 'grid', gap: 9, marginBottom: 22 }}>
                   {plan.points.map((pt) => (
                     <div key={pt} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
                       <span style={{ fontSize: 13.5, color: MUTED }}>{pt}</span>
                     </div>
                   ))}
@@ -372,7 +366,7 @@ export default function HomePage() {
                 <Link href="/signup" style={{
                   display: 'block', textAlign: 'center', textDecoration: 'none',
                   padding: '12px 16px', borderRadius: 14, fontSize: 14, fontWeight: 600,
-                  background: plan.primary ? PURPLE : '#FFFFFF',
+                  background: plan.primary ? ACCENT : '#FFFFFF',
                   color: plan.primary ? '#FFFFFF' : INK,
                   border: plan.primary ? 'none' : `1px solid ${LINE}`,
                 }}>
