@@ -83,7 +83,7 @@ function hoursRowInvalid(d?: { open:string; close:string; closed:boolean }): boo
 
 function blockAllowsPhoto(size?: BlockSize) { return size !== 'half' && size !== 'third'; }
 // These blocks are their own content — they don't need a link to be useful.
-const SELF_CONTAINED_BLOCKS = new Set(['hours','location','updates','gallery','socials']);
+const SELF_CONTAINED_BLOCKS = new Set(['hours','location','updates','gallery']);
 // A block with no destination is excluded from the published page, so the
 // builder has to say so rather than letting the owner think it went live.
 function blockNeedsSetup(b: OpenStatusBlock) {
@@ -755,28 +755,6 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
                     );
                   }
 
-                  // ── SOCIALS list style ──
-                  if(b.id==='socials' && bStyle==='list') {
-                    const activeSocials = SOCIAL_PLATFORMS.filter(s=>config.socials[s.key]);
-                    return (
-                      <div className="rounded-2xl border overflow-hidden" style={{ borderColor:bdr }}>
-                        {activeSocials.length===0
-                          ?<div className="flex items-center gap-2 px-2.5 py-2.5" style={{ background:cardBg }}>
-                            <BlockIcon id="socials" size={10} color={TOK.icon(b.color)}/>
-                            <p className={`text-[10px] font-semibold ${tx}`} style={tStyle(b)}>{b.title}</p>
-                          </div>
-                          :activeSocials.slice(0,3).map((s,i)=>(
-                            <div key={s.key} className={`flex items-center gap-2 px-2.5 py-1.5 ${i>0?'border-t':''}` } style={{ background:cardBg, borderColor:bdr }}>
-                              <SocialIcon platform={s.key} size={14}/>
-                              <p className={`text-[9px] font-medium ${tx}`}>{s.label}</p>
-                              <span className={`ml-auto text-xs ${isDark?'text-white/20':'text-black/20'}`}>›</span>
-                            </div>
-                          ))
-                        }
-                      </div>
-                    );
-                  }
-
                   // ── Generic fallback (cover photo or simple row) ──
                   if(b.coverPhoto && blockAllowsPhoto(b.size)) return (
                     <div className="rounded-2xl overflow-hidden border relative" style={{ borderColor:bdr, aspectRatio: isSquare ? '1/1' : '16/10' }}>
@@ -812,7 +790,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
                 const { style: extraStyle, ...extraRest } = extra ?? {};
                 return (
                   <div key={b.id} data-block-id={b.id}
-                    className={`${isHalf?'col-span-1':'col-span-2'} ${onSelectBlock?'cursor-pointer':''}`}
+                    className={`${isHalf?'col-span-1':'col-span-2'} grid ${onSelectBlock?'cursor-pointer':''}`}
                     onClick={()=>onSelectBlock?.(b.id)}
                     {...extraRest}
                     style={{
@@ -1470,28 +1448,11 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
             </div>
           )}
 
-          {/* ── SOCIALS ── */}
-          {block.id==='socials' && (
-            <div className="space-y-5">
-              <BlockStylePicker blockId="socials" selected={block.blockStyle??'icons'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <CoverPhotoField block={block} onUpdateBlock={onUpdateBlock} hint="Optional photo behind the social links block."/>
-              <div className="space-y-3">
-              <FieldLabel>Your social links</FieldLabel>
-              {SOCIAL_PLATFORMS.map(({key,label})=>(
-                <div key={key} className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
-                  <Input value={config.socials[key]??''} onChange={v=>onUpdateConfig({socials:{...config.socials,[key]:v}})} placeholder={`${label} URL…`}/>
-                </div>
-              ))}
-              </div>
-            </div>
-          )}
-
           {/* ── UPDATES ── */}
 
 
           {/* ── WEBSITE / generic ── */}
-          {(block.id==='website'||(!block.id.startsWith('custom-')&&!['location','hours','menu','order','book','socials'].includes(block.id))) && (
+          {(block.id==='website'||(!block.id.startsWith('custom-')&&!['location','hours','menu','order','book'].includes(block.id))) && (
             <div className="space-y-5">
               {block.id==='website'&&(
                 <>
@@ -1551,7 +1512,6 @@ const PICKER_CATEGORIES = [
   { label:'Food & Beverage',ids:['menu','order'] },
   { label:'Engagement',     ids:['book'] },
   { label:'Contact',        ids:['website'] },
-  { label:'Social',         ids:['socials'] },
 ];
 
 function BlockPicker({ blocks, onAdd, onClose }: {
@@ -3339,6 +3299,34 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </a>
                   </div>
                 )}
+
+                {/* ── Social links ──
+                     These used to live inside a "Follow us" block, which also
+                     rendered its own list of links on the page — so the same
+                     links showed up twice, once as a block and once as the icon
+                     row above the footer. The block is gone and they live here.
+
+                     Note the builder's config keeps socials as a record keyed
+                     by platform; lib/openstatus-page-config.ts keeps its own
+                     type where socials is an array. The normalizer converts
+                     between them on load. Two types with one name is asking
+                     for trouble, but it is not this change's job to fix. */}
+                <div className="mb-5 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-0.5">Social links</p>
+                  <p className="text-[12px] text-[#667085] mb-3.5">Shown as icons near the bottom of your page. Clear a field to remove it.</p>
+                  <div className="space-y-2.5">
+                    {SOCIAL_PLATFORMS.map(({key,label})=>(
+                      <div key={key} className="flex items-center gap-3">
+                        <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
+                        <Input
+                          value={config.socials?.[key] ?? ''}
+                          onChange={v=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:v}}))}
+                          placeholder={`${label} URL…`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
                 {/* ── Google connection status ── */}
                 <div className={`mb-5 p-4 rounded-2xl border ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E8EBF0] bg-[#F9FAFB]'}`}>

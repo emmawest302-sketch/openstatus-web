@@ -22,7 +22,7 @@ export default function PublishedBusinessBlocks({
   // Also drop blocks with nothing to open: a tappable row that goes nowhere
   // (or, worse, borrows another block's link) is a broken promise to the
   // customer. These render in the builder with a "Needs setup" badge instead.
-  const SELF_CONTAINED = new Set(['updates', 'gallery', 'socials']);
+  const SELF_CONTAINED = new Set(['updates', 'gallery']);
   const hasDestination = (b: { id: string; url?: string; menuFile?: string }) =>
     SELF_CONTAINED.has(b.id) || !!(b.url && b.url.trim()) || !!(b.menuFile && b.menuFile.trim());
 
@@ -30,6 +30,9 @@ export default function PublishedBusinessBlocks({
     block.on !== false &&
     block.id !== 'hours' &&
     block.id !== 'location' &&
+    // Retired. Social links render once, as the icon row above the footer.
+    // As a block they appeared a second time on the same page.
+    block.id !== 'socials' &&
     hasDestination(block)
   );
 
@@ -60,7 +63,11 @@ export default function PublishedBusinessBlocks({
         }
 
         return (
-          <div key={block.id} style={{ gridColumn: `span ${span}` }}>
+          // display:grid so the card stretches to the row height. Without it a
+          // short link card sat at its natural height beside a tall photo card
+          // and left a dead gap under itself — the pair read as broken spacing
+          // rather than as two tiles.
+          <div key={block.id} style={{ gridColumn: `span ${span}`, display: 'grid' }}>
             <PublicActionBlock block={block} businessId={businessId} dark={dark}/>
           </div>
         );

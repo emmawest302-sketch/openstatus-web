@@ -148,7 +148,7 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
         href={href}
         target="_blank"
         rel="noreferrer"
-        style={{ display: 'block', textDecoration: 'none' }}
+        style={{ display: 'block', height: '100%', textDecoration: 'none' }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
@@ -166,6 +166,10 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: 11,
+        // Fills the grid row so a link card pairs cleanly with a taller photo
+        // card. alignItems:center keeps the contents vertically centred rather
+        // than stranded at the top of a stretched tile.
+        height: '100%', boxSizing: 'border-box',
         background: CARD,
         border: `1px solid ${CARD_BORDER}`,
         backdropFilter: 'blur(24px) saturate(130%)',
@@ -235,7 +239,7 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
       href={href}
       target="_blank"
       rel="noreferrer"
-      style={{ display: 'block', textDecoration: 'none' }}
+      style={{ display: 'block', height: '100%', textDecoration: 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => trackOpenStatusEvent(businessId, 'block_click', block.id)}
