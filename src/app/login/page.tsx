@@ -32,6 +32,16 @@ export default function LoginPage() {
   const [oauthLoading, setOauthLoading] = useState<'google' | 'meta' | null>(null);
   const [error, setError] = useState('');
 
+  // /auth/callback redirects here with ?error=oauth when a social sign-in
+  // fails. Nothing read it, so the user landed on a clean form with no idea
+  // what had happened and no reason not to try the same button again.
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get('error');
+    if (reason === 'oauth') {
+      setError('That sign-in didn\u2019t complete. Try again, or use your email and password.');
+    }
+  }, []);
+
   // Redirect already-authenticated users to their dashboard
   useEffect(() => {
     void (async () => {
@@ -39,10 +49,10 @@ export default function LoginPage() {
       if (!session) return;
       const { data: biz } = await supabase
         .from('businesses')
-        .select('id')
+        .select('id, slug')
         .eq('user_id', session.user.id)
         .maybeSingle();
-      router.replace(biz ? '/dashboard' : '/setup');
+      router.replace(biz?.slug ? '/builder' : '/setup');
     })();
   }, [router]);
 
@@ -70,7 +80,9 @@ export default function LoginPage() {
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
-      router.push('/dashboard');
+      // /dashboard is a permanent redirect to /builder in next.config, so this
+      // was a 308 hop on every single sign-in.
+      router.push('/builder');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Login failed');
     } finally {
@@ -167,6 +179,12 @@ export default function LoginPage() {
               className={inputCls}
               required
             />
+
+            <div style={{ textAlign: 'right', marginTop: -4 }}>
+              <Link href="/forgot-password" style={{ fontSize: 12.5, color: '#858585', textDecoration: 'none' }}>
+                Forgot your password?
+              </Link>
+            </div>
 
             {error && (
               <p className="rounded-2xl bg-red-50 border border-red-100 px-4 py-3 text-[13px] text-red-600">

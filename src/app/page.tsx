@@ -112,10 +112,13 @@ export default function HomePage() {
       if (!session) return;
       const { data: biz } = await supabase
         .from('businesses')
-        .select('id')
+        .select('id, slug')
         .eq('user_id', session.user.id)
         .maybeSingle();
-      router.replace(biz ? '/builder' : '/setup');
+      // Not "has a row" — /setup creates one the moment it loads, so an owner
+      // who abandoned step 1 looked onboarded forever and nothing ever sent
+      // them back. A slug only exists once they got past step 2.
+      router.replace(biz?.slug ? '/builder' : '/setup');
     })();
   }, [router]);
 
@@ -128,7 +131,7 @@ export default function HomePage() {
       if (loginError) throw loginError;
       if (data.user) {
         const { data: business } = await supabase.from('businesses').select('slug').eq('user_id', data.user.id).maybeSingle();
-        router.push(business ? '/builder' : '/setup');
+        router.push(business?.slug ? '/builder' : '/setup');
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Login failed');
@@ -291,6 +294,8 @@ export default function HomePage() {
             </div>
             {error && <p style={{ fontSize: 12, color: '#D92D20', marginTop: 12 }}>{error}</p>}
             <p style={{ fontSize: 12, color: MUTED, marginTop: 16, textAlign: 'center' }}>
+              <Link href="/forgot-password" style={{ color: '#858585', textDecoration: 'none' }}>Forgot your password?</Link>
+              <span style={{ margin: '0 8px', color: '#D0D5DD' }}>·</span>
               New here? <Link href="/signup" style={{ color: PURPLE_DEEP, fontWeight: 600, textDecoration: 'none' }}>Create an account</Link>
             </p>
           </div>

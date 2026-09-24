@@ -1412,7 +1412,7 @@ const PICKER_CATEGORIES = [
   { label:'Promotions',     ids:['offers'] },
   { label:'Food & Beverage',ids:['menu','order'] },
   { label:'Selling online', ids:['shop'] },
-  { label:'Engagement',     ids:['book','reviews','gallery','updates'] },
+  { label:'Engagement',     ids:['book','reviews','gallery'] },
 ];
 
 function BlockPicker({ blocks, category, onAdd, onClose }: {
@@ -1809,7 +1809,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [openId,setOpenId]=useState<string|null>(null);
   const [showPicker,setShowPicker]=useState(false);
   const [showTutorial,setShowTutorial]=useState(()=>{try{return!localStorage.getItem('os_tutorial_done')}catch{return true}});
-  const [showFirstRun,setShowFirstRun]=useState(isFirstRun);
+  // A first-run tutorial state used to live here, set from ?new=1 and never
+  // read by anything. Removed rather than left as a promise the UI does not keep.
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
   const [saveError,setSaveError]=useState('');
@@ -2079,7 +2080,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const hours = config.weeklyHours??{...DEFAULT_WEEK_HOURS};
   const showEditPanel = !!openBlock && sidebarTab==='design';
   const isEditSubTab = ['design','style'].includes(sidebarTab);
-  const igHandle = (business as (Business & { instagram_handle?: string })|null)?.instagram_handle??null;
 
   function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
     setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));

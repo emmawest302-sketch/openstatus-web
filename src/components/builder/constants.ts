@@ -139,9 +139,15 @@ export const DEFAULT_BLOCKS: OpenStatusBlock[] = [
   // them AND the config merge deleted them from any page that had one saved.
   { id:'gallery', title:'Photos',                sub:'Your Google photos',         icon:'image',  on:false,tone:'default',color:'#0d9488',size:'full' },
   { id:'reviews', title:'Reviews',               sub:'Recent Google reviews',      icon:'star',   on:false,tone:'default',color:'#ca8a04',size:'full' },
-  { id:'updates', title:'Latest updates',        sub:'Your recent Instagram posts',icon:'insta',  on:false,tone:'default',color:'#db2777',size:'full' },
   { id:'offers',  title:'Offers',                sub:'Deals running right now',    icon:'tag',    on:false,tone:'default',color:'#c2410c',size:'full' },
   { id:'shop',    title:'Shop',                  sub:'Shop online',                icon:'bag',    on:false,tone:'default',color:'#4338ca',size:'full' },
+  // 'updates' (Instagram posts) is deliberately absent. The block renders, but
+  // nothing in the app can create the Meta token it reads and no job populates
+  // the posts table — there is no Connect Instagram button and no cron. So it
+  // was a feature an owner could switch on, see a placeholder for in the
+  // preview, and never see on their page. It comes back when the connect flow
+  // and the sync job do. The renderer and the block id are untouched, so any
+  // business that already has it saved keeps working.
 ];
 
 /**

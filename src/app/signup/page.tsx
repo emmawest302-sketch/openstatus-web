@@ -54,10 +54,10 @@ export default function SignupPage() {
       if (!session) return;
       const { data: biz } = await supabase
         .from('businesses')
-        .select('id')
+        .select('id, slug')
         .eq('user_id', session.user.id)
         .maybeSingle();
-      router.replace(biz ? '/builder' : '/setup');
+      router.replace(biz?.slug ? '/builder' : '/setup');
     })();
   }, [router]);
 

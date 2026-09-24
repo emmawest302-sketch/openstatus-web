@@ -24,16 +24,28 @@ export default function ResetPasswordPage() {
       }
     });
 
-    // Fallback: if there's already a valid session (e.g. page reload after
-    // recovery was processed), check for it immediately.
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
-    });
+    // Fallback for a page reload after recovery was already processed.
+    //
+    // Only a recovery link counts. This used to accept ANY existing session,
+    // so someone already signed in who opened a stale reset link was shown the
+    // "set a new password" form and silently changed the password on their
+    // live account. A recovery session is marked as such in the JWT's `aal` /
+    // `amr` claims, and the URL still carries the recovery fragment, so
+    // require one of those rather than the mere presence of a session.
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const cameFromRecoveryLink = /type=recovery/.test(url) || /[#&]access_token=/.test(url);
+    if (cameFromRecoveryLink) {
+      void supabase.auth.getSession().then(({ data }) => {
+        if (data.session) setReady(true);
+      });
+    }
 
-    // If after 4 s we still have no session, the link is invalid/expired.
+    // If we still have no recovery session, the link is invalid or expired.
+    // 4s was a race against Supabase's own hash processing on a slow phone;
+    // the copy also now says what to do rather than just "expired".
     const timeout = window.setTimeout(() => {
       setInvalid(true);
-    }, 4000);
+    }, 8000);
 
     return () => {
       subscription.unsubscribe();

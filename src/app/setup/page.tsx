@@ -6,17 +6,25 @@ import { supabase } from '@/lib/supabase';
 import type { OpenStatusBlock, OpenStatusPageConfig, OpenStatusSocial, WeeklyHours } from '@/lib/openstatus-page-config';
 import { savePageConfig } from '@/lib/page-config-store';
 import { detectTimeZone, isValidTimeZone } from '@/lib/timezone';
+import { DEFAULT_WEEK_HOURS } from '@/components/builder/constants';
+import { normaliseHandle, HANDLE_MAX } from '@/lib/handles';
 
 // ─── SLUG UTILS ───────────────────────────────────────────────────────────────
 
+/**
+ * Turn what the owner typed into the handle we will actually store.
+ *
+ * This used to be its own function and it disagreed with the validator in two
+ * ways. It sliced at 48 while validateHandle rejects anything over 32, so a
+ * long business name produced a slug that read "taken" with no reason given;
+ * and it kept trailing hyphens while normaliseHandle strips them, so
+ * "my-shop-" was CHECKED as "my-shop" and WRITTEN as "my-shop-" — availability
+ * confirmed for a different string than the one saved.
+ *
+ * Both now come from lib/handles, which is what /api/handle validates with.
+ */
 function toSlug(str: string) {
-  return str
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 48);
+  return normaliseHandle(str.replace(/\s+/g, '-')).slice(0, HANDLE_MAX);
 }
 
 // ─── CATEGORY CONFIG ──────────────────────────────────────────────────────────
@@ -215,7 +223,9 @@ export default function SetupPage() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
-  const [slugState, setSlugState] = useState<'idle' | 'checking' | 'free' | 'taken'>('idle');
+  const [slugState, setSlugState] = useState<'idle' | 'checking' | 'free' | 'taken' | 'error'>('idle');
+  /** Google's own words for why, e.g. "That one is reserved". */
+  const [slugReason, setSlugReason] = useState<string | null>(null);
   const [initialSlug, setInitialSlug] = useState('');
 
   // Step 3: Category
@@ -243,6 +253,13 @@ export default function SetupPage() {
       setSlug(existing.slug ?? '');
       setInitialSlug(existing.slug ?? '');
       if (existing.slug) setSlugState('free');
+
+      // An owner who already finished setup does not belong here. finish()
+      // rebuilds business_page_config from category defaults, so walking back
+      // through the wizard silently replaced their blocks, socials and
+      // background with a fresh set. Slug present means they got past step 2,
+      // which is the only step that writes one.
+      if (existing.slug) { router.replace('/builder'); return; }
     } else {
       const newId = crypto.randomUUID();
       const { data: created, error: insertErr } = await supabase
@@ -275,10 +292,17 @@ export default function SetupPage() {
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/handle?handle=${encodeURIComponent(normalized)}`);
-        const body = await res.json() as { available: boolean };
+        const body = await res.json() as { available?: boolean; reason?: string };
         setSlugState(body.available ? 'free' : 'taken');
+        // "Already taken", "That one is reserved" and "At most 32 characters"
+        // all rendered as a bare "taken" chip. Someone typing `status` had no
+        // way to learn it is a reserved route.
+        setSlugReason(body.available ? null : (body.reason ?? 'Already taken'));
       } catch {
-        setSlugState('idle');
+        // Not the same as taken: the check itself failed, and treating it as
+        // 'idle' disabled Continue forever with no message on screen.
+        setSlugState('error');
+        setSlugReason('Could not check that address right now. Try again in a moment.');
       }
     }, 350);
     return () => clearTimeout(t);
@@ -432,7 +456,46 @@ export default function SetupPage() {
     if (placeDetails?.phone) businessUpdate.phone = placeDetails.phone;
     if (placeDetails?.website) businessUpdate.website = placeDetails.website;
 
-    await supabase.from('businesses').update(businessUpdate).eq('id', businessId);
+    // The result was never checked. If `timezone` or `place_id` don't exist as
+    // columns, or RLS refuses, every Google-imported field was dropped in
+    // silence and the owner was pushed on regardless.
+    const { error: bizErr } = await supabase.from('businesses').update(businessUpdate).eq('id', businessId);
+    if (bizErr) { setError(bizErr.message); setSaving(false); return; }
+
+    // ── Hours have to reach business_hours, not just the page config ──
+    //
+    // The public page reads hours from the business_hours TABLE and nowhere
+    // else. Writing them only into business_page_config meant a brand-new
+    // owner finished setup — Google hours imported and all — and their live
+    // page said "Hours not set" until they happened to open the builder and
+    // press Save. For a product whose whole promise is live hours, that was
+    // the first thing every new customer saw.
+    //
+    // Not fatal if it fails: the page config is already saved, and the builder
+    // mirrors hours on every save. But the owner is told, rather than
+    // discovering it from a customer.
+    const weeklyHours = placeDetails?.hours ?? DEFAULT_WEEK_HOURS;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (token) {
+        const res = await fetch('/api/business/hours', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ weeklyHours }),
+        });
+        if (!res.ok) {
+          const out = await res.json().catch(() => ({}));
+          setError(`Your page is set up, but the hours didn't publish: ${out?.error ?? res.status}. Open the builder and press Save.`);
+          setSaving(false);
+          return;
+        }
+      }
+    } catch {
+      setError('Your page is set up, but the hours didn\u2019t publish. Open the builder and press Save.');
+      setSaving(false);
+      return;
+    }
 
     setSaving(false);
     router.push('/builder?new=1');
@@ -444,7 +507,8 @@ export default function SetupPage() {
     ? CATEGORIES.filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()))
     : CATEGORIES;
   const canGoStep2 = name.trim().length > 0 && slugState === 'free';
-  const slugColor = slugState === 'free' ? '#22C55E' : slugState === 'taken' ? '#EF4444' : '#858585';
+  const slugColor = slugState === 'free' ? '#22C55E'
+    : slugState === 'taken' || slugState === 'error' ? '#EF4444' : '#858585';
 
   // ── STYLES ────────────────────────────────────────────────────────────────
   const base: React.CSSProperties = {
@@ -715,7 +779,7 @@ export default function SetupPage() {
                 <input
                   type="text"
                   value={slug}
-                  onChange={e => { setSlugEdited(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 48)); }}
+                  onChange={e => { setSlugEdited(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, HANDLE_MAX)); }}
                   style={{
                     flex: 1, border: 'none', outline: 'none',
                     fontSize: 14, fontWeight: 600, color: '#0A0A0A',
@@ -724,9 +788,12 @@ export default function SetupPage() {
                   }}
                 />
                 <span style={{ padding: '0 14px', fontSize: 10, fontWeight: 700, color: slugColor, flexShrink: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  {slugState === 'checking' ? '...' : slugState === 'free' ? '✓' : slugState === 'taken' ? 'taken' : ''}
+                  {slugState === 'checking' ? '...' : slugState === 'free' ? '✓' : slugState === 'taken' ? 'taken' : slugState === 'error' ? '!' : ''}
                 </span>
               </div>
+              {slugReason && slugState !== 'free' && (
+                <p style={{ marginTop: 8, fontSize: 12.5, color: '#EF4444' }}>{slugReason}</p>
+              )}
             </div>
 
             {error && <p style={{ marginTop: 12, fontSize: 13, color: '#EF4444' }}>{error}</p>}
