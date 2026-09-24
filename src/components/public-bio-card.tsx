@@ -16,11 +16,15 @@ import PublicShareButton from '@/components/public-share-button';
  * forget to switch on or bury under a custom link.
  *
  * Sizing note: this card is read on a phone, in one hand, usually from an
- * Instagram bio tap. Everything in here is tuned so the name, the address and
- * the three actions land above the fold with the hours card, rather than a
- * desktop card squeezed into a 390px screen. Tags scroll sideways instead of
- * wrapping onto a third line — a fourth tag is not worth 30px of the only
- * screen the customer will ever see.
+ * Instagram bio tap. The sizes come from the --os-* scale in lib/page-metrics,
+ * which is driven by the width of the column the page is in rather than fixed
+ * pixels — the builder preview is a 340px box and the live page runs from 320
+ * to 560, and numbers tuned at one of those looked oversized at another. The
+ * literals in the var() fallbacks are the 390px values, so this still renders
+ * sensibly if the stylesheet ever fails to land.
+ *
+ * Tags scroll sideways instead of wrapping onto a third line — a fourth tag is
+ * not worth 30px of the only screen the customer will ever see.
  */
 
 type Props = {
@@ -52,35 +56,35 @@ export default function PublicBioCard({
     WebkitBackdropFilter: 'blur(28px) saturate(140%)',
     border: dark ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(255,255,255,0.75)',
     boxShadow: dark ? '0 14px 40px rgba(0,0,0,0.34)' : '0 14px 40px rgba(0,0,0,0.09)',
-    borderRadius: 22,
+    borderRadius: 'var(--os-radius, 22px)',
   };
 
   const muted = dark ? 'rgba(255,255,255,0.68)' : 'rgba(21,21,21,0.58)';
 
   return (
-    <div style={{ ...glass, padding: '0 16px 16px', marginTop: -36, position: 'relative', zIndex: 2 }}>
+    <div style={{ ...glass, padding: '0 var(--os-card-pad, 16px) var(--os-card-pad, 16px)', marginTop: 'calc(var(--os-logo, 68px) * -0.53)', position: 'relative', zIndex: 2 }}>
       {/* Logo straddles the top edge, tying the card to the cover above it. */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: -34 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'calc(var(--os-logo, 68px) * -0.5)' }}>
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logo} alt={`${businessName} logo`} style={logoStyle(dark)}/>
         ) : (
-          <div style={{ ...logoStyle(dark), display: 'grid', placeItems: 'center', fontSize: 22, fontWeight: 800, color: accent }}>
+          <div style={{ ...logoStyle(dark), display: 'grid', placeItems: 'center', fontSize: 'calc(var(--os-logo, 68px) * 0.32)', fontWeight: 800, color: accent }}>
             {initials}
           </div>
         )}
       </div>
 
-      <div style={{ textAlign: 'center', paddingTop: 9 }}>
+      <div style={{ textAlign: 'center', paddingTop: 'clamp(7px, 2.4cqw, 10px)' }}>
         <h1 style={{
-          fontSize: 28, fontWeight: 800, letterSpacing: '-0.035em',
+          fontSize: 'var(--os-name, 28px)', fontWeight: 800, letterSpacing: '-0.035em',
           color: nameColor, lineHeight: 1.08, margin: 0, fontFamily: pageFont,
         }}>
           {businessName}
         </h1>
 
         {address && (
-          <p style={{ fontSize: 15, color: muted, margin: '5px 0 0', lineHeight: 1.3 }}>
+          <p style={{ fontSize: 'var(--os-addr, 15px)', color: muted, margin: '5px 0 0', lineHeight: 1.3 }}>
             {address}
           </p>
         )}
@@ -100,7 +104,7 @@ export default function PublicBioCard({
             <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 5, width: 'max-content', margin: '0 auto' }}>
               {tags.filter(Boolean).slice(0, 6).map((tag) => (
                 <span key={tag} style={{
-                  fontSize: 11, fontWeight: 500, padding: '4px 9px', borderRadius: 999,
+                  fontSize: 'var(--os-tag, 11px)', fontWeight: 500, padding: '4px 9px', borderRadius: 999,
                   whiteSpace: 'nowrap', flexShrink: 0,
                   color: dark ? 'rgba(255,255,255,0.80)' : 'rgba(21,21,21,0.68)',
                   background: dark ? 'rgba(255,255,255,0.10)' : 'rgba(10,10,10,0.05)',
@@ -119,7 +123,7 @@ export default function PublicBioCard({
             than the two actions it sits beside. */}
         <div style={{
           display: 'flex', flexWrap: 'nowrap', justifyContent: 'center',
-          alignItems: 'center', gap: 5, marginTop: 13,
+          alignItems: 'center', gap: 5, marginTop: 'clamp(10px, 3.4cqw, 13px)',
         }}>
           {websiteUrl && (
             <a href={websiteUrl} target="_blank" rel="noreferrer" style={primaryAction(dark)}>
@@ -154,7 +158,7 @@ export default function PublicBioCard({
 
 function logoStyle(dark: boolean): React.CSSProperties {
   return {
-    width: 68, height: 68, borderRadius: '50%',
+    width: 'var(--os-logo, 68px)', height: 'var(--os-logo, 68px)', borderRadius: '50%',
     objectFit: 'cover',
     border: dark ? '3px solid rgba(255,255,255,0.22)' : '3px solid rgba(255,255,255,0.92)',
     background: dark ? 'rgba(40,40,44,0.9)' : 'rgba(255,255,255,0.92)',
@@ -167,8 +171,8 @@ const actionBase: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
   // 12px of side padding made the three pills 297px wide, which bleeds
   // past the card's own padding on a 320px screen.
-  padding: '9px 10px', borderRadius: 999,
-  fontSize: 12.5, fontWeight: 650, letterSpacing: '-0.01em',
+  padding: 'var(--os-action-pad-y, 9px) var(--os-action-pad-x, 10px)', borderRadius: 999,
+  fontSize: 'var(--os-action-fs, 12.5px)', fontWeight: 650, letterSpacing: '-0.01em',
   textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
 };
 

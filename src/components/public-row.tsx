@@ -53,7 +53,7 @@ export default function PublicRow({
     WebkitBackdropFilter: 'blur(20px) saturate(130%)',
     border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(10,10,10,0.05)',
     boxShadow: dark ? '0 6px 20px rgba(0,0,0,0.22)' : '0 6px 20px rgba(10,10,10,0.05)',
-    borderRadius: 16,
+    borderRadius: 'var(--os-radius, 16px)',
     overflow: 'hidden',
   };
 
@@ -69,12 +69,13 @@ export default function PublicRow({
     // be the same height, or a list of them looks like it was assembled by
     // accident. 78 matches the link rows in public-action-block.
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 13,
-      padding: emphasis ? '15px 16px' : '13px 16px',
-      minHeight: emphasis ? 86 : 78, boxSizing: 'border-box',
+      display: 'flex', alignItems: 'center', gap: 'clamp(10px, 3.4cqw, 13px)',
+      padding: `clamp(11px, 3.6cqw, ${emphasis ? 15 : 13}px) var(--os-card-pad, 16px)`,
+      minHeight: emphasis ? 'calc(var(--os-row-min, 78px) + 8px)' : 'var(--os-row-min, 78px)',
+      boxSizing: 'border-box',
     }}>
       <span style={{
-        width: emphasis ? 42 : 38, height: emphasis ? 42 : 38, borderRadius: '50%', flexShrink: 0,
+        width: 'var(--os-icon, 38px)', height: 'var(--os-icon, 38px)', borderRadius: '50%', flexShrink: 0,
         display: 'grid', placeItems: 'center',
         background: dark ? 'rgba(255,255,255,0.09)' : 'rgba(10,10,10,0.04)',
         color: iconInk,
@@ -85,7 +86,7 @@ export default function PublicRow({
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
-            fontSize: emphasis ? 17 : 15, fontWeight: 700, color: ink,
+            fontSize: 'var(--os-row-title, 15px)', fontWeight: 700, color: ink,
             letterSpacing: '-0.02em', lineHeight: 1.25,
           }}>
             {title}
@@ -101,7 +102,7 @@ export default function PublicRow({
           )}
         </span>
         {subtitle && (
-          <span style={{ display: 'block', fontSize: 12.5, color: muted, marginTop: 2, lineHeight: 1.35 }}>
+          <span style={{ display: 'block', fontSize: 'var(--os-row-sub, 12.5px)', color: muted, marginTop: 2, lineHeight: 1.35 }}>
             {subtitle}
           </span>
         )}
@@ -159,7 +160,7 @@ export default function PublicRow({
       {open && (
         <div style={{
           borderTop: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(10,10,10,0.06)',
-          padding: '14px 16px 16px',
+          padding: 'var(--os-card-pad, 16px)',
         }}>
           {children}
         </div>

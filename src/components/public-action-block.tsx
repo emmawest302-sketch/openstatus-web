@@ -91,15 +91,15 @@ export default function PublicActionBlock({ block, businessId, dark = false, acc
   const card = (
     <div
       style={{
-        display: 'flex', alignItems: 'center', gap: 12,
+        display: 'flex', alignItems: 'center', gap: 'clamp(10px, 3.4cqw, 12px)',
         // Every row is the same height, so a list of them reads as a list
         // rather than a pile of differently-sized cards.
-        minHeight: 78, boxSizing: 'border-box',
+        minHeight: 'var(--os-row-min, 78px)', boxSizing: 'border-box',
         background: CARD,
         border: `1px solid ${CARD_BORDER}`,
         backdropFilter: 'blur(24px) saturate(130%)',
         WebkitBackdropFilter: 'blur(24px) saturate(130%)',
-        borderRadius: 16, padding: '13px 15px',
+        borderRadius: 'var(--os-radius, 16px)', padding: 'clamp(11px, 3.6cqw, 13px) var(--os-card-pad, 15px)',
         boxShadow: hovered
           ? '0 12px 36px rgba(0,0,0,0.10)'
           : '0 8px 30px rgba(0,0,0,0.06)',
@@ -110,7 +110,7 @@ export default function PublicActionBlock({ block, businessId, dark = false, acc
     >
       {/* Icon circle */}
       <div style={{
-        width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+        width: 'var(--os-icon, 40px)', height: 'var(--os-icon, 40px)', borderRadius: '50%', flexShrink: 0,
         background: iconBg, display: 'grid', placeItems: 'center',
       }}>
         <BlockIcon id={block.id} color={iconColor}/>
@@ -122,7 +122,7 @@ export default function PublicActionBlock({ block, businessId, dark = false, acc
           cut with an ellipsis, never broken mid-word. */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 14.5, color: TEXT, lineHeight: 1.3,
+          fontSize: 'var(--os-row-title, 14.5px)', color: TEXT, lineHeight: 1.3,
           fontWeight: block.titleBold ? 800 : 600,
           fontStyle: block.titleItalic ? 'italic' : 'normal',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -131,7 +131,7 @@ export default function PublicActionBlock({ block, businessId, dark = false, acc
         </div>
         {block.sub && (
           <div style={{
-            fontSize: 12, color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35,
+            fontSize: 'var(--os-row-sub, 12px)', color: TEXT_MUTED, marginTop: 2, lineHeight: 1.35,
             fontWeight: block.subBold ? 700 : 400,
             fontStyle: block.subItalic ? 'italic' : 'normal',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,

@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 import PublishedBusinessBlocks from '@/components/published-business-blocks';
+import { shortAddress } from '@/lib/address';
+import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
 import PublicSocialLinks from '@/components/public-social-links';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicHoursRow from '@/components/public-hours-row';
@@ -269,17 +271,10 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   // zoom-1 map of the whole world.
   const mapAddress = (locationBlock?.address || business.address || '').trim();
 
-  // Google returns "2716 Wind Gap Dr, Columbia, TN 38401, USA". The country and
-  // postcode are noise to a local customer and compete with the business name
-  // for attention, so the header shows street and town only. The full address
-  // is still what the map and directions use.
-  const shortAddress = (() => {
-    const parts = mapAddress.split(',').map((p) => p.trim()).filter(Boolean);
-    if (parts.length <= 2) return mapAddress;
-    const [street, town, region] = parts;
-    const state = (region ?? '').replace(/\s*\d{4,}.*$/, '').trim(); // drop the postcode
-    return [street, town, state].filter(Boolean).join(', ');
-  })();
+  // Street and town only — the postcode and the country are noise to a local
+  // customer and wrap the line onto a second row. See lib/address.
+  const shortAddr = shortAddress(mapAddress);
+
   const locationBlockOn = locationBlock?.on !== false && !!locationBlock && (!!mapAddress || !!locationBlock.googleUrl || !!locationBlock.appleMapsUrl);
 
   // Initials fallback
@@ -332,6 +327,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
       }}
     >
       <style>{BG_KEYFRAMES}</style>
+      <style>{PAGE_METRICS_CSS}</style>
 
       {/* Background veil. Softens whatever the owner picked so the cards on
           top stay readable and a saturated colour stops shouting. Fixed, so
@@ -368,14 +364,17 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
       <AnalyticsTracker businessId={business.id} ownerUserId={business.user_id}/>
 
       {/* ── Outer page centering wrapper ── */}
-      <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+      {/* The --os-* scale is a container query, so it reads this column's
+          width rather than the window's. That is what lets the builder's
+          340px preview and a 390px phone render identically. */}
+      <div className={PAGE_CONTAINER_CLASS} style={{ maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1 }}>
 
         {/* ── Cover photo ── */}
         {coverPhoto ? (
           // 280px was a desktop hero on a phone: it pushed the name, the
           // address and the hours below the fold on a 390px screen. The cover
           // is scene-setting, not the content.
-          <div style={{ position: 'relative', height: 230, overflow: 'hidden' }}>
+          <div style={{ position: 'relative', height: 'var(--os-cover-h, 214px)', overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverPhoto}
@@ -406,7 +405,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           // as a deliberate header instead. The solid base is the fallback if
           // color-mix isn't supported.
           <div style={{
-            height: 84,
+            height: 'var(--os-cover-h-bare, 84px)',
             width: '100vw', marginLeft: 'calc(50% - 50vw)',
             background: bgIsDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.022)',
             backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${themeColor} 18%, transparent) 0%, transparent 100%)`,
@@ -424,7 +423,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           businessName={business.name}
           businessId={business.id}
           slug={slug}
-          address={shortAddress || business.address}
+          address={shortAddr || business.address}
           tags={enrichedConfig.tags ?? []}
           placeId={business.place_id}
           websiteUrl={headerWebsiteUrl}
@@ -444,7 +443,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
              Website and Menu; this one is allowed to dominate, because it is
              the only thing on the page they cannot get from a Google result. */}
         {hoursBlockOn && (
-          <div style={{ padding: '20px 12px 0' }}>
+          <div style={{ padding: 'clamp(12px, 4cqw, 18px) clamp(9px, 3.2cqw, 12px) 0' }}>
             <PublicHoursRow
               state={hoursUnknown ? 'unknown' : isOpen ? 'open' : 'closed'}
               headline={bigText}
@@ -465,7 +464,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         )}
 
         {/* ── Blocks ── */}
-        <div style={{ padding: '8px 12px 36px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ padding: 'var(--os-gap, 8px) clamp(9px, 3.2cqw, 12px) 36px', display: 'flex', flexDirection: 'column', gap: 'var(--os-gap, 8px)' }}>
 
           {/* Location and Website used to be rows here. They are permanent
               header actions now, so PublishedBusinessBlocks filters them out

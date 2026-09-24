@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
+import BodyPortal from '@/components/body-portal';
 
 /**
  * "Share this place".
@@ -135,7 +136,7 @@ export default function PublicShareButton({
       </button>
 
       {open && (
-        <>
+        <BodyPortal>
           <div
             onClick={() => setOpen(false)}
             style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.34)' }}
@@ -216,7 +217,7 @@ export default function PublicShareButton({
               Close
             </button>
           </div>
-        </>
+        </BodyPortal>
       )}
     </>
   );

@@ -9,6 +9,8 @@ import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedu
 import { swapById, canDrag } from '@/lib/reorder';
 import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
+import { shortAddress } from '@/lib/address';
+import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
 import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
@@ -188,11 +190,19 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
   const isEmpty = !raw || (typeof raw==='object' && Object.keys(raw as object).length===0);
   const saved = Array.isArray(r.blocks) ? r.blocks as OpenStatusBlock[] : [];
   // When nothing has been configured yet, default to orange bg + all blocks on
-  // Built-ins are merged onto their defaults. Custom links (id "custom-…") have
-  // no default to merge with, and the old map dropped them entirely — they have
-  // to be carried through or they vanish on reload. Their saved order is kept.
+  // Built-ins are merged onto their defaults. Anything saved that has no
+  // default is carried through untouched.
+  //
+  // This used to keep only DEFAULT_BLOCKS plus ids starting "custom-", which
+  // quietly deleted every other saved block on load — and since the load
+  // feeds the autosave, the deletion was then written back to the database.
+  // Photos, Reviews and Updates all lived in this gap: an owner could have
+  // one, and the builder would erase it the next time they opened the page.
+  // Carrying unknown ids through costs nothing and makes the merge
+  // non-destructive by construction.
+  const defaultIds = new Set(DEFAULT_BLOCKS.map(b=>b.id));
   const merged = DEFAULT_BLOCKS.map(def => { const f=saved.find(b=>b.id===def.id); return f?{...def,...f}:{...def}; });
-  const customs = saved.filter(b=>typeof b.id==='string' && b.id.startsWith('custom-'));
+  const customs = saved.filter(b=>typeof b.id==='string' && !defaultIds.has(b.id));
   const byId = new Map<string,OpenStatusBlock>([...merged,...customs].map(b=>[b.id,b]));
   const savedOrder = saved.map(b=>b.id).filter(id=>byId.has(id));
   const ordered = [
@@ -625,6 +635,10 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   const websiteUrl = config.blocks.find(b => b.id === 'website')?.url?.trim() || null;
   const addr = (config.blocks.find(b => b.id === 'location')?.address || config.location || '').trim();
   const directionsUrl = addr ? `https://maps.google.com/?q=${encodeURIComponent(addr)}` : null;
+  // Directions uses the full address; the card shows the short one, same as
+  // the live page. The preview used to print Google's whole string, postcode
+  // and "USA" included, which wrapped to a second line the page never had.
+  const displayAddr = shortAddress(addr);
 
   const avatar = business?.avatar_url?.startsWith('storage:') && business?.id
     ? `/api/assets?businessId=${business.id}&kind=avatar`
@@ -672,9 +686,10 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   };
 
   return (
-    <div style={{ width:'100%', background: config.bg || '#F7F7F5', fontFamily: pageFont }}>
+    <div className={PAGE_CONTAINER_CLASS} style={{ width:'100%', background: config.bg || '#F7F7F5', fontFamily: pageFont }}>
+      <style>{PAGE_METRICS_CSS}</style>
       {config.bgImage && (
-        <div style={{ position:'relative', height:230, overflow:'hidden' }}>
+        <div style={{ position:'relative', height:'var(--os-cover-h, 214px)', overflow:'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={config.bgImage} alt="" style={{
             width:'100%', height:'100%', objectFit:'cover',
@@ -687,12 +702,12 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
         </div>
       )}
 
-      <div style={{ padding: '0 12px' }}>
+      <div style={{ padding: '0 clamp(9px, 3.2cqw, 12px)' }}>
         <PublicBioCard
           businessName={business?.name ?? 'Your business'}
           businessId={business?.id ?? ''}
           slug={business?.slug ?? ''}
-          address={addr || null}
+          address={displayAddr || null}
           tags={config.tags ?? []}
           // The rating row only fetches when it knows there's a place to
           // fetch for. This was hardcoded null, so the preview never showed
@@ -710,7 +725,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
         />
       </div>
 
-      <div style={{ padding: '14px 12px 18px', display:'flex', flexDirection:'column', gap:10 }}>
+      <div style={{ padding: 'clamp(12px, 4cqw, 18px) clamp(9px, 3.2cqw, 12px) 18px', display:'flex', flexDirection:'column', gap:'var(--os-gap, 10px)' }}>
         {hoursOn && editable('hours', (
           <PublicHoursRow
             state={status === 'open' ? 'open' : 'closed'}
@@ -1225,11 +1240,77 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
             </div>
           )}
 
-          {/* ── UPDATES ── */}
+          {/* ── PHOTOS ── */}
+          {block.id==='gallery' && (
+            <div className="space-y-4">
+              <p className="text-[12.5px] text-[#777777] leading-relaxed">
+                Pulls the photos from your Google listing — nothing to upload. Customers
+                tap the row to open them without leaving your page.
+              </p>
+              {!config.placeId && (
+                <p className="rounded-xl bg-[#FFF7ED] border border-[#FED7AA] px-3 py-2.5 text-[11.5px] text-[#9A3412] leading-relaxed">
+                  No Google place linked yet, so there are no photos to show. Connect
+                  Google Business in the Business tab and this row fills itself in.
+                </p>
+              )}
+              <div>
+                <FieldLabel>Album link (optional)</FieldLabel>
+                <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://… a fuller gallery"/>
+                <p className="mt-1 text-[10px] text-black/35">
+                  Adds a &ldquo;See more photos&rdquo; link under the grid. Leave it blank to show Google&rsquo;s photos only.
+                </p>
+              </div>
+              <p className="text-[11px] text-[#9A9A97] leading-relaxed">
+                If Google has no photos and there&rsquo;s no album link, this row hides
+                itself rather than publishing an empty one.
+              </p>
+            </div>
+          )}
 
+          {/* ── REVIEWS ── */}
+          {block.id==='reviews' && (
+            <div className="space-y-4">
+              <p className="text-[12.5px] text-[#777777] leading-relaxed">
+                Shows your three most recent Google reviews, in full, when a customer
+                taps the row. Your star rating already sits under your business name.
+              </p>
+              {!config.placeId
+                ? (
+                  <p className="rounded-xl bg-[#FFF7ED] border border-[#FED7AA] px-3 py-2.5 text-[11.5px] text-[#9A3412] leading-relaxed">
+                    No Google place linked yet. Connect Google Business in the Business
+                    tab and your reviews appear here automatically.
+                  </p>
+                )
+                : (
+                  <p className="rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] px-3 py-2.5 text-[11.5px] text-[#777777] leading-relaxed">
+                    Reviews come straight from Google and refresh on their own. There is
+                    deliberately no way to write or edit one here — a rating a customer
+                    can&rsquo;t trust is worth nothing to you.
+                  </p>
+                )}
+              <p className="text-[11px] text-[#9A9A97] leading-relaxed">
+                No reviews on Google yet? The row hides itself until there are some.
+              </p>
+            </div>
+          )}
+
+          {/* ── UPDATES ── */}
+          {block.id==='updates' && (
+            <div className="space-y-4">
+              <p className="text-[12.5px] text-[#777777] leading-relaxed">
+                Shows your three most recent Instagram posts, refreshed nightly, so a
+                customer can see you&rsquo;re open and active without leaving the page.
+              </p>
+              <p className="rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] px-3 py-2.5 text-[11.5px] text-[#777777] leading-relaxed">
+                Needs your Instagram connected under Settings. Until it is, this row
+                doesn&rsquo;t publish — the preview shows a placeholder so you can see
+                where it will sit.
+              </p>
+            </div>
+          )}
 
           {/* ── WEBSITE / generic ── */}
-          {(block.id==='website'||(!block.id.startsWith('custom-')&&!['location','hours','menu','order','book'].includes(block.id))) && (
+          {(block.id==='website'||(!block.id.startsWith('custom-')&&!['location','hours','menu','order','book','gallery','reviews','updates'].includes(block.id))) && (
             <div className="space-y-5">
               {block.id==='website'&&(
                 <>
@@ -1257,7 +1338,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
 const PICKER_CATEGORIES = [
   { label:'Essential',      ids:['hours','location'] },
   { label:'Food & Beverage',ids:['menu','order'] },
-  { label:'Engagement',     ids:['book'] },
+  { label:'Engagement',     ids:['book','reviews','gallery','updates'] },
   { label:'Contact',        ids:['website'] },
 ];
 

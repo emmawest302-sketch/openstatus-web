@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import PublicRow from '@/components/public-row';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
+import BodyPortal from '@/components/body-portal';
 
 /**
  * Photos, as a row.
@@ -139,6 +140,7 @@ export default function PublicPhotosRow({ block, businessId, placeId, dark = fal
       </PublicRow>
 
       {lightbox !== null && photos[lightbox] && (
+        <BodyPortal>
         <div
           role="dialog" aria-modal="true" aria-label="Photo"
           onClick={close}
@@ -169,6 +171,7 @@ export default function PublicPhotosRow({ block, businessId, placeId, dark = fal
             Close
           </button>
         </div>
+        </BodyPortal>
       )}
     </>
   );

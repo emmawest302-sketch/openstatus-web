@@ -46,7 +46,7 @@ export default function PublicHoursRow({
 
   return (
     <div style={{
-      borderRadius: 18,
+      borderRadius: 'var(--os-radius, 18px)',
       overflow: 'hidden',
       // The card used to be filled green when the shop was open. At this size
       // that is a slab of colour the width of the screen, and it made the
@@ -67,9 +67,9 @@ export default function PublicHoursRow({
         aria-expanded={open}
         style={{ all: 'unset', display: 'block', width: '100%', cursor: 'pointer', boxSizing: 'border-box' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px, 3.2cqw, 12px)', padding: 'clamp(11px, 3.6cqw, 14px) var(--os-card-pad, 15px)', minHeight: 'var(--os-row-min, 78px)', boxSizing: 'border-box' }}>
           <span style={{
-            width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+            width: 'var(--os-icon, 38px)', height: 'var(--os-icon, 38px)', borderRadius: '50%', flexShrink: 0,
             display: 'grid', placeItems: 'center',
             background: live
               ? (dark ? 'rgba(34,197,94,0.18)' : 'rgba(22,163,74,0.10)')
@@ -96,12 +96,12 @@ export default function PublicHoursRow({
               </span>
             )}
             <span style={{
-              display: 'block', fontSize: 19, fontWeight: 800, letterSpacing: '-0.03em',
+              display: 'block', fontSize: 'var(--os-hours-headline, 19px)', fontWeight: 800, letterSpacing: '-0.03em',
               color: ink, lineHeight: 1.1,
             }}>
               {headline}
             </span>
-            <span style={{ display: 'block', fontSize: 13.5, color: dark ? 'rgba(255,255,255,0.72)' : 'rgba(21,21,21,0.62)', marginTop: 2, lineHeight: 1.3 }}>
+            <span style={{ display: 'block', fontSize: 'var(--os-hours-detail, 13.5px)', color: dark ? 'rgba(255,255,255,0.72)' : 'rgba(21,21,21,0.62)', marginTop: 2, lineHeight: 1.3 }}>
               {detail}
               {accent && <strong style={{ color: live ? green : ink, fontWeight: 750 }}>{accent}</strong>}
             </span>
@@ -118,7 +118,7 @@ export default function PublicHoursRow({
 
         {note && (
           <div style={{
-            margin: '0 15px 12px', padding: '8px 11px', borderRadius: 11,
+            margin: '0 var(--os-card-pad, 15px) 12px', padding: '8px 11px', borderRadius: 11,
             background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(10,10,10,0.035)',
             fontSize: 12, lineHeight: 1.35, color: dark ? 'rgba(255,255,255,0.88)' : 'rgba(21,21,21,0.78)',
           }}>
@@ -129,7 +129,7 @@ export default function PublicHoursRow({
       </button>
 
       {open && (
-        <div style={{ borderTop: `1px solid ${hairline}`, padding: '4px 15px 12px' }}>
+        <div style={{ borderTop: `1px solid ${hairline}`, padding: '4px var(--os-card-pad, 15px) 12px' }}>
           {/* Today and tomorrow first: that is what someone is deciding with.
               The full week is underneath for the rare person who needs it. */}
           {today && <Line row={today} ink={ink} muted={muted} green={green} live={live} emphasis/>}

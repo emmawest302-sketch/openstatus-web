@@ -135,4 +135,11 @@ export const DEFAULT_BLOCKS: OpenStatusBlock[] = [
   { id:'order',   title:'Online ordering',       sub:'DoorDash, Uber Eats & more', icon:'bag',  on:false,tone:'default',color:'#dc2626',size:'full' },
   { id:'book',    title:'Reservations',          sub:'Book a table',               icon:'cal',  on:false,tone:'default',color:'#7c3aed',size:'full' },
   { id:'website', title:'Website',               sub:'Link to your site',          icon:'globe',  on:false,tone:'default',color:'#0891b2',size:'full' },
+  // Photos, Reviews and Updates render themselves from the business's Google
+  // listing or connected Instagram, so they have no URL to fill in. They were
+  // missing from this list entirely, which meant the picker couldn't offer
+  // them AND the config merge deleted them from any page that had one saved.
+  { id:'gallery', title:'Photos',                sub:'Your Google photos',         icon:'image',  on:false,tone:'default',color:'#0d9488',size:'full' },
+  { id:'reviews', title:'Reviews',               sub:'Recent Google reviews',      icon:'star',   on:false,tone:'default',color:'#ca8a04',size:'full' },
+  { id:'updates', title:'Latest updates',        sub:'Your recent Instagram posts',icon:'insta',  on:false,tone:'default',color:'#db2777',size:'full' },
 ];
