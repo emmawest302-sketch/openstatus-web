@@ -22,6 +22,8 @@ const FULL = {
   socials: { instagram: 'https://instagram.com/x', tiktok: '' },
   location: 'Nashville',
   directionsUrl: 'https://maps.app.goo.gl/abc',
+  banner: 'Snow day — delivery only',
+  bannerOn: true,
   tags: ['coffee', 'wifi'],
   font: 'Poppins',
   nameColor: '#FFFFFF',
@@ -88,6 +90,8 @@ describe('round trip', () => {
     expect(c.themeColor).toBe('#DB6B8F');
     expect(c.location).toBe('Nashville');
     expect(c.directionsUrl).toBe('https://maps.app.goo.gl/abc');
+    expect(c.banner).toBe('Snow day — delivery only');
+    expect(c.bannerOn).toBe(true);
     expect(c.tags).toEqual(['coffee', 'wifi']);
     expect(c.font).toBe('Poppins');
     // These three were being dropped, which is why a custom name colour and an
@@ -109,7 +113,7 @@ describe('round trip', () => {
     // to the normalizer, FULL will stop covering it and this list will drift.
     const produced = normalizeOpenStatusPageConfig(FULL) as Record<string, unknown>;
     const expected: (keyof OpenStatusPageConfig)[] = [
-      'blocks', 'bg', 'bgImage', 'bgImagePosition', 'themeColor', 'socials', 'directionsUrl',
+      'blocks', 'bg', 'bgImage', 'bgImagePosition', 'themeColor', 'socials', 'directionsUrl', 'banner', 'bannerOn',
       'location', 'tags', 'weeklyHours', 'font', 'nameColor', 'bgAnim', 'bgAnimSpeed',
       'imageIntensity', 'imageBlur', 'imageOverlay',
     ];
@@ -146,5 +150,18 @@ describe('image treatment', () => {
     expect(c.imageBlur).toBeUndefined();
     expect(c.imageOverlay).toBeUndefined();
     expect(c.imageIntensity).toBeUndefined();
+  });
+});
+
+
+describe('banner', () => {
+  it('caps a long banner rather than letting it push the page down', () => {
+    const long = 'x'.repeat(400);
+    expect(normalizeOpenStatusPageConfig({ banner: long }).banner).toHaveLength(160);
+  });
+
+  it('ignores a non-string banner', () => {
+    expect(normalizeOpenStatusPageConfig({ banner: 42 }).banner).toBeUndefined();
+    expect(normalizeOpenStatusPageConfig({ bannerOn: 'yes' }).bannerOn).toBeUndefined();
   });
 });

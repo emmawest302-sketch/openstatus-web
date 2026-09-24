@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 /**
  * Four buttons, and nothing else.
@@ -22,9 +23,15 @@ type Props = {
   closesAt: string | null;
   opensAt: string | null;
   hasOverride: boolean;
-  /** From a home-screen shortcut: open straight into that time picker. */
-  initialPick?: 'close' | 'open' | null;
+  /** Today's regular schedule, so "We're open" knows whether there is
+      anything to undo or a day to open that is normally shut. */
+  todayClosed?: boolean;
+  todayClosesAt?: string | null;
+  /** From a home-screen shortcut: open straight into that control. */
+  initialPick?: Pick_;
 };
+
+type Pick_ = 'close' | 'open' | 'openUntil' | null;
 
 const TIMES = ['12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
 const OPENINGS = ['09:00','10:00','11:00','12:00','13:00','14:00'];
@@ -37,22 +44,54 @@ function pretty(hhmm: string | null): string {
   return `${hour}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
+/**
+ * Ask Google to match, and report honestly what happened.
+ *
+ * A 2xx is not success here: the route answers 202 when Google's API access is
+ * still under review, with the reason in the body. Treating any 2xx as done is
+ * how a closure silently never reached the listing.
+ */
+async function syncGoogle(payload: Record<string, unknown>): Promise<{ ok: boolean; text: string }> {
+  try {
+    const res = await fetch('/api/google/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const out = await res.json().catch(() => ({})) as { error?: string; ok?: boolean };
+
+    if (res.status === 400) {
+      return { ok: false, text: out.error ?? 'Google Business Profile isn\u2019t connected, so Google wasn\u2019t changed.' };
+    }
+    if (!res.ok || out.error) {
+      return { ok: false, text: out.error ?? `Google didn\u2019t accept the change (${res.status}).` };
+    }
+    return { ok: true, text: 'Google updated too.' };
+  } catch {
+    return { ok: false, text: 'Couldn\u2019t reach Google. Your page is already right.' };
+  }
+}
+
 export default function OwnerControls({
-  businessName, slug, state, closesAt, opensAt, hasOverride, initialPick = null,
+  businessName, slug, state, closesAt, opensAt, hasOverride,
+  todayClosed = false, todayClosesAt = null, initialPick = null,
 }: Props) {
+  const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Long-pressing the home screen icon and choosing "Close early" should land
   // on the times, not on the menu that leads to the times.
-  const [picking, setPicking] = useState<'close' | 'open' | null>(initialPick);
+  const [picking, setPicking] = useState<Pick_>(initialPick);
+  /** What Google did, separately from what this page did. */
+  const [google, setGoogle] = useState<{ ok: boolean; text: string } | null>(null);
 
   const send = useCallback(async (
     label: string,
     body: Record<string, unknown>,
-    google?: Record<string, unknown>,
+    googleBody?: Record<string, unknown>,
   ) => {
-    setBusy(label); setError(null); setMessage(null);
+    setBusy(label); setError(null); setMessage(null); setGoogle(null);
     try {
       const res = await fetch('/api/status', {
         method: 'POST',
@@ -62,31 +101,28 @@ export default function OwnerControls({
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out?.error ?? 'Could not update');
 
-      // Google is a separate call and a slower one. A failure there must not
-      // read as "nothing happened" — the page is already right.
-      let googleNote = '';
-      if (google) {
-        try {
-          const g = await fetch('/api/google/status', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(google),
-          });
-          // 400 means Google simply is not connected, which is not an error
-          // worth putting in front of someone closing their shop.
-          if (!g.ok && g.status !== 400) googleNote = ' Google is still catching up.';
-        } catch { googleNote = ' Google is still catching up.'; }
+      setMessage(label + '.');
+
+      // Google is a separate system and it fails in ways that are not errors:
+      // not connected, API access still pending review, a write Google accepts
+      // but does not apply. All of those used to land as either silence or one
+      // vague line that a page reload wiped a second later — so an owner who
+      // closed their shop here was told it worked and found Google unchanged.
+      // Every outcome is now named, and nothing clears it but the next action.
+      if (googleBody) {
+        setGoogle(await syncGoogle(googleBody));
       }
 
-      setMessage(label + '.' + googleNote);
       setPicking(null);
-      setTimeout(() => window.location.reload(), 1200);
+      // refresh(), not reload(): the status above re-renders from the server
+      // while the message about what Google did stays on screen.
+      router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update');
     } finally {
       setBusy(null);
     }
-  }, []);
+  }, [router]);
 
   const today = () => {
     const [y, m, d] = new Intl.DateTimeFormat('en-CA', {
@@ -115,6 +151,46 @@ export default function OwnerControls({
     return send(`Opening at ${pretty(t)}`, { action: 'publish', preset: 'custom_hours', opensAt: t, closesAt: close },
       { action: 'special_hours', today: d, periods: [{ startDate: d, endDate: d, openTime: hm(t), closeTime: hm(close) }] });
   };
+  // Their usual closing time first, since that is the answer most days.
+  const closeTimes = todayClosesAt && !TIMES.includes(todayClosesAt)
+    ? [todayClosesAt, ...TIMES].slice(0, 9)
+    : TIMES;
+
+  /** Now, to the nearest five minutes — the opening time for "we're open". */
+  const nowHHMM = () => {
+    const d = new Date();
+    const m = Math.floor(d.getMinutes() / 5) * 5;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
+  const openUntil = (t: string) => {
+    const d = today();
+    const from = nowHHMM();
+    return send(`Open until ${pretty(t)}`,
+      { action: 'publish', preset: 'custom_hours', opensAt: from, closesAt: t },
+      { action: 'special_hours', today: d, periods: [{ startDate: d, endDate: d, openTime: hm(from), closeTime: hm(t) }] });
+  };
+
+  /**
+   * "We're open" is not one action, because the shop can be shut for two
+   * different reasons and undoing the wrong one leaves it shut.
+   *
+   * If the owner closed it, this undoes that. If the schedule says closed —
+   * a Sunday they decided to trade — there is nothing to undo, so it asks how
+   * late they are staying and opens the day properly on both the page and
+   * Google. Without this there was no way to open on a normally-closed day at
+   * all, while the home screen shortcut already promised one.
+   */
+  const weAreOpen = () => {
+    if (hasOverride) return backToNormal();
+    if (!todayClosed) {
+      setError(null); setGoogle(null);
+      setMessage('Your hours already say you\u2019re open today.');
+      return;
+    }
+    setPicking('openUntil');
+  };
+
   const backToNormal = () => {
     const d = today();
     return send('Back to your regular hours', { action: 'clear' },
@@ -152,28 +228,42 @@ export default function OwnerControls({
       </div>
 
       {message && <p style={{ ...note, background: '#F0FDF4', color: '#15803D' }}>✓ {message}</p>}
+      {google && (
+        <p style={{
+          ...note,
+          background: google.ok ? '#F0FDF4' : '#FFFBEB',
+          color: google.ok ? '#15803D' : '#92400E',
+          fontWeight: 500,
+        }}>
+          {google.ok ? '✓ ' : ''}{google.text}
+        </p>
+      )}
       {error && <p style={{ ...note, background: '#FEF2F2', color: '#B91C1C' }}>{error}</p>}
 
       {picking === null && (
         <div style={{ display: 'grid', gap: 10 }}>
           <button style={primary} disabled={!!busy} onClick={closedToday}>Closed today</button>
+          <button style={open_} disabled={!!busy} onClick={weAreOpen}>
+            {hasOverride ? 'We\u2019re open — back to normal' : 'We\u2019re open'}
+          </button>
           <button style={secondary} disabled={!!busy} onClick={() => setPicking('close')}>Closing early…</button>
           <button style={secondary} disabled={!!busy} onClick={() => setPicking('open')}>Opening late…</button>
-          {hasOverride && (
-            <button style={quiet} disabled={!!busy} onClick={backToNormal}>Back to normal hours</button>
-          )}
         </div>
       )}
 
       {picking && (
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A', margin: '0 0 10px' }}>
-            {picking === 'close' ? 'Closing at' : 'Opening at'}
+            {picking === 'close' ? 'Closing at' : picking === 'openUntil' ? 'Open until' : 'Opening at'}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {(picking === 'close' ? TIMES : OPENINGS).map(t => (
+            {(picking === 'open' ? OPENINGS : closeTimes).map(t => (
               <button key={t} style={timeBtn} disabled={!!busy}
-                onClick={() => (picking === 'close' ? closeEarly(t) : openLate(t))}>
+                onClick={() => (
+                  picking === 'close' ? closeEarly(t)
+                  : picking === 'openUntil' ? openUntil(t)
+                  : openLate(t)
+                )}>
                 {pretty(t)}
               </button>
             ))}
@@ -210,6 +300,7 @@ const base: React.CSSProperties = {
 };
 const primary: React.CSSProperties = { ...base, background: '#0A0A0A', color: '#FFFFFF' };
 const secondary: React.CSSProperties = { ...base, background: '#FFFFFF', color: '#0A0A0A', borderColor: '#E9E9E7' };
+const open_: React.CSSProperties = { ...base, background: '#12803D', color: '#FFFFFF' };
 const quiet: React.CSSProperties = { ...base, background: 'transparent', color: '#777777', fontSize: 14, padding: '12px' };
 const timeBtn: React.CSSProperties = {
   padding: '15px 6px', borderRadius: 14, border: '1px solid #E9E9E7', background: '#FFFFFF',

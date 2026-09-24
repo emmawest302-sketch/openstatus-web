@@ -53,6 +53,14 @@ export type OpenStatusPageConfig = {
    * which is right for almost everyone and opens each visitor's own maps app.
    */
   directionsUrl?: string;
+  /**
+   * A line the owner writes that sits above everything on the public page.
+   * "Snow day — delivery only", "Closed for a family wedding, back Tuesday".
+   * Not hours, not a status: the things a shop needs to say that no schedule
+   * can express.
+   */
+  banner?: string;
+  bannerOn?: boolean;
   tags?: string[];
   weeklyHours?: WeeklyHours;
   font?: string;
@@ -136,6 +144,10 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
     socials,
     location: typeof raw.location === 'string' ? raw.location : '',
     directionsUrl: typeof raw.directionsUrl === 'string' ? raw.directionsUrl : undefined,
+    // Capped here rather than only in the input: a saved config can come from
+    // an older client, and this text renders above the business's own name.
+    banner: typeof raw.banner === 'string' ? raw.banner.slice(0, 160) : undefined,
+    bannerOn: typeof raw.bannerOn === 'boolean' ? raw.bannerOn : undefined,
     tags: Array.isArray(raw.tags) ? raw.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 8) : [],
     font: typeof raw.font === 'string' ? raw.font : undefined,
     // Previously missing — see the note above normalizeOpenStatusPageConfig.

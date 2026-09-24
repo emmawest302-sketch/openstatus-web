@@ -18,6 +18,7 @@ import VibePicker from '@/components/builder/vibe-picker';
 // drift. See the note on LivePhonePreview.
 import { publishedBlocks, HEADER_ACTION_IDS } from '@/lib/page-rows';
 import PublicBioCard from '@/components/public-bio-card';
+import PublicBanner from '@/components/public-banner';
 import PublicHoursRow from '@/components/public-hours-row';
 import PublicBlockRow from '@/components/public-block-row';
 import PublicUpdatesPlaceholder from '@/components/public-updates-placeholder';
@@ -129,7 +130,8 @@ export interface OpenStatusPageConfig {
   imageIntensity?: number;
   imageBlur?: 'none'|'soft'|'strong';
   imageOverlay?: 'auto'|'light'|'dark'|'none';
-  location?: string; directionsUrl?: string; tags?: string[]; weeklyHours?: WeeklyHours;
+  location?: string; directionsUrl?: string; banner?: string; bannerOn?: boolean;
+  tags?: string[]; weeklyHours?: WeeklyHours;
   likeCount?: number; dislikeCount?: number;
   themeColor?: string; placeId?: string; nameColor?: string;
   bgAnim?: string; bgAnimSpeed?: number;
@@ -222,6 +224,8 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     imageOverlay:   (r.imageOverlay==='auto'||r.imageOverlay==='light'||r.imageOverlay==='dark'||r.imageOverlay==='none')?r.imageOverlay:undefined,
     location:     typeof r.location==='string'?r.location:undefined,
     directionsUrl: typeof r.directionsUrl==='string'?r.directionsUrl:undefined,
+    banner:       typeof r.banner==='string'?r.banner:undefined,
+    bannerOn:     typeof r.bannerOn==='boolean'?r.bannerOn:undefined,
     tags:         Array.isArray(r.tags)?r.tags as string[]:[],
     weeklyHours:  (r.weeklyHours&&typeof r.weeklyHours==='object')?r.weeklyHours as WeeklyHours:{...DEFAULT_WEEK_HOURS},
     likeCount:    typeof r.likeCount==='number'?r.likeCount:0,
@@ -582,6 +586,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   return (
     <div className={PAGE_CONTAINER_CLASS} style={{ width:'100%', background: config.bg || '#F7F7F5', fontFamily: pageFont }}>
       <style>{PAGE_METRICS_CSS}</style>
+      {config.bannerOn !== false && <PublicBanner text={config.banner}/>}
       {config.bgImage && (
         <div style={{ position:'relative', height:'var(--os-cover-h, 214px)', overflow:'hidden' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2962,6 +2967,40 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         </div>
                         <span className="text-[13px] font-medium">Add link</span>
                       </button>
+                    </div>
+
+                    {/* ── Notice ──────────────────────────────────────────
+                         Above everything on the page, and above the fold on
+                         every phone. Hours cannot say "snow day, delivery
+                         only", and those are the days it matters most. */}
+                    <div className="mb-8 rounded-2xl border border-[#E9E9E7] bg-white p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[#0A0A0A]">Notice at the top</p>
+                          <p className="text-[12px] text-[#777777] mt-0.5">
+                            One line above your page. Leave it blank when there&apos;s nothing to say.
+                          </p>
+                        </div>
+                        <Toggle
+                          on={config.bannerOn !== false}
+                          onChange={v=>setConfig(c=>({...c,bannerOn:v}))}
+                        />
+                      </div>
+                      <div className="mt-3">
+                        <Input
+                          value={config.banner ?? ''}
+                          onChange={v=>setConfig(c=>({...c,banner:v.slice(0,160)}))}
+                          placeholder="Snow day — delivery only until 2pm"
+                        />
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-[10px] text-black/35">
+                            Shows on your live page and nowhere else. It stays until you clear it.
+                          </p>
+                          <span className="text-[10px] text-[#C0C0C0] tabular-nums flex-shrink-0 ml-3">
+                            {(config.banner ?? '').length}/160
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Logo, page background and cover photo used to be

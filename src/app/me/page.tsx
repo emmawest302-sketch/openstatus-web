@@ -4,6 +4,8 @@ import { getAdminClient } from '@/lib/supabaseAdmin';
 import { OWNER_COOKIE, readOwnerSession } from '@/lib/owner-link';
 import OwnerControls from '@/components/owner-controls';
 import AddToHomeScreen from '@/components/add-to-home-screen';
+import OwnerBanner from '@/components/owner-banner';
+import { normalizeOpenStatusPageConfig } from '@/lib/openstatus-page-config';
 import { summarise, formatCount } from '@/lib/owner-stats';
 import { getBusinessStatus, weeklyFromRows, applyOverride, type TodayOverride } from '@/lib/business-status';
 import { SITE_DOMAIN } from '@/lib/site';
@@ -119,7 +121,7 @@ export default async function OwnerHome({
   // design, so reading the clock here is the correct behaviour, not a bug.
   // eslint-disable-next-line react-hooks/purity
   const since = new Date(Date.now() - ANALYTICS_DAYS * 86400000).toISOString();
-  const [{ data: hourRows }, { data: updates }, { data: events }] = await Promise.all([
+  const [{ data: hourRows }, { data: updates }, { data: events }, { data: cfgRow }] = await Promise.all([
     admin.from('business_hours')
       .select('day_of_week, opens_at, closes_at, is_closed')
       .eq('business_id', business.id),
@@ -136,6 +138,10 @@ export default async function OwnerHome({
       .select('event_type, block_id, visitor_id')
       .eq('business_id', business.id)
       .gte('created_at', since),
+    admin.from('business_page_config')
+      .select('config')
+      .eq('business_id', business.id)
+      .maybeSingle(),
   ]);
 
   const override: TodayOverride = updates?.[0]
@@ -143,10 +149,17 @@ export default async function OwnerHome({
     : null;
 
   const schedule = weeklyFromRows(hourRows ?? []);
+  // Today's regular schedule, so the controls can tell "the owner closed us"
+  // from "we are never open on a Sunday" — undoing the wrong one leaves the
+  // shop shut.
+  const DAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'] as const;
+  // eslint-disable-next-line react-hooks/purity
+  const todayRow = schedule?.[DAY_KEYS[new Date().getDay()]] ?? null;
   const status = applyOverride(getBusinessStatus(new Date(), timeZone, schedule), override);
   // A missing page_events table is not something to put in front of an owner
   // holding a phone — the zeroes read the same as a quiet month.
   const stats = summarise(events ?? []);
+  const pageConfig = normalizeOpenStatusPageConfig(cfgRow?.config);
 
   return (
     <main style={shell}>
@@ -158,7 +171,21 @@ export default async function OwnerHome({
         closesAt={status.closesAt}
         opensAt={status.opensAt}
         hasOverride={!!override}
-        initialPick={shortcut === 'close' ? 'close' : shortcut === 'open' ? 'open' : null}
+        todayClosed={todayRow?.closed ?? false}
+        todayClosesAt={todayRow?.close ?? null}
+        initialPick={
+          shortcut === 'close' ? 'close'
+          // "We're open" only needs a time when today is normally shut. With an
+          // override in place the answer is "undo it", which is the button
+          // already waiting on the main screen.
+          : shortcut === 'open' && !override && todayRow?.closed ? 'openUntil'
+          : null
+        }
+      />
+
+      <OwnerBanner
+        initialText={pageConfig.banner ?? ''}
+        initialOn={pageConfig.bannerOn !== false}
       />
 
       <section style={card}>

@@ -7,6 +7,7 @@ import { shareImageUrl } from '@/lib/share-image';
 import { externalUrl } from '@/lib/url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
 import PublicSocialLinks from '@/components/public-social-links';
+import PublicBanner from '@/components/public-banner';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicHoursRow from '@/components/public-hours-row';
 import { imageTreatment } from '@/lib/image-treatment';
@@ -401,6 +402,12 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           width rather than the window's. That is what lets the builder's
           340px preview and a 390px phone render identically. */}
       <div className={PAGE_CONTAINER_CLASS} style={{ maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+
+        {/* ── Owner's notice ── above the cover, because the whole point is
+             that it is read before anything else on the page. */}
+        {enrichedConfig.bannerOn !== false && (
+          <PublicBanner text={enrichedConfig.banner}/>
+        )}
 
         {/* ── Cover photo ── */}
         {coverPhoto ? (
