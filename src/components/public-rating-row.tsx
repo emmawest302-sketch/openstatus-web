@@ -107,8 +107,9 @@ export default function PublicRatingRow({ businessId, placeId }: Props) {
       {rating !== null && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '0 16px',
-          borderRight: '1px solid rgba(0,0,0,0.07)',
+          padding: '0 14px 0 16px',
+          marginRight: 8,
+          borderRight: '1px solid rgba(0,0,0,0.09)',
           height: '100%',
         }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 1 }} aria-label={`${rating.toFixed(1)} out of 5`}>
@@ -139,6 +140,11 @@ export default function PublicRatingRow({ businessId, placeId }: Props) {
               ({reviewCount.toLocaleString()})
             </span>
           )}
+          {/* Whose rating this is. Without it the thumbs sitting alongside
+              looked like buttons that changed the star rating. */}
+          <span style={{ fontSize: 11, color: '#A1A1AA', fontWeight: 500, letterSpacing: '0.01em' }}>
+            Google
+          </span>
         </div>
       )}
 
@@ -149,13 +155,17 @@ export default function PublicRatingRow({ businessId, placeId }: Props) {
 
       {/* Thumbs up */}
       <button
+        type="button"
         onClick={() => vote('up')}
+        aria-label={myVote === 'up' ? 'Remove your recommendation' : 'Recommend this place'}
+        aria-pressed={myVote === 'up'}
+        title="Recommend this place"
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '0 16px', height: '100%',
-          background: myVote === 'up' ? 'rgba(34,197,94,0.08)' : 'transparent',
+          padding: '0 13px', height: 40, borderRadius: 14,
+          background: myVote === 'up' ? 'rgba(34,197,94,0.10)' : 'rgba(0,0,0,0.035)',
           border: 'none', cursor: 'pointer',
-          borderRight: '1px solid rgba(0,0,0,0.07)',
+          marginRight: 5,
           transition: 'background 0.15s',
         }}
       >
@@ -181,11 +191,15 @@ export default function PublicRatingRow({ businessId, placeId }: Props) {
 
       {/* Thumbs down */}
       <button
+        type="button"
         onClick={() => vote('down')}
+        aria-label={myVote === 'down' ? 'Remove your rating' : 'Not a good experience'}
+        aria-pressed={myVote === 'down'}
+        title="Not a good experience"
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '0 16px', height: '100%',
-          background: myVote === 'down' ? 'rgba(239,68,68,0.07)' : 'transparent',
+          padding: '0 13px', height: 40, borderRadius: 14,
+          background: myVote === 'down' ? 'rgba(239,68,68,0.09)' : 'rgba(0,0,0,0.035)',
           border: 'none', cursor: 'pointer',
           transition: 'background 0.15s',
         }}

@@ -535,8 +535,13 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           href="/"
           style={{
             display: 'block', textAlign: 'center',
-            fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase',
-            color: 'rgba(0,0,0,0.22)', paddingBottom: 'calc(32px + env(safe-area-inset-bottom))', textDecoration: 'none',
+            // Was 10px at 22% black, which on a light background is all but
+            // invisible — and on a dark one it disappeared completely, since
+            // the colour never looked at bgIsDark. This mark sits on every
+            // customer's page, so it should be readable without shouting.
+            fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase',
+            color: bgIsDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.42)',
+            paddingBottom: 'calc(32px + env(safe-area-inset-bottom))', textDecoration: 'none',
           }}
         >
           Powered by OpenStatus

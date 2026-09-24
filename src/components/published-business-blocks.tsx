@@ -3,6 +3,7 @@ import PublicLocationBlock from '@/components/public-location-block';
 import InstagramUpdatesBlock from '@/components/instagram-updates-block';
 import PublicGalleryBlock from '@/components/public-gallery-block';
 import type { OpenStatusPageConfig } from '@/lib/openstatus-page-config';
+import { computeSpans } from '@/lib/block-layout';
 
 type Props = {
   businessId: string;
@@ -32,17 +33,14 @@ export default function PublishedBusinessBlocks({
     hasDestination(block)
   );
 
+  // Spans depend on what sits next to a block, so they are worked out for the
+  // whole list at once. See src/lib/block-layout.ts for the rule and its tests.
+  const spans = computeSpans(enabled);
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
-      {enabled.map((block) => {
-        // Determine column span
-        // A 'third' used to be 2 of 6 columns — about 33% of a phone screen,
-        // which after the icon and padding left ~60px for text. Titles broke
-        // mid-word ("Revi / ews") and subtitles rendered one word per line.
-        // Half is the narrowest a block with words in it can survive on a phone.
-        const span =
-          block.size === 'third' || block.size === 'half' || block.size === 'square' ? 3
-          : 6; // 'full' or default
+      {enabled.map((block, index) => {
+        const span = spans[index];
 
         // Special renderers
         if (block.id === 'updates') {

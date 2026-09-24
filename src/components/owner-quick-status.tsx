@@ -242,7 +242,11 @@ export default function OwnerQuickStatus({
               <p style={{ fontSize: 11, fontWeight: 600, color: '#8A8A8A', margin: 0, lineHeight: 1.3 }}>
                 Only you see this bar
               </p>
-              <p style={{ fontSize: 12.5, fontWeight: 600, color: hasOwnerUpdate ? '#991B1B' : '#166534', margin: 0, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p style={{ fontSize: 12.5, fontWeight: 600, color: hasOwnerUpdate ? '#991B1B' : '#166534', margin: 0, lineHeight: 1.3,
+                // Was nowrap + ellipsis, which cut the sentence mid-word
+                // ("Customers see your normal hou…"). Two lines is plenty and
+                // the owner can actually read what their customers see.
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {hasOwnerUpdate
                   ? `Customers see: ${ownerHeadline || 'a status update'}`
                   : 'Customers see your normal hours'}
