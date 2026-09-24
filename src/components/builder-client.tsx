@@ -9,12 +9,15 @@ import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedu
 import { swapById, canDrag } from '@/lib/reorder';
 import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
+import { applyVibe } from '@/lib/page-vibes';
+import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
 import { publishedBlocks } from '@/lib/page-rows';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicHoursRow from '@/components/public-hours-row';
-import PublicActionBlock from '@/components/public-action-block';
+import PublicBlockRow from '@/components/public-block-row';
+import PublicUpdatesPlaceholder from '@/components/public-updates-placeholder';
 import PublicSocialLinks from '@/components/public-social-links';
 import type { OpenStatusBlock as LibBlock } from '@/lib/openstatus-page-config';
 import {
@@ -393,54 +396,6 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
 
 // ── Style presets ────────────────────────────────────────────────────────────
 //
-// A preset is a starting point, not a mode. Each one writes the same config
-// fields the individual controls write, so after picking "Bold" the owner can
-// still change the background or the font and nothing fights them. `matches`
-// is what decides whether a card shows as chosen, so it only checks the
-// fields the preset actually sets.
-type StylePreset = {
-  key: string;
-  label: string;
-  blurb: string;
-  thumbBg: string;
-  thumbInk: string;
-  apply: Partial<OpenStatusPageConfig>;
-  matches: (c: OpenStatusPageConfig) => boolean;
-};
-
-const STYLE_PRESETS: StylePreset[] = [
-  {
-    key:'minimal', label:'Minimal', blurb:'Clean and classic',
-    thumbBg:'#F4F4F2', thumbInk:'#0A0A0A',
-    apply:{ bg:'#F7F7F5', nameColor:undefined, imageIntensity:78, imageBlur:'none', imageOverlay:'auto' },
-    matches:c=>c.bg==='#F7F7F5' && (c.imageBlur??'none')==='none',
-  },
-  {
-    key:'editorial', label:'Editorial', blurb:'Warm and modern',
-    thumbBg:'#EDE4D8', thumbInk:'#3A2A1C',
-    apply:{ bg:'#F3EBE1', nameColor:undefined, imageIntensity:86, imageBlur:'none', imageOverlay:'light' },
-    matches:c=>c.bg==='#F3EBE1',
-  },
-  {
-    key:'bold', label:'Bold', blurb:'Dark and vibrant',
-    thumbBg:'#17151F', thumbInk:'#FFFFFF',
-    apply:{ bg:'#141218', nameColor:'#FFFFFF', imageIntensity:92, imageBlur:'none', imageOverlay:'dark' },
-    matches:c=>c.bg==='#141218',
-  },
-  {
-    key:'soft', label:'Soft', blurb:'Light and airy',
-    thumbBg:'#E6EEF6', thumbInk:'#24425C',
-    apply:{ bg:'#EDF3F8', nameColor:undefined, imageIntensity:62, imageBlur:'soft', imageOverlay:'light' },
-    matches:c=>c.bg==='#EDF3F8',
-  },
-  {
-    key:'custom', label:'Custom', blurb:'Start from scratch',
-    thumbBg:'#FFFFFF', thumbInk:'#9A9A97',
-    apply:{ bg:'#FFFFFF', nameColor:undefined, imageIntensity:100, imageBlur:'none', imageOverlay:'none' },
-    matches:c=>c.bg==='#FFFFFF',
-  },
-];
-
 // ── Image appearance: how loud a cover photo is allowed to be ─────────────────
 //
 // Three controls, no more. A cover photo should behave like atmosphere behind
@@ -631,7 +586,7 @@ function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
  * The preview.
  *
  * It renders the same components the published page does — PublicBioCard,
- * PublicHoursRow, PublicActionBlock, PublicSocialLinks — rather than its own
+ * PublicHoursRow, PublicBlockRow, PublicSocialLinks — rather than its own
  * copy of them.
  *
  * It used to be a parallel implementation, and everything that can go wrong
@@ -739,7 +694,10 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
           slug={business?.slug ?? ''}
           address={addr || null}
           tags={config.tags ?? []}
-          placeId={null}
+          // The rating row only fetches when it knows there's a place to
+          // fetch for. This was hardcoded null, so the preview never showed
+          // the Google rating the live page did.
+          placeId={config.placeId ?? null}
           websiteUrl={websiteUrl}
           directionsUrl={directionsUrl}
           shareUrl={business?.slug ? `${SITE_URL}/${business.slug}` : SITE_URL}
@@ -767,11 +725,17 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
         ))}
 
         {activeBlocks.map(b => editable(b.id, (
-          <PublicActionBlock
-            block={b as unknown as LibBlock}
-            businessId={business?.id ?? ''}
-            dark={isDark}
-          />
+          // Instagram updates reads the database on the server, so the preview
+          // shows a stand-in rather than an empty gap the owner can't explain.
+          b.id === 'updates'
+            ? <PublicUpdatesPlaceholder dark={isDark}/>
+            : <PublicBlockRow
+                block={b as unknown as LibBlock}
+                businessId={business?.id ?? ''}
+                placeId={config.placeId ?? null}
+                dark={isDark}
+                accent={accent}
+              />
         )))}
 
         {activeBlocks.length === 0 && !hoursOn && (
@@ -1699,7 +1663,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // ─────────────────────────────────────────────────────────────────────────
 
   /** Which small sheet is up over the phone canvas. null = just the canvas. */
-  type MSheetKind = null | 'block' | 'add' | 'font' | 'color' | 'background';
+  type MSheetKind = null | 'block' | 'add' | 'vibe' | 'font' | 'color' | 'background';
   const [mSheet,setMSheet] = useState<MSheetKind>(null);
 
   /** Widget currently picked up by a long press on the phone canvas. */
@@ -2474,8 +2438,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // The font swatches each render in their own family, so every face has to be
   // loaded — not just the selected one. Without this, Playfair, Pacifico and
   // Lobster all fell back to the same generic serif and the picker was useless.
+  // The vibe cards on mobile show the same specimens, and they live under the
+  // design tab rather than style — without this they all rendered in Inter and
+  // "Bakery" and "Night Shift" looked identical.
   useEffect(()=>{
-    if(sidebarTab!=='style') return;
+    if(sidebarTab!=='style' && mSheet!=='vibe') return;
     for(const opt of FONT_OPTIONS){
       if(!opt.google) continue;
       const id=`gfont-${opt.google}`;
@@ -2485,7 +2452,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       link.href=`https://fonts.googleapis.com/css2?family=${opt.google}&display=swap`;
       document.head.appendChild(link);
     }
-  },[sidebarTab]);
+  },[sidebarTab, mSheet]);
 
   // Load Google Font whenever selected font changes
   useEffect(()=>{
@@ -3284,37 +3251,18 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <p className="text-[#777777] text-[13px] mt-1">Background, imagery, brand and type.</p>
                 </div>
 
-                {/* ── 1. Presets ────────────────────────────────────────────
-                     A starting point, not a lock-in: each one just writes the
-                     same fields the controls below write, so the owner can
-                     pick a look and then change any part of it. */}
+                {/* ── 1. Vibe ───────────────────────────────────────────────
+                     This used to open on a grid of colour swatches and a hex
+                     wheel, which asks a shop owner to art-direct their own
+                     page. A vibe picks the background, the font, the name
+                     colour, the accent and the photo treatment as a set. The
+                     individual controls are still here, under Fine-tune, for
+                     the owner who wants their exact brand green. */}
                 <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">1. Presets</p>
-                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Start with a look, then customize it.</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-                    {STYLE_PRESETS.map(preset=>{
-                      const active = preset.matches(config);
-                      return (
-                        <button key={preset.key} type="button"
-                          onClick={()=>setConfig(c=>({...c,...preset.apply}))}
-                          className={`text-left rounded-2xl border p-2.5 transition-colors ${
-                            active?'border-[#7C3AED] bg-[rgba(124,58,237,0.05)]':'border-[#E9E9E7] bg-white hover:border-[#DCDCD9]'
-                          }`}>
-                          <span className="block rounded-xl overflow-hidden mb-2 aspect-[3/4]" style={{background:preset.thumbBg}}>
-                            <span className="flex h-full flex-col justify-end gap-1 p-2">
-                              <span className="block h-1.5 rounded-full" style={{background:preset.thumbInk,opacity:0.85,width:'62%'}}/>
-                              <span className="block h-3 rounded-lg" style={{background:preset.thumbInk,opacity:0.30}}/>
-                              <span className="block h-3 rounded-lg" style={{background:preset.thumbInk,opacity:0.18}}/>
-                            </span>
-                          </span>
-                          <span className="block text-[12.5px] font-semibold text-[#0A0A0A] leading-tight">{preset.label}</span>
-                          <span className="block text-[11px] text-[#9A9A97] leading-tight mt-0.5">{preset.blurb}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">1. Vibe</p>
+                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Pick a feel. You can change any part of it below.</p>
+                  <VibePicker config={config} onPick={v=>setConfig(c=>applyVibe(c,v))}/>
                 </div>
-
 
                 {/* ── 2. Brand ── */}
                 <div>
@@ -3391,36 +3339,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                 </div>
 
-                {/* ── 3. Background ── */}
+                {/* ── 3. Tags ── */}
                 <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">3. Background</p>
-                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Choose a background for your page.</p>
-                  <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(pc=>({...pc,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
-                  <div className="mt-6">
-                    <p className="text-[13px] font-semibold text-[#0A0A0A] mb-0.5">Image appearance</p>
-                    <p className="text-[12px] text-[#777777] mb-3">Soften a photo so it sits behind your page, not in front of it.</p>
-                  <div>
-                    <ImageAppearanceControls config={config} onChange={patch=>setConfig(c=>({...c,...patch}))}/>
-                  </div>
-                </div>
-                </div>
-
-                {/* ── Business name colour ── */}
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">4. Typography</p>
-                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Set the font and how your name looks.</p>
-                  <p className="text-[13px] font-semibold text-[#0A0A0A] mb-2">Business name colour</p>
-                  <NameColorPicker
-                    value={config.nameColor}
-                    autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
-                    onChange={v=>setConfig(c=>({...c,nameColor:v}))}
-                  />
-                </div>
-
-                {/* ── Tags on the link preview ── */}
-                <div>
-                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-1">Tags</p>
-                  <p className="text-[11px] text-[#9A9A97] mb-3">Pick up to 3 — these show under your business name.</p>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">3. Tags</p>
+                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Pick up to 3 — these show under your business name.</p>
                   {/* custom tag entry */}
                   <div className="flex items-center gap-2 mb-3">
                     <input
@@ -3473,20 +3395,48 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                 </div>
 
+
+                {/* ── 4. Fine-tune ──────────────────────────────────────────
+                     Everything a vibe already decided, for the owner who
+                     wants their own brand colour or their own typeface. It is
+                     closed by default because the page is finished without
+                     it, and open-by-default controls read as work to do. */}
                 <div>
-                  <p className="text-[13px] font-semibold text-[#0A0A0A] mb-0.5">Font</p>
-                  <p className="text-[12px] text-[#777777] mb-3">Applies to everything on your page.</p>
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                    {FONT_OPTIONS.map(opt=>{
-                      const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
-                      return (
-                        <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
-                          className={`flex flex-col items-start px-3 py-2.5 rounded-2xl border transition-all text-left ${isActive?'border-[#0A0A0A] bg-[#0A0A0A]':'border-[#E9E9E7] bg-[#F7F7F6] hover:border-[#0A0A0A]'}`}>
-                          <span className={`text-[16px] leading-tight ${isActive?'text-white':'text-[#0A0A0A]'}`} style={{fontFamily:opt.family}}>Aa</span>
-                          <span className={`text-[10px] font-medium mt-0.5 ${isActive?'text-white/70':'text-[#9A9A97]'}`}>{opt.label}</span>
-                        </button>
-                      );
-                    })}
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">4. Fine-tune</p>
+                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Optional. Override any part of your vibe.</p>
+                  <div className="space-y-3">
+                    <MoreOptions label="Background">
+                      <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(pc=>({...pc,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
+                    </MoreOptions>
+
+                    <MoreOptions label="Cover photo appearance">
+                      <p className="text-[12px] text-[#777777] -mt-1 mb-1">Soften a photo so it sits behind your page, not in front of it.</p>
+                      <ImageAppearanceControls config={config} onChange={patch=>setConfig(c=>({...c,...patch}))}/>
+                    </MoreOptions>
+
+                    <MoreOptions label="Font">
+                      <p className="text-[12px] text-[#777777] -mt-1 mb-1">Applies to everything on your page.</p>
+                      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                        {FONT_OPTIONS.map(opt=>{
+                          const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
+                          return (
+                            <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
+                              className={`flex flex-col items-start px-3 py-2.5 rounded-2xl border transition-all text-left ${isActive?'border-[#0A0A0A] bg-[#0A0A0A]':'border-[#E9E9E7] bg-[#F7F7F6] hover:border-[#0A0A0A]'}`}>
+                              <span className={`text-[16px] leading-tight ${isActive?'text-white':'text-[#0A0A0A]'}`} style={{fontFamily:opt.family}}>Aa</span>
+                              <span className={`text-[10px] font-medium mt-0.5 ${isActive?'text-white/70':'text-[#9A9A97]'}`}>{opt.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </MoreOptions>
+
+                    <MoreOptions label="Business name colour">
+                      <NameColorPicker
+                        value={config.nameColor}
+                        autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
+                        onChange={v=>setConfig(c=>({...c,nameColor:v}))}
+                      />
+                    </MoreOptions>
                   </div>
                 </div>
               </div>
@@ -4449,6 +4399,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <div className="flex w-full max-w-[420px] bg-white/92 backdrop-blur border border-[#E9E9E7] rounded-2xl p-1 gap-1 shadow-[0_6px_24px_rgba(124,58,237,0.16)]">
           {([
             {key:'add'        as const, label:'Block',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>},
+            {key:'vibe'       as const, label:'Vibe',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.4L12 15l-1.9-4.6L5.5 9l4.6-1.4L12 3z"/><path d="M18 16l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"/></svg>},
             {key:'font'       as const, label:'Font',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>},
             {key:'color'      as const, label:'Color',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>},
             {key:'background' as const, label:'Background', svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>},
@@ -4523,6 +4474,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add any other link
         </button>
+      </MobileSheet>
+
+      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Vibe" onClose={()=>setMSheet(null)} maxVh={56} dim={false}>
+        <p className="text-[11.5px] text-[#777777] mb-3">
+          Sets your background, font, name colour and photo treatment together. Font and Colour
+          are still there if you want to change one part afterwards.
+        </p>
+        <VibePicker config={config} onPick={v=>setConfig(c=>applyVibe(c,v))}/>
       </MobileSheet>
 
       <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={46} dim={false}>

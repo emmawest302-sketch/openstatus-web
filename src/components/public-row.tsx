@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
+import { liftColor } from '@/lib/page-theme';
 
 /**
  * One row. Every feature on the page is one of these, at one width.
@@ -31,6 +32,8 @@ type Props = {
   /** Present when the row sends the customer somewhere. */
   href?: string | null;
   dark?: boolean;
+  /** Icon tint. Falls back to the page's ink so a dark accent on a dark page
+      can't make the icon disappear. */
   accent?: string;
   /** Hours is the one row allowed to look more important than the others. */
   emphasis?: boolean;
@@ -39,7 +42,7 @@ type Props = {
 
 export default function PublicRow({
   id, businessId, icon, title, subtitle, badge, preview, children, href,
-  dark = false, accent = '#0A0A0A', emphasis = false, defaultOpen = false,
+  dark = false, accent, emphasis = false, defaultOpen = false,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const expandable = !!children;
@@ -50,20 +53,31 @@ export default function PublicRow({
     WebkitBackdropFilter: 'blur(20px) saturate(130%)',
     border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(10,10,10,0.05)',
     boxShadow: dark ? '0 6px 20px rgba(0,0,0,0.22)' : '0 6px 20px rgba(10,10,10,0.05)',
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
   };
 
   const ink = dark ? '#FFFFFF' : '#0A0A0A';
   const muted = dark ? 'rgba(255,255,255,0.60)' : 'rgba(21,21,21,0.52)';
+  // An owner's brand colour is chosen against their light page. Dropped onto
+  // a dark one it can be all but invisible, so lift it rather than make them
+  // keep a second colour for the dark theme.
+  const iconInk = liftColor(accent, dark) ?? ink;
 
   const head = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: emphasis ? '16px 16px' : '14px 16px' }}>
+    // minHeight, not padding: a row with a subtitle and one without have to
+    // be the same height, or a list of them looks like it was assembled by
+    // accident. 78 matches the link rows in public-action-block.
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 13,
+      padding: emphasis ? '15px 16px' : '13px 16px',
+      minHeight: emphasis ? 86 : 78, boxSizing: 'border-box',
+    }}>
       <span style={{
         width: emphasis ? 42 : 38, height: emphasis ? 42 : 38, borderRadius: '50%', flexShrink: 0,
         display: 'grid', placeItems: 'center',
         background: dark ? 'rgba(255,255,255,0.09)' : 'rgba(10,10,10,0.04)',
-        color: accent,
+        color: iconInk,
       }}>
         {icon}
       </span>

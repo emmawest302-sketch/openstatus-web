@@ -147,9 +147,12 @@ export function affordanceFor(id: RowId): RowAffordance {
 
 /**
  * Blocks that open something of their own rather than linking away. They earn
- * a row without a URL, because the row *is* the content.
+ * a row without a URL, because the row *is* the content — photos and reviews
+ * come from the business's Google listing, and Instagram updates from the
+ * connected account. Each renders nothing at all when it has nothing, which
+ * is the right empty state: an absent row, not a row about an absence.
  */
-export const SELF_CONTAINED_IDS = new Set(['updates', 'gallery']);
+export const SELF_CONTAINED_IDS = new Set(['updates', 'gallery', 'reviews']);
 
 /**
  * Social links render once, as the icon row above the footer. As a block they

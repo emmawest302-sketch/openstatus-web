@@ -1,14 +1,13 @@
-import PublicActionBlock from '@/components/public-action-block';
 import InstagramUpdatesBlock from '@/components/instagram-updates-block';
-import PublicGalleryBlock from '@/components/public-gallery-block';
+import PublicBlockRow from '@/components/public-block-row';
 import type { OpenStatusPageConfig } from '@/lib/openstatus-page-config';
 import { publishedBlocks } from '@/lib/page-rows';
 
 /**
- * businessName, location and themeColor used to be threaded through here for
- * a location row this component no longer renders — Directions is a header
- * action now. They stay in the props so the page's call site doesn't have to
- * change, but nothing reads them.
+ * businessName and location used to be threaded through here for a location
+ * row this component no longer renders — Directions is a header action now.
+ * They stay in the props so the page's call site doesn't have to change, but
+ * nothing reads them.
  */
 type Props = {
   businessId: string;
@@ -21,7 +20,7 @@ type Props = {
 };
 
 export default function PublishedBusinessBlocks({
-  businessId, config, placeId, dark = false,
+  businessId, config, themeColor, placeId, dark = false,
 }: Props) {
   // One shared filter, in lib/page-rows, so the builder preview and this page
   // cannot disagree about which rows publish.
@@ -35,7 +34,8 @@ export default function PublishedBusinessBlocks({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {enabled.map((block) => {
 
-        // Special renderers
+        // Instagram updates reads from the database on the server, so it
+        // can't go through the shared client renderer below.
         if (block.id === 'updates') {
           return (
             <div key={block.id}>
@@ -44,17 +44,15 @@ export default function PublishedBusinessBlocks({
           );
         }
 
-        if (block.id === 'gallery') {
-          return (
-            <div key={block.id}>
-              <PublicGalleryBlock block={block} businessId={businessId} placeId={placeId}/>
-            </div>
-          );
-        }
-
         return (
           <div key={block.id}>
-            <PublicActionBlock block={block} businessId={businessId} dark={dark}/>
+            <PublicBlockRow
+              block={block}
+              businessId={businessId}
+              placeId={placeId}
+              dark={dark}
+              accent={themeColor}
+            />
           </div>
         );
       })}

@@ -3,8 +3,15 @@
 import { useState } from 'react';
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
+import { liftColor } from '@/lib/page-theme';
 
-type Props = { block: OpenStatusBlock; businessId: string; dark?: boolean };
+type Props = {
+  block: OpenStatusBlock;
+  businessId: string;
+  dark?: boolean;
+  /** Icon tint, matching the rows in public-row.tsx. */
+  accent?: string;
+};
 
 function safeUrl(value?: string) {
   const raw = value?.trim();
@@ -55,7 +62,7 @@ function BlockIcon({ id, color }: { id: string; color: string }) {
   );
 }
 
-export default function PublicActionBlock({ block, businessId, dark = false }: Props) {
+export default function PublicActionBlock({ block, businessId, dark = false, accent }: Props) {
   // Card fill was a fixed 72% white, which turns into a glaring slab on a dark
   // page. Derive it so the card is always visible against whatever is behind it.
   const CARD = dark ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.72)';
@@ -75,10 +82,11 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
 
   // ── Standard card (no photo) ─────────────────────────────────────
   // These were hardcoded black on a light grey, which on a dark page put a
-  // black glyph inside a nearly-black circle.
-  const iconColor = dark ? '#FFFFFF' : '#111111';
+  // black glyph inside a nearly-black circle. The accent keeps this row's
+  // icon the same colour as the Photos, Menu and Reviews rows beside it.
+  const iconColor = liftColor(accent, dark) ?? (dark ? '#FFFFFF' : '#111111');
   const iconBg = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.05)';
-  const chevron = dark ? 'rgba(255,255,255,0.40)' : 'rgba(0,0,0,0.28)';
+  const chevron = dark ? 'rgba(255,255,255,0.42)' : 'rgba(10,10,10,0.28)';
 
   const card = (
     <div
@@ -134,16 +142,18 @@ export default function PublicActionBlock({ block, businessId, dark = false }: P
         )}
       </div>
 
-      {/* Chevron */}
+      {/* One glyph, one meaning. A right chevron said "opens here" on a row
+          that always navigates away; every row that leaves the page now shows
+          the same outbound arrow the Menu and Photos rows use. */}
       {href && (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke={chevron} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          stroke={chevron} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"
           style={{
             flexShrink: 0,
-            transform: hovered ? 'translateX(2px)' : 'translateX(0)',
+            transform: hovered ? 'translate(1.5px,-1.5px)' : 'none',
             transition: 'transform 0.15s ease',
           }}>
-          <polyline points="9 18 15 12 9 6"/>
+          <path d="M7 17 17 7"/><path d="M8 7h9v9"/>
         </svg>
       )}
     </div>
