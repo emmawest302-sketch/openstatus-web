@@ -1,4 +1,5 @@
 import PublicRatingRow from '@/components/public-rating-row';
+import type { ButtonStyle } from '@/lib/openstatus-page-config';
 import PublicShareButton from '@/components/public-share-button';
 
 /**
@@ -43,12 +44,18 @@ type Props = {
   pageFont: string;
   logo: string | null;
   initials: string;
+  /**
+   * How the three header buttons are drawn. One decision for the page: a
+   * header with a filled Website, an outlined Directions and a glass Share is
+   * three shapes in a row and reads as a mistake.
+   */
+  buttonStyle?: ButtonStyle;
 };
 
 export default function PublicBioCard({
   businessName, businessId, address, tags, placeId,
   websiteUrl, directionsUrl, shareUrl, dark, accent, nameColor, pageFont,
-  logo, initials,
+  logo, initials, buttonStyle = 'filled',
 }: Props) {
   const glass: React.CSSProperties = {
     background: dark ? 'rgba(22,22,24,0.62)' : 'rgba(255,255,255,0.74)',
@@ -126,7 +133,7 @@ export default function PublicBioCard({
           alignItems: 'center', gap: 5, marginTop: 'clamp(10px, 3.4cqw, 13px)',
         }}>
           {websiteUrl && (
-            <a href={websiteUrl} target="_blank" rel="noreferrer" style={primaryAction(dark)}>
+            <a href={websiteUrl} target="_blank" rel="noreferrer" style={primaryAction(dark, buttonStyle)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
               </svg>
@@ -135,7 +142,7 @@ export default function PublicBioCard({
           )}
 
           {directionsUrl && (
-            <a href={directionsUrl} target="_blank" rel="noreferrer" style={secondaryAction(dark)}>
+            <a href={directionsUrl} target="_blank" rel="noreferrer" style={secondaryAction(dark, buttonStyle)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
               </svg>
@@ -149,6 +156,7 @@ export default function PublicBioCard({
             businessId={businessId}
             dark={dark}
             accent={accent}
+            buttonStyle={buttonStyle}
           />
         </div>
       </div>
@@ -176,7 +184,32 @@ const actionBase: React.CSSProperties = {
   textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
 };
 
-function primaryAction(dark: boolean): React.CSSProperties {
+/**
+ * Three ways to draw the same button.
+ *
+ * `filled` is the default and what the page has always looked like: a solid
+ * primary, a soft secondary. `outline` drops the fills so the cover photo
+ * carries the header. `glass` leans on the same frosted material as the card
+ * itself. The primary stays visibly primary in all three — a style choice
+ * should not flatten the hierarchy of what to tap first.
+ */
+function primaryAction(dark: boolean, style: ButtonStyle): React.CSSProperties {
+  const ink = dark ? '#FFFFFF' : '#0A0A0A';
+  if (style === 'outline') return {
+    ...actionBase,
+    background: 'transparent',
+    color: ink,
+    border: `1.5px solid ${ink}`,
+  };
+  if (style === 'glass') return {
+    ...actionBase,
+    background: dark ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.94)',
+    color: dark ? '#FFFFFF' : '#0A0A0A',
+    border: dark ? '1px solid rgba(255,255,255,0.32)' : '1px solid rgba(10,10,10,0.10)',
+    backdropFilter: 'blur(18px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.10)',
+  };
   return {
     ...actionBase,
     background: dark ? '#FFFFFF' : '#0A0A0A',
@@ -185,11 +218,26 @@ function primaryAction(dark: boolean): React.CSSProperties {
   };
 }
 
-function secondaryAction(dark: boolean): React.CSSProperties {
+function secondaryAction(dark: boolean, style: ButtonStyle): React.CSSProperties {
+  const ink = dark ? '#FFFFFF' : '#151515';
+  if (style === 'outline') return {
+    ...actionBase,
+    background: 'transparent',
+    color: ink,
+    border: dark ? '1px solid rgba(255,255,255,0.32)' : '1px solid rgba(10,10,10,0.22)',
+  };
+  if (style === 'glass') return {
+    ...actionBase,
+    background: dark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.62)',
+    color: ink,
+    border: dark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.80)',
+    backdropFilter: 'blur(18px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+  };
   return {
     ...actionBase,
     background: dark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.86)',
-    color: dark ? '#FFFFFF' : '#151515',
+    color: ink,
     border: dark ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(10,10,10,0.09)',
   };
 }

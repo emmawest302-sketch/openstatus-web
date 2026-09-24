@@ -5,7 +5,7 @@ import PublishedBusinessBlocks from '@/components/published-business-blocks';
 import { shortAddress } from '@/lib/address';
 import { shareImageUrl } from '@/lib/share-image';
 import { externalUrl } from '@/lib/url';
-import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
+import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS, fontScaleStyle } from '@/lib/page-metrics';
 import PublicSocialLinks from '@/components/public-social-links';
 import PublicBanner from '@/components/public-banner';
 import PublicBioCard from '@/components/public-bio-card';
@@ -404,7 +404,14 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
       {/* The --os-* scale is a container query, so it reads this column's
           width rather than the window's. That is what lets the builder's
           340px preview and a 390px phone render identically. */}
-      <div className={PAGE_CONTAINER_CLASS} style={{ maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+      <div
+        className={PAGE_CONTAINER_CLASS}
+        style={{
+          maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1,
+          // One custom property, read by every --os-* clamp. See page-metrics.
+          ...fontScaleStyle(enrichedConfig.fontScale),
+        }}
+      >
 
         {/* ── Owner's notice ── above the cover, because the whole point is
              that it is read before anything else on the page. */}
@@ -478,6 +485,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           pageFont={pageFont}
           logo={avatar}
           initials={initials}
+          buttonStyle={enrichedConfig.buttonStyle}
         />
 
         {/* ── Live hours ──

@@ -204,3 +204,33 @@ describe('offers', () => {
     expect(withOffers([])).toBeUndefined();
   });
 });
+
+describe('style properties added after businesses already had pages', () => {
+  it('defaults an old config to the look it already had', () => {
+    // The whole point of the defaults: a page saved before these fields
+    // existed has to render byte-identically afterwards. Anything else is a
+    // migration, and a migration to change a button shape is not acceptable.
+    const legacy = normalizeOpenStatusPageConfig({ bg: '#F7F7F5', blocks: [] });
+    expect(legacy.buttonStyle).toBe('filled');
+    expect(legacy.fontScale).toBe('standard');
+  });
+
+  it('keeps a real choice', () => {
+    const cfg = normalizeOpenStatusPageConfig({ buttonStyle: 'glass', fontScale: 'compact' });
+    expect(cfg.buttonStyle).toBe('glass');
+    expect(cfg.fontScale).toBe('compact');
+  });
+
+  it('refuses junk rather than passing it into a style attribute', () => {
+    const cfg = normalizeOpenStatusPageConfig({ buttonStyle: 'neon', fontScale: 42 });
+    expect(cfg.buttonStyle).toBe('filled');
+    expect(cfg.fontScale).toBe('standard');
+  });
+
+  it('survives a round trip, which is what autosave does every few seconds', () => {
+    const once = normalizeOpenStatusPageConfig({ buttonStyle: 'outline', fontScale: 'large' });
+    const twice = normalizeOpenStatusPageConfig(once);
+    expect(twice.buttonStyle).toBe('outline');
+    expect(twice.fontScale).toBe('large');
+  });
+});

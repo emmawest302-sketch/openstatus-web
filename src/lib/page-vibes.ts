@@ -63,68 +63,109 @@ export type Vibe = {
   apply: VibeFields;
 };
 
-const INTER = 'Inter, system-ui, sans-serif';
+/**
+ * The presets.
+ *
+ * These replaced a set named after shop types — Bakery, Night Shift, Market,
+ * Bold. Naming a look after a trade tells an owner which one is "for them" and
+ * then they stop looking, which is how every cafe ended up on the same warm
+ * serif. A florist might want Night; a tattoo studio might want Editorial.
+ * These are named after the feeling instead, so the choice is a design choice.
+ *
+ * Each one is a complete set: background, typeface, name colour, accent, and
+ * how loud a cover photo may be. They were mixed together rather than picked
+ * one field at a time, which is the whole reason presets exist.
+ */
+export const PRESET_BLURBS: Record<string, string> = {
+  clean: 'Quiet and modern',
+  editorial: 'Warm serif',
+  botanical: 'Soft green',
+  coastal: 'Cool and calm',
+  warm: 'Earthy and friendly',
+  night: 'Dark, with gold',
+  mono: 'Black and white',
+  cobalt: 'Sharp and blue',
+};
 
 export const VIBES: Vibe[] = [
   {
     key: 'clean',
     label: 'Clean',
-    blurb: 'Quiet and modern',
-    swatch: { bg: '#F4F4F2', ink: '#0A0A0A' },
+    blurb: PRESET_BLURBS.clean,
+    swatch: { bg: '#F7F7F5', ink: '#0A0A0A' },
     apply: {
-      bg: '#F7F7F5', font: INTER, nameColor: undefined, themeColor: '#0A0A0A',
-      imageIntensity: 78, imageBlur: 'none', imageOverlay: 'auto',
+      bg: '#F7F7F5', font: 'Inter, system-ui, sans-serif', nameColor: '#0A0A0A',
+      themeColor: '#111111', imageIntensity: 82, imageBlur: 'none', imageOverlay: 'auto',
     },
   },
   {
-    key: 'bakery',
-    label: 'Bakery',
-    blurb: 'Warm paper and serif',
-    swatch: { bg: '#F3EBE1', ink: '#3A2A1C' },
+    key: 'editorial',
+    label: 'Editorial',
+    blurb: PRESET_BLURBS.editorial,
+    swatch: { bg: '#F1EDE5', ink: '#2C2924' },
     apply: {
-      bg: '#F3EBE1', font: '"Playfair Display", Georgia, serif', nameColor: '#3A2A1C',
-      themeColor: '#9A5B33', imageIntensity: 86, imageBlur: 'none', imageOverlay: 'light',
+      bg: '#F1EDE5', font: '"DM Serif Display", Georgia, serif', nameColor: '#2C2924',
+      themeColor: '#786C5B', imageIntensity: 88, imageBlur: 'none', imageOverlay: 'light',
     },
   },
   {
-    key: 'nightshift',
-    label: 'Night Shift',
-    blurb: 'Dark, for bars and late hours',
-    swatch: { bg: '#141218', ink: '#FFFFFF' },
+    key: 'botanical',
+    label: 'Botanical',
+    blurb: PRESET_BLURBS.botanical,
+    swatch: { bg: '#E9EFE7', ink: '#1E3023' },
     apply: {
-      bg: '#141218', font: '"Space Grotesk", system-ui, sans-serif', nameColor: '#FFFFFF',
-      themeColor: '#E4B95B', imageIntensity: 92, imageBlur: 'none', imageOverlay: 'dark',
+      bg: '#E9EFE7', font: '"Manrope", system-ui, sans-serif', nameColor: '#1E3023',
+      themeColor: '#5F765D', imageIntensity: 80, imageBlur: 'none', imageOverlay: 'light',
     },
   },
   {
-    key: 'studio',
-    label: 'Studio',
-    blurb: 'Airy, for salons and wellness',
-    swatch: { bg: '#EDF3F8', ink: '#24425C' },
+    key: 'coastal',
+    label: 'Coastal',
+    blurb: PRESET_BLURBS.coastal,
+    swatch: { bg: '#EDF2F4', ink: '#17262F' },
     apply: {
-      bg: '#EDF3F8', font: '"Cormorant Garamond", Georgia, serif', nameColor: '#24425C',
-      themeColor: '#3E7CA6', imageIntensity: 62, imageBlur: 'soft', imageOverlay: 'light',
+      bg: '#EDF2F4', font: '"DM Sans", system-ui, sans-serif', nameColor: '#17262F',
+      themeColor: '#608197', imageIntensity: 86, imageBlur: 'none', imageOverlay: 'light',
     },
   },
   {
-    key: 'market',
-    label: 'Market',
-    blurb: 'Fresh and green',
-    swatch: { bg: '#EAF2E4', ink: '#22351D' },
+    key: 'warm',
+    label: 'Warm',
+    blurb: PRESET_BLURBS.warm,
+    swatch: { bg: '#F2E8DC', ink: '#30261F' },
     apply: {
-      bg: '#EDF4E7', font: INTER, nameColor: '#22351D',
-      themeColor: '#3F7233', imageIntensity: 80, imageBlur: 'none', imageOverlay: 'light',
+      bg: '#F2E8DC', font: '"Poppins", system-ui, sans-serif', nameColor: '#30261F',
+      themeColor: '#A06E50', imageIntensity: 84, imageBlur: 'none', imageOverlay: 'light',
     },
   },
   {
-    key: 'bold',
-    label: 'Bold',
-    blurb: 'Loud, for street food and pop-ups',
-    swatch: { bg: '#FF5F6D', ink: '#FFFFFF' },
+    key: 'night',
+    label: 'Night',
+    blurb: PRESET_BLURBS.night,
+    swatch: { bg: '#111111', ink: '#F5F2EB' },
     apply: {
-      bg: 'linear-gradient(160deg,#FF9A5A 0%,#FF5F6D 55%,#C13584 100%)',
-      font: '"Bebas Neue", Impact, sans-serif', nameColor: '#FFFFFF',
-      themeColor: '#FFFFFF', imageIntensity: 70, imageBlur: 'soft', imageOverlay: 'dark',
+      bg: '#111111', font: '"Space Grotesk", system-ui, sans-serif', nameColor: '#F5F2EB',
+      themeColor: '#C9B58B', imageIntensity: 92, imageBlur: 'none', imageOverlay: 'dark',
+    },
+  },
+  {
+    key: 'mono',
+    label: 'Mono',
+    blurb: PRESET_BLURBS.mono,
+    swatch: { bg: '#EDEDEB', ink: '#0A0A0A' },
+    apply: {
+      bg: '#EDEDEB', font: '"Poppins", system-ui, sans-serif', nameColor: '#0A0A0A',
+      themeColor: '#0A0A0A', imageIntensity: 76, imageBlur: 'none', imageOverlay: 'auto',
+    },
+  },
+  {
+    key: 'cobalt',
+    label: 'Cobalt',
+    blurb: PRESET_BLURBS.cobalt,
+    swatch: { bg: '#F4F5F7', ink: '#111318' },
+    apply: {
+      bg: '#F4F5F7', font: '"Manrope", system-ui, sans-serif', nameColor: '#111318',
+      themeColor: '#315DE8', imageIntensity: 84, imageBlur: 'none', imageOverlay: 'auto',
     },
   },
 ];

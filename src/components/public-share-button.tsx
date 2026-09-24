@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ButtonStyle } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
 import BodyPortal from '@/components/body-portal';
 
@@ -24,10 +25,12 @@ type Props = {
   businessId: string;
   dark?: boolean;
   accent?: string;
+  /** Follows the page's one button decision. See public-bio-card. */
+  buttonStyle?: ButtonStyle;
 };
 
 export default function PublicShareButton({
-  businessName, url, businessId, dark = false, accent = '#7C3AED',
+  businessName, url, businessId, dark = false, accent = '#0A0A0A', buttonStyle = 'filled',
 }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -88,19 +91,40 @@ export default function PublicShareButton({
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const pill: React.CSSProperties = dark
-    ? {
-        background: hovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.14)',
-        border: '1px solid rgba(255,255,255,0.28)',
-        color: '#FFFFFF',
-      }
-    : {
-        background: hovered
-          ? `color-mix(in srgb, ${accent} 18%, #FFFFFF)`
-          : `color-mix(in srgb, ${accent} 10%, #FFFFFF)`,
-        border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
-        color: accent,
-      };
+  const ink = dark ? '#FFFFFF' : '#151515';
+  const pill: React.CSSProperties =
+    buttonStyle === 'outline'
+      ? {
+          background: hovered ? (dark ? 'rgba(255,255,255,0.08)' : 'rgba(10,10,10,0.04)') : 'transparent',
+          border: dark ? '1px solid rgba(255,255,255,0.32)' : '1px solid rgba(10,10,10,0.22)',
+          color: ink,
+        }
+      : buttonStyle === 'glass'
+      ? {
+          background: dark
+            ? (hovered ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)')
+            : (hovered ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.62)'),
+          border: dark ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.80)',
+          color: ink,
+          backdropFilter: 'blur(18px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+        }
+      : dark
+      ? {
+          background: hovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.14)',
+          border: '1px solid rgba(255,255,255,0.28)',
+          color: '#FFFFFF',
+        }
+      : {
+          // Share is the one thing we actively want a visitor to do, so on a
+          // light page it still carries a tint of the owner's accent. Accent
+          // as emphasis is fine; accent as a status colour is not.
+          background: hovered
+            ? `color-mix(in srgb, ${accent} 18%, #FFFFFF)`
+            : `color-mix(in srgb, ${accent} 10%, #FFFFFF)`,
+          border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
+          color: accent,
+        };
 
   return (
     <>

@@ -24,43 +24,64 @@
  * Tuning here fixes it everywhere at once, which is the whole point of having
  * one scale instead of forty literals.
  */
+import type React from 'react';
+
 export const PAGE_CONTAINER_CLASS = 'os-page';
 
 export const PAGE_METRICS_CSS = `
 .${PAGE_CONTAINER_CLASS} {
   container-type: inline-size;
   container-name: ospage;
+  /* Overwritten per page by fontScaleStyle() below. */
+  --os-scale: 1;
 }
 .${PAGE_CONTAINER_CLASS} {
   /* Cover: scene-setting, never the content. */
-  --os-cover-h: clamp(128px, 39cqw, 188px);
-  --os-cover-h-bare: clamp(52px, 15cqw, 74px);
+  --os-cover-h: clamp(128px, calc(39cqw * var(--os-scale, 1)), 188px);
+  --os-cover-h-bare: clamp(52px, calc(15cqw * var(--os-scale, 1)), 74px);
 
   /* Identity */
-  --os-logo: clamp(46px, 13.5cqw, 58px);
-  --os-name: clamp(19px, 5.5cqw, 24px);
-  --os-addr: clamp(12px, 3.2cqw, 13.5px);
-  --os-tag: clamp(9.5px, 2.6cqw, 10.5px);
+  --os-logo: clamp(46px, calc(13.5cqw * var(--os-scale, 1)), 58px);
+  --os-name: clamp(19px, calc(5.5cqw * var(--os-scale, 1)), 24px);
+  --os-addr: clamp(12px, calc(3.2cqw * var(--os-scale, 1)), 13.5px);
+  --os-tag: clamp(9.5px, calc(2.6cqw * var(--os-scale, 1)), 10.5px);
 
   /* Card padding and radii, so a narrow column doesn't spend a fifth of its
      width on the gap between the text and the card edge. */
-  --os-card-pad: clamp(11px, 3.5cqw, 14px);
-  --os-radius: clamp(13px, 4cqw, 17px);
-  --os-gap: clamp(6px, 2.1cqw, 9px);
+  --os-card-pad: clamp(11px, calc(3.5cqw * var(--os-scale, 1)), 14px);
+  --os-radius: clamp(13px, calc(4cqw * var(--os-scale, 1)), 17px);
+  --os-gap: clamp(6px, calc(2.1cqw * var(--os-scale, 1)), 9px);
 
   /* Rows */
-  --os-row-min: clamp(56px, 16.5cqw, 68px);
-  --os-row-title: clamp(13px, 3.4cqw, 14px);
-  --os-row-sub: clamp(11px, 2.9cqw, 12px);
-  --os-icon: clamp(30px, 8.6cqw, 35px);
+  --os-row-min: clamp(56px, calc(16.5cqw * var(--os-scale, 1)), 68px);
+  --os-row-title: clamp(13px, calc(3.4cqw * var(--os-scale, 1)), 14px);
+  --os-row-sub: clamp(11px, calc(2.9cqw * var(--os-scale, 1)), 12px);
+  --os-icon: clamp(30px, calc(8.6cqw * var(--os-scale, 1)), 35px);
 
   /* Hours is allowed to be the loudest thing here, but not by much. */
-  --os-hours-headline: clamp(16px, 4.3cqw, 17.5px);
-  --os-hours-detail: clamp(12px, 3.1cqw, 13px);
+  --os-hours-headline: clamp(16px, calc(4.3cqw * var(--os-scale, 1)), 17.5px);
+  --os-hours-detail: clamp(12px, calc(3.1cqw * var(--os-scale, 1)), 13px);
 
   /* Actions */
-  --os-action-fs: clamp(11px, 2.9cqw, 12px);
-  --os-action-pad-y: clamp(7.5px, 2.1cqw, 8.5px);
-  --os-action-pad-x: clamp(9px, 2.7cqw, 11px);
+  --os-action-fs: clamp(11px, calc(2.9cqw * var(--os-scale, 1)), 12px);
+  --os-action-pad-y: clamp(7.5px, calc(2.1cqw * var(--os-scale, 1)), 8.5px);
+  --os-action-pad-x: clamp(9px, calc(2.7cqw * var(--os-scale, 1)), 11px);
 }
 `;
+
+/**
+ * The owner's one dial on page density.
+ *
+ * Not a font size — a multiplier on the whole scale above, so the cover, the
+ * logo, the rows and the type all move together and stay in proportion. A
+ * business with a long name picks Compact and the page tightens; one aimed at
+ * older customers picks Large. Both still get a page someone designed.
+ *
+ * Applied as an inline custom property on the page container, which is the
+ * only place a per-page value can enter a stylesheet that is otherwise static
+ * and shared.
+ */
+export function fontScaleStyle(scale: 'compact' | 'standard' | 'large' | undefined): React.CSSProperties {
+  const factor = scale === 'compact' ? 0.92 : scale === 'large' ? 1.09 : 1;
+  return factor === 1 ? {} : ({ '--os-scale': String(factor) } as React.CSSProperties);
+}

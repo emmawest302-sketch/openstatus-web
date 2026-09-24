@@ -14,7 +14,7 @@ import { imageTreatment } from '@/lib/image-treatment';
 import { shortAddress } from '@/lib/address';
 import { localDay, activeOffers, newOfferId, MAX_OFFERS, OFFER_TITLE_MAX, OFFER_DESC_MAX, OFFER_CODE_MAX, type Offer } from '@/lib/offers';
 import { externalUrl } from '@/lib/url';
-import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
+import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS, fontScaleStyle } from '@/lib/page-metrics';
 import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
@@ -27,6 +27,10 @@ import PublicBlockRow from '@/components/public-block-row';
 import PublicUpdatesPlaceholder from '@/components/public-updates-placeholder';
 import PublicSocialLinks from '@/components/public-social-links';
 import type { OpenStatusBlock as LibBlock } from '@/lib/openstatus-page-config';
+import {
+  isButtonStyle, isFontScale, BUTTON_STYLES, FONT_SCALES,
+  type ButtonStyle, type FontScale,
+} from '@/lib/openstatus-page-config';
 import {
   BlockIcon,
   IconAcuity,
@@ -139,6 +143,7 @@ export interface OpenStatusBlock {
 }
 export interface OpenStatusPageConfig {
   blocks: OpenStatusBlock[]; bg: string; bgImage?: string; bgImagePosition?: string;
+  buttonStyle?: ButtonStyle; fontScale?: FontScale;
   socials: Record<string, string>;
   imageIntensity?: number;
   imageBlur?: 'none'|'soft'|'strong';
@@ -249,6 +254,8 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     bgAnim:       typeof r.bgAnim==='string'?r.bgAnim:undefined,
     bgAnimSpeed:  typeof r.bgAnimSpeed==='number'?r.bgAnimSpeed:undefined,
     font:         typeof r.font==='string'?r.font:undefined,
+    buttonStyle:  isButtonStyle(r.buttonStyle)?r.buttonStyle:'filled',
+    fontScale:    isFontScale(r.fontScale)?r.fontScale:'standard',
   };
 }
 
@@ -629,7 +636,13 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   };
 
   return (
-    <div className={PAGE_CONTAINER_CLASS} style={{ width:'100%', background: config.bg || '#F7F7F5', fontFamily: pageFont }}>
+    <div
+      className={PAGE_CONTAINER_CLASS}
+      style={{
+        width:'100%', background: config.bg || '#F7F7F5', fontFamily: pageFont,
+        ...fontScaleStyle(config.fontScale),
+      }}
+    >
       <style>{PAGE_METRICS_CSS}</style>
       {config.bannerOn !== false && <PublicBanner text={config.banner}/>}
       {config.bgImage && (
@@ -666,6 +679,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
           pageFont={pageFont}
           logo={avatar}
           initials={initials}
+          buttonStyle={config.buttonStyle}
         />
       </div>
 

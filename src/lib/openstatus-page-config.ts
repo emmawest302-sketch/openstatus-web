@@ -37,6 +37,18 @@ export type WeeklyHours = Record<WeekDay, DayHours>;
 import { type ImageBlur, type ImageOverlay, isImageBlur, isImageOverlay } from './image-treatment';
 import { type Offer, MAX_OFFERS, OFFER_TITLE_MAX, OFFER_DESC_MAX, OFFER_CODE_MAX } from './offers';
 
+export const BUTTON_STYLES = ['filled', 'outline', 'glass'] as const;
+export type ButtonStyle = typeof BUTTON_STYLES[number];
+export function isButtonStyle(v: unknown): v is ButtonStyle {
+  return typeof v === 'string' && (BUTTON_STYLES as readonly string[]).includes(v);
+}
+
+export const FONT_SCALES = ['compact', 'standard', 'large'] as const;
+export type FontScale = typeof FONT_SCALES[number];
+export function isFontScale(v: unknown): v is FontScale {
+  return typeof v === 'string' && (FONT_SCALES as readonly string[]).includes(v);
+}
+
 export type OpenStatusSocial = { id: string; label: string; url: string; on: boolean };
 export type OpenStatusPageConfig = {
   blocks: OpenStatusBlock[];
@@ -68,6 +80,25 @@ export type OpenStatusPageConfig = {
   weeklyHours?: WeeklyHours;
   font?: string;
   nameColor?: string;
+  /**
+   * How the header's Website / Directions / Share buttons are drawn.
+   *
+   * One decision for the page, not one per button. Letting each button pick
+   * its own is how a header ends up with three different shapes in a row.
+   */
+  buttonStyle?: ButtonStyle;
+  /**
+   * A nudge to the whole page's type scale, applied in lib/page-metrics.
+   *
+   * Not a font size. The sizes are one clamp scale and this multiplies it, so
+   * a business with a long name can tighten everything at once instead of
+   * finding forty literals.
+   */
+  fontScale?: FontScale;
+  /**
+   * Legacy. The animated backgrounds are gone from the picker; a page saved
+   * with one keeps rendering until its owner picks something else.
+   */
   bgAnim?: string;
   bgAnimSpeed?: number;
 };
@@ -188,6 +219,10 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
     font: typeof raw.font === 'string' ? raw.font : undefined,
     // Previously missing — see the note above normalizeOpenStatusPageConfig.
     nameColor: typeof raw.nameColor === 'string' ? raw.nameColor : undefined,
+    // Both default rather than stay undefined, so a page written before these
+    // existed renders identically to one written after. No migration.
+    buttonStyle: isButtonStyle(raw.buttonStyle) ? raw.buttonStyle : 'filled',
+    fontScale: isFontScale(raw.fontScale) ? raw.fontScale : 'standard',
     bgAnim: typeof raw.bgAnim === 'string' ? raw.bgAnim : undefined,
     bgAnimSpeed: typeof raw.bgAnimSpeed === 'number' ? raw.bgAnimSpeed : undefined,
     weeklyHours: (raw.weeklyHours && typeof raw.weeklyHours === 'object')

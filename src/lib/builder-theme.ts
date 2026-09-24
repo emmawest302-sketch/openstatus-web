@@ -1,103 +1,93 @@
 /**
- * The builder's visual system.
+ * The builder's own palette.
  *
- * The builder is the frame, not the picture. A shop's page is full of their
- * colour, their photo, their type — so everything around it stays quiet:
- * white surfaces on a cool grey field, near-black text, one restrained
- * accent. If the builder is also shouting, the two compete and the owner
- * cannot judge their own page.
+ * Two colour systems live in this product and confusing them is what made the
+ * app feel like a template builder. The BUSINESS PAGE is where a shop expresses
+ * itself — its vibe, its accent, its cover photo. The BUILDER is the workshop
+ * around that page, and a workshop should be quiet: paper, ink, stone. When the
+ * editor chrome was purple and the page was sage, the two fought, and the thing
+ * the owner was actually making came second to the tool making it.
  *
- * Before this existed the file carried four different border greys, two
- * secondary text greys, six radius scales and fifty-two purple fills applied
- * to anything clickable. These are the values everything should reach for.
+ * So: nothing in here is expressive. There is no brand accent, because the
+ * builder does not need one — black is the accent. The only colours with any
+ * saturation are the three semantic ones, and they mean something: this
+ * worked, look at this, this is wrong. A business's accent never gets to
+ * borrow those, and they never get applied as decoration.
+ *
+ * Use these instead of writing another hex literal. There were several hundred
+ * in builder-client before this file existed.
  */
+export const BUILDER_UI = {
+  /** The page behind everything. */
+  app: '#F5F5F3',
+  /** A card, a sheet, a field. */
+  surface: '#FFFFFF',
+  /** A card that sits ON a surface, or a resting control. */
+  surfaceSoft: '#F1F1EF',
+  /** That control, held down. */
+  surfacePressed: '#EAEAE7',
 
-export const SURFACE = {
-  /** The application field everything sits on. */
-  app: '#F4F5F6',
-  /** Cards, panels, the editor column. */
-  card: '#FFFFFF',
-  /** A quiet fill: inactive segments, wells, secondary rows. */
-  soft: '#F7F7F6',
-  /** The stage the page preview floats on. Slightly cooler than the app. */
-  stage: '#F1F2F3',
-} as const;
+  border: '#E7E7E3',
+  borderStrong: '#D8D8D3',
 
-export const TEXT = {
-  primary: '#0A0A0A',
-  secondary: '#777777',
-  /** Hints, counts, things you should be able to ignore. */
-  muted: '#9A9A97',
-  onDark: '#FFFFFF',
-} as const;
+  /** Headings, primary buttons, the active nav item. */
+  ink: '#0A0A0A',
+  /** Body copy. */
+  text: '#3F3F3C',
+  /** Labels and secondary copy. */
+  muted: '#777774',
+  /** Placeholders, disabled, the inactive nav item. */
+  quiet: '#A3A39F',
 
-export const LINE = {
-  /** The one border colour. */
-  default: '#E9E9E7',
-  /** For a border that needs to register without becoming a box. */
-  strong: '#DCDCD9',
+  success: '#168A46',
+  successSoft: '#EEF8F1',
+
+  warning: '#B87518',
+  warningSoft: '#FFF8EA',
+
+  danger: '#C4473F',
+  dangerSoft: '#FFF2F1',
 } as const;
 
 /**
- * Purple marks what the owner has chosen, and nothing else. Not "this is a
- * button", not "this is active by default" — chosen. A thin outline or a
- * small mark, never a filled surface.
+ * The application typeface.
+ *
+ * Poppins is the OpenStatus wordmark and it stays that. As interface type it
+ * is too round and too wide — every label read a size larger than it was, and
+ * a dense settings list in Poppins is a wall. Inter is the boring correct
+ * answer for UI and it makes the same screen feel calmer at the same size.
+ *
+ * The BUSINESS PAGE still renders in whatever font the owner picked. This is
+ * the chrome only.
  */
-export const ACCENT = {
-  base: '#7C3AED',
-  /** Outline for a selected card. */
-  ring: '#7C3AED',
-  /** The lightest possible tint, for a selected segment's fill. */
-  wash: 'rgba(124,58,237,0.07)',
-  text: '#6D28D9',
-} as const;
+export const BUILDER_FONT = 'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
 
 /**
- * Tailwind's own scale already lands on these, so prefer the class over an
- * arbitrary value: rounded-lg = 8, rounded-xl = 12, rounded-2xl = 16.
+ * Builder type scale.
+ *
+ * Not every label is semibold. The old builder reached for 600 on anything it
+ * wanted noticed, which meant nothing was noticeable. Weight is hierarchy, so
+ * it has to be spent.
  */
-export const RADIUS = {
-  /** Tiny controls: swatches, chips, segment buttons. */
-  control: 8,
-  /** Buttons and inputs. */
-  button: 12,
-  /** Cards and panels. */
+export const BUILDER_TYPE = {
+  /** The name of the screen you are on. */
+  screenTitle:  { fontSize: 20,   fontWeight: 600, letterSpacing: '-0.025em' },
+  /** "You're open" — the one number-sized thing on a page. */
+  majorStatus:  { fontSize: 25,   fontWeight: 600, letterSpacing: '-0.035em' },
+  /** A group of rows. */
+  sectionTitle: { fontSize: 14,   fontWeight: 600, letterSpacing: '-0.01em' },
+  /** The name of one row or card. */
+  cardTitle:    { fontSize: 13,   fontWeight: 600, letterSpacing: '-0.005em' },
+  body:         { fontSize: 12,   fontWeight: 400 },
+  helper:       { fontSize: 11,   fontWeight: 400 },
+  button:       { fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.005em' },
+  navLabel:     { fontSize: 10,   fontWeight: 500 },
+} as const;
+
+/** Corner radii, so a sheet and a card agree about what round means. */
+export const BUILDER_RADIUS = {
+  sheet: 22,
   card: 16,
-  /** Pills. */
+  control: 12,
   pill: 999,
-  /** Reserved for the preview surface and the public page itself. */
-  stage: 24,
 } as const;
-
-/** Soft and wide, never tight and dark. */
-export const SHADOW = {
-  none: 'none',
-  card: '0 1px 2px rgba(10,10,10,0.04)',
-  raised: '0 4px 16px rgba(10,10,10,0.06)',
-  /** The preview, floating on the stage. */
-  stage: '0 24px 70px rgba(10,10,10,0.14)',
-} as const;
-
-/**
- * Button hierarchy. Black carries the primary action; everything else is
- * quiet. Purple is not a button colour.
- */
-export const BUTTON = {
-  primary:
-    'inline-flex items-center justify-center gap-2 rounded-xl bg-[#0A0A0A] px-4 py-2 ' +
-    'text-[13px] font-semibold text-white transition-colors hover:bg-[#242424] ' +
-    'disabled:opacity-45 disabled:cursor-default',
-  secondary:
-    'inline-flex items-center justify-center gap-2 rounded-xl border border-[#E9E9E7] bg-white px-4 py-2 ' +
-    'text-[13px] font-semibold text-[#0A0A0A] transition-colors hover:bg-[#F7F7F6] ' +
-    'disabled:opacity-45 disabled:cursor-default',
-  quiet:
-    'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 ' +
-    'text-[13px] font-medium text-[#777777] transition-colors hover:text-[#0A0A0A] hover:bg-[#F7F7F6]',
-} as const;
-
-/** A control the owner has selected: thin ring, faintest wash, dark label. */
-export const SELECTED =
-  'border-[#7C3AED] bg-[rgba(124,58,237,0.07)] text-[#0A0A0A]';
-export const UNSELECTED =
-  'border-[#E9E9E7] bg-white text-[#777777] hover:border-[#DCDCD9]';

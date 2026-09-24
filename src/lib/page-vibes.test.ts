@@ -43,14 +43,28 @@ describe('applyVibe', () => {
     }
   });
 
-  it('leaves no trace of the previous vibe', () => {
-    // Bakery sets a name colour; Clean does not. Switching Bakery → Clean has
-    // to clear it, or the "Clean" page keeps Bakery's brown heading.
-    const bakery = VIBES.find(v => v.key === 'bakery')!;
-    const clean = VIBES.find(v => v.key === 'clean')!;
-    const after = applyVibe(applyVibe(base(), bakery), clean);
-    expect(after.nameColor).toBeUndefined();
-    expect(activeVibe(after)?.key).toBe('clean');
+  it('leaves no trace of the previous preset', () => {
+    // Editorial is a warm serif on stone with a taupe accent; Mono is black on
+    // grey. Switching has to replace every one of those, or the "Mono" page
+    // keeps Editorial's serif and nobody can see why.
+    const editorial = VIBES.find(v => v.key === 'editorial')!;
+    const mono = VIBES.find(v => v.key === 'mono')!;
+    const after = applyVibe(applyVibe(base(), editorial), mono);
+    expect(after.font).toBe(mono.apply.font);
+    expect(after.nameColor).toBe(mono.apply.nameColor);
+    expect(after.themeColor).toBe(mono.apply.themeColor);
+    expect(after.imageOverlay).toBe(mono.apply.imageOverlay);
+    expect(activeVibe(after)?.key).toBe('mono');
+  });
+
+  it('clears a field the next preset deliberately leaves unset', () => {
+    // Nothing sets bgAnim any more — the animated backgrounds are gone — but a
+    // page saved when they existed still carries one, and applying a preset
+    // has to wipe it rather than leave a snowfall behind the new look.
+    const stale = { ...base(), bgAnim: 'fall', bgAnimSpeed: 26 };
+    const after = applyVibe(stale, VIBES[0]);
+    expect(after.bgAnim).toBeUndefined();
+    expect(after.bgAnimSpeed).toBeUndefined();
   });
 
   it('does not touch the owner’s own content', () => {
@@ -79,8 +93,8 @@ describe('activeVibe', () => {
   it('stops matching once the owner changes one part of the look', () => {
     // The old presets matched on background alone, so this case lit up a card
     // that no longer described the page.
-    const v = VIBES.find(x => x.key === 'bakery')!;
-    const edited = { ...applyVibe(base(), v), font: 'Inter, system-ui, sans-serif' };
+    const v = VIBES.find(x => x.key === 'editorial')!;
+    const edited = { ...applyVibe(base(), v), font: '"Oswald", Impact, sans-serif' };
     expect(activeVibe(edited)).toBeNull();
   });
 
