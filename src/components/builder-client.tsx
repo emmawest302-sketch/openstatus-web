@@ -384,6 +384,56 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
   );
 }
 
+// ── Style presets ────────────────────────────────────────────────────────────
+//
+// A preset is a starting point, not a mode. Each one writes the same config
+// fields the individual controls write, so after picking "Bold" the owner can
+// still change the background or the font and nothing fights them. `matches`
+// is what decides whether a card shows as chosen, so it only checks the
+// fields the preset actually sets.
+type StylePreset = {
+  key: string;
+  label: string;
+  blurb: string;
+  thumbBg: string;
+  thumbInk: string;
+  apply: Partial<OpenStatusPageConfig>;
+  matches: (c: OpenStatusPageConfig) => boolean;
+};
+
+const STYLE_PRESETS: StylePreset[] = [
+  {
+    key:'minimal', label:'Minimal', blurb:'Clean and classic',
+    thumbBg:'#F4F4F2', thumbInk:'#0A0A0A',
+    apply:{ bg:'#F7F7F5', nameColor:undefined, imageIntensity:78, imageBlur:'none', imageOverlay:'auto' },
+    matches:c=>c.bg==='#F7F7F5' && (c.imageBlur??'none')==='none',
+  },
+  {
+    key:'editorial', label:'Editorial', blurb:'Warm and modern',
+    thumbBg:'#EDE4D8', thumbInk:'#3A2A1C',
+    apply:{ bg:'#F3EBE1', nameColor:undefined, imageIntensity:86, imageBlur:'none', imageOverlay:'light' },
+    matches:c=>c.bg==='#F3EBE1',
+  },
+  {
+    key:'bold', label:'Bold', blurb:'Dark and vibrant',
+    thumbBg:'#17151F', thumbInk:'#FFFFFF',
+    apply:{ bg:'#141218', nameColor:'#FFFFFF', imageIntensity:92, imageBlur:'none', imageOverlay:'dark' },
+    matches:c=>c.bg==='#141218',
+  },
+  {
+    key:'soft', label:'Soft', blurb:'Light and airy',
+    thumbBg:'#E6EEF6', thumbInk:'#24425C',
+    apply:{ bg:'#EDF3F8', nameColor:undefined, imageIntensity:62, imageBlur:'soft', imageOverlay:'light' },
+    matches:c=>c.bg==='#EDF3F8',
+  },
+  {
+    key:'custom', label:'Custom', blurb:'Start from scratch',
+    thumbBg:'#FFFFFF', thumbInk:'#9A9A97',
+    apply:{ bg:'#FFFFFF', nameColor:undefined, imageIntensity:100, imageBlur:'none', imageOverlay:'none' },
+    matches:c=>c.bg==='#FFFFFF',
+  },
+];
+
 // ── Image appearance: how loud a cover photo is allowed to be ─────────────────
 //
 // Three controls, no more. A cover photo should behave like atmosphere behind
@@ -460,10 +510,10 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
     <div>
       <style>{BG_KEYFRAMES}</style>
       {/* tabs */}
-      <div className="flex gap-1.5 mb-3">
-        {([['color','Color'],['design','Designs']] as const).map(([k,label])=>(
+      <div className="inline-flex gap-1 mb-4 p-1 rounded-xl bg-[#F1F2F3]">
+        {([['color','Solid'],['design','Design']] as const).map(([k,label])=>(
           <button key={k} onClick={()=>setTab(k)}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${tab===k?'bg-[#7C3AED] text-white':'bg-[#F7F7F6] text-[#777777] hover:text-[#0A0A0A]'}`}>
+            className={`px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${tab===k?'bg-white text-[#0A0A0A] shadow-[0_1px_2px_rgba(10,10,10,0.08)]':'text-[#777777] hover:text-[#0A0A0A]'}`}>
             {label}
           </button>
         ))}
@@ -471,18 +521,18 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
 
       {tab==='color'&&(
         <>
-          <div className="grid grid-cols-8 gap-2 mb-3">
+          <div className="flex flex-wrap gap-2 mb-3">
             {BG_RAINBOW.map(c=>(
               <button key={c} onClick={()=>onChange(c)} title={c}
-                className="aspect-square rounded-lg border-2 transition-all hover:scale-110"
+                className="w-9 h-9 rounded-lg border-2 transition-transform hover:scale-110"
                 style={{background:c,borderColor:value===c?accent:border}}/>
             ))}
           </div>
           {/* colour wheel */}
           <button onClick={()=>wheelRef.current?.click()}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors hover:border-[#0A0A0A]"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors hover:bg-[#F7F7F6]"
             style={{borderColor:border}}>
-            <span className="w-6 h-6 rounded-full flex-shrink-0" style={{background:'conic-gradient(#ef4444,#f59e0b,#eab308,#22c55e,#06b6d4,#3b82f6,#8b5cf6,#ec4899,#ef4444)'}}/>
+            <span className="w-5 h-5 rounded-full flex-shrink-0" style={{background:'conic-gradient(#ef4444,#f59e0b,#eab308,#22c55e,#06b6d4,#3b82f6,#8b5cf6,#ec4899,#ef4444)'}}/>
             <span className="text-[12px] font-semibold text-[#0A0A0A]">Pick any color</span>
           </button>
           <input ref={wheelRef} type="color"
@@ -693,24 +743,37 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
           }
           <p className="font-bold text-[13px]" style={{fontFamily:config.font??'Inter, system-ui, sans-serif',color:config.nameColor??(isDark?'#FFFFFF':'#0A0A0A')}}>{business?.name??'Your Business'}</p>
           {config.location && <p className={`text-[9px] truncate px-2 mt-0.5 ${sx}`}>{config.location}</p>}
-          <div className="flex items-center justify-center gap-3 mt-2">
-            {reviewPct && (
-              <div className="flex items-center gap-1">
-                <LucideStar size={9} color="#f59e0b" filled/>
-                <span className="text-[9px] font-semibold text-[#f59e0b]">{locBlock?.reviewStars}</span>
-                <span className="text-[8px] font-medium text-[#f59e0b]/70">({reviewPct}%)</span>
-                {!!locBlock?.reviewCount&&locBlock.reviewCount>0&&<span className={`text-[8px] ${sx}`}>· {locBlock.reviewCount.toLocaleString()}</span>}
-              </div>
-            )}
-            {reviewPct && <span className={`text-[8px] ${sx}`}>·</span>}
-            <button className={`flex items-center gap-1 px-2 py-0.5 rounded-lg ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              <span className="text-[8px] font-medium">Share</span>
-            </button>
-          </div>
+
           {(config.tags??[]).length>0 && (
             <TagsRow tags={config.tags??[]} isDark={isDark}/>
           )}
+
+          {/* Rating: the Google score only. The percentage that used to sit
+              here came from the anonymous thumbs, which the public page no
+              longer has. */}
+          {!!locBlock?.reviewStars && locBlock.reviewStars > 0 && (
+            <div className="flex items-center justify-center gap-1.5 mt-2">
+              <LucideStar size={9} color="#FBBC04" filled/>
+              <span className={`text-[9px] font-bold ${isDark?'text-white/90':'text-black/85'}`}>
+                {locBlock.reviewStars.toFixed(1)}
+              </span>
+              {!!locBlock?.reviewCount&&locBlock.reviewCount>0&&(
+                <span className={`text-[8.5px] ${sx}`}>
+                  · {locBlock.reviewCount.toLocaleString()} Google {locBlock.reviewCount===1?'review':'reviews'}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Share is a real action on the live page, so it looks like one here. */}
+          <div className="flex justify-center mt-2.5">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-semibold ${
+              isDark?'bg-white/14 text-white border border-white/25':'bg-black/5 text-black/75 border border-black/10'
+            }`}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
+              Share this place
+            </span>
+          </div>
         </div>
 
         {/* Blocks — support half/full layout */}
@@ -1003,14 +1066,29 @@ function LiveDesktopPreview({ business,config,timeZone,override,selectedId,onSel
               {config.tags.filter(Boolean).join(' · ')}
             </p>
           )}
-          {reviewPct && (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:4, marginTop:6 }}>
-              <LucideStar size={11} color="#f59e0b" filled/>
-              <span style={{ fontSize:11, fontWeight:700, color:'#f59e0b' }}>{locBlock?.reviewStars}</span>
-              <span style={{ fontSize:10, fontWeight:600, color:'#f59e0b', opacity:0.7 }}>({reviewPct}%)</span>
-              {!!locBlock?.reviewCount && locBlock.reviewCount>0 && <span style={{ fontSize:10, color:sx }}> · {locBlock.reviewCount.toLocaleString()} reviews</span>}
+          {!!locBlock?.reviewStars && locBlock.reviewStars > 0 && (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:5, marginTop:8 }}>
+              <LucideStar size={11} color="#FBBC04" filled/>
+              <span style={{ fontSize:12, fontWeight:700, color:tx }}>{locBlock.reviewStars.toFixed(1)}</span>
+              {!!locBlock?.reviewCount && locBlock.reviewCount>0 && (
+                <span style={{ fontSize:11, color:sx }}>
+                  · {locBlock.reviewCount.toLocaleString()} Google {locBlock.reviewCount===1?'review':'reviews'}
+                </span>
+              )}
             </div>
           )}
+          <div style={{ display:'flex', justifyContent:'center', marginTop:12 }}>
+            <span style={{
+              display:'inline-flex', alignItems:'center', gap:7, padding:'9px 16px', borderRadius:999,
+              fontSize:12.5, fontWeight:650,
+              background:isDark?'rgba(255,255,255,0.14)':'rgba(0,0,0,0.05)',
+              border:isDark?'1px solid rgba(255,255,255,0.25)':'1px solid rgba(0,0,0,0.10)',
+              color:isDark?'#FFFFFF':'rgba(0,0,0,0.78)',
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
+              Share this place
+            </span>
+          </div>
         </div>
 
         {/* Blocks */}
@@ -2900,7 +2978,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
           {SIDEBAR_NAV.map(({key,label,icon,badge})=>(
             <button key={key} onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
-              className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-all ${
+              className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2 rounded-xl text-[13px] font-medium text-left transition-colors ${
                 sidebarTab===key ? 'bg-[#ECECEA]' : 'hover:bg-[#F7F7F6]'
               }`}
               style={{color:sidebarTab===key?'#0A0A0A':'#777777',fontWeight:sidebarTab===key?600:500}}>
@@ -2945,7 +3023,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </span>}
             <span className="min-w-0 flex-1">
               <span className="block text-[12px] font-semibold text-[#0A0A0A] truncate leading-tight">{business?.name??'Your business'}</span>
-              <span className="block text-[10.5px] text-[#9A9A97] leading-tight">OpenStatus</span>
+              <span className="block text-[10.5px] text-[#9A9A97] leading-tight">
+                {business?.slug ? `openstatus.co/${business.slug}` : 'Not published yet'}
+              </span>
             </span>
           </div>
         </div>
@@ -2958,6 +3038,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <header className="relative h-14 items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm border-b border-[#E9E9E7]" style={{display:isMobile?"none":"flex"}}>
           <span aria-hidden="true"/>
           <div className="flex items-center gap-3">
+            {/* Preview target. It used to float on top of the phone, covering
+                the owner's own cover photo. */}
+            {!['hours','settings','integrations'].includes(sidebarTab)&&(
+              <div className="inline-flex gap-1 p-1 rounded-xl bg-[#F1F2F3]">
+                {([['mobile','Mobile'] as const,['desktop','Desktop'] as const]).map(([k,label])=>(
+                  <button key={k} onClick={()=>setPreviewMode(k)}
+                    className={`px-3 py-1 rounded-lg text-[12px] font-semibold transition-colors ${
+                      previewMode===k?'bg-white text-[#0A0A0A] shadow-[0_1px_2px_rgba(10,10,10,0.08)]':'text-[#777777] hover:text-[#0A0A0A]'
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
                 className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E9E9E7] bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#0A0A0A] transition-colors hover:bg-[#F7F7F6]">
@@ -3293,7 +3387,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         <span className="text-[13px] font-medium">Add block</span>
                       </button>
                       <button onClick={addCustomLink}
-                        className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#DDD6FE] text-[#6D28D9] hover:border-[#7C3AED] hover:bg-[#FAFAFF] transition-all">
+                        className="flex-1 flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-[#DCDCD9] text-[#0A0A0A] hover:border-[#0A0A0A] hover:bg-[#F7F7F6] transition-colors">
                         <div className="w-6 h-6 rounded-full border border-current flex items-center justify-center flex-shrink-0">
                           <span className="text-[14px] leading-none">+</span>
                         </div>
@@ -3581,88 +3675,132 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <p className="text-[#777777] text-[13px] mt-1">Background, imagery, brand and type.</p>
                 </div>
 
+                {/* ── 1. Presets ────────────────────────────────────────────
+                     A starting point, not a lock-in: each one just writes the
+                     same fields the controls below write, so the owner can
+                     pick a look and then change any part of it. */}
                 <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">3. Background</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Choose a background for your page.</p>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">1. Presets</p>
+                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Start with a look, then customize it.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                    {STYLE_PRESETS.map(preset=>{
+                      const active = preset.matches(config);
+                      return (
+                        <button key={preset.key} type="button"
+                          onClick={()=>setConfig(c=>({...c,...preset.apply}))}
+                          className={`text-left rounded-2xl border p-2.5 transition-colors ${
+                            active?'border-[#7C3AED] bg-[rgba(124,58,237,0.05)]':'border-[#E9E9E7] bg-white hover:border-[#DCDCD9]'
+                          }`}>
+                          <span className="block rounded-xl overflow-hidden mb-2 aspect-[3/4]" style={{background:preset.thumbBg}}>
+                            <span className="flex h-full flex-col justify-end gap-1 p-2">
+                              <span className="block h-1.5 rounded-full" style={{background:preset.thumbInk,opacity:0.85,width:'62%'}}/>
+                              <span className="block h-3 rounded-lg" style={{background:preset.thumbInk,opacity:0.30}}/>
+                              <span className="block h-3 rounded-lg" style={{background:preset.thumbInk,opacity:0.18}}/>
+                            </span>
+                          </span>
+                          <span className="block text-[12.5px] font-semibold text-[#0A0A0A] leading-tight">{preset.label}</span>
+                          <span className="block text-[11px] text-[#9A9A97] leading-tight mt-0.5">{preset.blurb}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+
+                {/* ── 2. Brand ── */}
+                <div>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">2. Brand</p>
+                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Add your logo and cover photo.</p>
+                  <div className="grid gap-4 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] items-start">
+                    <div className="rounded-2xl border border-[#E9E9E7] bg-white p-4">
+                      <p className="text-[13px] font-semibold text-[#0A0A0A] mb-3">Logo</p>
+                    <div>
+                      <div className="flex items-center gap-4">
+                        {localBusiness?.avatar_url
+                          ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                              className="w-14 h-14 rounded-full object-cover border border-[#E9E9E7] flex-shrink-0" alt="Logo"/>
+                          :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
+                        }
+                        <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
+                          <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                            const file=e.target.files?.[0];if(!file)return;
+                            setLogoUploading(true);setLogoUploadError('');
+                            try{
+                              const ref=await uploadAsset(file,'avatar');
+                              if(localBusiness?.id){
+                                await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                                setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                              }
+                            }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                            finally{setLogoUploading(false);e.target.value='';}
+                          }}/>
+                          <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-medium text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
+                            <LucideImage size={13} color="#777777"/>
+                            {logoUploading?'Uploading…':'Upload logo'}
+                          </span>
+                        </label>
+                      </div>
+                      {logoUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{logoUploadError}</p>}
+                    </div>
+                    </div>
+                    <div className="rounded-2xl border border-[#E9E9E7] bg-white p-4">
+                      <p className="text-[13px] font-semibold text-[#0A0A0A] mb-3">Cover photo</p>
+                      {config.bgImage&&(
+                        <CoverPhotoCrop
+                          src={config.bgImage}
+                          position={config.bgImagePosition}
+                          onChange={pos=>setConfig(c=>({...c,bgImagePosition:pos}))}
+                          onRemove={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
+                        />
+                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
+                          <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                            const file=e.target.files?.[0];if(!file)return;
+                            setBgUploading(true);setBgUploadError('');
+                            try{
+                              const ref=await uploadAsset(file,'header');
+                              const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
+                              setConfig(c=>({...c,bgImage:bgUrl}));
+                            }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+                            finally{setBgUploading(false);e.target.value='';}
+                          }}/>
+                          <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-medium text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
+                            <LucideImage size={13} color="#777777"/>
+                            {bgUploading?'Uploading…':'Upload photo'}
+                          </span>
+                        </label>
+                        {googlePhotos.map((url,i)=>(
+                          <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+                            className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
+                            <img src={url} className="w-full h-full object-cover" alt=""/>
+                          </button>
+                        ))}
+                      </div>
+                      {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── 3. Background ── */}
+                <div>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">3. Background</p>
+                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Choose a background for your page.</p>
                   <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(pc=>({...pc,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
-                </div>
-
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">Cover photo</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Adds personality to the top of your page.</p>
-                  {config.bgImage&&(
-                    <CoverPhotoCrop
-                      src={config.bgImage}
-                      position={config.bgImagePosition}
-                      onChange={pos=>setConfig(c=>({...c,bgImagePosition:pos}))}
-                      onRemove={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
-                    />
-                  )}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
-                      <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                        const file=e.target.files?.[0];if(!file)return;
-                        setBgUploading(true);setBgUploadError('');
-                        try{
-                          const ref=await uploadAsset(file,'header');
-                          const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
-                          setConfig(c=>({...c,bgImage:bgUrl}));
-                        }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
-                        finally{setBgUploading(false);e.target.value='';}
-                      }}/>
-                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-medium text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
-                        <LucideImage size={13} color="#777777"/>
-                        {bgUploading?'Uploading…':'Upload photo'}
-                      </span>
-                    </label>
-                    {googlePhotos.map((url,i)=>(
-                      <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                        className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
-                        <img src={url} className="w-full h-full object-cover" alt=""/>
-                      </button>
-                    ))}
+                  <div className="mt-6">
+                    <p className="text-[13px] font-semibold text-[#0A0A0A] mb-0.5">Image appearance</p>
+                    <p className="text-[12px] text-[#777777] mb-3">Soften a photo so it sits behind your page, not in front of it.</p>
+                  <div>
+                    <ImageAppearanceControls config={config} onChange={patch=>setConfig(c=>({...c,...patch}))}/>
                   </div>
-                  {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
                 </div>
-
-                {/* ── Image appearance ── */}
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">Image appearance</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Soften a photo so it sits behind your page, not in front of it.</p>
-                  <ImageAppearanceControls config={config} onChange={patch=>setConfig(c=>({...c,...patch}))}/>
-                </div>
-
-                {/* ── Logo ── */}
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">Logo</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Shown above your business name.</p>
-                  <div className="flex items-center gap-4">
-                    {localBusiness?.avatar_url
-                      ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                          className="w-14 h-14 rounded-full object-cover border border-[#E9E9E7] flex-shrink-0" alt="Logo"/>
-                      :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
-                    }
-                    <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
-                      <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                        const file=e.target.files?.[0];if(!file)return;
-                        setLogoUploading(true);setLogoUploadError('');
-                        try{
-                          const ref=await uploadAsset(file,'avatar');
-                          if(localBusiness?.id){
-                            await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                            setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                          }
-                        }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                        finally{setLogoUploading(false);e.target.value='';}
-                      }}/>
-                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-medium text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
-                        <LucideImage size={13} color="#777777"/>
-                        {logoUploading?'Uploading…':'Upload logo'}
-                      </span>
-                    </label>
-                  </div>
-                  {logoUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{logoUploadError}</p>}
                 </div>
 
                 {/* ── Business name colour ── */}
                 <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">Typography</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Set the font and how your name looks.</p>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">4. Typography</p>
+                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Set the font and how your name looks.</p>
+                  <p className="text-[13px] font-semibold text-[#0A0A0A] mb-2">Business name colour</p>
                   <NameColorPicker
                     value={config.nameColor}
                     autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
@@ -3727,8 +3865,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-1">Font</p>
-                  <p className="text-[11px] text-[#9A9A97] mb-3">Applies to everything on your page.</p>
+                  <p className="text-[13px] font-semibold text-[#0A0A0A] mb-0.5">Font</p>
+                  <p className="text-[12px] text-[#777777] mb-3">Applies to everything on your page.</p>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                     {FONT_OPTIONS.map(opt=>{
                       const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
@@ -4106,11 +4244,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               {/* Drag-resize handle */}
               <div
                 onMouseDown={onResizeStart}
-                className="w-2 flex-shrink-0 cursor-col-resize group flex items-center justify-center transition-colors hover:bg-[#a78bfa]/20 active:bg-[#a78bfa]/40"
+                className="w-2 flex-shrink-0 cursor-col-resize group flex items-center justify-center transition-colors hover:bg-[#0A0A0A]/5 active:bg-[#0A0A0A]/10"
                 style={{background:'transparent'}}
                 title="Drag to resize"
               >
-                <div className="w-0.5 h-10 rounded-full bg-[#C0C0C0] group-hover:bg-[#a78bfa] transition-colors"/>
+                <div className="w-0.5 h-10 rounded-full bg-[#C0C0C0] group-hover:bg-[#777777] transition-colors"/>
               </div>
               {/* Preview panel */}
               <div
@@ -4120,22 +4258,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   overflow: 'hidden',
                   backgroundImage:'linear-gradient(rgba(10,10,10,0.030) 1px,transparent 1px),linear-gradient(90deg,rgba(10,10,10,0.030) 1px,transparent 1px)',
                   backgroundSize:'24px 24px',
-                  backgroundColor:'#f5f3ff',
+                  backgroundColor:'#F1F2F3',
                 }}
               >
-                {/* Phone / Web toggle */}
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex gap-0.5 p-1 rounded-full bg-white/85 backdrop-blur border border-[#E9E9E7] shadow-sm">
-                  {([
-                    {key:'mobile'  as const, label:'Phone', icon:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>},
-                    {key:'desktop' as const, label:'Web',   icon:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>},
-                  ]).map(({key,label,icon})=>(
-                    <button key={key} onClick={()=>setPreviewMode(key)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${previewMode===key?'bg-white text-[#0A0A0A] shadow-[0_1px_2px_rgba(10,10,10,0.06)]':'text-[#777777] hover:text-[#0A0A0A]'}`}>
-                      {icon}{label}
-                    </button>
-                  ))}
-                </div>
-
                 {/* Centered preview */}
                 <div className="flex flex-col items-center gap-3 w-full" style={{padding:'0 24px',maxWidth:previewMode==='desktop'?'100%':undefined}}>
                   {previewMode==='mobile'
@@ -4673,7 +4798,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             ? 'calc(48vh + 56px + env(safe-area-inset-bottom))'
             : 'calc(112px + env(safe-area-inset-bottom))',
           transition:'bottom .3s cubic-bezier(.32,.72,0,1)',
-          backgroundColor:'#f5f3ff',
+          backgroundColor:'#F1F2F3',
           backgroundImage:'linear-gradient(rgba(10,10,10,0.030) 1px,transparent 1px),linear-gradient(90deg,rgba(10,10,10,0.030) 1px,transparent 1px)',
           backgroundSize:'24px 24px',
           touchAction: mDragId ? 'none' : undefined,
