@@ -26,6 +26,8 @@ export type OpenStatusBlock = {
   lat?: number;
   lng?: number;
   reviews?: Array<{author:string;rating:number;text:string;time:string}>;
+  /** Offers block only. Structured, so expiry and analytics are possible. */
+  offers?: Offer[];
 };
 
 export type WeekDay = 'mon'|'tue'|'wed'|'thu'|'fri'|'sat'|'sun';
@@ -33,6 +35,7 @@ export interface DayHours { open: string; close: string; closed: boolean; }
 export type WeeklyHours = Record<WeekDay, DayHours>;
 
 import { type ImageBlur, type ImageOverlay, isImageBlur, isImageOverlay } from './image-treatment';
+import { type Offer, MAX_OFFERS, OFFER_TITLE_MAX, OFFER_DESC_MAX, OFFER_CODE_MAX } from './offers';
 
 export type OpenStatusSocial = { id: string; label: string; url: string; on: boolean };
 export type OpenStatusPageConfig = {
@@ -78,6 +81,38 @@ export const defaultOpenStatusBlocks: OpenStatusBlock[] = [
   { id: 'reviews', title: 'Reviews',         sub: 'Read what guests say',         icon: '', on: true,  tone: 'glass', url: '', size: 'third' },
 ];
 
+/**
+ * Offers, cleaned on the way in.
+ *
+ * Lengths are capped here and not only in the input, because a saved config
+ * can come from an older client and this text renders on a stranger's phone.
+ */
+function normalizeOffers(value: unknown): Offer[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const out = value
+    .filter((o): o is Record<string, unknown> => !!o && typeof o === 'object')
+    .map((o, i) => {
+      const str = (k: string, max: number): string | undefined => {
+        const v = o[k];
+        return typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined;
+      };
+      return {
+        id: typeof o.id === 'string' && o.id ? o.id : `offer-${i}`,
+        title: str('title', OFFER_TITLE_MAX) ?? '',
+        description: str('description', OFFER_DESC_MAX),
+        code: str('code', OFFER_CODE_MAX),
+        // Only a real calendar date survives; anything else would render as
+        // "Valid through Invalid Date" on a customer's phone.
+        expiresAt: typeof o.expiresAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.expiresAt)
+          ? o.expiresAt : undefined,
+        url: str('url', 500),
+        on: typeof o.on === 'boolean' ? o.on : true,
+      } satisfies Offer;
+    })
+    .slice(0, MAX_OFFERS);
+  return out.length ? out : undefined;
+}
+
 /** The builder has always written 'photos'; older saves used 'photo'. */
 function normalizeMenuType(value: unknown): 'url' | 'photos' | 'pdf' {
   if (value === 'photos' || value === 'photo') return 'photos';
@@ -114,6 +149,7 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
           color: typeof b.color === 'string' ? b.color : undefined,
           menuType: normalizeMenuType((b as { menuType?: unknown }).menuType),
           menuFile: typeof b.menuFile === 'string' ? b.menuFile : undefined,
+          offers: normalizeOffers((b as { offers?: unknown }).offers),
         };
       })
     : defaultOpenStatusBlocks;

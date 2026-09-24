@@ -513,6 +513,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           {/* All other blocks */}
           <PublishedBusinessBlocks
           dark={bgIsDark}
+            today={localToday}
             businessId={business.id}
             businessName={business.name}
             location={enrichedConfig.location || business.tagline || business.name}

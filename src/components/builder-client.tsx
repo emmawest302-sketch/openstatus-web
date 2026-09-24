@@ -10,13 +10,14 @@ import { swapById, canDrag } from '@/lib/reorder';
 import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
 import { shortAddress } from '@/lib/address';
+import { localDay, activeOffers, newOfferId, MAX_OFFERS, OFFER_TITLE_MAX, OFFER_DESC_MAX, OFFER_CODE_MAX, type Offer } from '@/lib/offers';
 import { externalUrl } from '@/lib/url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
 import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
-import { publishedBlocks, blockHasDestination, HEADER_ACTION_IDS } from '@/lib/page-rows';
+import { publishedBlocks, blockHasDestination, rowRank, isCustomRow, HEADER_ACTION_IDS } from '@/lib/page-rows';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicBanner from '@/components/public-banner';
 import PublicHoursRow from '@/components/public-hours-row';
@@ -65,12 +66,14 @@ import {
   BG_DESIGNS,
   BG_RAINBOW,
   BOOK_PROVIDERS,
+  SHOP_PROVIDERS,
   DAYS,
   DEFAULT_BLOCKS,
   DEFAULT_WEEK_HOURS,
   FEATURE_TAGS,
   FONT_OPTIONS,
   ORDER_PROVIDERS,
+  SHOP_SUGGESTED_CATEGORIES,
   SOCIAL_PLATFORMS,
 } from '@/components/builder/constants';
 
@@ -128,6 +131,8 @@ export interface OpenStatusBlock {
   lat?: number;
   lng?: number;
   reviews?: Array<{author:string;rating:number;text:string;time:string}>;
+  /** Offers block only. Structured, so expiry and analytics are possible. */
+  offers?: Offer[];
   _googleFetching?: boolean; _googleError?: string;
 }
 export interface OpenStatusPageConfig {
@@ -655,6 +660,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
                 placeId={config.placeId ?? null}
                 dark={isDark}
                 accent={accent}
+                today={localDay(new Date(), timeZone || 'America/Chicago')}
               />
         )))}
 
@@ -972,10 +978,121 @@ function ReviewsCard({ block,placeId,onUpdateBlock }: {
 }
 
 // ── Block edit panel (inline right of blocks, no modal) ───────────────────────
-function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,onClose,timeZone,override }: {
+/**
+ * The offers editor.
+ *
+ * One list, one row per offer, everything optional except the title. The
+ * owner is not designing a coupon — how it looks is the page's job — so there
+ * is nothing here but the words, the code and the date.
+ */
+function OffersEditor({ offers, today, onChange }: {
+  offers: Offer[] | undefined;
+  today: string;
+  onChange: (next: Offer[]) => void;
+}) {
+  const list = offers ?? [];
+  const live = activeOffers(list, today).length;
+
+  const update = (id: string, patch: Partial<Offer>) =>
+    onChange(list.map(o => (o.id === id ? { ...o, ...patch } : o)));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[12.5px] text-[#777777] leading-relaxed">
+          Shown as one row on your page that opens to the list. Expired and switched-off
+          offers never appear, and with none live the row hides itself.
+        </p>
+        <span className="flex-shrink-0 text-[11px] font-semibold text-[#9A9A97] tabular-nums">
+          {live} live
+        </span>
+      </div>
+
+      {list.length === 0 && (
+        <p className="rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] px-3 py-2.5 text-[11.5px] text-[#777777]">
+          No offers yet. Add one and it goes live as soon as you save.
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {list.map((offer) => {
+          const expired = !!offer.expiresAt && offer.expiresAt < today;
+          return (
+            <div key={offer.id} className="rounded-2xl border border-[#E9E9E7] bg-white p-3.5">
+              <div className="flex items-center justify-between gap-3 mb-2.5">
+                <span className={`text-[10.5px] font-semibold uppercase tracking-[0.1em] ${
+                  expired ? 'text-[#B45309]' : offer.on === false ? 'text-[#9A9A97]' : 'text-[#15803D]'
+                }`}>
+                  {expired ? 'Expired' : offer.on === false ? 'Off' : 'Live'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Toggle on={offer.on !== false} onChange={v => update(offer.id, { on: v })}/>
+                  <button
+                    onClick={() => onChange(list.filter(o => o.id !== offer.id))}
+                    aria-label="Remove this offer"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[#C0C0C0] hover:text-[#0A0A0A] hover:bg-[#F0F0F0] transition-all">
+                    <LucideX size={11} color="currentColor"/>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <Input
+                  value={offer.title}
+                  onChange={v => update(offer.id, { title: v.slice(0, OFFER_TITLE_MAX) })}
+                  placeholder="10% off your first visit"
+                />
+                <Input
+                  value={offer.description ?? ''}
+                  onChange={v => update(offer.id, { description: v.slice(0, OFFER_DESC_MAX) })}
+                  placeholder="Details (optional)"
+                />
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Input
+                    value={offer.code ?? ''}
+                    onChange={v => update(offer.id, { code: v.slice(0, OFFER_CODE_MAX) })}
+                    placeholder="Code (optional)"
+                  />
+                  <input
+                    type="date"
+                    value={offer.expiresAt ?? ''}
+                    onChange={e => update(offer.id, { expiresAt: e.target.value || undefined })}
+                    className="w-full bg-white border border-[#E9E9E7] rounded-xl px-3 py-2 text-[12px] text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+                  />
+                </div>
+                <Input
+                  value={offer.url ?? ''}
+                  onChange={v => update(offer.id, { url: v })}
+                  placeholder="Redeem link (optional)"
+                />
+              </div>
+              {expired && (
+                <p className="text-[10.5px] text-[#B45309] mt-2">
+                  Past its date, so customers can&apos;t see it. Change the date or delete it.
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        disabled={list.length >= MAX_OFFERS}
+        onClick={() => onChange([...list, { id: newOfferId(), title: '', on: true }])}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-[#D0D5DD] text-[12.5px] font-semibold text-[#777777] hover:border-[#0A0A0A] hover:text-[#0A0A0A] transition-colors disabled:opacity-40 disabled:hover:border-[#D0D5DD]">
+        {list.length >= MAX_OFFERS ? `That\u2019s the limit of ${MAX_OFFERS}` : 'Add an offer'}
+      </button>
+    </div>
+  );
+}
+
+function BlockEditPanel({ block,config,businessId,today,onUpdateBlock,onUpdateConfig,onClose,timeZone,override }: {
   block:OpenStatusBlock; config:OpenStatusPageConfig;
   /** For the rows that read live data from the business's Google listing. */
   businessId?:string;
+  /** Today where the shop is — offers expire on a calendar date. */
+  today?:string;
   onUpdateBlock:(u:Partial<OpenStatusBlock>)=>void;
   onUpdateConfig:(u:Partial<OpenStatusPageConfig>)=>void;
   onClose:()=>void;
@@ -1215,6 +1332,41 @@ function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,o
             </div>
           )}
 
+          {/* ── OFFERS ── */}
+          {block.id==='offers' && (
+            <OffersEditor
+              offers={block.offers}
+              today={today ?? localDay(new Date(), timeZone || 'America/Chicago')}
+              onChange={next=>onUpdateBlock({ offers: next })}
+            />
+          )}
+
+          {/* ── SHOP ── */}
+          {block.id==='shop' && (
+            <div className="space-y-5">
+              <p className="text-[12.5px] text-[#777777] leading-relaxed">
+                Sends people to the store you already run. OpenStatus doesn&apos;t hold your
+                products or take the payment — it just makes sure customers can find it.
+              </p>
+              <div>
+                <FieldLabel>Where you sell</FieldLabel>
+                <BrandProviderPicker
+                  providers={SHOP_PROVIDERS}
+                  selectedKey={block.provider??''}
+                  onSelect={(key,label)=>onUpdateBlock({ provider:key, sub: key==='other' ? 'Shop online' : label })}
+                />
+                <p className="mt-1 text-[10px] text-black/35">
+                  Optional. Picking one shows their logo and name on the row.
+                </p>
+              </div>
+              <div>
+                <FieldLabel>Shop link</FieldLabel>
+                <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://\u2026 your store"/>
+                <p className="mt-1 text-[10px] text-black/35">Without a link this block won&apos;t publish.</p>
+              </div>
+            </div>
+          )}
+
           {/* ── UPDATES ── */}
           {block.id==='updates' && (
             <div className="space-y-4">
@@ -1257,12 +1409,16 @@ function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,o
  */
 const PICKER_CATEGORIES = [
   { label:'Essential',      ids:['hours'] },
+  { label:'Promotions',     ids:['offers'] },
   { label:'Food & Beverage',ids:['menu','order'] },
+  { label:'Selling online', ids:['shop'] },
   { label:'Engagement',     ids:['book','reviews','gallery','updates'] },
 ];
 
-function BlockPicker({ blocks, onAdd, onClose }: {
+function BlockPicker({ blocks, category, onAdd, onClose }: {
   blocks: OpenStatusBlock[];
+  /** Used only to suggest, never to hide. See SHOP_SUGGESTED_CATEGORIES. */
+  category?: string | null;
   onAdd: (id: string) => void;
   onClose: () => void;
 }) {
@@ -1292,18 +1448,31 @@ function BlockPicker({ blocks, onAdd, onClose }: {
                 <p className="text-[10px] font-semibold text-[#C0C0C0] tracking-widest uppercase px-4 pt-3 pb-1">{cat.label}</p>
                 {items.map(def => {
                   const isOn = blocks.find(b=>b.id===def.id)?.on;
+                  // Progressive relevance: a boutique sees Shop flagged, a
+                  // restaurant still finds it in the same list. Nothing is
+                  // hidden from anyone on the strength of a category.
+                  const suggested = def.id === 'shop'
+                    && !isOn
+                    && !!category
+                    && SHOP_SUGGESTED_CATEGORIES.has(category);
                   return (
                     <button key={def.id}
                       onClick={()=>{ onAdd(def.id); onClose(); }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#F4F5F6] transition-colors text-left">
-                      <div className="w-8 h-8 rounded-xl bg-[#EEEEEC] border border-[#E9E9E7] flex items-center justify-center flex-shrink-0">
-                        <BlockIcon id={def.id} size={14} color="#0A0A0A"/>
+                      <div className={`w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+                        suggested ? 'bg-[#EEF2FF] border-[#C7D2FE]' : 'bg-[#EEEEEC] border-[#E9E9E7]'
+                      }`}>
+                        <BlockIcon id={def.id} size={14} color={suggested ? '#4338CA' : '#0A0A0A'}/>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium text-[#0A0A0A] leading-tight">{def.title}</p>
                         <p className="text-[11px] text-[#858585] leading-tight">{def.sub}</p>
                       </div>
-                      {isOn && <span className="text-[10px] text-[#C0C0C0] font-medium flex-shrink-0">Added</span>}
+                      {isOn
+                        ? <span className="text-[10px] text-[#C0C0C0] font-medium flex-shrink-0">Added</span>
+                        : suggested
+                          ? <span className="text-[10px] font-semibold text-[#4338CA] bg-[#EEF2FF] rounded-full px-2 py-0.5 flex-shrink-0">Suggested</span>
+                          : null}
                     </button>
                   );
                 })}
@@ -1886,7 +2055,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // owner reorders. Leaving them in meant dragging a block that never appeared
   // on the page and switching off a button that stayed on.
   const rowBlocks = allBlocks.filter(b=>!HEADER_ACTION_IDS.has(b.id));
-  const orderedBlocks = [...rowBlocks.filter(b=>b.id==='hours'),...rowBlocks.filter(b=>b.id!=='hours')];
+  // Same hierarchy the published page uses, so the list an owner reads top to
+  // bottom is the page they are about to publish. This used to be "hours, then
+  // whatever order it was saved in", which stopped matching the moment the
+  // page started sorting.
+  const orderedBlocks = [...rowBlocks].sort((a,b)=>{
+    if (isCustomRow(a.id) !== isCustomRow(b.id)) return isCustomRow(a.id) ? 1 : -1;
+    if (isCustomRow(a.id)) return 0;                  // customs keep owner order
+    return rowRank(a.id) - rowRank(b.id);
+  });
   const activeBlocks = orderedBlocks.filter(b=>b.on);
   const openBlock = allBlocks.find(b=>b.id===openId)??null;
   // What the owner has set for today, if anything. Passed into every preview so
@@ -2888,6 +3065,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {showEditPanel&&openBlock?(
                   <BlockEditPanel
                     businessId={localBusiness?.id}
+                    today={localDay(new Date(), bizTimeZone || 'America/Chicago')}
                     block={openBlock} config={config} timeZone={bizTimeZone} override={todayOverride}
                     onUpdateBlock={u=>updateBlock(openBlock.id,u)}
                     onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
@@ -4445,6 +4623,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {openBlock&&(
           <BlockEditPanel
             businessId={localBusiness?.id}
+            today={localDay(new Date(), bizTimeZone || 'America/Chicago')}
             block={openBlock} config={config} timeZone={bizTimeZone} override={todayOverride}
             onUpdateBlock={u=>updateBlock(openBlock.id,u)}
             onUpdateConfig={u=>setConfig(c=>({...c,...u}))}
@@ -4692,6 +4871,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       {/* Block picker overlay */}
       {showPicker&&(
         <BlockPicker
+          category={normalizeCategory(localBusiness?.category)}
           blocks={allBlocks}
           onAdd={id=>enableBlock(id)}
           onClose={()=>setShowPicker(false)}

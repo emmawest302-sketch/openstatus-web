@@ -61,6 +61,10 @@ export function LucideLayoutList({ size=14,color='currentColor' }: { size?: numb
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="5"/><rect x="3" y="11" width="18" height="5"/><rect x="3" y="19" width="18" height="2"/></svg>;
 }
 
+export function LucideTag({ size=16,color='currentColor' }: { size?: number; color?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>;
+}
+
 export function LucideInstagram({ size=16,color='currentColor' }: { size?: number; color?: string }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill={color} stroke="none"/></svg>;
 }
@@ -76,6 +80,8 @@ export function BlockIcon({ id, size=16, color='currentColor' }: { id:string; si
     case 'gallery':  return <LucideImage size={size} color={color}/>;
     case 'reviews':  return <LucideStar size={size} color={color} filled/>;
     case 'updates':  return <LucideInstagram size={size} color={color}/>;
+    case 'offers':   return <LucideTag size={size} color={color}/>;
+    case 'shop':     return <LucideShoppingBag size={size} color={color}/>;
     default:         return <LucideGlobe size={size} color={color}/>;
   }
 }

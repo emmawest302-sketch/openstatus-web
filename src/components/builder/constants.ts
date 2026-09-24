@@ -73,6 +73,17 @@ export const ORDER_PROVIDERS = [
   { key:'toast',     label:'Toast'     },
   { key:'other',     label:'Other'     },
 ];
+/**
+ * Where a business already sells online. OpenStatus links out; it does not
+ * hold a catalogue, stock or a checkout.
+ */
+export const SHOP_PROVIDERS = [
+  { key:'shopify',     label:'Shopify'     },
+  { key:'square',      label:'Square'      },
+  { key:'woocommerce', label:'WooCommerce' },
+  { key:'etsy',        label:'Etsy'        },
+  { key:'other',       label:'Other'       },
+];
 export const BOOK_PROVIDERS = [
   { key:'resy',       label:'Resy'         },
   { key:'opentable',  label:'OpenTable'    },
@@ -129,4 +140,15 @@ export const DEFAULT_BLOCKS: OpenStatusBlock[] = [
   { id:'gallery', title:'Photos',                sub:'Your Google photos',         icon:'image',  on:false,tone:'default',color:'#0d9488',size:'full' },
   { id:'reviews', title:'Reviews',               sub:'Recent Google reviews',      icon:'star',   on:false,tone:'default',color:'#ca8a04',size:'full' },
   { id:'updates', title:'Latest updates',        sub:'Your recent Instagram posts',icon:'insta',  on:false,tone:'default',color:'#db2777',size:'full' },
+  { id:'offers',  title:'Offers',                sub:'Deals running right now',    icon:'tag',    on:false,tone:'default',color:'#c2410c',size:'full' },
+  { id:'shop',    title:'Shop',                  sub:'Shop online',                icon:'bag',    on:false,tone:'default',color:'#4338ca',size:'full' },
 ];
+
+/**
+ * Categories where an online store is likely enough to lead with.
+ *
+ * Progressive relevance, not gating: Shop stays in Add Block for everyone, a
+ * restaurant just does not get it suggested. Deliberately a flat list — a
+ * clever rule here would be a rule to maintain.
+ */
+export const SHOP_SUGGESTED_CATEGORIES = new Set(['retail', 'online', 'other']);

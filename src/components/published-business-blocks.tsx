@@ -17,10 +17,12 @@ type Props = {
   themeColor?: string;
   placeId?: string | null;
   dark?: boolean;
+  /** Today where the shop is, for anything that expires on a date. */
+  today: string;
 };
 
 export default function PublishedBusinessBlocks({
-  businessId, config, themeColor, placeId, dark = false,
+  businessId, config, themeColor, placeId, dark = false, today,
 }: Props) {
   // One shared filter, in lib/page-rows, so the builder preview and this page
   // cannot disagree about which rows publish.
@@ -52,6 +54,7 @@ export default function PublishedBusinessBlocks({
               placeId={placeId}
               dark={dark}
               accent={themeColor}
+              today={today}
             />
           </div>
         );

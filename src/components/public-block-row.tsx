@@ -5,6 +5,8 @@ import PublicActionBlock from '@/components/public-action-block';
 import PublicPhotosRow from '@/components/public-photos-row';
 import PublicMenuRow from '@/components/public-menu-row';
 import PublicReviewsRow from '@/components/public-reviews-row';
+import PublicOffersRow from '@/components/public-offers-row';
+import PublicShopRow from '@/components/public-shop-row';
 
 /**
  * One row, whichever kind it is.
@@ -26,14 +28,22 @@ export type PublicBlockRowProps = {
   placeId?: string | null;
   dark?: boolean;
   accent?: string;
+  /** Today where the shop is — offers expire on a calendar date. */
+  today: string;
 };
 
-export default function PublicBlockRow({ block, businessId, placeId, dark = false, accent }: PublicBlockRowProps) {
+export default function PublicBlockRow({ block, businessId, placeId, dark = false, accent, today }: PublicBlockRowProps) {
   if (block.id === 'gallery') {
     return <PublicPhotosRow block={block} businessId={businessId} placeId={placeId} dark={dark} accent={accent}/>;
   }
   if (block.id === 'reviews') {
     return <PublicReviewsRow block={block} businessId={businessId} placeId={placeId} dark={dark} accent={accent}/>;
+  }
+  if (block.id === 'offers') {
+    return <PublicOffersRow block={block} businessId={businessId} today={today} dark={dark} accent={accent}/>;
+  }
+  if (block.id === 'shop') {
+    return <PublicShopRow block={block} businessId={businessId} dark={dark} accent={accent}/>;
   }
   if (block.id === 'menu') {
     return <PublicMenuRow block={block} businessId={businessId} dark={dark} accent={accent}/>;

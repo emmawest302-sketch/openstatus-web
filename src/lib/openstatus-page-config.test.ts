@@ -14,6 +14,8 @@ const FULL = {
     { id: 'menu', title: 'Menu', sub: 'See the menu', icon: '', on: true, tone: 'glass',
       url: 'https://example.com/menu', size: 'square', color: '#7C3AED',
       menuType: 'photos', menuFile: 'menu.jpg' },
+    { id: 'offers', title: 'Offers', sub: '', icon: '', on: true, tone: 'glass',
+      offers: [{ id: 'o1', title: '10% off', code: 'WELCOME10', expiresAt: '2026-11-30', on: true }] },
   ],
   bg: '#101010',
   bgImage: 'https://example.com/bg.jpg',
@@ -163,5 +165,42 @@ describe('banner', () => {
   it('ignores a non-string banner', () => {
     expect(normalizeOpenStatusPageConfig({ banner: 42 }).banner).toBeUndefined();
     expect(normalizeOpenStatusPageConfig({ bannerOn: 'yes' }).bannerOn).toBeUndefined();
+  });
+});
+
+
+describe('offers', () => {
+  const withOffers = (offers: unknown) =>
+    normalizeOpenStatusPageConfig({ blocks: [{ id: 'offers', offers }] }).blocks[0].offers;
+
+  it('survives a save', () => {
+    const c = normalizeOpenStatusPageConfig(FULL);
+    const block = c.blocks.find(b => b.id === 'offers');
+    expect(block?.offers?.[0]).toMatchObject({ title: '10% off', code: 'WELCOME10', expiresAt: '2026-11-30' });
+  });
+
+  it('drops a date that is not a date, rather than rendering Invalid Date', () => {
+    expect(withOffers([{ id: 'a', title: 'x', expiresAt: 'next tuesday' }])?.[0].expiresAt).toBeUndefined();
+  });
+
+  it('caps the text that renders on a stranger\u2019s phone', () => {
+    const long = withOffers([{ id: 'a', title: 'x'.repeat(500), description: 'y'.repeat(500) }])?.[0];
+    expect(long?.title).toHaveLength(80);
+    expect(long?.description).toHaveLength(140);
+  });
+
+  it('caps how many there can be', () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ id: `o${i}`, title: `Offer ${i}` }));
+    expect(withOffers(many)).toHaveLength(8);
+  });
+
+  it('defaults a missing on to true', () => {
+    expect(withOffers([{ id: 'a', title: 'x' }])?.[0].on).toBe(true);
+    expect(withOffers([{ id: 'a', title: 'x', on: false }])?.[0].on).toBe(false);
+  });
+
+  it('is undefined rather than an empty array when there are none', () => {
+    expect(withOffers(undefined)).toBeUndefined();
+    expect(withOffers([])).toBeUndefined();
   });
 });
