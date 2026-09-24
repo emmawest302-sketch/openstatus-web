@@ -47,6 +47,12 @@ export type OpenStatusPageConfig = {
   themeColor?: string;
   socials: OpenStatusSocial[];
   location?: string;
+  /**
+   * Where the Directions button goes, when the owner wants a specific place
+   * rather than a search. Blank means build a maps search from the address,
+   * which is right for almost everyone and opens each visitor's own maps app.
+   */
+  directionsUrl?: string;
   tags?: string[];
   weeklyHours?: WeeklyHours;
   font?: string;
@@ -129,6 +135,7 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
     themeColor: typeof raw.themeColor === 'string' ? raw.themeColor : undefined,
     socials,
     location: typeof raw.location === 'string' ? raw.location : '',
+    directionsUrl: typeof raw.directionsUrl === 'string' ? raw.directionsUrl : undefined,
     tags: Array.isArray(raw.tags) ? raw.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 8) : [],
     font: typeof raw.font === 'string' ? raw.font : undefined,
     // Previously missing — see the note above normalizeOpenStatusPageConfig.

@@ -21,6 +21,7 @@ const FULL = {
   themeColor: '#DB6B8F',
   socials: { instagram: 'https://instagram.com/x', tiktok: '' },
   location: 'Nashville',
+  directionsUrl: 'https://maps.app.goo.gl/abc',
   tags: ['coffee', 'wifi'],
   font: 'Poppins',
   nameColor: '#FFFFFF',
@@ -86,6 +87,7 @@ describe('round trip', () => {
     expect(c.bgImagePosition).toBe('center');
     expect(c.themeColor).toBe('#DB6B8F');
     expect(c.location).toBe('Nashville');
+    expect(c.directionsUrl).toBe('https://maps.app.goo.gl/abc');
     expect(c.tags).toEqual(['coffee', 'wifi']);
     expect(c.font).toBe('Poppins');
     // These three were being dropped, which is why a custom name colour and an
@@ -107,7 +109,7 @@ describe('round trip', () => {
     // to the normalizer, FULL will stop covering it and this list will drift.
     const produced = normalizeOpenStatusPageConfig(FULL) as Record<string, unknown>;
     const expected: (keyof OpenStatusPageConfig)[] = [
-      'blocks', 'bg', 'bgImage', 'bgImagePosition', 'themeColor', 'socials',
+      'blocks', 'bg', 'bgImage', 'bgImagePosition', 'themeColor', 'socials', 'directionsUrl',
       'location', 'tags', 'weeklyHours', 'font', 'nameColor', 'bgAnim', 'bgAnimSpeed',
       'imageIntensity', 'imageBlur', 'imageOverlay',
     ];

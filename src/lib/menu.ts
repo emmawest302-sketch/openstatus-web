@@ -12,6 +12,8 @@
  * an owner replaces one without a delete button.
  */
 
+import { externalUrl } from './url';
+
 export type MenuSource = {
   url?: string;
   menuFile?: string;
@@ -21,7 +23,9 @@ export type MenuSource = {
 export type MenuDestination = { href: string; kind: 'pdf' | 'link' };
 
 export function menuDestination(block: MenuSource): MenuDestination | null {
-  const url = block.url?.trim() ?? '';
+  // "mymenu.com" typed without a scheme is a relative path in an href, which
+  // lands the customer on the business's own page instead of the menu.
+  const url = externalUrl(block.url);
   if (url) return { href: url, kind: 'link' };
 
   const file = block.menuFile?.trim() ?? '';

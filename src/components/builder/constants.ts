@@ -89,25 +89,12 @@ export const SOCIAL_PLATFORMS = [
   { key:'twitter',   label:'Twitter / X'},
   { key:'youtube',   label:'YouTube'   },
 ];
-/**
- * Layout choices offered for a block, keyed by block id.
- *
- * Only list a block here once its layouts actually render differently. The
- * picker previously offered choices for menu, order, book, socials and
- * website — "Brand / Calendar / CTA" and so on — but nothing anywhere read
- * `blockStyle` for those blocks. All three options drew the same blank grey
- * thumbnail (StyleThumb only has artwork for hours and location), nothing
- * changed in the preview, and nothing changed on the published page. The
- * owner was choosing between three identical buttons that did nothing.
- *
- * A control that does nothing is worse than no control, so those are gone
- * until the layouts behind them exist.
+/*
+ * A per-block layout list lived here. It went the same way the pickers did:
+ * every row renders through one component now, nothing reads `blockStyle`,
+ * so Minimal / Clock / Hero were three names for one look. See the note above
+ * ImageAppearanceControls in builder-client.
  */
-export const BLOCK_STYLES: Record<string, { key:string; label:string }[]> = {
-  hours:    [{ key:'minimal', label:'Minimal' }, { key:'clock',  label:'Clock'   }, { key:'hero',    label:'Hero'    }],
-  location: [{ key:'place',   label:'Map'     }, { key:'minimal', label:'Minimal' }],
-};
-
 export const FEATURE_TAGS = [
   'Delivery','Takeout','Dine-in','Curbside pickup','Catering',
   'Dog friendly','Kid friendly','Wheelchair accessible','Free WiFi',

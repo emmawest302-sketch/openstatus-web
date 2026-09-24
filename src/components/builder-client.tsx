@@ -10,6 +10,7 @@ import { swapById, canDrag } from '@/lib/reorder';
 import OwnerLinkCard from '@/components/owner-link-card';
 import { imageTreatment } from '@/lib/image-treatment';
 import { shortAddress } from '@/lib/address';
+import { externalUrl } from '@/lib/url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
 import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
@@ -62,7 +63,6 @@ import {
 import {
   BG_DESIGNS,
   BG_RAINBOW,
-  BLOCK_STYLES,
   BOOK_PROVIDERS,
   DAYS,
   DEFAULT_BLOCKS,
@@ -129,7 +129,7 @@ export interface OpenStatusPageConfig {
   imageIntensity?: number;
   imageBlur?: 'none'|'soft'|'strong';
   imageOverlay?: 'auto'|'light'|'dark'|'none';
-  location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
+  location?: string; directionsUrl?: string; tags?: string[]; weeklyHours?: WeeklyHours;
   likeCount?: number; dislikeCount?: number;
   themeColor?: string; placeId?: string; nameColor?: string;
   bgAnim?: string; bgAnimSpeed?: number;
@@ -221,6 +221,7 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     imageBlur:      (r.imageBlur==='none'||r.imageBlur==='soft'||r.imageBlur==='strong')?r.imageBlur:undefined,
     imageOverlay:   (r.imageOverlay==='auto'||r.imageOverlay==='light'||r.imageOverlay==='dark'||r.imageOverlay==='none')?r.imageOverlay:undefined,
     location:     typeof r.location==='string'?r.location:undefined,
+    directionsUrl: typeof r.directionsUrl==='string'?r.directionsUrl:undefined,
     tags:         Array.isArray(r.tags)?r.tags as string[]:[],
     weeklyHours:  (r.weeklyHours&&typeof r.weeklyHours==='object')?r.weeklyHours as WeeklyHours:{...DEFAULT_WEEK_HOURS},
     likeCount:    typeof r.likeCount==='number'?r.likeCount:0,
@@ -325,91 +326,17 @@ function ClockFace({ size=52, color='#059669' }: { size?: number; color?: string
 }
 
 // Block visual style picker
-function StyleThumb({ blockId, styleKey }: { blockId: string; styleKey: string }) {
-  // Hours
-  if (blockId === 'hours') {
-    if (styleKey === 'minimal') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-white flex items-center px-2 gap-1.5">
-        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"/>
-        <div className="flex-1 space-y-1"><div className="h-1.5 bg-[#E0E0E0] rounded-full w-full"/><div className="h-1 bg-[#F0F0F0] rounded-full w-3/4"/></div>
-        <div className="w-1.5 h-1.5 rounded-full bg-[#E0E0E0]"/>
-      </div>
-    );
-    if (styleKey === 'clock') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-white flex flex-col items-center justify-center gap-0.5">
-        <div className="w-[14px] h-[14px] rounded-full border-[1.5px] border-[#C0C0C0] relative">
-          <div className="absolute left-1/2 top-1/2 w-[1px] h-[5px] bg-[#888] rounded origin-bottom" style={{ transform:'translate(-50%,-100%) rotate(-35deg)' }}/>
-          <div className="absolute left-1/2 top-1/2 w-[1px] h-[4px] bg-[#666] rounded origin-bottom" style={{ transform:'translate(-50%,-100%) rotate(60deg)' }}/>
-        </div>
-        <div className="h-[5px] bg-[#F0F0F0] rounded-full w-10"/>
-      </div>
-    );
-    if (styleKey === 'hero') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-emerald-200 bg-gradient-to-br from-emerald-500 to-emerald-600 flex flex-col items-center justify-center gap-0.5">
-        <span className="text-[9px] font-semibold text-white tracking-tight leading-none">OPEN</span>
-        <div className="h-[4px] bg-white/30 rounded-full w-10"/>
-      </div>
-    );
-  }
-  // Location
-  if (blockId === 'location') {
-    if (styleKey === 'photo') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] overflow-hidden">
-        <div className="h-[22px] bg-gradient-to-br from-[#1e3a5f] to-[#0f172a] flex items-center justify-center">
-          <LucidePin size={7} color="rgba(255,255,255,0.6)"/>
-        </div>
-        <div className="h-[20px] bg-white px-1.5 flex items-center gap-1">
-          <div className="h-1.5 bg-[#E9E9E7] rounded-full flex-1"/>
-          <div className="h-1.5 w-1.5 bg-[#F0F0F0] rounded"/>
-        </div>
-      </div>
-    );
-    if (styleKey === 'place') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-gradient-to-br from-[#1e3a5f] to-[#0f172a] flex flex-col items-center justify-center gap-0.5">
-        <LucidePin size={10} color="white"/>
-        <div className="h-[4px] bg-white/30 rounded-full w-8"/>
-      </div>
-    );
-    if (styleKey === 'minimal') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-white flex items-center px-2 gap-1.5">
-        <LucidePin size={8} color="#C0C0C0"/>
-        <div className="flex-1 h-1.5 bg-[#E9E9E7] rounded-full"/>
-        <span className="text-[7px] text-[#C0C0C0]">›</span>
-      </div>
-    );
-  }
-  // Generics
-  return <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-[#EEEEEC]"/>;
-}
+/**
+ * The per-block layout picker used to sit here — Minimal / Clock / Hero for
+ * Hours, Map / Minimal for Location.
+ *
+ * It is gone because it had stopped being a choice. Every row renders through
+ * one component now, and none of them read block.blockStyle, so the thumbnails
+ * offered three looks and delivered the same one. A control that does nothing
+ * is worse than a missing control: the owner picks "Hero", sees no change, and
+ * stops trusting the rest of the builder.
+ */
 
-function BlockStylePicker({ blockId, selected, onSelect }: {
-  blockId: string; selected: string; onSelect: (key: string) => void;
-}) {
-  const styles = BLOCK_STYLES[blockId];
-  if (!styles) return null;
-  return (
-    <div>
-      <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-2">Layout</p>
-      <div className="flex gap-2">
-        {styles.map(s => (
-          <button key={s.key} onClick={() => onSelect(s.key)}
-            className={`flex flex-col items-center gap-1.5 rounded-xl p-1.5 border transition-all ${selected===s.key?'border-[#0A0A0A]':'border-[#E9E9E7] hover:border-[#C0C0C0]'}`}>
-            <StyleThumb blockId={blockId} styleKey={s.key}/>
-            <span className={`text-[10px] font-semibold ${selected===s.key?'text-[#0A0A0A]':'text-[#858585]'}`}>{s.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Style presets ────────────────────────────────────────────────────────────
-//
-// ── Image appearance: how loud a cover photo is allowed to be ─────────────────
-//
-// Three controls, no more. A cover photo should behave like atmosphere behind
-// the page, and the usual failure is one good photo turned up so far that the
-// name, the status and the blocks all have to fight it.
 function ImageAppearanceControls({ config, onChange }: {
   config: OpenStatusPageConfig;
   onChange: (patch: Partial<OpenStatusPageConfig>) => void;
@@ -596,11 +523,12 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   // Header actions. Same precedence as the live page: the business's own
   // Website and Address fields first, the retired blocks only as a fallback
   // for pages configured before those stopped being rows.
-  const websiteUrl = (business?.website || '').trim()
-    || config.blocks.find(b => b.id === 'website')?.url?.trim()
+  const websiteUrl = externalUrl(business?.website)
+    || externalUrl(config.blocks.find(b => b.id === 'website')?.url)
     || null;
   const addr = (business?.address || config.blocks.find(b => b.id === 'location')?.address || config.location || '').trim();
-  const directionsUrl = addr ? `https://maps.google.com/?q=${encodeURIComponent(addr)}` : null;
+  const directionsUrl = externalUrl(config.directionsUrl)
+    || (addr ? `https://maps.google.com/?q=${encodeURIComponent(addr)}` : null);
   // Directions uses the full address; the card shows the short one, same as
   // the live page. The preview used to print Google's whole string, postcode
   // and "USA" included, which wrapped to a second line the page never had.
@@ -1100,26 +1028,11 @@ function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,o
         <div className="space-y-5">
 
           {/* ── LOCATION ── */}
-          {block.id==='location' && (
-            <div className="space-y-5">
-              <BlockStylePicker blockId="location" selected={block.blockStyle??'place'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <div>
-                <FieldLabel>Address</FieldLabel>
-                <Input value={block.sub??''} onChange={v=>onUpdateBlock({sub:v})} placeholder="123 Main St, Nashville, TN"/>
-                <p className="mt-1 text-[10px] text-black/35">Visitors tap the button and it opens Maps on their phone.</p>
-              </div>
-              <MoreOptions>
-                <div>
-                  <FieldLabel>Apple Maps URL</FieldLabel>
-                  <Input value={block.appleMapsUrl??''} onChange={v=>onUpdateBlock({appleMapsUrl:v})} placeholder="Paste from Apple Maps → Share → Copy link"/>
-                  <p className="mt-1 text-[10px] text-black/35">Optional. Without it, iPhone visitors open Google Maps.</p>
-                </div>
-              </MoreOptions>
-              <p className="text-[11px] text-[#9A9A97] leading-relaxed">
-                Reviews and your star rating moved to the <strong className="text-[#777777] font-semibold">Business</strong> tab — they show in your page header, not on this card.
-              </p>
-            </div>
-          )}
+          {/* Location and Website used to have editors here. Both are header
+              buttons now, not rows, so neither panel was reachable — and the
+              location one wrote the address into block.sub, a field nothing
+              reads any more. They are edited under Business, beside the rest
+              of the business's details. */}
 
           {/* ── CUSTOM LINK ── */}
           {block.id.startsWith('custom-') && (
@@ -1135,7 +1048,6 @@ function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,o
           {/* ── HOURS ── */}
           {block.id==='hours' && (
             <div className="space-y-6">
-              <BlockStylePicker blockId="hours" selected={block.blockStyle??'minimal'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#F4F5F6] border-[#E9E9E7]'}`}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                 <div>
@@ -1186,7 +1098,6 @@ function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,o
           {/* ── MENU ── */}
           {block.id==='menu' && (
             <div className="space-y-5">
-              <BlockStylePicker blockId="menu" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               {/* This used to offer PDF / Photos / Link. Three ways to attach a
                   menu is three ways to get it wrong, and the PDF path stored
                   the whole file as a data URL inside the page config. A link
@@ -1211,7 +1122,6 @@ function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,o
           {/* ── ORDER ── */}
           {block.id==='order' && (
             <div className="space-y-5">
-              <BlockStylePicker blockId="order" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1227,7 +1137,6 @@ function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,o
           {/* ── BOOK ── */}
           {block.id==='book' && (
             <div className="space-y-5">
-              <BlockStylePicker blockId="book" selected={block.blockStyle??'brand'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
               <div>
                 <FieldLabel>Platform</FieldLabel>
                 <BrandProviderPicker
@@ -1310,17 +1219,7 @@ function BlockEditPanel({ block,config,businessId,onUpdateBlock,onUpdateConfig,o
             </div>
           )}
 
-          {/* ── WEBSITE / generic ── */}
-          {(block.id==='website'||(!block.id.startsWith('custom-')&&!['location','hours','menu','order','book','gallery','reviews','updates'].includes(block.id))) && (
-            <div className="space-y-5">
-              {block.id==='website'&&(
-                <>
-                  <BlockStylePicker blockId="website" selected={block.blockStyle??'photo'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-                  <div><FieldLabel>Website URL</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/></div>
-                </>
-              )}
-            </div>
-          )}
+
 
           {/* The size picker used to live here — Small / Square / Large.
               It is gone deliberately. An owner sizing each feature was an
@@ -3065,109 +2964,26 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </button>
                     </div>
 
-                    {/* Style: logo + background + socials */}
-                    <div className="space-y-8 border-t border-[#F0F0F0] pt-8">
-                      <div>
-                        <p className="text-[14px] font-semibold text-[#0A0A0A] mb-1">Style</p>
-                        <p className="text-[#858585] text-[13px] mb-5">Logo, page color, and fonts.</p>
-                        {/* Logo upload */}
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3">Logo</p>
-                        <div className="flex items-center gap-4 mb-3">
-                          {localBusiness?.avatar_url
-                            ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                                className="w-14 h-14 rounded-full object-cover border border-[#E9E9E7] flex-shrink-0" alt="Logo"/>
-                            :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
-                          }
-                          <div className="flex-1 min-w-0">
-                            <label className={`cursor-pointer ${logoUploading?'pointer-events-none':''}`}>
-                              <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                                const file=e.target.files?.[0];if(!file)return;
-                                setLogoUploading(true);setLogoUploadError('');
-                                try{
-                                  const ref=await uploadAsset(file,'avatar');
-                                  if(localBusiness?.id){
-                                    await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                                    setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                                  }
-                                }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                                finally{setLogoUploading(false);e.target.value='';}
-                              }}/>
-                              <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors ${logoUploading?'opacity-60':''}`}>
-                                <LucideImage size={13} color="#6B6B6B"/>
-                                {logoUploading?'Uploading…':'Upload logo'}
-                              </span>
-                            </label>
-                            {logoUploadError&&<p className="text-[11px] text-red-500 mt-1">{logoUploadError}</p>}
-                          </div>
-                        </div>
-                        {googlePhotos.length>0&&(
-                          <div className="mb-4">
-                            <p className="text-[10px] text-[#858585] mb-2">Or pick a Google Business photo as your logo:</p>
-                            <div className="flex gap-2 flex-wrap">
-                              {googlePhotos.map((url,i)=>(
-                                <button key={i} onClick={async()=>{
-                                  if(!localBusiness?.id){setLogoUploadError('No business found');return;}
-                                  setLogoUploading(true);setLogoUploadError('');
-                                  try{
-                                    const blob=await fetch(url).then(r=>r.blob());
-                                    const file=new File([blob],'google-photo.jpg',{type:blob.type||'image/jpeg'});
-                                    const ref=await uploadAsset(file,'avatar');
-                                    await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                                    setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                                  }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
-                                  finally{setLogoUploading(false);}
-                                }}
-                                className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#E9E9E7] hover:border-[#0A0A0A]`}
-                                title={`Use Google photo ${i+1}`}>
-                                  <img src={url} className="w-full h-full object-cover" alt=""/>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3 mt-6">Page background</p>
-                        <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
-                      </div>
-
-
-                      {/* Background photo */}
-                      <div>
-                        <p className="text-[11px] font-semibold text-[#858585] uppercase tracking-[0.12em] mb-3">Cover photo</p>
-                        {config.bgImage&&(
-                          <CoverPhotoCrop
-                            src={config.bgImage}
-                            position={config.bgImagePosition}
-                            onChange={pos=>setConfig(c=>({...c,bgImagePosition:pos}))}
-                            onRemove={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
-                          />
-                        )}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
-                        <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                          const file=e.target.files?.[0];if(!file)return;
-                          setBgUploading(true);setBgUploadError('');
-                          try{
-                            const ref=await uploadAsset(file,'header');
-                            const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
-                            setConfig(c=>({...c,bgImage:bgUrl}));
-                          }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
-                          finally{setBgUploading(false);e.target.value='';}
-                        }}/>
-                        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-semibold text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
-                          <LucideImage size={13} color="#777777"/>
-                          {bgUploading?'Uploading…':'Upload photo'}
-                        </span>
-                      </label>
-                      {googlePhotos.map((url,i)=>(
-                        <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                          className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
-                          <img src={url} className="w-full h-full object-cover" alt=""/>
-                        </button>
-                      ))}
+                    {/* Logo, page background and cover photo used to be
+                        duplicated down here, below the block list. They are
+                        not blocks — they are the look of the whole page — and
+                        having a second copy of each control next to the blocks
+                        meant two places to change the same thing, which is how
+                        a builder starts disagreeing with itself. They live in
+                        Style, which is the tab named after them. */}
+                    <div className="border-t border-[#F0F0F0] pt-7">
+                      <p className="text-[13px] font-semibold text-[#0A0A0A]">Logo, background and cover photo</p>
+                      <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3">
+                        Everything about how the page looks lives in Style.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={()=>{ setOpenId(null); setSidebarTab('style' as SidebarTab); }}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#E9E9E7] bg-white px-3.5 py-2 text-[12.5px] font-semibold text-[#0A0A0A] hover:bg-[#F7F7F6] transition-colors">
+                        Open Style
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      </button>
                     </div>
-                    {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
-                  </div>
-                </div>
                   </>
                 )}
               </div>
@@ -3266,7 +3082,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <FieldLabel>Address</FieldLabel>
                       <Input value={bizEdit.address} onChange={v=>setBizEdit(b=>({...b,address:v}))} placeholder="123 Main St, City, State"/>
                       <p className="mt-1 text-[10px] text-black/35">
-                        Shown under your name, shortened to street and town. Directions opens the full address in Maps.
+                        Shown under your name, shortened to street and town.
+                      </p>
+                    </div>
+                    <div>
+                      <FieldLabel>Directions link (optional)</FieldLabel>
+                      <Input
+                        value={config.directionsUrl ?? ''}
+                        onChange={v=>setConfig(c=>({...c,directionsUrl:v}))}
+                        placeholder="Paste your Google or Apple Maps link…"
+                      />
+                      <p className="mt-1 text-[10px] text-black/35">
+                        Leave blank and the button searches Maps for your address, which opens
+                        whichever maps app your customer already uses. Paste a link only if you
+                        want a specific listing.
                       </p>
                     </div>
                     <div>
@@ -4175,6 +4004,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Address</span>
                   <input value={bizEdit.address} onChange={e=>setBizEdit(b=>({...b,address:e.target.value}))}
                     placeholder="123 Main St, City, State"
+                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                </div>
+                {/* Directions — a button and a link. Blank searches the address. */}
+                <div className="flex items-center gap-2 px-3 py-2.5">
+                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Directions</span>
+                  <input value={config.directionsUrl ?? ''} onChange={e=>setConfig(c=>({...c,directionsUrl:e.target.value}))}
+                    placeholder="Maps link (optional)" type="url"
                     className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
               </div>

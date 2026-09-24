@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
+import { externalUrl } from '@/lib/url';
 import { liftColor } from '@/lib/page-theme';
 
 type Props = {
@@ -12,13 +13,6 @@ type Props = {
   /** Icon tint, matching the rows in public-row.tsx. */
   accent?: string;
 };
-
-function safeUrl(value?: string) {
-  const raw = value?.trim();
-  if (!raw) return '';
-  if (/^(https?:\/\/|tel:|mailto:)/i.test(raw)) return raw;
-  return `https://${raw}`;
-}
 
 const ICONS: Record<string, string> = {
   // Core
@@ -72,7 +66,7 @@ export default function PublicActionBlock({ block, businessId, dark = false, acc
   // A Reviews row keeps its destination in googleUrl, a listing might only
   // have Yelp. Reading block.url alone made those rows tappable-looking and
   // inert.
-  const href = safeUrl(block.url || block.googleUrl || block.yelpUrl || block.tripAdvisorUrl || block.appleMapsUrl);
+  const href = externalUrl(block.url || block.googleUrl || block.yelpUrl || block.tripAdvisorUrl || block.appleMapsUrl);
   const [hovered, setHovered] = useState(false);
 
   // Blocks used to be able to carry their own cover photo, which rendered the

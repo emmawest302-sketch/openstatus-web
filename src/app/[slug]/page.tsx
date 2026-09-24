@@ -4,6 +4,7 @@ import { getAdminClient } from '@/lib/supabaseAdmin';
 import PublishedBusinessBlocks from '@/components/published-business-blocks';
 import { shortAddress } from '@/lib/address';
 import { shareImageUrl } from '@/lib/share-image';
+import { externalUrl } from '@/lib/url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS } from '@/lib/page-metrics';
 import PublicSocialLinks from '@/components/public-social-links';
 import PublicBioCard from '@/components/public-bio-card';
@@ -310,11 +311,15 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   // fields looked like the same thing and were not. The block is still read as
   // a fallback for pages configured before Website left the row list.
   const websiteBlock = enrichedConfig.blocks.find((b) => b.id === 'website');
-  const headerWebsiteUrl = (business.website || '').trim() || websiteBlock?.url?.trim() || null;
+  const headerWebsiteUrl = externalUrl(business.website) || externalUrl(websiteBlock?.url) || null;
+  //
+  // Directions is a button and a link, nothing more. An owner who wants their
+  // exact Google or Apple listing pastes it; everyone else leaves it blank and
+  // gets a maps search for their address, which opens whichever maps app the
+  // visitor actually uses.
   const directionsTarget = (business.address || locationBlock?.address || '').trim();
-  const headerDirectionsUrl = directionsTarget
-    ? `https://maps.google.com/?q=${encodeURIComponent(directionsTarget)}`
-    : null;
+  const headerDirectionsUrl = externalUrl(enrichedConfig.directionsUrl)
+    || (directionsTarget ? `https://maps.google.com/?q=${encodeURIComponent(directionsTarget)}` : null);
 
   const initials = business.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p: string) => p[0]).join('').toUpperCase();
 
