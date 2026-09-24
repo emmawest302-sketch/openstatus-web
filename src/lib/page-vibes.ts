@@ -95,7 +95,7 @@ export const VIBES: Vibe[] = [
     swatch: { bg: '#F7F7F5', ink: '#0A0A0A' },
     apply: {
       bg: '#F7F7F5', font: 'Inter, system-ui, sans-serif', nameColor: '#0A0A0A',
-      themeColor: '#111111', imageIntensity: 82, imageBlur: 'none', imageOverlay: 'auto',
+      themeColor: '#111111', imageIntensity: 82, imageBlur: 'none', imageOverlay: 'none',
     },
   },
   {
@@ -105,7 +105,7 @@ export const VIBES: Vibe[] = [
     swatch: { bg: '#F1EDE5', ink: '#2C2924' },
     apply: {
       bg: '#F1EDE5', font: '"DM Serif Display", Georgia, serif', nameColor: '#2C2924',
-      themeColor: '#786C5B', imageIntensity: 88, imageBlur: 'none', imageOverlay: 'light',
+      themeColor: '#786C5B', imageIntensity: 88, imageBlur: 'none', imageOverlay: 'none',
     },
   },
   {
@@ -115,7 +115,7 @@ export const VIBES: Vibe[] = [
     swatch: { bg: '#E9EFE7', ink: '#1E3023' },
     apply: {
       bg: '#E9EFE7', font: '"Manrope", system-ui, sans-serif', nameColor: '#1E3023',
-      themeColor: '#5F765D', imageIntensity: 80, imageBlur: 'none', imageOverlay: 'light',
+      themeColor: '#5F765D', imageIntensity: 80, imageBlur: 'none', imageOverlay: 'none',
     },
   },
   {
@@ -125,7 +125,7 @@ export const VIBES: Vibe[] = [
     swatch: { bg: '#EDF2F4', ink: '#17262F' },
     apply: {
       bg: '#EDF2F4', font: '"DM Sans", system-ui, sans-serif', nameColor: '#17262F',
-      themeColor: '#608197', imageIntensity: 86, imageBlur: 'none', imageOverlay: 'light',
+      themeColor: '#608197', imageIntensity: 86, imageBlur: 'none', imageOverlay: 'none',
     },
   },
   {
@@ -135,7 +135,7 @@ export const VIBES: Vibe[] = [
     swatch: { bg: '#F2E8DC', ink: '#30261F' },
     apply: {
       bg: '#F2E8DC', font: '"Poppins", system-ui, sans-serif', nameColor: '#30261F',
-      themeColor: '#A06E50', imageIntensity: 84, imageBlur: 'none', imageOverlay: 'light',
+      themeColor: '#A06E50', imageIntensity: 84, imageBlur: 'none', imageOverlay: 'none',
     },
   },
   {
@@ -145,7 +145,7 @@ export const VIBES: Vibe[] = [
     swatch: { bg: '#111111', ink: '#F5F2EB' },
     apply: {
       bg: '#111111', font: '"Space Grotesk", system-ui, sans-serif', nameColor: '#F5F2EB',
-      themeColor: '#C9B58B', imageIntensity: 92, imageBlur: 'none', imageOverlay: 'dark',
+      themeColor: '#C9B58B', imageIntensity: 92, imageBlur: 'none', imageOverlay: 'none',
     },
   },
   {
@@ -155,7 +155,7 @@ export const VIBES: Vibe[] = [
     swatch: { bg: '#EDEDEB', ink: '#0A0A0A' },
     apply: {
       bg: '#EDEDEB', font: '"Poppins", system-ui, sans-serif', nameColor: '#0A0A0A',
-      themeColor: '#0A0A0A', imageIntensity: 76, imageBlur: 'none', imageOverlay: 'auto',
+      themeColor: '#0A0A0A', imageIntensity: 76, imageBlur: 'none', imageOverlay: 'none',
     },
   },
   {
@@ -165,7 +165,7 @@ export const VIBES: Vibe[] = [
     swatch: { bg: '#F4F5F7', ink: '#111318' },
     apply: {
       bg: '#F4F5F7', font: '"Manrope", system-ui, sans-serif', nameColor: '#111318',
-      themeColor: '#315DE8', imageIntensity: 84, imageBlur: 'none', imageOverlay: 'auto',
+      themeColor: '#315DE8', imageIntensity: 84, imageBlur: 'none', imageOverlay: 'none',
     },
   },
 ];

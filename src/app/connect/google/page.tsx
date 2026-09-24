@@ -74,7 +74,7 @@ export default function ConnectGoogle() {
         {justConnected ? (
           <div className="text-center">
             <div className="w-16 h-16 rounded-full bg-[#F5F3FF] flex items-center justify-center mx-auto mb-5">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             </div>
@@ -89,7 +89,7 @@ export default function ConnectGoogle() {
 
             <a
               href="/builder"
-              className="mt-8 block w-full py-3.5 rounded-full bg-[#7C3AED] text-white font-semibold text-center hover:bg-[#292929] transition"
+              className="mt-8 block w-full py-3.5 rounded-full bg-[#0A0A0A] text-white font-semibold text-center hover:bg-[#292929] transition"
             >
               Go to builder ↗
             </a>
@@ -131,14 +131,14 @@ export default function ConnectGoogle() {
 
             {connected ? (
               <div className="mt-4 rounded-2xl bg-[#F5F3FF] px-5 py-4">
-                <p className="text-[#7C3AED] font-medium">Your Google listing is connected</p>
+                <p className="text-[#0A0A0A] font-medium">Your Google listing is connected</p>
                 <p className="mt-1 text-sm text-[#4A4842]">Hours changes will sync automatically.</p>
               </div>
             ) : (
               <button
                 onClick={connect}
                 disabled={working}
-                className="mt-5 w-full py-3.5 rounded-full bg-[#7C3AED] text-white font-medium hover:bg-[#6D28D9] disabled:opacity-40 transition"
+                className="mt-5 w-full py-3.5 rounded-full bg-[#0A0A0A] text-white font-medium hover:bg-[#292926] disabled:opacity-40 transition"
               >
                 {working ? 'Opening Google...' : 'Connect Google'}
               </button>

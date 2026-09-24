@@ -87,14 +87,31 @@ export function googlePlanForToday(
  * An early close carries only a closing time — the day still opens on the
  * regular schedule — so the regular opening is passed in rather than guessed.
  */
+/**
+ * Reduce a clock time to HH:MM.
+ *
+ * Postgres hands back a `time` column as "19:30:00". Google's API gives
+ * {hours:19, minutes:30}, which we render as "19:30". Both describe the same
+ * moment and both printed "7:30 PM" on screen, so the mismatch card announced
+ * that Google and the page disagreed and then quoted two identical times at
+ * the owner. Comparing formatted strings is the bug; comparing normalised ones
+ * is the fix.
+ */
+function hhmmOnly(t: string | null | undefined): string | null {
+  if (!t) return null;
+  const m = /^(\d{1,2}):(\d{2})/.exec(t.trim());
+  if (!m) return null;
+  return `${m[1].padStart(2, '0')}:${m[2]}`;
+}
+
 export function pagePlanForToday(
   override: { kind?: string | null; opensAt?: string | null; closesAt?: string | null } | null | undefined,
   regularOpen?: string | null,
 ): DayPlan {
   if (!override) return NORMAL;
   if (override.kind === 'closed') return { kind: 'closed' };
-  const open = override.opensAt || regularOpen || null;
-  const close = override.closesAt || null;
+  const open = hhmmOnly(override.opensAt) ?? hhmmOnly(regularOpen);
+  const close = hhmmOnly(override.closesAt);
   if (open && close) return { kind: 'hours', open, close };
   // A note for today is not an hours change.
   return NORMAL;

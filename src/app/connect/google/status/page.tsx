@@ -50,7 +50,7 @@ export default function GoogleStatus() {
         <button
           onClick={run}
           disabled={running}
-          className="mt-6 w-full py-3.5 rounded-full bg-[#7C3AED] text-white font-medium hover:bg-[#6D28D9] disabled:opacity-40 transition"
+          className="mt-6 w-full py-3.5 rounded-full bg-[#0A0A0A] text-white font-medium hover:bg-[#292926] disabled:opacity-40 transition"
         >
           {running ? 'Checking...' : 'Check now'}
         </button>
@@ -59,7 +59,7 @@ export default function GoogleStatus() {
 
         {stored ? (
           <div className="mt-5 rounded-2xl bg-[#F5F3FF] px-5 py-4">
-            <p className="font-medium text-[#7C3AED]">Location found and saved</p>
+            <p className="font-medium text-[#0A0A0A]">Location found and saved</p>
             <p className="mt-1 text-sm text-[#4A4842] break-all">{stored}</p>
           </div>
         ) : null}

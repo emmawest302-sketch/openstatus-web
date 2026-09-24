@@ -16,7 +16,16 @@ export type ImageOverlay = 'auto' | 'light' | 'dark' | 'none';
 
 export const DEFAULT_INTENSITY = 78;
 export const DEFAULT_BLUR: ImageBlur = 'none';
-export const DEFAULT_OVERLAY: ImageOverlay = 'auto';
+/**
+ * No overlay, by default.
+ *
+ * 'auto' made sense when the business name sat ON the cover photo and needed
+ * something to be legible against. It does not sit there any more — the name
+ * is on the frosted card below, which carries its own contrast — so the
+ * overlay had no legibility job left and was only ever greying out the
+ * owner's photo. It stays available for anyone who wants it.
+ */
+export const DEFAULT_OVERLAY: ImageOverlay = 'none';
 
 /** Restrained on purpose. Past about 10px a photo stops reading as a photo. */
 const BLUR_PX: Record<ImageBlur, number> = { none: 0, soft: 4, strong: 10 };

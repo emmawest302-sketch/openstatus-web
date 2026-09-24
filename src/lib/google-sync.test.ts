@@ -113,3 +113,42 @@ describe('the comparison itself', () => {
     expect(describePlan({ kind: 'hours', open: '00:00', close: '12:05' })).toBe('open 12:00 AM – 12:05 PM');
   });
 });
+
+describe('the two sides speak different time dialects', () => {
+  it('treats a Postgres time and a Google time as the same moment', () => {
+    // status_updates.closes_at is a `time` column, so it arrives as
+    // "19:30:00". Google gives {hours:19, minutes:30}. Both rendered "7:30 PM"
+    // on screen, so the card told an owner the two disagreed and then quoted
+    // her identical times.
+    const google = googlePlanForToday(
+      [{ startDate: TODAY, openTime: { hours: 9, minutes: 0 }, closeTime: { hours: 19, minutes: 30 } }],
+      TODAY,
+    );
+    const page = pagePlanForToday({ kind: 'hours', opensAt: '09:00:00', closesAt: '19:30:00' });
+    expect(page).toEqual({ kind: 'hours', open: '09:00', close: '19:30' });
+    expect(samePlan(google, page)).toBe(true);
+  });
+
+  it('pads a single-digit hour', () => {
+    expect(pagePlanForToday({ kind: 'hours', opensAt: '9:00', closesAt: '17:00' }))
+      .toEqual({ kind: 'hours', open: '09:00', close: '17:00' });
+  });
+
+  it('normalises the regular opening time it falls back to', () => {
+    // An early close carries only a closing time, so the opening comes from
+    // the weekly schedule — a different table, and not necessarily the same
+    // string format.
+    expect(pagePlanForToday({ kind: 'hours', closesAt: '15:00:00' }, '08:00:00'))
+      .toEqual({ kind: 'hours', open: '08:00', close: '15:00' });
+  });
+
+  it('still reports a real difference', () => {
+    const google = googlePlanForToday([{ startDate: TODAY, openTime: { hours: 9 }, closeTime: { hours: 17 } }], TODAY);
+    const page = pagePlanForToday({ kind: 'hours', opensAt: '09:00:00', closesAt: '19:30:00' });
+    expect(samePlan(google, page)).toBe(false);
+  });
+
+  it('ignores junk rather than inventing a window from it', () => {
+    expect(pagePlanForToday({ kind: 'hours', opensAt: 'later', closesAt: '19:30:00' })).toEqual({ kind: 'normal' });
+  });
+});

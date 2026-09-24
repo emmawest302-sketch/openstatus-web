@@ -369,7 +369,7 @@ function ImageAppearanceControls({ config, onChange }: {
 }) {
   const intensity = config.imageIntensity ?? 78;
   const blur = config.imageBlur ?? 'none';
-  const overlay = config.imageOverlay ?? 'auto';
+  const overlay = config.imageOverlay ?? 'none';
 
   const seg = (active: boolean) =>
     `flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
@@ -761,6 +761,21 @@ function LiveDesktopPreview(props: React.ComponentProps<typeof LivePhonePreview>
  */
 const ACCENT_SWATCHES = ['#0A0A0A','#786C5B','#5F765D','#608197','#A06E50','#C9B58B','#315DE8','#B3453C'];
 
+/**
+ * One section heading for the Style workspace.
+ *
+ * Six sections, one shape. When each was hand-written they had drifted to
+ * three different sizes and two different greys.
+ */
+function StyleHeading({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div className="mb-4">
+      <p style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.015em', color: BUILDER_UI.ink }}>{title}</p>
+      <p className="mt-0.5" style={{ fontSize: 12.5, color: BUILDER_UI.muted }}>{sub}</p>
+    </div>
+  );
+}
+
 function AccentPicker({ value, onChange }: { value: string; onChange:(v:string)=>void }) {
   return (
     <div>
@@ -834,7 +849,9 @@ function ButtonStylePicker({ value, onChange }: { value: ButtonStyle; onChange:(
 function NameColorPicker({ value, autoColor, onChange }: {
   value?: string; autoColor: string; onChange:(v:string|undefined)=>void;
 }) {
-  const SWATCHES = ['#FFFFFF','#0A0A0A','#0A0A0A','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899'];
+  // Enough range to match a sign or an awning, and nothing neon. The old row
+  // carried two purples because it was built around the app's old accent.
+  const SWATCHES = ['#FFFFFF','#0A0A0A','#3F3F3C','#786C5B','#5F765D','#608197','#A06E50','#B3453C'];
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-2.5">
@@ -959,20 +976,6 @@ function TextStylePicker({ bold, italic, onToggle }: {
   );
 }
 
-function MoreOptions({ label='More options', children }: { label?:string; children:React.ReactNode }) {
-  const [open,setOpen]=useState(false);
-  return (
-    <div className="rounded-xl border border-[#E9E9E7] overflow-hidden">
-      <button type="button" onClick={()=>setOpen(v=>!v)}
-        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[#F7F7F6] hover:bg-[#F4F4F2] transition-colors">
-        <span className="text-[12px] font-semibold text-[#777777]">{label}</span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          style={{transform:open?'rotate(180deg)':'none',transition:'transform 0.18s ease'}}><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      {open&&<div className="px-3.5 py-4 space-y-4 bg-white">{children}</div>}
-    </div>
-  );
-}
 
 // ── Reviews & rating (Business tab) ───────────────────────────────────────────
 // The star rating renders in the PAGE HEADER, under the business name — not on
@@ -2249,6 +2252,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     return bg.startsWith('#')?bg.toUpperCase():'Custom';
   },[]);
 
+  const [previewOpen,setPreviewOpen]=useState(true);
   const blocksListRef=useRef<HTMLDivElement>(null);
   /**
    * Open a block's editor, having first moved the block out from under it.
@@ -2627,6 +2631,52 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     setFixingGoogle(false);
     setTimeout(()=>setFixMsg(''),8000);
   };
+
+  /**
+   * The page, on the screens where you are changing it.
+   *
+   * A 230px window showed the cover photo and the top of the name card — the
+   * two things least affected by anything on the list underneath it. This is
+   * tall enough to hold the hours block and a couple of rows, and it scrolls,
+   * so the whole page is reachable without leaving the editor.
+   *
+   * MOBILE_EDITOR_SCALE is a transform on the real public components. The
+   * width compensation (100 / scale) is what stops the scaled page leaving a
+   * gap down the right-hand side.
+   */
+  const mobilePreview = (
+    <div className="mx-4 mt-3">
+      <button onClick={()=>setPreviewOpen(v=>!v)}
+        className="flex items-center gap-1.5 mb-1.5 px-0.5 py-1"
+        style={{...BUILDER_TYPE.helper, fontWeight:500, color:BUILDER_UI.muted}}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+          style={{transform:previewOpen?'rotate(90deg)':'none',transition:'transform .18s'}}>
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        Preview
+      </button>
+      {previewOpen&&(
+        <div className="rounded-[16px] overflow-hidden"
+          style={{
+            height:'min(46vh, 400px)',
+            border:`1px solid ${BUILDER_UI.border}`,
+            background:BUILDER_UI.surface,
+            WebkitOverflowScrolling:'touch',
+            overflowY:'auto',
+            overscrollBehavior:'contain',
+          }}>
+          <div style={{
+            width:`${100/MOBILE_EDITOR_SCALE}%`,
+            transform:`scale(${MOBILE_EDITOR_SCALE})`,
+            transformOrigin:'top left',
+          }}>
+            <LivePhonePreview key={previewKey} business={localBusiness} config={config}
+              timeZone={bizTimeZone} override={todayOverride}/>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   /**
    * An element, not a component.
@@ -3768,199 +3818,169 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             {/* ══ STYLE ══ */}
             {sidebarTab==='style'&&(
-              <div className="px-4 md:px-10 py-7 md:py-10 max-w-[760px] space-y-11">
-                <div>
-                  <h2 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.03em]">Style</h2>
-                  <p className="text-[#777777] text-[13px] mt-1">Background, imagery, brand and type.</p>
+              <div className="px-4 md:px-10 py-8 md:py-12 max-w-[760px]" style={{fontFamily:BUILDER_FONT}}>
+                <div className="mb-10">
+                  <h2 style={{fontSize:22, fontWeight:600, letterSpacing:'-0.03em', color:BUILDER_UI.ink}}>Style</h2>
+                  <p className="mt-1" style={{fontSize:13, color:BUILDER_UI.muted}}>Choose a look, then make it yours.</p>
                 </div>
 
-                {/* ── 1. Vibe ───────────────────────────────────────────────
-                     This used to open on a grid of colour swatches and a hex
-                     wheel, which asks a shop owner to art-direct their own
-                     page. A vibe picks the background, the font, the name
-                     colour, the accent and the photo treatment as a set. The
-                     individual controls are still here, under Fine-tune, for
-                     the owner who wants their exact brand green. */}
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">1. Vibe</p>
-                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Pick a feel. You can change any part of it below.</p>
-                  <VibePicker config={config} onPick={v=>setConfig(c=>applyVibe(c,v))}/>
-                </div>
+                {/* This was a numbered wizard — 1. Vibe, 2. Brand, 3. Tags,
+                    4. Fine-tune — which told an owner there was a sequence to
+                    get through and a step they had skipped. There is no
+                    sequence. It is a workspace: six things, each finished on
+                    its own, in the order you happen to care about them. Tags
+                    left entirely; they are data about the business, not a
+                    design decision, and they live in Business info now. */}
+                <div className="space-y-12">
 
-                {/* ── 2. Brand ── */}
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">2. Brand</p>
-                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Add your logo and cover photo.</p>
-                  <div className="grid gap-4 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] items-start">
-                    <div className="rounded-2xl border border-[#E9E9E7] bg-white p-4">
-                      <p className="text-[13px] font-semibold text-[#0A0A0A] mb-3">Logo</p>
-                    <div>
-                      <div className="flex items-center gap-4">
-                        {localBusiness?.avatar_url
-                          ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                              className="w-14 h-14 rounded-full object-cover border border-[#E9E9E7] flex-shrink-0" alt="Logo"/>
-                          :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
-                        }
-                        <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
-                          <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                            const file=e.target.files?.[0];if(!file)return;
-                            setLogoUploading(true);setLogoUploadError('');
-                            try{
-                              const ref=await uploadAsset(file,'avatar');
-                              if(localBusiness?.id){
-                                await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
-                                setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
-                              }
-                            }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
-                            finally{setLogoUploading(false);e.target.value='';}
-                          }}/>
-                          <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-medium text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
-                            <LucideImage size={13} color="#777777"/>
-                            {logoUploading?'Uploading…':'Upload logo'}
-                          </span>
-                        </label>
-                      </div>
-                      {logoUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{logoUploadError}</p>}
-                    </div>
-                    </div>
-                    <div className="rounded-2xl border border-[#E9E9E7] bg-white p-4">
-                      <p className="text-[13px] font-semibold text-[#0A0A0A] mb-3">Cover photo</p>
-                      {config.bgImage&&(
-                        <CoverPhotoCrop
-                          src={config.bgImage}
-                          position={config.bgImagePosition}
-                          onChange={pos=>setConfig(c=>({...c,bgImagePosition:pos}))}
-                          onRemove={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
-                        />
-                      )}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
-                          <input type="file" accept="image/*" className="hidden" onChange={async e=>{
-                            const file=e.target.files?.[0];if(!file)return;
-                            setBgUploading(true);setBgUploadError('');
-                            try{
-                              const ref=await uploadAsset(file,'header');
-                              const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
-                              setConfig(c=>({...c,bgImage:bgUrl}));
-                            }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
-                            finally{setBgUploading(false);e.target.value='';}
-                          }}/>
-                          <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-medium text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
-                            <LucideImage size={13} color="#777777"/>
-                            {bgUploading?'Uploading…':'Upload photo'}
-                          </span>
-                        </label>
-                        {googlePhotos.map((url,i)=>(
-                          <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                            className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
-                            <img src={url} className="w-full h-full object-cover" alt=""/>
-                          </button>
-                        ))}
-                      </div>
-                      {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
-                    </div>
-                  </div>
-                </div>
+                  <section>
+                    <StyleHeading title="Presets" sub="A whole look in one tap. Change any part of it below."/>
+                    <VibePicker config={config} onPick={v=>setConfig(c=>applyVibe(c,v))}/>
+                  </section>
 
-                {/* ── 3. Tags ── */}
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">3. Tags</p>
-                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Pick up to 3 — these show under your business name.</p>
-                  {/* custom tag entry */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <input
-                      value={tagDraft}
-                      onChange={e=>setTagDraft(e.target.value.slice(0,24))}
-                      onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); addCustomTag(); } }}
-                      placeholder="Add your own…"
-                      className="flex-1 min-w-0 bg-white border border-[#E9E9E7] rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
-                    <button onClick={addCustomTag}
-                      disabled={!tagDraft.trim()||(config.tags??[]).length>=3||(config.tags??[]).includes(tagDraft.trim())}
-                      className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
-                      Add
-                    </button>
-                  </div>
-
-                  {/* chosen tags, including custom ones */}
-                  {(config.tags??[]).length>0&&(
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                      {(config.tags??[]).map(tag=>(
-                        <button key={`sel-${tag}`}
-                          onClick={()=>setConfig(c=>({...c,tags:(c.tags??[]).filter(t=>t!==tag)}))}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium bg-[#0A0A0A] text-white">
-                          {tag}
-                          <LucideX size={9} color="currentColor"/>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {FEATURE_TAGS.filter(t=>!(config.tags??[]).includes(t)).map(tag=>{
-                      const sel=(config.tags??[]).includes(tag);
-                      const full=(config.tags??[]).length>=3;
-                      return (
-                        <button key={tag}
-                          disabled={!sel&&full}
-                          onClick={()=>setConfig(c=>{
-                            const cur=c.tags??[];
-                            return {...c, tags: cur.includes(tag) ? cur.filter(t=>t!==tag) : (cur.length>=3?cur:[...cur,tag])};
-                          })}
-                          className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
-                            sel ? 'bg-[#0A0A0A] text-white border-[#0A0A0A]'
-                                : full ? 'border-[#E9E9E7] text-[#D0D5DD] cursor-not-allowed'
-                                       : 'border-[#E9E9E7] text-[#777777] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'
-                          }`}>
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-
-                {/* ── 4. Fine-tune ──────────────────────────────────────────
-                     Everything a vibe already decided, for the owner who
-                     wants their own brand colour or their own typeface. It is
-                     closed by default because the page is finished without
-                     it, and open-by-default controls read as work to do. */}
-                <div>
-                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">4. Fine-tune</p>
-                  <p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Optional. Override any part of your vibe.</p>
-                  <div className="space-y-3">
-                    <MoreOptions label="Background">
-                      <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(pc=>({...pc,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
-                    </MoreOptions>
-
-                    <MoreOptions label="Cover photo appearance">
-                      <p className="text-[12px] text-[#777777] -mt-1 mb-1">Soften a photo so it sits behind your page, not in front of it.</p>
-                      <ImageAppearanceControls config={config} onChange={patch=>setConfig(c=>({...c,...patch}))}/>
-                    </MoreOptions>
-
-                    <MoreOptions label="Font">
-                      <p className="text-[12px] text-[#777777] -mt-1 mb-1">Applies to everything on your page.</p>
-                      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                        {FONT_OPTIONS.map(opt=>{
-                          const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
-                          return (
-                            <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
-                              className={`flex flex-col items-start px-3 py-2.5 rounded-2xl border transition-all text-left ${isActive?'border-[#0A0A0A] bg-[#0A0A0A]':'border-[#E9E9E7] bg-[#F7F7F6] hover:border-[#0A0A0A]'}`}>
-                              <span className={`text-[16px] leading-tight ${isActive?'text-white':'text-[#0A0A0A]'}`} style={{fontFamily:opt.family}}>Aa</span>
-                              <span className={`text-[10px] font-medium mt-0.5 ${isActive?'text-white/70':'text-[#9A9A97]'}`}>{opt.label}</span>
+                  <section>
+                    <StyleHeading title="Cover" sub="The photo across the top, and your logo."/>
+                    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,260px)] items-start">
+                      <div className="rounded-2xl p-4" style={{border:`1px solid ${BUILDER_UI.border}`, background:BUILDER_UI.surface}}>
+                        <p className="mb-3" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Cover photo</p>
+                        {config.bgImage&&(
+                          <CoverPhotoCrop
+                            src={config.bgImage}
+                            position={config.bgImagePosition}
+                            onChange={pos=>setConfig(c=>({...c,bgImagePosition:pos}))}
+                            onRemove={()=>setConfig(c=>({...c,bgImage:undefined,bgImagePosition:undefined}))}
+                          />
+                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <label className={`cursor-pointer ${bgUploading?'pointer-events-none opacity-60':''}`}>
+                            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                              const file=e.target.files?.[0];if(!file)return;
+                              setBgUploading(true);setBgUploadError('');
+                              try{
+                                const ref=await uploadAsset(file,'header');
+                                const bgUrl=localBusiness?.id?`/api/assets?businessId=${localBusiness.id}&kind=header&v=${encodeURIComponent(ref.replace(/^storage:/,''))}`:ref;
+                                setConfig(c=>({...c,bgImage:bgUrl}));
+                              }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
+                              finally{setBgUploading(false);e.target.value='';}
+                            }}/>
+                            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl transition-colors"
+                              style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink, border:`1px solid ${BUILDER_UI.border}`}}>
+                              <LucideImage size={13} color={BUILDER_UI.muted}/>
+                              {bgUploading?'Uploading\u2026':config.bgImage?'Replace photo':'Upload photo'}
+                            </span>
+                          </label>
+                          {googlePhotos.map((url,i)=>(
+                            <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
+                              className="relative w-10 h-10 rounded-xl overflow-hidden flex-shrink-0"
+                              style={{border:`2px solid ${config.bgImage===url?BUILDER_UI.ink:BUILDER_UI.border}`}}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} className="w-full h-full object-cover" alt=""/>
                             </button>
-                          );
-                        })}
+                          ))}
+                        </div>
+                        {bgUploadError&&<p className="mt-1.5" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.danger}}>{bgUploadError}</p>}
+                        {config.bgImage&&(
+                          <div className="mt-4 pt-4" style={{borderTop:`1px solid ${BUILDER_UI.border}`}}>
+                            <ImageAppearanceControls config={config} onChange={patch=>setConfig(c=>({...c,...patch}))}/>
+                          </div>
+                        )}
                       </div>
-                    </MoreOptions>
 
-                    <MoreOptions label="Business name colour">
-                      <NameColorPicker
-                        value={config.nameColor}
-                        autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
-                        onChange={v=>setConfig(c=>({...c,nameColor:v}))}
-                      />
-                    </MoreOptions>
-                  </div>
+                      <div className="rounded-2xl p-4" style={{border:`1px solid ${BUILDER_UI.border}`, background:BUILDER_UI.surface}}>
+                        <p className="mb-3" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Logo</p>
+                        <div className="flex items-center gap-4">
+                          {localBusiness?.avatar_url
+                            ?// eslint-disable-next-line @next/next/no-img-element
+                             <img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
+                                className="w-14 h-14 rounded-full object-cover flex-shrink-0" style={{border:`1px solid ${BUILDER_UI.border}`}} alt="Logo"/>
+                            :<div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{background:BUILDER_UI.surfaceSoft}}><LucideImage size={18} color={BUILDER_UI.quiet}/></div>
+                          }
+                          <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
+                            <input type="file" accept="image/*" className="hidden" onChange={async e=>{
+                              const file=e.target.files?.[0];if(!file)return;
+                              setLogoUploading(true);setLogoUploadError('');
+                              try{
+                                const ref=await uploadAsset(file,'avatar');
+                                if(localBusiness?.id){
+                                  await supabase.from('businesses').update({avatar_url:ref}).eq('id',localBusiness.id);
+                                  setLocalBusiness(b=>b?{...b,avatar_url:ref}:b);
+                                }
+                              }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
+                              finally{setLogoUploading(false);e.target.value='';}
+                            }}/>
+                            <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl transition-colors"
+                              style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink, border:`1px solid ${BUILDER_UI.border}`}}>
+                              <LucideImage size={13} color={BUILDER_UI.muted}/>
+                              {logoUploading?'Uploading\u2026':'Upload logo'}
+                            </span>
+                          </label>
+                        </div>
+                        {logoUploadError&&<p className="mt-1.5" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.danger}}>{logoUploadError}</p>}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <StyleHeading title="Background" sub="Your cards lighten or darken automatically to stay readable."/>
+                    <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(pc=>({...pc,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
+                  </section>
+
+                  <section>
+                    <StyleHeading title="Accent" sub="Links, small icons and the share button. Open and closed keep their own colours."/>
+                    <AccentPicker value={config.themeColor ?? '#0A0A0A'} onChange={v=>setConfig(c=>({...c,themeColor:v}))}/>
+                    <p className="mt-6 mb-2" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Business name</p>
+                    <NameColorPicker
+                      value={config.nameColor}
+                      autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
+                      onChange={v=>setConfig(c=>({...c,nameColor:v}))}
+                    />
+                  </section>
+
+                  <section>
+                    <StyleHeading title="Buttons" sub="How Website, Directions and Share are drawn. One choice for all three."/>
+                    <div className="max-w-[420px]">
+                      <ButtonStylePicker value={config.buttonStyle ?? 'filled'} onChange={v=>setConfig(c=>({...c,buttonStyle:v}))}/>
+                    </div>
+                  </section>
+
+                  <section>
+                    <StyleHeading title="Typography" sub="Applies to everything on your page."/>
+                    <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                      {FONT_OPTIONS.map(opt=>{
+                        const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
+                        return (
+                          <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
+                            className="flex flex-col items-start px-3 py-2.5 rounded-2xl transition-all text-left"
+                            style={{
+                              background: BUILDER_UI.surface,
+                              border: isActive?`1.5px solid ${BUILDER_UI.ink}`:`1px solid ${BUILDER_UI.border}`,
+                              boxShadow: isActive?`0 0 0 1px ${BUILDER_UI.ink}`:undefined,
+                            }}>
+                            <span style={{fontFamily:opt.family, fontSize:17, lineHeight:1.15, color:BUILDER_UI.ink}}>Aa</span>
+                            <span className="mt-1" style={{...BUILDER_TYPE.helper, fontWeight:500, color:isActive?BUILDER_UI.ink:BUILDER_UI.muted}}>{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-6 mb-1" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Size</p>
+                    <p className="mb-2.5" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.muted}}>Moves the whole page together, not just the text.</p>
+                    <div className="flex gap-2 max-w-[360px]">
+                      {FONT_SCALES.map(sc=>{
+                        const isActive=(config.fontScale ?? 'standard')===sc;
+                        return (
+                          <button key={sc} onClick={()=>setConfig(c=>({...c,fontScale:sc}))}
+                            className="flex-1 py-2.5 rounded-xl transition-all"
+                            style={{
+                              ...BUILDER_TYPE.button,
+                              background: isActive?BUILDER_UI.ink:BUILDER_UI.surfaceSoft,
+                              color: isActive?'#FFFFFF':BUILDER_UI.text,
+                            }}>
+                            {sc.charAt(0).toUpperCase()+sc.slice(1)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
                 </div>
               </div>
             )}
@@ -4178,6 +4198,68 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                      by platform; lib/openstatus-page-config.ts keeps its own
                      type where socials is an array. The normalizer converts
                      between them on load. */}
+                {/* ── Tags ──
+                     These were the third step of the Style wizard, which made
+                     "Dog friendly" a design decision. They are facts about the
+                     business that happen to be rendered on the page, so they
+                     sit with the address and the phone number. */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Tags</p>
+                  <div className="rounded-2xl p-4" style={{border:`1px solid ${BUILDER_UI.border}`, background:BUILDER_UI.surface}}>
+                    <p className="mb-3.5" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>Pick up to 3 — these show under your business name.</p>
+{/* custom tag entry */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <input
+                      value={tagDraft}
+                      onChange={e=>setTagDraft(e.target.value.slice(0,24))}
+                      onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); addCustomTag(); } }}
+                      placeholder="Add your own…"
+                      className="flex-1 min-w-0 bg-white border border-[#E9E9E7] rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
+                    <button onClick={addCustomTag}
+                      disabled={!tagDraft.trim()||(config.tags??[]).length>=3||(config.tags??[]).includes(tagDraft.trim())}
+                      className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold hover:bg-[#292926] transition-colors disabled:opacity-40">
+                      Add
+                    </button>
+                  </div>
+
+                  {/* chosen tags, including custom ones */}
+                  {(config.tags??[]).length>0&&(
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {(config.tags??[]).map(tag=>(
+                        <button key={`sel-${tag}`}
+                          onClick={()=>setConfig(c=>({...c,tags:(c.tags??[]).filter(t=>t!==tag)}))}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-medium bg-[#0A0A0A] text-white">
+                          {tag}
+                          <LucideX size={9} color="currentColor"/>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {FEATURE_TAGS.filter(t=>!(config.tags??[]).includes(t)).map(tag=>{
+                      const sel=(config.tags??[]).includes(tag);
+                      const full=(config.tags??[]).length>=3;
+                      return (
+                        <button key={tag}
+                          disabled={!sel&&full}
+                          onClick={()=>setConfig(c=>{
+                            const cur=c.tags??[];
+                            return {...c, tags: cur.includes(tag) ? cur.filter(t=>t!==tag) : (cur.length>=3?cur:[...cur,tag])};
+                          })}
+                          className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
+                            sel ? 'bg-[#0A0A0A] text-white border-[#0A0A0A]'
+                                : full ? 'border-[#E9E9E7] text-[#D0D5DD] cursor-not-allowed'
+                                       : 'border-[#E9E9E7] text-[#777777] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'
+                          }`}>
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  </div>
+                </div>
+
                 <div>
                   <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Social links</p>
                   <div className="rounded-2xl border border-[#E9E9E7] p-4 bg-white">
@@ -4451,7 +4533,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </div>
                     )
                   }
-                  <p className="text-center text-[11px] font-medium" style={{color:mDragId?'#8B5CF6':'#9A9A97'}}>
+                  <p className="text-center text-[11px] font-medium" style={{color:mDragId?BUILDER_UI.ink:BUILDER_UI.quiet}}>
                     {mDragId?'Drag to rearrange, let go to drop':'Click a widget to edit \u00b7 drag it to move'}
                   </p>
                   {localBusiness?.slug&&(
@@ -4553,16 +4635,25 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {localBusiness?.name?.trim()||'Your business'}
               </p>
               <div className="flex items-center gap-2.5 mt-2">
+                {/* The dot answers one question: are they open. It used to go
+                    amber whenever an override existed, which put a warning
+                    colour next to the words "Open now" and read as a
+                    contradiction. Whether today is unusual is a separate fact
+                    and gets its own line below. */}
                 <span style={{
                   width:9, height:9, borderRadius:'50%', flexShrink:0,
-                  background: todayOverride ? BUILDER_UI.warning
-                    : liveStatus==='open' ? BUILDER_UI.success : BUILDER_UI.quiet,
+                  background: liveStatus==='open' ? BUILDER_UI.success : BUILDER_UI.quiet,
                 }}/>
                 <span style={{...BUILDER_TYPE.majorStatus, color:BUILDER_UI.ink}}>
                   {liveStatus==='open'?'Open now':'Closed'}
                 </span>
               </div>
               <p className="mt-1" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>{todayLabel}</p>
+              {todayOverride&&(
+                <p className="mt-1.5" style={{...BUILDER_TYPE.helper, fontWeight:500, color:BUILDER_UI.warning}}>
+                  You changed today. Back to normal tomorrow on its own.
+                </p>
+              )}
               <button onClick={()=>setSidebarTab('hours' as SidebarTab)}
                 className="mt-3 w-full py-2.5 rounded-xl active:scale-[0.99] transition-transform"
                 style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink}}>
@@ -4833,7 +4924,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
              only thing on the row with touch-action:none so the browser never
              mistakes the gesture for a scroll. */}
         {mobileTab==='blocks'&&(
-          <div ref={blocksListRef} className="flex-1 overflow-y-auto px-4 pb-8" style={{scrollbarWidth:'none', touchAction: mDragId?'none':undefined}}>
+          <div ref={blocksListRef} className="flex-1 overflow-y-auto pb-8" style={{scrollbarWidth:'none', touchAction: mDragId?'none':undefined}}>
+            <div className="-mx-0">{mobilePreview}</div>
+            <div className="px-4">
             <p className="pt-3 pb-2.5" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
               What sits on your page, in order. Website and directions are buttons under your
               name, not rows — they live in Business info.
@@ -4913,6 +5006,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink, border:`1px solid ${BUILDER_UI.border}`}}>
               + Add a block
             </button>
+            </div>
           </div>
         )}
 
@@ -4926,18 +5020,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {mobileTab==='style'&&(
           <div className="flex-1 overflow-y-auto" style={{scrollbarWidth:'none'}}>
 
-            <div className="mx-4 mt-3 rounded-[16px] overflow-hidden"
-              style={{height:230, border:`1px solid ${BUILDER_UI.border}`, background:BUILDER_UI.surface}}>
-              <div style={{
-                width:`${100/MOBILE_EDITOR_SCALE}%`,
-                transform:`scale(${MOBILE_EDITOR_SCALE})`,
-                transformOrigin:'top left',
-                pointerEvents:'none',
-              }}>
-                <LivePhonePreview key={previewKey} business={localBusiness} config={config}
-                  timeZone={bizTimeZone} override={todayOverride}/>
-              </div>
-            </div>
+            {mobilePreview}
 
             <div className="px-4 pt-4 pb-8 space-y-1.5">
               {([
@@ -5145,6 +5228,40 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <input value={config.directionsUrl ?? ''} onChange={e=>setConfig(c=>({...c,directionsUrl:e.target.value}))}
                       placeholder="Maps link (optional)" type="url"
                       className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                  </div>
+                  {/* Tags followed the Business info fields out of Style:
+                      "Dog friendly" is a fact, not a design decision. */}
+                  <div className="px-3 py-3">
+                    <p className="mb-2" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.muted}}>Tags \u2014 up to 3, shown under your name</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(config.tags??[]).map(tag=>(
+                        <button key={`m-sel-${tag}`}
+                          onClick={()=>setConfig(c=>({...c,tags:(c.tags??[]).filter(t=>t!==tag)}))}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full"
+                          style={{...BUILDER_TYPE.helper, fontWeight:500, background:BUILDER_UI.ink, color:'#FFFFFF'}}>
+                          {tag}
+                          <LucideX size={9} color="currentColor"/>
+                        </button>
+                      ))}
+                      {FEATURE_TAGS.filter(t=>!(config.tags??[]).includes(t)).slice(0,14).map(tag=>{
+                        const full=(config.tags??[]).length>=3;
+                        return (
+                          <button key={`m-${tag}`} disabled={full}
+                            onClick={()=>setConfig(c=>{
+                              const cur=c.tags??[];
+                              return cur.length>=3?c:{...c,tags:[...cur,tag]};
+                            })}
+                            className="px-2.5 py-1.5 rounded-full"
+                            style={{
+                              ...BUILDER_TYPE.helper, fontWeight:500,
+                              border:`1px solid ${BUILDER_UI.border}`,
+                              color: full?BUILDER_UI.quiet:BUILDER_UI.muted,
+                            }}>
+                            {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                   {SOCIAL_PLATFORMS.map(({key,label})=>(
                     <div key={key} className="flex items-center gap-2 px-3 py-2.5">

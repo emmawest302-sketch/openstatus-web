@@ -548,7 +548,7 @@ export default function SetupPage() {
   };
   const primaryBtn: React.CSSProperties = {
     width: '100%',
-    background: '#7C3AED',
+    background: '#0A0A0A',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: 99,
@@ -901,7 +901,7 @@ export default function SetupPage() {
               {selectedTags.map(tag => (
                 <span key={tag} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  background: '#7C3AED', color: '#FFFFFF',
+                  background: '#0A0A0A', color: '#FFFFFF',
                   borderRadius: 99, padding: '5px 10px',
                   fontSize: 12, fontWeight: 600,
                   fontFamily: 'var(--font-poppins), system-ui, sans-serif',

@@ -76,11 +76,21 @@ describe('imageTreatment', () => {
     expect(t.opacity).toBeCloseTo(0.78);
     expect(t.blur).toBe(0);
     expect(t.scale).toBe(1);
-    expect(t.overlay).toContain('255,255,255');
+    // No wash by default. The business name moved off the cover photo and on
+    // to the frosted card below it, so the overlay stopped earning its place
+    // and was only muddying the owner's photo.
+    expect(t.overlay).toBeNull();
   });
 
-  it('a dark page gets a dark wash on automatic', () => {
-    expect(imageTreatment({ pageIsDark: true }).overlay).toContain('rgba(0,0,0');
+  it('still washes when the owner asks for one', () => {
+    expect(imageTreatment({ pageIsDark: false, overlay: 'light' }).overlay).toContain('255,255,255');
+    expect(imageTreatment({ pageIsDark: true, overlay: 'dark' }).overlay).toContain('rgba(0,0,0');
+  });
+
+  it('a dark page still gets a dark wash when the choice is automatic', () => {
+    // 'auto' is no longer the default, but a page saved with it keeps working.
+    expect(imageTreatment({ pageIsDark: true, overlay: 'auto' }).overlay).toContain('rgba(0,0,0');
+    expect(imageTreatment({ pageIsDark: false, overlay: 'auto' }).overlay).toContain('255,255,255');
   });
 
   it('turning the image off leaves nothing showing', () => {

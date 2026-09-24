@@ -103,7 +103,7 @@ export default function LoginPage() {
   };
 
   const inputCls =
-    'w-full rounded-2xl border border-[#EBEBEA] bg-white px-4 py-3.5 text-[14px] text-[#0A0A0A] outline-none transition placeholder:text-[#858585] focus:border-[#7C3AED]/40 focus:ring-4 focus:ring-[#7C3AED]/10';
+    'w-full rounded-2xl border border-[#EBEBEA] bg-white px-4 py-3.5 text-[14px] text-[#0A0A0A] outline-none transition placeholder:text-[#858585] focus:border-[#0A0A0A]/40 focus:ring-4 focus:ring-[#0A0A0A]/10';
 
   const btnBase =
     'w-full flex items-center justify-center gap-3 py-[14px] rounded-full text-[14px] font-semibold transition-all disabled:opacity-50';
@@ -147,7 +147,7 @@ export default function LoginPage() {
             onClick={() => handleOAuth('google')}
             disabled={busy}
             className={btnBase}
-            style={{ background: '#7C3AED', color: '#FFFFFF' }}
+            style={{ background: '#0A0A0A', color: '#FFFFFF' }}
           >
             <GoogleLogo />
             {oauthLoading === 'google' ? 'Opening…' : 'Continue with Google'}
@@ -209,7 +209,7 @@ export default function LoginPage() {
               type="submit"
               disabled={busy}
               className={btnBase}
-              style={{ background: '#7C3AED', color: '#FFFFFF' }}
+              style={{ background: '#0A0A0A', color: '#FFFFFF' }}
             >
               {loading ? 'Signing in…' : 'Log in →'}
             </button>
@@ -217,7 +217,7 @@ export default function LoginPage() {
 
           <p style={{ textAlign: 'center', fontSize: 13, color: '#858585', paddingTop: 8 }}>
             Don&apos;t have an account?{' '}
-            <Link href="/signup" style={{ fontWeight: 600, color: '#6D28D9', textDecoration: 'none' }}>
+            <Link href="/signup" style={{ fontWeight: 600, color: '#292926', textDecoration: 'none' }}>
               Create one
             </Link>
           </p>
