@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
 import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedule } from '@/lib/business-status';
+import { swapById, canDrag } from '@/lib/reorder';
 import {
   BlockIcon,
   IconAcuity,
@@ -1941,15 +1942,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     setMDragId(null);
   },[cancelLongPress]);
 
-  /** Swap two blocks in config order. Live-reorders as the finger passes each one. */
+  /** Live-reorders as the pointer passes each block. Logic and tests in lib/reorder. */
   const swapBlocks = useCallback((a:string,b:string)=>{
-    if(a===b) return;
     setConfig(c=>{
-      const list=[...c.blocks];
-      const i=list.findIndex(x=>x.id===a), j=list.findIndex(x=>x.id===b);
-      if(i<0||j<0) return c;
-      [list[i],list[j]]=[list[j],list[i]];
-      return {...c,blocks:list};
+      const next=swapById(c.blocks,a,b);
+      return next===c.blocks ? c : {...c,blocks:next};
     });
   },[]);
 
@@ -1959,9 +1956,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
    * rather than computing drop gaps, which keeps it correct in the two-column
    * grid where blocks are different widths.
    */
-  const mobileBlockProps = useCallback((id:string)=>({
+  const previewBlockProps = useCallback((id:string)=>({
     style:{
-      touchAction: dragging.current ? 'none' as const : undefined,
+      touchAction: mDragId ? 'none' as const : undefined,
       transform: mDragId===id ? 'scale(1.06)' : undefined,
       boxShadow: mDragId===id ? '0 12px 32px rgba(0,0,0,0.28)' : undefined,
       opacity: mDragId && mDragId!==id ? 0.55 : undefined,
@@ -1970,8 +1967,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       transition: 'transform .18s cubic-bezier(.32,.72,0,1), opacity .18s, box-shadow .18s',
     },
     onPointerDown:(e:React.PointerEvent<HTMLDivElement>)=>{
+      if(!canDrag(id)) return;            // the hours hero is pinned first
+      pointerKind.current=e.pointerType;
       dragStart.current={x:e.clientX,y:e.clientY};
       cancelLongPress();
+      // A mouse picks a block up as soon as you move with the button held.
+      // Making someone hold still for a third of a second with a mouse feels
+      // broken; on touch the hold is what separates a drag from a scroll.
+      if(e.pointerType==='mouse') return;
       dragTimer.current=setTimeout(()=>{
         dragging.current=true;
         setMDragId(id);
@@ -1983,23 +1986,48 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       // Before pick-up, any real movement means the user is scrolling, not holding.
       if(!dragging.current){
         const st=dragStart.current;
-        if(st && Math.hypot(e.clientX-st.x, e.clientY-st.y) > 8) cancelLongPress();
-        return;
+        if(!st) return;
+        const moved=Math.hypot(e.clientX-st.x, e.clientY-st.y);
+        if(pointerKind.current==='mouse'){
+          if(!canDrag(id) || !(e.buttons & 1) || moved <= 4) return;
+          dragging.current=true;
+          setMDragId(id);
+        } else {
+          // Before pick-up, real movement means the user is scrolling.
+          if(moved > 8) cancelLongPress();
+          return;
+        }
       }
       e.preventDefault();
       const el=document.elementFromPoint(e.clientX,e.clientY) as HTMLElement|null;
       const over=el?.closest('[data-block-id]') as HTMLElement|null;
       const overId=over?.getAttribute('data-block-id');
-      if(overId && mDragId && overId!==mDragId) swapBlocks(mDragId,overId);
+      const from=mDragId ?? id;
+      if(overId && overId!==from) swapBlocks(from,overId);
     },
     onPointerUp:()=>{ const wasDragging=dragging.current; endDrag(); if(wasDragging) try{ navigator.vibrate?.(8); }catch{} },
     onPointerCancel:endDrag,
     onContextMenu:(e:React.MouseEvent)=>{ if(dragging.current) e.preventDefault(); },
   }),[mDragId,cancelLongPress,endDrag,swapBlocks]);
 
+  // A mouse released outside the preview never fires the block's own
+  // pointerup, which would leave a block stuck to the cursor. Watch the window
+  // for as long as a drag is live.
+  useEffect(()=>{
+    if(!mDragId) return;
+    const stop=()=>endDrag();
+    window.addEventListener('pointerup',stop);
+    window.addEventListener('pointercancel',stop);
+    return ()=>{
+      window.removeEventListener('pointerup',stop);
+      window.removeEventListener('pointercancel',stop);
+    };
+  },[mDragId,endDrag]);
+
   const [isMobile,setIsMobile]=useState<boolean>(false);
   const sheetDragRef=useRef<{startY:number,open:boolean}|null>(null);
   const [dragOverId,setDragOverId]=useState<string|null>(null);
+  const pointerKind=useRef<string>('mouse');
   // contentMaxWidth: how wide the editor panel can grow. Drag handle shrinks it to give more room to preview.
   // SIDEBAR_W + PREVIEW_MIN must always fit, or the panels overflow the viewport
   // and the sidebar appears to sit on top of the content.
@@ -3970,7 +3998,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     ?(
                       <div className="rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)]" style={{width:340,maxWidth:'100%'}}>
                         <LivePhonePreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride} selectedId={openId}
-                          onSelectBlock={id=>{setOpenId(id);setSidebarTab('design');}}/>
+                          blockProps={previewBlockProps}
+                          onSelectBlock={id=>{
+                            // A drag ends with a pointerup on some block; without
+                            // this the drop would also open that block's editor.
+                            if(dragging.current||suppressTap.current) return;
+                            setOpenId(id);setSidebarTab('design');
+                          }}/>
                       </div>
                     )
                     :(
@@ -3991,6 +4025,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </div>
                     )
                   }
+                  {previewMode==='mobile'&&(
+                    <p className="text-center text-[11px] font-medium" style={{color:mDragId?'#8B5CF6':'#98A2B3'}}>
+                      {mDragId?'Drag to rearrange, let go to drop':'Click a widget to edit \u00b7 drag it to move'}
+                    </p>
+                  )}
                   {localBusiness?.slug&&(
                     <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-[11px] font-semibold text-[#6d28d9] hover:text-[#4c1d95] transition-colors">
@@ -4504,7 +4543,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <LivePhonePreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}
               selectedId={mSheet==='block'?openId:null}
               onSelectBlock={id=>{ if(dragging.current||suppressTap.current) return; setOpenId(id); setSidebarTab('design'); setMSheet('block'); }}
-              blockProps={mobileBlockProps}/>
+              blockProps={previewBlockProps}/>
           </div>
         </div>
 
