@@ -577,6 +577,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   return (
     <div style={{ width:'100%' }}>
       <style>{BG_KEYFRAMES}</style>
+      <style>{`[data-block-id],[data-block-id] *{-webkit-user-drag:none;user-select:none;-webkit-user-select:none}`}</style>
       <div
         className="relative rounded-[28px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-black/8"
         data-os-bg-anim={config.bgAnim?'':undefined}
@@ -823,7 +824,12 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
 }
 
 // ── Desktop page preview (matches [slug]/page.tsx layout) ─────────────────────
-function LiveDesktopPreview({ business,config,timeZone,override }: { business:Business|null; config:OpenStatusPageConfig; timeZone?:string|null; override?:TodayOverride }) {
+function LiveDesktopPreview({ business,config,timeZone,override,selectedId,onSelectBlock,blockProps }: {
+  business:Business|null; config:OpenStatusPageConfig; timeZone?:string|null; override?:TodayOverride;
+  selectedId?:string|null;
+  onSelectBlock?:(id:string)=>void;
+  blockProps?:(id:string)=>{ style?:React.CSSProperties } & React.DOMAttributes<HTMLDivElement> & Record<string,unknown>;
+}) {
   const isDark = isDarkBg(config.bg);
   const DTOK = surfaceTokens(config.bg);
   const bg = config.bg || '#F7F7F5';
@@ -872,6 +878,7 @@ function LiveDesktopPreview({ business,config,timeZone,override }: { business:Bu
       }}
     >
       <style>{BG_KEYFRAMES}</style>
+      <style>{`[data-block-id],[data-block-id] *{-webkit-user-drag:none;user-select:none;-webkit-user-select:none}`}</style>
       <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>
 
         {/* Cover photo */}
@@ -924,8 +931,19 @@ function LiveDesktopPreview({ business,config,timeZone,override }: { business:Bu
         <div style={{ padding:'10px 14px 32px', display:'flex', flexDirection:'column', gap:10 }}>
           {sortedBlocks.length === 0 ? (
             <p style={{ textAlign:'center', fontSize:12, color:sx, padding:'24px 0' }}>Toggle blocks to see them here</p>
-          ) : sortedBlocks.map(b => (
-            <div key={b.id} style={{ ...glass }}>
+          ) : sortedBlocks.map(b => {
+            const extra = blockProps?.(b.id);
+            const { style: extraStyle, ...extraRest } = extra ?? {};
+            return (
+            <div key={b.id} data-block-id={b.id}
+              onClick={()=>onSelectBlock?.(b.id)}
+              {...extraRest}
+              style={{
+                ...glass,
+                ...(onSelectBlock?{cursor:'pointer'}:{}),
+                ...(selectedId===b.id?{outline:'2px solid #7C3AED',outlineOffset:2}:{}),
+                ...(extraStyle ?? {}),
+              }}>
               <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ width:40, height:40, borderRadius:'50%', flexShrink:0, background: isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.05)', display:'grid', placeItems:'center' }}>
                   <BlockIcon id={b.id} size={18} color={DTOK.icon(b.color)}/>
@@ -945,7 +963,8 @@ function LiveDesktopPreview({ business,config,timeZone,override }: { business:Bu
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Social icons */}
@@ -1959,6 +1978,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const previewBlockProps = useCallback((id:string)=>({
     style:{
       touchAction: mDragId ? 'none' as const : undefined,
+      userSelect: 'none' as const,
+      WebkitUserSelect: 'none' as const,
+      WebkitTouchCallout: 'none' as const,
       transform: mDragId===id ? 'scale(1.06)' : undefined,
       boxShadow: mDragId===id ? '0 12px 32px rgba(0,0,0,0.28)' : undefined,
       opacity: mDragId && mDragId!==id ? 0.55 : undefined,
@@ -2008,6 +2030,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     onPointerUp:()=>{ const wasDragging=dragging.current; endDrag(); if(wasDragging) try{ navigator.vibrate?.(8); }catch{} },
     onPointerCancel:endDrag,
     onContextMenu:(e:React.MouseEvent)=>{ if(dragging.current) e.preventDefault(); },
+    // Native link/image dragging bubbles from the anchors and photos inside a
+    // block. Left alone it takes over the mouse and the reorder never starts.
+    onDragStart:(e:React.DragEvent)=>{ e.preventDefault(); },
   }),[mDragId,cancelLongPress,endDrag,swapBlocks]);
 
   // A mouse released outside the preview never fires the block's own
@@ -4020,16 +4045,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           </span>
                         </div>
                         <div className="overflow-y-auto" style={{maxHeight:560}}>
-                          <LiveDesktopPreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}/>
+                          <LiveDesktopPreview key={previewKey} business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}
+                            selectedId={openId}
+                            blockProps={previewBlockProps}
+                            onSelectBlock={id=>{
+                              if(dragging.current||suppressTap.current) return;
+                              setOpenId(id);setSidebarTab('design');
+                            }}/>
                         </div>
                       </div>
                     )
                   }
-                  {previewMode==='mobile'&&(
-                    <p className="text-center text-[11px] font-medium" style={{color:mDragId?'#8B5CF6':'#98A2B3'}}>
-                      {mDragId?'Drag to rearrange, let go to drop':'Click a widget to edit \u00b7 drag it to move'}
-                    </p>
-                  )}
+                  <p className="text-center text-[11px] font-medium" style={{color:mDragId?'#8B5CF6':'#98A2B3'}}>
+                    {mDragId?'Drag to rearrange, let go to drop':'Click a widget to edit \u00b7 drag it to move'}
+                  </p>
                   {localBusiness?.slug&&(
                     <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-[11px] font-semibold text-[#6d28d9] hover:text-[#4c1d95] transition-colors">
