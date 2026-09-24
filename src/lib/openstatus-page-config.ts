@@ -32,12 +32,18 @@ export type WeekDay = 'mon'|'tue'|'wed'|'thu'|'fri'|'sat'|'sun';
 export interface DayHours { open: string; close: string; closed: boolean; }
 export type WeeklyHours = Record<WeekDay, DayHours>;
 
+import { type ImageBlur, type ImageOverlay, isImageBlur, isImageOverlay } from './image-treatment';
+
 export type OpenStatusSocial = { id: string; label: string; url: string; on: boolean };
 export type OpenStatusPageConfig = {
   blocks: OpenStatusBlock[];
   bg: string;
   bgImage?: string;
   bgImagePosition?: string;
+  /** Image treatment. See lib/image-treatment.ts. */
+  imageIntensity?: number;
+  imageBlur?: ImageBlur;
+  imageOverlay?: ImageOverlay;
   themeColor?: string;
   socials: OpenStatusSocial[];
   location?: string;
@@ -115,6 +121,11 @@ export function normalizeOpenStatusPageConfig(value: unknown): OpenStatusPageCon
     bg: typeof raw.bg === 'string' ? raw.bg : '#FFFFFF',
     bgImage: typeof raw.bgImage === 'string' ? raw.bgImage : undefined,
     bgImagePosition: typeof raw.bgImagePosition === 'string' ? raw.bgImagePosition : undefined,
+    imageIntensity: typeof raw.imageIntensity === 'number' && Number.isFinite(raw.imageIntensity)
+      ? Math.min(100, Math.max(0, raw.imageIntensity))
+      : undefined,
+    imageBlur: isImageBlur(raw.imageBlur) ? raw.imageBlur : undefined,
+    imageOverlay: isImageOverlay(raw.imageOverlay) ? raw.imageOverlay : undefined,
     themeColor: typeof raw.themeColor === 'string' ? raw.themeColor : undefined,
     socials,
     location: typeof raw.location === 'string' ? raw.location : '',

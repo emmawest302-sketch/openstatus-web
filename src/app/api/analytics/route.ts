@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
 
-const EVENT_TYPES = new Set(['page_view','block_click','directions_click','social_click']);
+const EVENT_TYPES = new Set(['page_view','block_click','directions_click','social_click','share_click']);
 
 /**
  * Turn a referrer into a source label. Applied at WRITE time now, so we store

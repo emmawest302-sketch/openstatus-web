@@ -4,6 +4,7 @@ import { getAdminClient } from '@/lib/supabaseAdmin';
 import OwnerQuickStatus from '@/components/owner-quick-status';
 import PublishedBusinessBlocks from '@/components/published-business-blocks';
 import PublicSocialLinks from '@/components/public-social-links';
+import { imageTreatment } from '@/lib/image-treatment';
 import PublicRatingRow from '@/components/public-rating-row';
 import AnalyticsTracker from '@/components/analytics-tracker';
 import PublicShareButton from '@/components/public-share-button';
@@ -188,6 +189,15 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   const bgIsDark = (0.2126*bgR + 0.7152*bgG + 0.0722*bgB) < 140;
   const nameColor = enrichedConfig.nameColor ?? (bgIsDark ? '#FFFFFF' : '#151515');
   const pageFont = enrichedConfig.font ?? 'Inter, system-ui, sans-serif';
+  // Cover photo treatment: how present, how blurred, how washed. Applied to
+  // the image layer only — putting opacity on the container would fade the
+  // page's own text and cards along with the photo.
+  const cover = imageTreatment({
+    intensity: enrichedConfig.imageIntensity,
+    blur: enrichedConfig.imageBlur,
+    overlay: enrichedConfig.imageOverlay,
+    pageIsDark: bgIsDark,
+  });
   const fadeGradient = `linear-gradient(to bottom, rgba(${bgR},${bgG},${bgB},0) 0%, rgba(${bgR},${bgG},${bgB},0.08) 22%, rgba(${bgR},${bgG},${bgB},0.35) 48%, rgba(${bgR},${bgG},${bgB},0.72) 72%, ${bgSolid} 100%)`;
 
   // Hours / open status — one shared engine, see lib/business-status.ts.
@@ -345,8 +355,20 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             <img
               src={coverPhoto}
               alt={`${business.name} cover`}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: enrichedConfig.bgImagePosition ?? '50% 60%', display: 'block' }}
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                objectPosition: enrichedConfig.bgImagePosition ?? '50% 60%', display: 'block',
+                opacity: cover.opacity,
+                filter: cover.blur ? `blur(${cover.blur}px)` : undefined,
+                // Blur samples past the edges and leaves a soft transparent
+                // band; scaling up hides it behind the clipped container.
+                transform: cover.scale !== 1 ? `scale(${cover.scale})` : undefined,
+              }}
             />
+            {/* Readability wash, before the fade so the fade still wins at the bottom */}
+            {cover.overlay && (
+              <div style={{ position: 'absolute', inset: 0, background: cover.overlay }}/>
+            )}
             {/* Editorial gradient fade into page bg */}
             <div style={{
               position: 'absolute', inset: 0,
@@ -440,9 +462,19 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
               {business.tagline}
             </p>
           )}
-          {/* Share button */}
-          <div style={{ marginTop: 13, display: 'flex', justifyContent: 'center' }}>
-            <PublicShareButton businessName={business.name} url={`https://openstatus.co/${slug}`}/>
+          {/* Credibility sits with the identity it belongs to, not in a bar
+              of its own further down the page. */}
+          <PublicRatingRow businessId={business.id} placeId={business.place_id} dark={bgIsDark}/>
+
+          {/* The one thing we want a visitor to do. */}
+          <div style={{ marginTop: 15, display: 'flex', justifyContent: 'center' }}>
+            <PublicShareButton
+              businessName={business.name}
+              url={pageUrl(slug)}
+              businessId={business.id}
+              dark={bgIsDark}
+              accent={themeColor}
+            />
           </div>
         </div>
 
@@ -452,7 +484,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
              shop is open right now is the one thing this page knows that a
              plain link list doesn't, so it goes first and it is allowed to be
              loud. */}
-        <div style={{ padding: '12px 12px 0' }}>
+        <div style={{ padding: '22px 12px 0' }}>
         {/* Hours card */}
         {hoursBlockOn && (
           <details style={{
@@ -540,11 +572,6 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             </ul>
           </details>
         )}
-        </div>
-
-        {/* ── Rating row ── */}
-        <div style={{ padding: '10px 14px 0' }}>
-          <PublicRatingRow businessId={business.id} placeId={business.place_id}/>
         </div>
 
         {/* ── Blocks ── */}

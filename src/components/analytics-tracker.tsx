@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
-type EventType = 'page_view' | 'block_click' | 'directions_click' | 'social_click';
+type EventType = 'page_view' | 'block_click' | 'directions_click' | 'social_click' | 'share_click';
 
 function visitorId() {
   try {

@@ -1,171 +1,222 @@
 'use client';
-import { useState } from 'react';
 
-export default function PublicShareButton({ businessName, url }: { businessName: string; url: string }) {
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { trackOpenStatusEvent } from '@/components/analytics-tracker';
+
+/**
+ * "Share this place".
+ *
+ * Sharing is the one thing we actively want a visitor to do, so it is styled
+ * as a real action rather than the small grey utility pill it used to be. It
+ * takes its look from the page: frosted glass on a dark page, a tint of the
+ * owner's accent colour on a light one, so it reads as part of the profile
+ * instead of a browser control.
+ *
+ * Phones get the native share sheet. Everything else gets a small panel with
+ * a QR code and a copy button — a QR because these pages end up on a counter
+ * or a window as often as in a text message.
+ */
+
+type Props = {
+  businessName: string;
+  url: string;
+  businessId: string;
+  dark?: boolean;
+  accent?: string;
+};
+
+export default function PublicShareButton({
+  businessName, url, businessId, dark = false, accent = '#7C3AED',
+}: Props) {
+  const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showFallback, setShowFallback] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [qr, setQr] = useState<string | null>(null);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function handleShare() {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({ title: businessName, url });
-        return;
-      } catch {
-        // user cancelled or error — fall through
-        return;
-      }
+  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
+
+  // The QR library is only pulled in if someone actually opens the panel.
+  useEffect(() => {
+    if (!open || qr) return;
+    let cancelled = false;
+    import('qrcode')
+      .then((m) => m.toDataURL(url, {
+        margin: 1, width: 320, errorCorrectionLevel: 'M',
+        color: { dark: '#111111', light: '#FFFFFF' },
+      }))
+      .then((data) => { if (!cancelled) setQr(data); })
+      .catch(() => {/* no QR is fine, the link still copies */});
+    return () => { cancelled = true; };
+  }, [open, qr, url]);
+
+  const nativeShare = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.share) return false;
+    try {
+      await navigator.share({ title: businessName, text: `${businessName} on OpenStatus`, url });
+      return true;
+    } catch {
+      // Cancelling is not a failure; don't fall back into a panel they
+      // didn't ask for.
+      return true;
     }
-    // Fallback: show copy/link options
-    setShowFallback(true);
-  }
+  }, [businessName, url]);
 
-  async function copyLink() {
+  const onShare = useCallback(async () => {
+    trackOpenStatusEvent(businessId, 'share_click');
+    if (await nativeShare()) return;
+    setOpen(true);
+  }, [businessId, nativeShare]);
+
+  const copyLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      setTimeout(() => { setCopied(false); setShowFallback(false); }, 1500);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
-      // ignore
+      // Clipboard can be blocked; the URL is on screen to copy by hand.
     }
-  }
+  }, [url]);
+
+  // Escape closes, as it should for anything modal.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const pill: React.CSSProperties = dark
+    ? {
+        background: hovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.14)',
+        border: '1px solid rgba(255,255,255,0.28)',
+        color: '#FFFFFF',
+      }
+    : {
+        background: hovered
+          ? `color-mix(in srgb, ${accent} 18%, #FFFFFF)`
+          : `color-mix(in srgb, ${accent} 10%, #FFFFFF)`,
+        border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
+        color: accent,
+      };
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <>
       <button
-        onClick={handleShare}
-        aria-label="Share"
+        type="button"
+        onClick={onShare}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        aria-label={`Share ${businessName}`}
         style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          padding: '7px 14px',
-          borderRadius: 20,
-          border: '1.5px solid rgba(0,0,0,0.09)',
-          background: 'rgba(255,255,255,0.82)',
-          backdropFilter: 'blur(12px)',
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          padding: '10px 18px', borderRadius: 999,
+          fontSize: 13.5, fontWeight: 650, letterSpacing: '-0.01em',
           cursor: 'pointer',
-          fontSize: 12, fontWeight: 600,
-          color: '#292929',
-          letterSpacing: '-0.01em',
+          backdropFilter: 'blur(20px) saturate(130%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(130%)',
+          boxShadow: hovered ? '0 8px 24px rgba(0,0,0,0.12)' : '0 4px 14px rgba(0,0,0,0.07)',
+          transform: hovered ? 'translateY(-1px)' : 'translateY(0)',
+          transition: 'transform .16s ease, box-shadow .16s ease, background .16s ease',
+          ...pill,
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-          <line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/>
-          <line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"
+          style={{
+            transform: hovered ? 'translate(1.5px,-1.5px)' : 'none',
+            transition: 'transform .16s ease',
+          }}>
+          <path d="M7 17 17 7"/><path d="M8 7h9v9"/>
         </svg>
-        Share
+        Share this place
       </button>
 
-      {/* Fallback panel for non-Web Share API browsers */}
-      {showFallback && (
+      {open && (
         <>
-          {/* Backdrop */}
           <div
-            onClick={() => setShowFallback(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 50,
-              background: 'rgba(0,0,0,0.18)',
-            }}
+            onClick={() => setOpen(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.34)' }}
           />
-          <div style={{
-            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-            zIndex: 51, width: 'min(340px, calc(100vw - 32px))',
-            background: 'rgba(255,255,255,0.96)',
-            backdropFilter: 'blur(24px)',
-            borderRadius: 22,
-            boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
-            padding: '20px 20px 24px',
-          }}>
-            <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: '#151515', letterSpacing: '-0.01em' }}>
-              Share {businessName}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Share ${businessName}`}
+            style={{
+              position: 'fixed', zIndex: 61,
+              left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
+              width: 'min(320px, calc(100vw - 32px))',
+              background: 'rgba(255,255,255,0.97)',
+              backdropFilter: 'blur(28px)',
+              borderRadius: 24,
+              boxShadow: '0 24px 70px rgba(0,0,0,0.26)',
+              padding: '22px 22px 18px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ fontSize: 15, fontWeight: 750, color: '#151515', letterSpacing: '-0.02em', margin: 0 }}>
+              Share this place
+            </p>
+            <p style={{ fontSize: 12.5, color: '#767674', margin: '4px 0 16px' }}>
+              {businessName}
             </p>
 
-            {/* Instagram option */}
-            <a
-              href={`instagram://sharesheet?text=${encodeURIComponent(url)}`}
-              onClick={() => setShowFallback(false)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '11px 0',
-                borderBottom: '1px solid rgba(0,0,0,0.06)',
-                textDecoration: 'none', color: '#292929',
-              }}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
-                display: 'grid', placeItems: 'center',
-              }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="white" strokeWidth="1.5"/>
-                  <circle cx="12" cy="12" r="4" fill="none" stroke="white" strokeWidth="1.5"/>
-                  <circle cx="17.5" cy="6.5" r="1" fill="white"/>
-                </svg>
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 500 }}>Instagram</span>
-            </a>
+            <div style={{
+              width: 168, height: 168, margin: '0 auto 16px',
+              borderRadius: 16, overflow: 'hidden',
+              background: '#FFFFFF',
+              border: '1px solid rgba(0,0,0,0.07)',
+              display: 'grid', placeItems: 'center',
+            }}>
+              {qr
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={qr} alt={`QR code linking to ${businessName}`} style={{ width: '100%', height: '100%' }}/>
+                : <span style={{ fontSize: 11, color: '#A1A1AA' }}>Generating…</span>}
+            </div>
 
-            {/* Text message option */}
-            <a
-              href={`sms:?body=${encodeURIComponent(`Check out ${businessName}: ${url}`)}`}
-              onClick={() => setShowFallback(false)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '11px 0',
-                borderBottom: '1px solid rgba(0,0,0,0.06)',
-                textDecoration: 'none', color: '#292929',
-              }}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: '#34C759',
-                display: 'grid', placeItems: 'center',
-              }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 500 }}>Text message</span>
-            </a>
-
-            {/* Copy link */}
             <button
+              type="button"
               onClick={copyLink}
               style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '11px 0',
-                background: 'none', border: 'none', cursor: 'pointer',
-                width: '100%', textAlign: 'left',
+                width: '100%', padding: '12px', borderRadius: 14,
+                border: 'none', cursor: 'pointer',
+                background: copied ? 'rgba(34,197,94,0.14)' : '#151515',
+                color: copied ? '#15803D' : '#FFFFFF',
+                fontSize: 13.5, fontWeight: 650,
+                transition: 'background .15s, color .15s',
               }}
             >
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'rgba(0,0,0,0.07)',
-                display: 'grid', placeItems: 'center',
-              }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#292929" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                </svg>
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 500, color: '#292929' }}>
-                {copied ? '✓ Copied!' : 'Copy link'}
-              </span>
+              {copied ? '✓ Link copied' : 'Copy link'}
             </button>
 
+            {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
+              <button
+                type="button"
+                onClick={() => { void nativeShare(); setOpen(false); }}
+                style={{
+                  width: '100%', marginTop: 8, padding: '11px', borderRadius: 14,
+                  border: '1px solid rgba(0,0,0,0.10)', background: 'transparent',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#292929',
+                }}
+              >
+                More sharing options
+              </button>
+            )}
+
             <button
-              onClick={() => setShowFallback(false)}
+              type="button"
+              onClick={() => setOpen(false)}
               style={{
-                marginTop: 8, width: '100%', padding: '12px',
-                borderRadius: 14, border: 'none',
-                background: 'rgba(0,0,0,0.06)',
-                fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#292929',
+                marginTop: 10, background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 12.5, color: '#8A8A86', fontWeight: 500,
               }}
             >
-              Cancel
+              Close
             </button>
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }

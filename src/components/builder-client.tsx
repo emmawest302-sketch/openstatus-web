@@ -7,6 +7,7 @@ import { SITE_DOMAIN, SITE_URL } from '@/lib/site';
 import { BG_KEYFRAMES, bgAnimationStyle, isDarkBg, solidBg, surfaceTokens } from '@/lib/page-theme';
 import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedule } from '@/lib/business-status';
 import { swapById, canDrag } from '@/lib/reorder';
+import { imageTreatment } from '@/lib/image-treatment';
 import {
   BlockIcon,
   IconAcuity,
@@ -113,6 +114,9 @@ export interface OpenStatusBlock {
 export interface OpenStatusPageConfig {
   blocks: OpenStatusBlock[]; bg: string; bgImage?: string; bgImagePosition?: string;
   socials: Record<string, string>;
+  imageIntensity?: number;
+  imageBlur?: 'none'|'soft'|'strong';
+  imageOverlay?: 'auto'|'light'|'dark'|'none';
   location?: string; tags?: string[]; weeklyHours?: WeeklyHours;
   likeCount?: number; dislikeCount?: number;
   themeColor?: string; placeId?: string; nameColor?: string;
@@ -194,6 +198,9 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     bgImage:      typeof r.bgImage==='string'?r.bgImage:undefined,
     bgImagePosition: typeof r.bgImagePosition==='string'?r.bgImagePosition:undefined,
     socials:      (r.socials&&typeof r.socials==='object')?r.socials as Record<string,string>:{},
+    imageIntensity: typeof r.imageIntensity==='number'?r.imageIntensity:undefined,
+    imageBlur:      (r.imageBlur==='none'||r.imageBlur==='soft'||r.imageBlur==='strong')?r.imageBlur:undefined,
+    imageOverlay:   (r.imageOverlay==='auto'||r.imageOverlay==='light'||r.imageOverlay==='dark'||r.imageOverlay==='none')?r.imageOverlay:undefined,
     location:     typeof r.location==='string'?r.location:undefined,
     tags:         Array.isArray(r.tags)?r.tags as string[]:[],
     weeklyHours:  (r.weeklyHours&&typeof r.weeklyHours==='object')?r.weeklyHours as WeeklyHours:{...DEFAULT_WEEK_HOURS},
@@ -372,6 +379,70 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
             <span className={`text-[10px] font-semibold ${selected===s.key?'text-[#0A0A0A]':'text-[#858585]'}`}>{s.label}</span>
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Image appearance: how loud a cover photo is allowed to be ─────────────────
+//
+// Three controls, no more. A cover photo should behave like atmosphere behind
+// the page, and the usual failure is one good photo turned up so far that the
+// name, the status and the blocks all have to fight it.
+function ImageAppearanceControls({ config, onChange }: {
+  config: OpenStatusPageConfig;
+  onChange: (patch: Partial<OpenStatusPageConfig>) => void;
+}) {
+  const intensity = config.imageIntensity ?? 78;
+  const blur = config.imageBlur ?? 'none';
+  const overlay = config.imageOverlay ?? 'auto';
+
+  const seg = (active: boolean) =>
+    `flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+      active ? 'bg-[#7C3AED] text-white' : 'bg-[#F4F6FA] text-[#667085] hover:text-[#111]'
+    }`;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-baseline justify-between mb-1.5">
+          <FieldLabel>Image intensity</FieldLabel>
+          <span className="text-[11px] font-semibold text-[#667085] tabular-nums">{intensity}%</span>
+        </div>
+        <input
+          type="range" min={0} max={100} step={1} value={intensity}
+          onChange={e=>onChange({ imageIntensity: Number(e.target.value) })}
+          className="w-full accent-[#7C3AED]"
+          aria-label="Image intensity"
+        />
+        <p className="text-[11px] text-[#98A2B3] mt-1">
+          Fades the photo only. Your text and widgets stay fully solid.
+        </p>
+      </div>
+
+      <div>
+        <FieldLabel>Blur</FieldLabel>
+        <div className="flex gap-1.5 mt-1.5">
+          {(['none','soft','strong'] as const).map(k=>(
+            <button key={k} type="button" onClick={()=>onChange({ imageBlur: k })} className={seg(blur===k)}>
+              {k==='none'?'None':k==='soft'?'Soft':'Strong'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <FieldLabel>Overlay</FieldLabel>
+        <div className="flex gap-1.5 mt-1.5">
+          {(['auto','light','dark','none'] as const).map(k=>(
+            <button key={k} type="button" onClick={()=>onChange({ imageOverlay: k })} className={seg(overlay===k)}>
+              {k==='auto'?'Auto':k==='light'?'Light':k==='dark'?'Dark':'None'}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-[#98A2B3] mt-1.5">
+          Auto picks whichever keeps your text readable on this background.
+        </p>
       </div>
     </div>
   );
@@ -591,10 +662,25 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
       >
         {/* Photo header — constrained 148px, fades into page bg */}
         {config.bgImage && (
-          <div style={{ position:'relative', height:190, overflow:'hidden' }}>
-            <img src={config.bgImage} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', objectPosition:config.bgImagePosition??'center 60%', display:'block' }}/>
-            <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${solidBg(config.bg)} 100%)` }}/>
-          </div>
+          (()=>{
+            const t=imageTreatment({
+              intensity:config.imageIntensity, blur:config.imageBlur,
+              overlay:config.imageOverlay, pageIsDark:isDark,
+            });
+            return (
+              <div style={{ position:'relative', height:190, overflow:'hidden' }}>
+                <img src={config.bgImage} alt="" style={{
+                  width:'100%', height:'100%', objectFit:'cover',
+                  objectPosition:config.bgImagePosition??'center 60%', display:'block',
+                  opacity:t.opacity,
+                  filter:t.blur?`blur(${t.blur}px)`:undefined,
+                  transform:t.scale!==1?`scale(${t.scale})`:undefined,
+                }}/>
+                {t.overlay&&<div style={{ position:'absolute', inset:0, background:t.overlay }}/>}
+                <div style={{ position:'absolute', inset:0, background:`linear-gradient(to bottom, transparent 40%, ${solidBg(config.bg)} 100%)` }}/>
+              </div>
+            );
+          })()
         )}
 
         {/* Hero header */}
@@ -3465,8 +3551,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px] space-y-8">
                 <div>
                   <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Style</h2>
-                  <p className="text-[#667085] text-[13px] mt-1">Background, cover photo, and fonts.</p>
+                  <p className="text-[#667085] text-[13px] mt-1">Background, imagery, brand and type.</p>
                 </div>
+
+                <p className="text-[13px] font-semibold text-[#111111] tracking-[-0.01em] -mb-3">Background</p>
 
                 <div>
                   <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Page background</p>
@@ -3510,6 +3598,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   {bgUploadError&&<p className="text-[11px] text-red-500 mt-1.5">{bgUploadError}</p>}
                 </div>
 
+                {/* ── Image appearance ── */}
+                <div>
+                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Image appearance</p>
+                  <ImageAppearanceControls config={config} onChange={patch=>setConfig(c=>({...c,...patch}))}/>
+                </div>
+
+                <p className="text-[13px] font-semibold text-[#111111] tracking-[-0.01em] -mb-3">Brand</p>
+
                 {/* ── Logo ── */}
                 <div>
                   <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Logo</p>
@@ -3543,6 +3639,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 {/* ── Business name colour ── */}
                 <div>
+                  <p className="text-[13px] font-semibold text-[#111111] tracking-[-0.01em] mb-3">Typography</p>
                   <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Business name color</p>
                   <NameColorPicker
                     value={config.nameColor}

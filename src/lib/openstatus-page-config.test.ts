@@ -26,6 +26,9 @@ const FULL = {
   nameColor: '#FFFFFF',
   bgAnim: 'drift',
   bgAnimSpeed: 40,
+  imageIntensity: 65,
+  imageBlur: 'soft',
+  imageOverlay: 'dark',
   weeklyHours: { mon: { open: '09:00', close: '17:00', closed: false } },
 };
 
@@ -106,6 +109,7 @@ describe('round trip', () => {
     const expected: (keyof OpenStatusPageConfig)[] = [
       'blocks', 'bg', 'bgImage', 'bgImagePosition', 'themeColor', 'socials',
       'location', 'tags', 'weeklyHours', 'font', 'nameColor', 'bgAnim', 'bgAnimSpeed',
+      'imageIntensity', 'imageBlur', 'imageOverlay',
     ];
     for (const key of expected) {
       expect(produced, `normalizer dropped "${key}"`).toHaveProperty(key);
@@ -119,5 +123,26 @@ describe('empty input', () => {
     expect(Array.isArray(c.blocks)).toBe(true);
     expect(c.bg).toBe('#FFFFFF');
     expect(c.socials).toEqual([]);
+  });
+});
+
+describe('image treatment', () => {
+  it('keeps the three image settings through a round trip', () => {
+    const c = normalizeOpenStatusPageConfig(FULL);
+    expect(c.imageIntensity).toBe(65);
+    expect(c.imageBlur).toBe('soft');
+    expect(c.imageOverlay).toBe('dark');
+  });
+
+  it('clamps an intensity outside 0-100 instead of trusting it', () => {
+    expect(normalizeOpenStatusPageConfig({ imageIntensity: 250 }).imageIntensity).toBe(100);
+    expect(normalizeOpenStatusPageConfig({ imageIntensity: -5 }).imageIntensity).toBe(0);
+  });
+
+  it('drops values it does not recognise rather than passing them to CSS', () => {
+    const c = normalizeOpenStatusPageConfig({ imageBlur: 'enormous', imageOverlay: 'rainbow', imageIntensity: 'lots' });
+    expect(c.imageBlur).toBeUndefined();
+    expect(c.imageOverlay).toBeUndefined();
+    expect(c.imageIntensity).toBeUndefined();
   });
 });
