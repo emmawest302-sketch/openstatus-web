@@ -89,14 +89,23 @@ export const SOCIAL_PLATFORMS = [
   { key:'twitter',   label:'Twitter / X'},
   { key:'youtube',   label:'YouTube'   },
 ];
+/**
+ * Layout choices offered for a block, keyed by block id.
+ *
+ * Only list a block here once its layouts actually render differently. The
+ * picker previously offered choices for menu, order, book, socials and
+ * website — "Brand / Calendar / CTA" and so on — but nothing anywhere read
+ * `blockStyle` for those blocks. All three options drew the same blank grey
+ * thumbnail (StyleThumb only has artwork for hours and location), nothing
+ * changed in the preview, and nothing changed on the published page. The
+ * owner was choosing between three identical buttons that did nothing.
+ *
+ * A control that does nothing is worse than no control, so those are gone
+ * until the layouts behind them exist.
+ */
 export const BLOCK_STYLES: Record<string, { key:string; label:string }[]> = {
   hours:    [{ key:'minimal', label:'Minimal' }, { key:'clock',  label:'Clock'   }, { key:'hero',    label:'Hero'    }],
   location: [{ key:'place',   label:'Map'     }, { key:'minimal', label:'Minimal' }],
-  menu:     [{ key:'photo',   label:'Photo'   }, { key:'card',   label:'Card'    }, { key:'dark',    label:'Dark'    }],
-  order:    [{ key:'brand',   label:'Brand'   }, { key:'hero',   label:'Hero'    }, { key:'cta',     label:'CTA'     }],
-  book:     [{ key:'brand',   label:'Brand'   }, { key:'cal',    label:'Calendar'}, { key:'cta',     label:'CTA'     }],
-  socials:  [{ key:'icons',   label:'Icons'   }, { key:'list',   label:'List'    }],
-  website:  [{ key:'photo',   label:'Photo'   }, { key:'link',   label:'Link'    }],
 };
 
 export const FEATURE_TAGS = [

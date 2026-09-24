@@ -300,6 +300,16 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
       }}
     >
       <style>{BG_KEYFRAMES}</style>
+
+      {/* Background veil. Softens whatever the owner picked so the cards on
+          top stay readable and a saturated colour stops shouting. Fixed, so
+          it covers the full viewport rather than just the content column. */}
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        background: bgIsDark ? 'rgba(0,0,0,0.20)' : 'rgba(255,255,255,0.26)',
+        backdropFilter: 'saturate(0.86)',
+        WebkitBackdropFilter: 'saturate(0.86)',
+      }}/>
       {/* Structured data — this is what surfaces hours directly in Google results. */}
       <script
         type="application/ld+json"
@@ -326,7 +336,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
       <AnalyticsTracker businessId={business.id} ownerUserId={business.user_id}/>
 
       {/* ── Outer page centering wrapper ── */}
-      <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative' }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1 }}>
 
         {/* ── Cover photo ── */}
         {coverPhoto ? (
@@ -344,7 +354,16 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
             }}/>
           </div>
         ) : (
-          <div style={{ height: 80, background: 'rgba(0,0,0,0.04)' }}/>
+          // No cover photo. A flat grey band looked like an image that had
+          // failed to load; a soft wash of the page's own theme colour reads
+          // as a deliberate header instead. The solid base is the fallback if
+          // color-mix isn't supported.
+          <div style={{
+            height: 96,
+            width: '100vw', marginLeft: 'calc(50% - 50vw)',
+            background: bgIsDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.022)',
+            backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${themeColor} 18%, transparent) 0%, transparent 100%)`,
+          }}/>
         )}
 
         {/* ── Logo ── */}
@@ -393,121 +412,143 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           </h1>
           {shortAddress && (
             <p style={{
-              fontSize: 12, color: bgIsDark ? 'rgba(255,255,255,0.72)' : '#4B4B4B',
-              marginTop: 6, lineHeight: 1.4,
+              // Address, tags and tagline used to sit at near-identical size
+              // and colour, so they blurred into one grey paragraph. Each now
+              // steps down in weight so the eye can tell them apart.
+              fontSize: 12.5, fontWeight: 500,
+              color: bgIsDark ? 'rgba(255,255,255,0.74)' : '#5A5A57',
+              marginTop: 7, lineHeight: 1.4,
             }}>
               {shortAddress}
             </p>
           )}
           {(enrichedConfig.tags ?? []).length > 0 && (
             <p style={{
-              maxWidth:440, margin:'9px auto 0', padding:'0 8px',
-              fontSize:12, fontWeight:500, lineHeight:1.6,
-              color:bgIsDark ? 'rgba(255,255,255,0.7)' : 'rgba(21,21,21,0.58)',
+              maxWidth:440, margin:'6px auto 0', padding:'0 8px',
+              fontSize:12, fontWeight:400, lineHeight:1.55,
+              color:bgIsDark ? 'rgba(255,255,255,0.58)' : 'rgba(21,21,21,0.48)',
             }}>
               {(enrichedConfig.tags ?? []).filter(Boolean).join(' · ')}
             </p>
           )}
           {business.tagline && (
             <p style={{
-              fontSize: 10, fontWeight: 500, letterSpacing: '0.16em',
-              textTransform: 'uppercase', color: '#4B4B4B', marginTop: 5,
+              fontSize: 10, fontWeight: 600, letterSpacing: '0.16em',
+              textTransform: 'uppercase', marginTop: 7,
+              color: bgIsDark ? 'rgba(255,255,255,0.52)' : 'rgba(21,21,21,0.42)',
             }}>
               {business.tagline}
             </p>
           )}
           {/* Share button */}
-          <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ marginTop: 13, display: 'flex', justifyContent: 'center' }}>
             <PublicShareButton businessName={business.name} url={`https://openstatus.co/${slug}`}/>
           </div>
         </div>
 
+        {/* ── Status: the reason this page exists, so it leads ──
+             This used to sit third — below the name, the share button and the
+             star rating — styled identically to Reviews and Website. Whether a
+             shop is open right now is the one thing this page knows that a
+             plain link list doesn't, so it goes first and it is allowed to be
+             loud. */}
+        <div style={{ padding: '12px 12px 0' }}>
+        {/* Hours card */}
+        {hoursBlockOn && (
+          <details style={{
+            ...glass,
+            borderRadius: 24,
+            overflow: 'hidden',
+          }}>
+            <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '15px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                {/* Icon */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                  background: isOpen ? 'rgba(34,197,94,0.12)' : 'rgba(0,0,0,0.05)',
+                  display: 'grid', placeItems: 'center',
+                }}>
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none"
+                    stroke={isOpen ? '#22C55E' : '#8A8A86'}
+                    strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                {/* Text */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{
+                      width: 9, height: 9, borderRadius: '50%',
+                      background: dot, display: 'inline-block', flexShrink: 0,
+                    }}/>
+                    <span style={{
+                      fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em',
+                      color: bgIsDark ? '#FFFFFF' : '#151515',
+                    }}>
+                      {bigText}
+                    </span>
+                  </div>
+                  <p style={{
+                    fontSize: 13.5, marginTop: 3,
+                    color: bgIsDark ? 'rgba(255,255,255,0.68)' : '#6B6B68',
+                  }}>
+                    {subText}
+                    {accentText && <strong style={{ color: dot, fontWeight: 800 }}>{accentText}</strong>}
+                  </p>
+                </div>
+                {/* Chevron */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke={bgIsDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.28)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ flexShrink: 0 }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+              {/* Lead update pill */}
+              {lead && (
+                <div style={{
+                  marginTop: 10, borderRadius: 12,
+                  background: bgIsDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.04)',
+                  border: bgIsDark ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(0,0,0,0.06)',
+                  padding: '8px 12px', fontSize: 12,
+                  color: bgIsDark ? 'rgba(255,255,255,0.92)' : '#292929',
+                }}>
+                  <strong>{lead.headline}</strong>
+                  {lead.detail && <p style={{ marginTop: 2, color: bgIsDark ? 'rgba(255,255,255,0.64)' : '#8A8A86' }}>{lead.detail}</p>}
+                </div>
+              )}
+            </summary>
+
+            {/* Weekly hours table */}
+            <ul style={{
+              borderTop: bgIsDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.06)',
+              margin: 0, padding: '12px 18px',
+              listStyle: 'none',
+            }}>
+              {DAY_NAMES.map((d, i) => (
+                <li key={d} style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  padding: '5px 0', fontSize: 13,
+                  color: i === today
+                    ? (bgIsDark ? '#FFFFFF' : '#151515')
+                    : (bgIsDark ? 'rgba(255,255,255,0.62)' : '#8A8A86'),
+                  fontWeight: i === today ? 600 : 400,
+                }}>
+                  <span>{d}</span>
+                  <span>{rowLabel(hours.find((h) => h.day_of_week === i))}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        </div>
+
         {/* ── Rating row ── */}
-        <div style={{ padding: '6px 14px 0' }}>
+        <div style={{ padding: '10px 14px 0' }}>
           <PublicRatingRow businessId={business.id} placeId={business.place_id}/>
         </div>
 
         {/* ── Blocks ── */}
         <div style={{ padding: '8px 12px 36px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-          {/* Hours card */}
-          {hoursBlockOn && (
-            <details style={{
-              ...glass,
-              borderRadius: 22,
-              overflow: 'hidden',
-            }}>
-              <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '11px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  {/* Icon */}
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                    background: isOpen ? 'rgba(34,197,94,0.10)' : 'rgba(0,0,0,0.05)',
-                    display: 'grid', placeItems: 'center',
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                      stroke={isOpen ? '#22C55E' : '#8A8A86'}
-                      strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                  </div>
-                  {/* Text */}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{
-                        width: 7, height: 7, borderRadius: '50%',
-                        background: dot, display: 'inline-block', flexShrink: 0,
-                      }}/>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: '#151515', letterSpacing: '-0.02em' }}>
-                        {bigText}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 12, color: '#8A8A86', marginTop: 2 }}>
-                      {subText}
-                      {accentText && <strong style={{ color: dot, fontWeight: 700 }}>{accentText}</strong>}
-                    </p>
-                  </div>
-                  {/* Chevron */}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="rgba(0,0,0,0.28)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                    style={{ flexShrink: 0 }}>
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </div>
-                {/* Lead update pill */}
-                {lead && (
-                  <div style={{
-                    marginTop: 10, borderRadius: 12,
-                    background: 'rgba(0,0,0,0.04)',
-                    border: '1px solid rgba(0,0,0,0.06)',
-                    padding: '8px 12px', fontSize: 12, color: '#292929',
-                  }}>
-                    <strong>{lead.headline}</strong>
-                    {lead.detail && <p style={{ marginTop: 2, color: '#8A8A86' }}>{lead.detail}</p>}
-                  </div>
-                )}
-              </summary>
-
-              {/* Weekly hours table */}
-              <ul style={{
-                borderTop: '1px solid rgba(0,0,0,0.06)',
-                margin: 0, padding: '12px 18px',
-                listStyle: 'none',
-              }}>
-                {DAY_NAMES.map((d, i) => (
-                  <li key={d} style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    padding: '5px 0', fontSize: 13,
-                    color: i === today ? '#151515' : '#8A8A86',
-                    fontWeight: i === today ? 600 : 400,
-                  }}>
-                    <span>{d}</span>
-                    <span>{rowLabel(hours.find((h) => h.day_of_week === i))}</span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
 
           {/* Location block */}
           {locationBlockOn && locationBlock && (
