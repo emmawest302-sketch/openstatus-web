@@ -4,6 +4,7 @@ import { getAdminClient } from '@/lib/supabaseAdmin';
 import PublishedBusinessBlocks from '@/components/published-business-blocks';
 import PublicSocialLinks from '@/components/public-social-links';
 import PublicBioCard from '@/components/public-bio-card';
+import PublicHoursRow from '@/components/public-hours-row';
 import { imageTreatment } from '@/lib/image-treatment';
 import PublicRatingRow from '@/components/public-rating-row';
 import AnalyticsTracker from '@/components/analytics-tracker';
@@ -248,6 +249,17 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
   else if (isOpen) { bigText = 'Open now'; subText = 'Closes at '; accentText = pretty(effectiveClose); }
   else if (effective.opensAt) { bigText = 'Opens later'; subText = 'Opens at '; accentText = pretty(`${effective.opensAt}:00`); }
 
+  /** One line of the hours table, labelled for how a customer thinks about it. */
+  const dayRow = (dayIndex: number, label: string) => {
+    const row = hours.find((h) => h.day_of_week === dayIndex);
+    return {
+      label,
+      hours: rowLabel(row),
+      isToday: dayIndex === today,
+      closed: !!row?.is_closed,
+    };
+  };
+
   // Block visibility
   const hoursBlock = enrichedConfig.blocks.find((b) => b.id === 'hours');
   const hoursBlockOn = hoursBlock?.on !== false;
@@ -423,101 +435,31 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
           initials={initials}
         />
 
-        {/* ── Status: the reason this page exists, so it leads ──
-             This used to sit third — below the name, the share button and the
-             star rating — styled identically to Reviews and Website. Whether a
-             shop is open right now is the one thing this page knows that a
-             plain link list doesn't, so it goes first and it is allowed to be
-             loud. */}
-        <div style={{ padding: '22px 12px 0' }}>
-        {/* Hours card */}
+        {/* ── Live hours ──
+             The one question a customer arrives with, answered before
+             anything else. The old version was a card the same weight as
+             Website and Menu; this one is allowed to dominate, because it is
+             the only thing on the page they cannot get from a Google result. */}
         {hoursBlockOn && (
-          <details style={{
-            ...glass,
-            borderRadius: 24,
-            overflow: 'hidden',
-          }}>
-            <summary style={{ cursor: 'pointer', listStyle: 'none', padding: '15px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                {/* Icon */}
-                <div style={{
-                  width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                  background: isOpen ? 'rgba(34,197,94,0.12)' : 'rgba(0,0,0,0.05)',
-                  display: 'grid', placeItems: 'center',
-                }}>
-                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none"
-                    stroke={isOpen ? '#22C55E' : '#8A8A86'}
-                    strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                </div>
-                {/* Text */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{
-                      width: 9, height: 9, borderRadius: '50%',
-                      background: dot, display: 'inline-block', flexShrink: 0,
-                    }}/>
-                    <span style={{
-                      fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em',
-                      color: bgIsDark ? '#FFFFFF' : '#151515',
-                    }}>
-                      {bigText}
-                    </span>
-                  </div>
-                  <p style={{
-                    fontSize: 13.5, marginTop: 3,
-                    color: bgIsDark ? 'rgba(255,255,255,0.68)' : '#6B6B68',
-                  }}>
-                    {subText}
-                    {accentText && <strong style={{ color: dot, fontWeight: 800 }}>{accentText}</strong>}
-                  </p>
-                </div>
-                {/* Chevron */}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke={bgIsDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.28)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ flexShrink: 0 }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </div>
-              {/* Lead update pill */}
-              {lead && (
-                <div style={{
-                  marginTop: 10, borderRadius: 12,
-                  background: bgIsDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.04)',
-                  border: bgIsDark ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(0,0,0,0.06)',
-                  padding: '8px 12px', fontSize: 12,
-                  color: bgIsDark ? 'rgba(255,255,255,0.92)' : '#292929',
-                }}>
-                  <strong>{lead.headline}</strong>
-                  {lead.detail && <p style={{ marginTop: 2, color: bgIsDark ? 'rgba(255,255,255,0.64)' : '#8A8A86' }}>{lead.detail}</p>}
-                </div>
-              )}
-            </summary>
-
-            {/* Weekly hours table */}
-            <ul style={{
-              borderTop: bgIsDark ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.06)',
-              margin: 0, padding: '12px 18px',
-              listStyle: 'none',
-            }}>
-              {DAY_NAMES.map((d, i) => (
-                <li key={d} style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  padding: '5px 0', fontSize: 13,
-                  color: i === today
-                    ? (bgIsDark ? '#FFFFFF' : '#151515')
-                    : (bgIsDark ? 'rgba(255,255,255,0.62)' : '#8A8A86'),
-                  fontWeight: i === today ? 600 : 400,
-                }}>
-                  <span>{d}</span>
-                  <span>{rowLabel(hours.find((h) => h.day_of_week === i))}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
+          <div style={{ padding: '20px 12px 0' }}>
+            <PublicHoursRow
+              state={hoursUnknown ? 'unknown' : isOpen ? 'open' : 'closed'}
+              headline={bigText}
+              detail={subText}
+              accent={accentText || null}
+              note={lead ? { headline: lead.headline, detail: lead.detail } : null}
+              today={dayRow(today, 'Today')}
+              tomorrow={dayRow((today + 1) % 7, 'Tomorrow')}
+              week={DAY_NAMES.map((name, i) => ({
+                label: name,
+                hours: rowLabel(hours.find((h) => h.day_of_week === i)),
+                isToday: i === today,
+                closed: !!hours.find((h) => h.day_of_week === i)?.is_closed,
+              }))}
+              dark={bgIsDark}
+            />
+          </div>
         )}
-        </div>
 
         {/* ── Blocks ── */}
         <div style={{ padding: '8px 12px 36px', display: 'flex', flexDirection: 'column', gap: 8 }}>
