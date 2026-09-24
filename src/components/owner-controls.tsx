@@ -23,6 +23,10 @@ type Props = {
   closesAt: string | null;
   opensAt: string | null;
   hasOverride: boolean;
+  /** Whether a Google Business Profile is linked. Drives the card below the
+   *  buttons: without it, "Closed today" changes this page and nothing else,
+   *  and the owner deserves to know that BEFORE they tap, not after. */
+  googleConnected?: boolean;
   /** IANA zone for the business. Never the phone's. */
   timeZone: string;
   /** Today's regular schedule, so "We're open" knows whether there is
@@ -77,6 +81,7 @@ async function syncGoogle(payload: Record<string, unknown>): Promise<{ ok: boole
 export default function OwnerControls({
   businessName, slug, state, closesAt, opensAt, hasOverride, timeZone,
   todayClosed = false, todayClosesAt = null, initialPick = null,
+  googleConnected = false,
 }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -287,6 +292,36 @@ export default function OwnerControls({
         </div>
       )}
 
+      {/*
+        Google's state, stated up front.
+
+        This used to surface only as an error line AFTER an action — tap
+        "Closed today", wait, then find out Google was never connected and the
+        closure went nowhere but this page. The whole promise of the product is
+        that one tap reaches every surface, so whether that is true today is
+        not a detail to discover on failure.
+
+        Connecting needs the Google OAuth consent screen, which needs a real
+        signed-in account — the owner-link cookie is deliberately not enough to
+        grant an API scope with. So the button sends them to sign in rather
+        than pretending it can be done from here.
+      */}
+      {!googleConnected && (
+        <div style={gCard}>
+          <p style={{ fontSize: 13.5, fontWeight: 650, color: '#0A0A0A', margin: 0 }}>
+            Google isn&apos;t connected
+          </p>
+          <p style={{ fontSize: 12.5, color: '#92400E', margin: '5px 0 0', lineHeight: 1.5 }}>
+            Closing today changes this page straight away. It won&apos;t change what Google
+            shows until you connect your Business Profile.
+          </p>
+          <a href="/connect/google" style={gBtn}>Connect Google Business</a>
+          <button type="button" onClick={() => router.refresh()} style={gQuiet}>
+            Already connected? Check again
+          </button>
+        </div>
+      )}
+
       {slug && (
         <a href={`/${slug}`} target="_blank" rel="noreferrer" style={link}>
           See your page ↗
@@ -320,6 +355,18 @@ const quiet: React.CSSProperties = { ...base, background: 'transparent', color: 
 const timeBtn: React.CSSProperties = {
   padding: '15px 6px', borderRadius: 14, border: '1px solid #E9E9E7', background: '#FFFFFF',
   fontSize: 14.5, fontWeight: 600, color: '#0A0A0A', cursor: 'pointer',
+};
+const gCard: React.CSSProperties = {
+  background: '#FFFCF5', border: '1px solid #FEC84B', borderRadius: 18, padding: '16px 18px 18px',
+};
+const gBtn: React.CSSProperties = {
+  display: 'block', marginTop: 13, padding: '13px 16px', borderRadius: 14,
+  background: '#0A0A0A', color: '#FFFFFF', fontSize: 14, fontWeight: 650,
+  textAlign: 'center', textDecoration: 'none',
+};
+const gQuiet: React.CSSProperties = {
+  display: 'block', width: '100%', marginTop: 8, padding: '9px', border: 'none',
+  background: 'transparent', color: '#92400E', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
 };
 const link: React.CSSProperties = {
   textAlign: 'center', fontSize: 13, color: '#777777', textDecoration: 'none', fontWeight: 500,

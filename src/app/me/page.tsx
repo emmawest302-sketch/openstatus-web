@@ -100,7 +100,7 @@ export default async function OwnerHome({
   const admin = getAdminClient();
   const { data: business } = await admin
     .from('businesses')
-    .select('id, name, timezone, slug')
+    .select('id, name, timezone, slug, google_location_id')
     .eq('id', session.businessId)
     .maybeSingle();
 
@@ -179,6 +179,7 @@ export default async function OwnerHome({
         opensAt={status.opensAt}
         hasOverride={!!override}
         timeZone={timeZone}
+        googleConnected={!!business.google_location_id}
         todayClosed={todayRow?.closed ?? false}
         todayClosesAt={todayRow?.close ?? null}
         initialPick={
