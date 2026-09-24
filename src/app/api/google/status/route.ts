@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mergeSpecialPeriods, type SpecialPeriod, type GDate } from '@/lib/special-hours';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import { OWNER_COOKIE, readOwnerSession } from '@/lib/owner-link';
+import { OWNER_COOKIE, readOwnerSession, sessionVersionOk, type OwnerSession } from '@/lib/owner-link';
 
 /**
  * Google Business Profile open-state + special hours.
@@ -52,10 +52,11 @@ async function resolveGoogle(req: NextRequest) {
   const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
 
   let ownerBusinessId: string | null = null;
+  let ownerSession: OwnerSession | null = null;
   if (!jwt) {
-    const session = readOwnerSession(req.cookies.get(OWNER_COOKIE)?.value);
-    if (!session) return { error: 'Not signed in', status: 401 as const };
-    ownerBusinessId = session.businessId;
+    ownerSession = readOwnerSession(req.cookies.get(OWNER_COOKIE)?.value);
+    if (!ownerSession) return { error: 'Not signed in', status: 401 as const };
+    ownerBusinessId = ownerSession.businessId;
   }
 
   let userId: string | null = null;
@@ -67,13 +68,17 @@ async function resolveGoogle(req: NextRequest) {
 
   const query = admin
     .from('businesses')
-    .select('id, google_location_id');
+    .select('id, google_location_id, owner_session_version');
   const { data: business } = await (ownerBusinessId
     ? query.eq('id', ownerBusinessId)
     : query.eq('user_id', userId!)
   ).single();
 
   if (!business) return { error: 'No business found', status: 404 as const };
+  // The phone's cookie must also survive the owner's last "Get a new link".
+  if (ownerSession && !sessionVersionOk(ownerSession, business.owner_session_version as number | null)) {
+    return { error: 'Not signed in', status: 401 as const };
+  }
   if (!business.google_location_id) {
     return { error: 'Google Business Profile not connected.', status: 400 as const };
   }

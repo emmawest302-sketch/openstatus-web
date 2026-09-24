@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import { OWNER_COOKIE, readOwnerSession } from '@/lib/owner-link';
+import { OWNER_COOKIE } from '@/lib/owner-link';
+import { resolveOwnerSession } from '@/lib/owner-session';
 
 /**
  * The owner's own manifest.
@@ -38,7 +39,7 @@ function shortName(name: string): string {
 
 export async function GET() {
   const jar = await cookies();
-  const session = readOwnerSession(jar.get(OWNER_COOKIE)?.value);
+  const session = await resolveOwnerSession(jar.get(OWNER_COOKIE)?.value);
 
   let name = 'OpenStatus';
   let description = 'Change your hours everywhere, in one tap.';

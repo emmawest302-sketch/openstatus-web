@@ -16,7 +16,7 @@ import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
-import { publishedBlocks, HEADER_ACTION_IDS } from '@/lib/page-rows';
+import { publishedBlocks, blockHasDestination, HEADER_ACTION_IDS } from '@/lib/page-rows';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicBanner from '@/components/public-banner';
 import PublicHoursRow from '@/components/public-hours-row';
@@ -97,13 +97,19 @@ function hoursRowInvalid(d?: { open:string; close:string; closed:boolean }): boo
   return toMin(d.close) <= toMin(d.open);
 }
 
-// These blocks are their own content — they don't need a link to be useful.
-const SELF_CONTAINED_BLOCKS = new Set(['hours','location','updates','gallery']);
-// A block with no destination is excluded from the published page, so the
-// builder has to say so rather than letting the owner think it went live.
+/**
+ * A block with no destination is excluded from the published page, so the
+ * builder has to say so rather than letting the owner think it went live.
+ *
+ * This used to keep its own list of self-contained blocks and its own
+ * url/menuFile check, and the two drifted: Reviews was missing from the
+ * builder's list, so a Reviews row that publishes perfectly well was badged
+ * "Needs setup" — and googleUrl-only blocks were judged by a rule that never
+ * looked at googleUrl. One function decides for both surfaces now.
+ */
 function blockNeedsSetup(b: OpenStatusBlock) {
-  if (SELF_CONTAINED_BLOCKS.has(b.id)) return false;
-  return !(b.url && b.url.trim()) && !(b.menuFile && b.menuFile.trim());
+  if (b.id === 'hours' || HEADER_ACTION_IDS.has(b.id)) return false;
+  return !blockHasDestination(b);
 }
 export type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 interface DayHours { open: string; close: string; closed: boolean; }
@@ -2476,13 +2482,21 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     autosaveTimer.current=setTimeout(()=>{
       setSaving(true);setSaveError('');
       savePageConfig(business?.id,config).then(async ({error})=>{
+        // Hours are not just another config field. The public page reads them
+        // from business_hours, not from the config blob — so if this mirror
+        // fails, the saved config says one thing and every customer sees
+        // another. Swallowing that and showing a green "Saved" told the owner
+        // their new hours were live when they were not, which is the single
+        // most damaging thing this builder can get wrong.
+        let hoursError: string | null = null;
         if(!error&&business?.id&&config.weeklyHours){
           try{ await syncHoursToDb(business.id, config.weeklyHours); }
-          catch{/* surfaced on an explicit save */}
+          catch(e){ hoursError = e instanceof Error ? e.message : 'Hours could not be published'; }
         }
         setSaving(false);
-        if(!error){setSaved(true);setTimeout(()=>setSaved(false),2000);}
-        else{setSaveError(error.message);}
+        if(error){ setSaveError(error.message); return; }
+        if(hoursError){ setSaveError(`Your hours didn’t publish — customers still see the old ones. ${hoursError}`); return; }
+        setSaved(true);setTimeout(()=>setSaved(false),2000);
       });
     },1500);
     return ()=>{if(autosaveTimer.current)clearTimeout(autosaveTimer.current);};

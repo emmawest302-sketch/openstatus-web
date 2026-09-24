@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import { OWNER_COOKIE, readOwnerSession } from '@/lib/owner-link';
+import { OWNER_COOKIE } from '@/lib/owner-link';
+import { resolveOwnerSession } from '@/lib/owner-session';
 import OwnerControls from '@/components/owner-controls';
 import AddToHomeScreen from '@/components/add-to-home-screen';
 import OwnerBanner from '@/components/owner-banner';
@@ -35,7 +36,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function generateMetadata() {
   const jar = await cookies();
-  const session = readOwnerSession(jar.get(OWNER_COOKIE)?.value);
+  const session = await resolveOwnerSession(jar.get(OWNER_COOKIE)?.value);
 
   let label = 'OpenStatus';
   if (session) {
@@ -74,7 +75,7 @@ export default async function OwnerHome({
   searchParams: Promise<{ do?: string }>;
 }) {
   const jar = await cookies();
-  const session = readOwnerSession(jar.get(OWNER_COOKIE)?.value);
+  const session = await resolveOwnerSession(jar.get(OWNER_COOKIE)?.value);
   const { do: shortcut } = await searchParams;
 
   if (!session) {
@@ -152,9 +153,15 @@ export default async function OwnerHome({
   // Today's regular schedule, so the controls can tell "the owner closed us"
   // from "we are never open on a Sunday" — undoing the wrong one leaves the
   // shop shut.
+  //
+  // The day has to be read in the business's timezone. This server runs in
+  // UTC, so getDay() here is already tomorrow for a US shop any evening after
+  // 6pm — which would have offered Tuesday's hours on a Monday night.
   const DAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'] as const;
   // eslint-disable-next-line react-hooks/purity
-  const todayRow = schedule?.[DAY_KEYS[new Date().getDay()]] ?? null;
+  const weekdayAtShop = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone })
+    .format(new Date()).toLowerCase().slice(0, 3) as typeof DAY_KEYS[number];
+  const todayRow = schedule?.[weekdayAtShop] ?? null;
   const status = applyOverride(getBusinessStatus(new Date(), timeZone, schedule), override);
   // A missing page_events table is not something to put in front of an owner
   // holding a phone — the zeroes read the same as a quiet month.
@@ -171,6 +178,7 @@ export default async function OwnerHome({
         closesAt={status.closesAt}
         opensAt={status.opensAt}
         hasOverride={!!override}
+        timeZone={timeZone}
         todayClosed={todayRow?.closed ?? false}
         todayClosesAt={todayRow?.close ?? null}
         initialPick={

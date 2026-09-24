@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import {
-  generateOwnerToken, issueOwnerSession, readOwnerSession, ownerLinkUrl, SESSION_DAYS,
+  generateOwnerToken, issueOwnerSession, readOwnerSession, sessionVersionOk, ownerLinkUrl, SESSION_DAYS,
 } from './owner-link';
 
 beforeAll(() => { process.env.ADMIN_SESSION_SECRET = 'test-secret-for-owner-links'; });
@@ -36,23 +36,24 @@ describe('sessions', () => {
   });
 
   it('refuses an expired cookie', () => {
-    const old = issueOwnerSession(BIZ, Date.now() - (SESSION_DAYS + 1) * 86_400_000);
+    const old = issueOwnerSession(BIZ, { now: Date.now() - (SESSION_DAYS + 1) * 86_400_000 });
     expect(readOwnerSession(old)).toBeNull();
   });
 
   it('refuses a cookie whose business was swapped', () => {
-    const [, expires, mac] = issueOwnerSession(BIZ).split('.');
-    expect(readOwnerSession(`someone-elses-id.${expires}.${mac}`)).toBeNull();
+    const [, version, expires, mac] = issueOwnerSession(BIZ).split('.');
+    expect(readOwnerSession(`someone-elses-id.${version}.${expires}.${mac}`)).toBeNull();
   });
 
   it('refuses a cookie whose expiry was pushed out', () => {
-    const [id, , mac] = issueOwnerSession(BIZ).split('.');
+    const [id, version, , mac] = issueOwnerSession(BIZ).split('.');
     const forever = Date.now() + 10 * 365 * 86_400_000;
-    expect(readOwnerSession(`${id}.${forever}.${mac}`)).toBeNull();
+    expect(readOwnerSession(`${id}.${version}.${forever}.${mac}`)).toBeNull();
   });
 
   it('refuses an unsigned or malformed cookie', () => {
-    for (const bad of ['', 'nonsense', `${BIZ}.${Date.now() + 1000}`, `${BIZ}.${Date.now() + 1000}.`, 'a.b.c.d']) {
+    for (const bad of ['', 'nonsense', `${BIZ}.${Date.now() + 1000}`, `${BIZ}.1.${Date.now() + 1000}`,
+                       `${BIZ}.1.${Date.now() + 1000}.`, 'a.b.c.d', 'a.b.c.d.e']) {
       expect(readOwnerSession(bad)).toBeNull();
     }
     expect(readOwnerSession(undefined)).toBeNull();
@@ -71,5 +72,51 @@ describe('the link', () => {
   it('builds cleanly whether or not the site url has a trailing slash', () => {
     expect(ownerLinkUrl('https://openstatus.co/', 'abc')).toBe('https://openstatus.co/s/abc');
     expect(ownerLinkUrl('https://openstatus.co', 'abc')).toBe('https://openstatus.co/s/abc');
+  });
+});
+
+
+describe('session revocation', () => {
+  const BIZ_ = '11111111-2222-3333-4444-555555555555';
+
+  it('carries the version it was issued under', () => {
+    expect(readOwnerSession(issueOwnerSession(BIZ_, { version: 4 }))?.version).toBe(4);
+  });
+
+  it('refuses a cookie whose version was edited', () => {
+    const [id, , expires, mac] = issueOwnerSession(BIZ_, { version: 1 }).split('.');
+    expect(readOwnerSession(`${id}.99.${expires}.${mac}`)).toBeNull();
+  });
+
+  it('accepts a session at or above the current version', () => {
+    const s = readOwnerSession(issueOwnerSession(BIZ_, { version: 3 }))!;
+    expect(sessionVersionOk(s, 3)).toBe(true);
+    expect(sessionVersionOk(s, 2)).toBe(true);
+  });
+
+  it('revokes a session issued before the last rotation', () => {
+    // The whole point: the stolen phone's cookie is still perfectly signed.
+    const stolen = readOwnerSession(issueOwnerSession(BIZ_, { version: 1 }))!;
+    expect(sessionVersionOk(stolen, 2)).toBe(false);
+  });
+
+  it('reads a pre-versioning cookie as version 1 rather than signing them out', () => {
+    // Three-part cookies were issued before this existed. They keep working
+    // until the owner rotates, which is exactly when they should stop.
+    const legacy = `${BIZ_}.${Date.now() + 1000}`;
+    const { createHmac } = require('crypto') as typeof import('crypto');
+    const secret = process.env.ADMIN_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const mac = createHmac('sha256', secret).update(legacy).digest('hex');
+    const session = readOwnerSession(`${legacy}.${mac}`);
+    expect(session?.version).toBe(1);
+    expect(sessionVersionOk(session!, 1)).toBe(true);
+    expect(sessionVersionOk(session!, 2)).toBe(false);
+  });
+
+  it('falls back to version 1 when the column has not been added yet', () => {
+    // A missing migration must not lock every owner out of their own shop.
+    const s = readOwnerSession(issueOwnerSession(BIZ_, { version: 1 }))!;
+    expect(sessionVersionOk(s, undefined)).toBe(true);
+    expect(sessionVersionOk(s, null)).toBe(true);
   });
 });

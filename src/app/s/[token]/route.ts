@@ -34,7 +34,7 @@ export async function GET(
   const admin = getAdminClient();
   const { data: business } = await admin
     .from('businesses')
-    .select('id')
+    .select('id, owner_session_version')
     .eq('owner_token', token)
     .maybeSingle();
 
@@ -45,8 +45,11 @@ export async function GET(
     return NextResponse.redirect(landing(req, { link: existing ? 'stale' : 'invalid' }));
   }
 
+  // Stamp the session with the business's current version, so a later
+  // rotation can tell this cookie apart from the ones it is revoking.
+  const version = Number(business.owner_session_version);
   const res = NextResponse.redirect(landing(req, { welcome: '1' }));
-  res.cookies.set(OWNER_COOKIE, issueOwnerSession(business.id), {
+  res.cookies.set(OWNER_COOKIE, issueOwnerSession(business.id, { version: Number.isInteger(version) && version >= 1 ? version : 1 }), {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',

@@ -80,17 +80,49 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ url: ownerLinkUrl(SITE_URL, token) });
 }
 
-/** Rotate. Every device holding the old link stops working immediately. */
+/**
+ * Rotate. Every device holding the old link — or a session minted from it —
+ * stops working immediately.
+ *
+ * Replacing the token alone was not enough and the UI was telling owners it
+ * was. A phone that had already swapped the old link for a cookie kept working
+ * for the rest of its 400 days, so the one button offered for a stolen phone
+ * did nothing about the phone. Bumping owner_session_version is what actually
+ * revokes: every cookie carries the number it was issued under, and anything
+ * older is refused on its next request.
+ */
 export async function POST(req: NextRequest) {
   const ctx = await businessFor(req);
   if (!ctx.ok) return NextResponse.json({ error: ctx.error }, { status: ctx.status });
 
+  const { data: current } = await ctx.admin
+    .from('businesses')
+    .select('owner_session_version')
+    .eq('id', ctx.businessId)
+    .maybeSingle();
+
+  const version = Number(current?.owner_session_version);
+  const nextVersion = Number.isInteger(version) && version >= 1 ? version + 1 : 2;
+
   const token = generateOwnerToken();
   const { error } = await ctx.admin
     .from('businesses')
-    .update({ owner_token: token, owner_token_created_at: new Date().toISOString() })
+    .update({
+      owner_token: token,
+      owner_token_created_at: new Date().toISOString(),
+      owner_session_version: nextVersion,
+    })
     .eq('id', ctx.businessId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (error) {
+    // Without the bump this is a half-rotation: new link, old phones still in.
+    // Say so rather than return a fresh URL that implies the old one is dead.
+    return NextResponse.json({
+      error: /owner_session_version/i.test(error.message)
+        ? 'Run supabase_migration_owner_session_version.sql in the Supabase SQL editor — until then, a new link cannot sign out a lost phone.'
+        : error.message,
+    }, { status: 503 });
+  }
 
   return NextResponse.json({ url: ownerLinkUrl(SITE_URL, token) });
 }

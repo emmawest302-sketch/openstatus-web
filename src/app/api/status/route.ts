@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import { OWNER_COOKIE, readOwnerSession } from '@/lib/owner-link';
+import { OWNER_COOKIE, readOwnerSession, sessionVersionOk } from '@/lib/owner-link';
 
 /**
  * Two ways to be the owner here.
@@ -36,11 +36,16 @@ async function getBusiness(req: NextRequest) {
 
   const { data: business } = await admin
     .from('businesses')
-    .select('id, timezone')
+    .select('id, timezone, owner_session_version')
     .eq('id', session.businessId)
     .maybeSingle();
 
-  return business ? { admin, businessId: business.id, timezone: business.timezone } : null;
+  if (!business) return null;
+  // A signed cookie is not enough: it also has to predate no rotation. See
+  // lib/owner-session for why this check lives at every call site.
+  if (!sessionVersionOk(session, business.owner_session_version as number | null)) return null;
+
+  return { admin, businessId: business.id, timezone: business.timezone };
 }
 
 function localDateParts(timeZone: string) {

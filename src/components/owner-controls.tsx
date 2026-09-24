@@ -23,6 +23,8 @@ type Props = {
   closesAt: string | null;
   opensAt: string | null;
   hasOverride: boolean;
+  /** IANA zone for the business. Never the phone's. */
+  timeZone: string;
   /** Today's regular schedule, so "We're open" knows whether there is
       anything to undo or a day to open that is normally shut. */
   todayClosed?: boolean;
@@ -73,7 +75,7 @@ async function syncGoogle(payload: Record<string, unknown>): Promise<{ ok: boole
 }
 
 export default function OwnerControls({
-  businessName, slug, state, closesAt, opensAt, hasOverride,
+  businessName, slug, state, closesAt, opensAt, hasOverride, timeZone,
   todayClosed = false, todayClosesAt = null, initialPick = null,
 }: Props) {
   const router = useRouter();
@@ -124,9 +126,18 @@ export default function OwnerControls({
     }
   }, [router]);
 
+  /**
+   * Today where the shop is, not where the phone is.
+   *
+   * This read the device clock. An owner in Nashville checking their phone
+   * from California would close "today" a day early on Google, and the
+   * special-hours period would carry the wrong date — a dated exception on the
+   * wrong date does not expire into anything useful, it just closes the wrong
+   * day. The business timezone is the only clock that means anything here.
+   */
   const today = () => {
     const [y, m, d] = new Intl.DateTimeFormat('en-CA', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
+      year: 'numeric', month: '2-digit', day: '2-digit', timeZone,
     }).format(new Date()).split('-').map(Number);
     return { year: y, month: m, day: d };
   };
@@ -156,11 +167,15 @@ export default function OwnerControls({
     ? [todayClosesAt, ...TIMES].slice(0, 9)
     : TIMES;
 
-  /** Now, to the nearest five minutes — the opening time for "we're open". */
+  /** Now at the shop, to the nearest five minutes, for "we're open". */
   const nowHHMM = () => {
-    const d = new Date();
-    const m = Math.floor(d.getMinutes() / 5) * 5;
-    return `${String(d.getHours()).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZone,
+    }).formatToParts(new Date());
+    const hh = parts.find(p => p.type === 'hour')?.value ?? '09';
+    const mm = Number(parts.find(p => p.type === 'minute')?.value ?? '0');
+    // 24 rather than 00 comes back from some locales at midnight.
+    return `${hh === '24' ? '00' : hh}:${String(Math.floor(mm / 5) * 5).padStart(2, '0')}`;
   };
 
   const openUntil = (t: string) => {

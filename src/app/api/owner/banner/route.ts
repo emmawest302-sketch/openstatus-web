@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import { OWNER_COOKIE, readOwnerSession } from '@/lib/owner-link';
+import { OWNER_COOKIE } from '@/lib/owner-link';
+import { resolveOwnerSession } from '@/lib/owner-session';
 
 /**
  * Sets the notice at the top of the public page, from the owner's phone.
@@ -20,7 +21,7 @@ export const dynamic = 'force-dynamic';
 const MAX = 160;
 
 export async function POST(req: NextRequest) {
-  const session = readOwnerSession(req.cookies.get(OWNER_COOKIE)?.value);
+  const session = await resolveOwnerSession(req.cookies.get(OWNER_COOKIE)?.value);
   if (!session) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
   const body = await req.json().catch(() => null) as { text?: unknown; on?: unknown } | null;
