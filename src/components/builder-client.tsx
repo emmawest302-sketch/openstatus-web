@@ -232,7 +232,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 function Input({ value,onChange,placeholder,type='text' }: { value:string; onChange:(v:string)=>void; placeholder?:string; type?:string }) {
   return (
     <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-      className="w-full bg-white border border-[#DEDEDC] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
+      className="w-full bg-white border border-[#E9E9E7] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
     />
   );
 }
@@ -241,7 +241,7 @@ function PillSelect({ options,selected,onSelect }: { options:string[]; selected:
     <div className="flex flex-wrap gap-1.5">
       {options.map(o=>(
         <button key={o} onClick={()=>onSelect(o)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#7C3AED] text-white font-semibold border-[#0A0A0A]':'border-[#DEDEDC] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selected===o?'bg-[#7C3AED] text-white font-semibold border-[#0A0A0A]':'border-[#E9E9E7] text-[#6B6B6B] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'}`}>
           {o}
         </button>
       ))}
@@ -263,7 +263,7 @@ function BrandProviderPicker({ providers, selectedKey, onSelect }: {
           <button
             key={key}
             onClick={() => onSelect(key, label)}
-            className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3 transition-all ${active ? 'border-[#0A0A0A] bg-[#EEEEEC] shadow-sm' : 'border-[#DEDEDC] hover:border-[#C0C0C0] bg-white'}`}
+            className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3 transition-all ${active ? 'border-[#0A0A0A] bg-[#EEEEEC] shadow-sm' : 'border-[#E9E9E7] hover:border-[#C0C0C0] bg-white'}`}
           >
             {key === 'other'
               ? <div className="w-8 h-8 rounded-xl border-2 border-dashed border-[#D4D4D4] flex items-center justify-center"><LucideGlobe size={14} color="#858585"/></div>
@@ -310,14 +310,14 @@ function StyleThumb({ blockId, styleKey }: { blockId: string; styleKey: string }
   // Hours
   if (blockId === 'hours') {
     if (styleKey === 'minimal') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-white flex items-center px-2 gap-1.5">
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-white flex items-center px-2 gap-1.5">
         <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"/>
         <div className="flex-1 space-y-1"><div className="h-1.5 bg-[#E0E0E0] rounded-full w-full"/><div className="h-1 bg-[#F0F0F0] rounded-full w-3/4"/></div>
         <div className="w-1.5 h-1.5 rounded-full bg-[#E0E0E0]"/>
       </div>
     );
     if (styleKey === 'clock') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-white flex flex-col items-center justify-center gap-0.5">
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-white flex flex-col items-center justify-center gap-0.5">
         <div className="w-[14px] h-[14px] rounded-full border-[1.5px] border-[#C0C0C0] relative">
           <div className="absolute left-1/2 top-1/2 w-[1px] h-[5px] bg-[#888] rounded origin-bottom" style={{ transform:'translate(-50%,-100%) rotate(-35deg)' }}/>
           <div className="absolute left-1/2 top-1/2 w-[1px] h-[4px] bg-[#666] rounded origin-bottom" style={{ transform:'translate(-50%,-100%) rotate(60deg)' }}/>
@@ -335,32 +335,32 @@ function StyleThumb({ blockId, styleKey }: { blockId: string; styleKey: string }
   // Location
   if (blockId === 'location') {
     if (styleKey === 'photo') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] overflow-hidden">
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] overflow-hidden">
         <div className="h-[22px] bg-gradient-to-br from-[#1e3a5f] to-[#0f172a] flex items-center justify-center">
           <LucidePin size={7} color="rgba(255,255,255,0.6)"/>
         </div>
         <div className="h-[20px] bg-white px-1.5 flex items-center gap-1">
-          <div className="h-1.5 bg-[#E8E8E8] rounded-full flex-1"/>
+          <div className="h-1.5 bg-[#E9E9E7] rounded-full flex-1"/>
           <div className="h-1.5 w-1.5 bg-[#F0F0F0] rounded"/>
         </div>
       </div>
     );
     if (styleKey === 'place') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-gradient-to-br from-[#1e3a5f] to-[#0f172a] flex flex-col items-center justify-center gap-0.5">
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-gradient-to-br from-[#1e3a5f] to-[#0f172a] flex flex-col items-center justify-center gap-0.5">
         <LucidePin size={10} color="white"/>
         <div className="h-[4px] bg-white/30 rounded-full w-8"/>
       </div>
     );
     if (styleKey === 'minimal') return (
-      <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-white flex items-center px-2 gap-1.5">
+      <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-white flex items-center px-2 gap-1.5">
         <LucidePin size={8} color="#C0C0C0"/>
-        <div className="flex-1 h-1.5 bg-[#E8E8E8] rounded-full"/>
+        <div className="flex-1 h-1.5 bg-[#E9E9E7] rounded-full"/>
         <span className="text-[7px] text-[#C0C0C0]">›</span>
       </div>
     );
   }
   // Generics
-  return <div className="w-[68px] h-[42px] rounded-lg border border-[#E8E8E8] bg-[#EEEEEC]"/>;
+  return <div className="w-[68px] h-[42px] rounded-lg border border-[#E9E9E7] bg-[#EEEEEC]"/>;
 }
 
 function BlockStylePicker({ blockId, selected, onSelect }: {
@@ -374,7 +374,7 @@ function BlockStylePicker({ blockId, selected, onSelect }: {
       <div className="flex gap-2">
         {styles.map(s => (
           <button key={s.key} onClick={() => onSelect(s.key)}
-            className={`flex flex-col items-center gap-1.5 rounded-xl p-1.5 border transition-all ${selected===s.key?'border-[#0A0A0A]':'border-[#E8E8E8] hover:border-[#C0C0C0]'}`}>
+            className={`flex flex-col items-center gap-1.5 rounded-xl p-1.5 border transition-all ${selected===s.key?'border-[#0A0A0A]':'border-[#E9E9E7] hover:border-[#C0C0C0]'}`}>
             <StyleThumb blockId={blockId} styleKey={s.key}/>
             <span className={`text-[10px] font-semibold ${selected===s.key?'text-[#0A0A0A]':'text-[#858585]'}`}>{s.label}</span>
           </button>
@@ -399,7 +399,7 @@ function ImageAppearanceControls({ config, onChange }: {
 
   const seg = (active: boolean) =>
     `flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-      active ? 'bg-[#7C3AED] text-white' : 'bg-[#F4F6FA] text-[#667085] hover:text-[#111]'
+      active ? 'bg-[#7C3AED] text-white' : 'bg-[#F7F7F6] text-[#777777] hover:text-[#0A0A0A]'
     }`;
 
   return (
@@ -407,7 +407,7 @@ function ImageAppearanceControls({ config, onChange }: {
       <div>
         <div className="flex items-baseline justify-between mb-1.5">
           <FieldLabel>Image intensity</FieldLabel>
-          <span className="text-[11px] font-semibold text-[#667085] tabular-nums">{intensity}%</span>
+          <span className="text-[11px] font-semibold text-[#777777] tabular-nums">{intensity}%</span>
         </div>
         <input
           type="range" min={0} max={100} step={1} value={intensity}
@@ -415,7 +415,7 @@ function ImageAppearanceControls({ config, onChange }: {
           className="w-full accent-[#7C3AED]"
           aria-label="Image intensity"
         />
-        <p className="text-[11px] text-[#98A2B3] mt-1">
+        <p className="text-[11px] text-[#9A9A97] mt-1">
           Fades the photo only. Your text and widgets stay fully solid.
         </p>
       </div>
@@ -440,7 +440,7 @@ function ImageAppearanceControls({ config, onChange }: {
             </button>
           ))}
         </div>
-        <p className="text-[11px] text-[#98A2B3] mt-1.5">
+        <p className="text-[11px] text-[#9A9A97] mt-1.5">
           Auto picks whichever keeps your text readable on this background.
         </p>
       </div>
@@ -453,8 +453,8 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
   value: string; onChange:(v:string, anim?:string, speed?:number)=>void; dark?:boolean;
 }) {
   const wheelRef = useRef<HTMLInputElement>(null);
-  const border = dark ? '#E8EBF0' : '#DEDEDC';
-  const accent = dark ? '#111111' : '#0A0A0A';
+  const border = dark ? '#E9E9E7' : '#E9E9E7';
+  const accent = dark ? '#0A0A0A' : '#0A0A0A';
   const [tab,setTab] = useState<'color'|'design'>('color');
   return (
     <div>
@@ -463,7 +463,7 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
       <div className="flex gap-1.5 mb-3">
         {([['color','Color'],['design','Designs']] as const).map(([k,label])=>(
           <button key={k} onClick={()=>setTab(k)}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${tab===k?'bg-[#7C3AED] text-white':'bg-[#F4F6FA] text-[#667085] hover:text-[#111]'}`}>
+            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${tab===k?'bg-[#7C3AED] text-white':'bg-[#F7F7F6] text-[#777777] hover:text-[#0A0A0A]'}`}>
             {label}
           </button>
         ))}
@@ -480,10 +480,10 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
           </div>
           {/* colour wheel */}
           <button onClick={()=>wheelRef.current?.click()}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors hover:border-[#111]"
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-colors hover:border-[#0A0A0A]"
             style={{borderColor:border}}>
             <span className="w-6 h-6 rounded-full flex-shrink-0" style={{background:'conic-gradient(#ef4444,#f59e0b,#eab308,#22c55e,#06b6d4,#3b82f6,#8b5cf6,#ec4899,#ef4444)'}}/>
-            <span className="text-[12px] font-semibold text-[#111]">Pick any color</span>
+            <span className="text-[12px] font-semibold text-[#0A0A0A]">Pick any color</span>
           </button>
           <input ref={wheelRef} type="color"
             value={/^#[0-9a-fA-F]{6}$/.test(value)?value:'#ffffff'}
@@ -501,7 +501,7 @@ function PageBackgroundPicker({ value, onChange, dark=false }: {
                 data-os-bg-anim={d.anim?'':undefined}
                 style={{background:d.css,borderColor:value===d.css?accent:border,
                   animation:bgAnimationStyle(d.anim,(d.speed??60)/3)}}/>
-              <span className={`text-[9px] font-semibold ${value===d.css?'text-[#111]':'text-[#98A2B3]'}`}>{d.label}{d.anim?" ✦":""}</span>
+              <span className={`text-[9px] font-semibold ${value===d.css?'text-[#0A0A0A]':'text-[#9A9A97]'}`}>{d.label}{d.anim?" ✦":""}</span>
             </button>
           ))}
         </div>
@@ -530,7 +530,7 @@ function PhotoField({ label, value, onChange, placeholder, hint }: {
       {hint && <p className="text-xs text-[#858585] mb-3 leading-snug">{hint}</p>}
       {value
         ? (
-          <div className="relative group rounded-xl overflow-hidden border border-[#DEDEDC]">
+          <div className="relative group rounded-xl overflow-hidden border border-[#E9E9E7]">
             <img src={value} className="w-full h-32 object-cover" alt=""/>
             <button onClick={()=>onChange('')}
               className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -542,7 +542,7 @@ function PhotoField({ label, value, onChange, placeholder, hint }: {
           <div>
             <div
               onClick={()=>fileRef.current?.click()}
-              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F7F7F5] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
+              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F4F5F6] h-24 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
               <LucideImage size={18} color="#858585"/>
               <p className="text-[12px] text-[#858585]">Click to upload</p>
             </div>
@@ -569,7 +569,7 @@ function PdfField({ label, value, onChange }: { label:string; value:string; onCh
       <FieldLabel>{label}</FieldLabel>
       {value
         ? (
-          <div className="flex items-center gap-3 rounded-xl border border-[#DEDEDC] bg-[#F7F7F5] px-4 py-3">
+          <div className="flex items-center gap-3 rounded-xl border border-[#E9E9E7] bg-[#F4F5F6] px-4 py-3">
             <LucideFileText size={18} color="#0A0A0A"/>
             <span className="text-sm text-[#0A0A0A] font-medium flex-1 truncate">PDF uploaded</span>
             <button onClick={()=>onChange('')} className="text-[11px] text-[#858585] hover:text-[#0A0A0A] transition-colors font-medium">Remove</button>
@@ -579,7 +579,7 @@ function PdfField({ label, value, onChange }: { label:string; value:string; onCh
           <div>
             <div
               onClick={()=>fileRef.current?.click()}
-              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F7F7F5] h-20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
+              className="rounded-xl border-2 border-dashed border-[#D4D4D4] bg-[#F4F5F6] h-20 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-[#0A0A0A] hover:bg-[#EEEEEC] transition-all">
               <LucideFileText size={18} color="#858585"/>
               <p className="text-[12px] text-[#858585]">Upload PDF</p>
             </div>
@@ -597,7 +597,7 @@ function TimeSelect({ value,onChange }: { value:string; onChange:(v:string)=>voi
   for(let h=0;h<24;h++) for(const m of [0,30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
   return (
     <select value={value} onChange={e=>onChange(e.target.value)}
-      className="bg-white border border-[#DEDEDC] rounded-lg px-2.5 py-1.5 text-xs text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] cursor-pointer appearance-none">
+      className="bg-white border border-[#E9E9E7] rounded-lg px-2.5 py-1.5 text-xs text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] cursor-pointer appearance-none">
       {times.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
     </select>
   );
@@ -703,7 +703,7 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
               </div>
             )}
             {reviewPct && <span className={`text-[8px] ${sx}`}>·</span>}
-            <button className={`flex items-center gap-1 px-2 py-0.5 rounded-md ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
+            <button className={`flex items-center gap-1 px-2 py-0.5 rounded-lg ${isDark?'bg-white/8 text-white/60':'bg-black/5 text-black/50'}`}>
               <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
               <span className="text-[8px] font-medium">Share</span>
             </button>
@@ -1081,10 +1081,10 @@ function CoverPhotoField({ block, onUpdateBlock, label='Cover photo', hint }: {
 }) {
   if (!blockAllowsPhoto(block.size)) {
     return (
-      <div className="rounded-xl border border-[#EBEBEA] bg-[#FAFAF9] px-3.5 py-3">
-        <p className="text-[11px] font-normal text-[#667085]">{label} needs a bigger block</p>
-        <p className="text-[10px] text-[#98A2B3] mt-0.5">
-          Set the size below to <strong className="text-[#667085] font-semibold">Square</strong> or <strong className="text-[#667085] font-semibold">Large</strong>.
+      <div className="rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] px-3.5 py-3">
+        <p className="text-[11px] font-normal text-[#777777]">{label} needs a bigger block</p>
+        <p className="text-[10px] text-[#9A9A97] mt-0.5">
+          Set the size below to <strong className="text-[#777777] font-semibold">Square</strong> or <strong className="text-[#777777] font-semibold">Large</strong>.
           {block.coverPhoto ? ' Your photo is saved and comes back when you do.' : ''}
         </p>
       </div>
@@ -1105,23 +1105,23 @@ function NameColorPicker({ value, autoColor, onChange }: {
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-2.5">
         <button onClick={()=>onChange(undefined)}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${!value?'bg-[#7C3AED] text-white border-[#111]':'border-[#DEDEDC] text-[#667085] hover:border-[#111]'}`}>
+          className={`px-3 py-1.5 rounded-full text-[11px] font-medium border transition-all ${!value?'bg-[#7C3AED] text-white border-[#0A0A0A]':'border-[#E9E9E7] text-[#777777] hover:border-[#0A0A0A]'}`}>
           Auto
         </button>
         {SWATCHES.map(c=>(
           <button key={c} onClick={()=>onChange(c)} title={c}
             className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
-            style={{background:c,borderColor:value===c?'#111':'#DEDEDC'}}/>
+            style={{background:c,borderColor:value===c?'#0A0A0A':'#E9E9E7'}}/>
         ))}
         <button onClick={()=>wheelRef.current?.click()} title="Custom color"
-          className="w-7 h-7 rounded-full border-2 border-dashed border-[#D4D4D4] flex items-center justify-center hover:border-[#111] transition-colors">
-          <span className="text-[11px] text-[#98A2B3]">+</span>
+          className="w-7 h-7 rounded-full border-2 border-dashed border-[#D4D4D4] flex items-center justify-center hover:border-[#0A0A0A] transition-colors">
+          <span className="text-[11px] text-[#9A9A97]">+</span>
         </button>
         <input ref={wheelRef} type="color" className="sr-only" aria-label="Custom business name color"
           value={/^#[0-9a-fA-F]{6}$/.test(value??'')?value:autoColor}
           onChange={e=>onChange(e.target.value)}/>
       </div>
-      <p className="text-[10px] text-[#98A2B3]">
+      <p className="text-[10px] text-[#9A9A97]">
         {value ? 'Custom color.' : `Auto — currently ${autoColor==='#FFFFFF'?'white':'black'}, based on your background.`}
       </p>
     </div>
@@ -1185,11 +1185,11 @@ function CoverPhotoCrop({ src, position, onChange, onRemove }: {
       </div>
       {/* vertical nudge — the axis that actually matters on a wide banner */}
       <div className="flex items-center gap-2.5 mt-2">
-        <span className="text-[10px] font-normal text-[#98A2B3] w-8 flex-shrink-0">Up</span>
+        <span className="text-[10px] font-normal text-[#9A9A97] w-8 flex-shrink-0">Up</span>
         <input type="range" min={0} max={100} value={py}
           onChange={e=>onChange(`${px}% ${e.target.value}%`)}
           className="flex-1 accent-[#7C3AED]" aria-label="Vertical crop position"/>
-        <span className="text-[10px] font-normal text-[#98A2B3] w-10 flex-shrink-0 text-right">Down</span>
+        <span className="text-[10px] font-normal text-[#9A9A97] w-10 flex-shrink-0 text-right">Down</span>
       </div>
     </div>
   );
@@ -1201,8 +1201,8 @@ function TextStylePicker({ bold, italic, onToggle }: {
   bold:boolean; italic:boolean; onToggle:(k:'bold'|'italic')=>void;
 }) {
   const btn = (on:boolean) =>
-    `w-6 h-6 rounded-md text-[11px] leading-none flex items-center justify-center border transition-colors ${
-      on ? 'bg-[#F5F3FF] border-[#DDD6FE] text-[#6D28D9]' : 'bg-white border-[#EBEBEA] text-[#98A2B3] hover:border-[#111]'
+    `w-6 h-6 rounded-lg text-[11px] leading-none flex items-center justify-center border transition-colors ${
+      on ? 'bg-[rgba(124,58,237,0.07)] border-[#7C3AED] text-[#0A0A0A]' : 'bg-white border-[#E9E9E7] text-[#9A9A97] hover:border-[#DCDCD9]'
     }`;
   return (
     <div className="flex items-center gap-1 mb-1.5">
@@ -1217,11 +1217,11 @@ function TextStylePicker({ bold, italic, onToggle }: {
 function MoreOptions({ label='More options', children }: { label?:string; children:React.ReactNode }) {
   const [open,setOpen]=useState(false);
   return (
-    <div className="rounded-xl border border-[#EBEBEA] overflow-hidden">
+    <div className="rounded-xl border border-[#E9E9E7] overflow-hidden">
       <button type="button" onClick={()=>setOpen(v=>!v)}
-        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[#FAFAF9] hover:bg-[#F4F4F2] transition-colors">
-        <span className="text-[12px] font-semibold text-[#667085]">{label}</span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[#F7F7F6] hover:bg-[#F4F4F2] transition-colors">
+        <span className="text-[12px] font-semibold text-[#777777]">{label}</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
           style={{transform:open?'rotate(180deg)':'none',transition:'transform 0.18s ease'}}><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       {open&&<div className="px-3.5 py-4 space-y-4 bg-white">{children}</div>}
@@ -1298,11 +1298,11 @@ function ReviewsCard({ block,placeId,onUpdateBlock }: {
   }
 
   return (
-    <div className="mb-5 rounded-2xl border border-[#EBEBEA] bg-white p-4">
+    <div className="mb-5 rounded-2xl border border-[#E9E9E7] bg-white p-4">
       <div className="flex items-start justify-between gap-3 mb-1">
-        <p className="text-[12px] font-semibold text-[#111]">Reviews &amp; rating</p>
+        <p className="text-[12px] font-semibold text-[#0A0A0A]">Reviews &amp; rating</p>
         <button onClick={()=>void refresh()} disabled={busy}
-          className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[11px] font-semibold hover:border-[#111] transition-colors disabled:opacity-40">
+          className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[11px] font-semibold hover:border-[#0A0A0A] transition-colors disabled:opacity-40">
           {busy?'Refreshing…':'Refresh from Google'}
         </button>
       </div>
@@ -1311,16 +1311,16 @@ function ReviewsCard({ block,placeId,onUpdateBlock }: {
         ?(
           <div className="flex items-center gap-2 mt-2.5">
             <StarRating value={stars}/>
-            <span className="text-[15px] font-semibold text-[#111] leading-none">{stars.toFixed(1)}</span>
+            <span className="text-[15px] font-semibold text-[#0A0A0A] leading-none">{stars.toFixed(1)}</span>
             {!!block.reviewCount&&(
-              <span className="text-[12px] text-[#98A2B3]">({block.reviewCount.toLocaleString()})</span>
+              <span className="text-[12px] text-[#9A9A97]">({block.reviewCount.toLocaleString()})</span>
             )}
           </div>
         )
-        :<p className="text-[12px] text-[#98A2B3] mt-1">No rating yet — hit refresh once your Google listing has reviews.</p>
+        :<p className="text-[12px] text-[#9A9A97] mt-1">No rating yet — hit refresh once your Google listing has reviews.</p>
       }
 
-      <p className="text-[11px] text-[#98A2B3] mt-2.5 leading-relaxed">
+      <p className="text-[11px] text-[#9A9A97] mt-2.5 leading-relaxed">
         This is your real Google rating, so it can&apos;t be typed by hand. It shows in your page header, under your business name.
       </p>
       {err&&<p className="text-[11px] text-red-500 mt-2">{err}</p>}
@@ -1349,13 +1349,13 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
   return (
     <div className="flex flex-col h-full">
       {/* header */}
-      <div className="flex items-center gap-3 pb-5 mb-6 border-b border-[#DEDEDC] flex-shrink-0">
+      <div className="flex items-center gap-3 pb-5 mb-6 border-b border-[#E9E9E7] flex-shrink-0">
         <button onClick={onClose} className="flex items-center gap-1.5 text-[12px] text-[#858585] hover:text-[#0A0A0A] transition-colors font-medium -ml-0.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           Blocks
         </button>
-        <div className="h-4 w-px bg-[#DEDEDC]"/>
-        <div className="w-7 h-7 rounded-lg bg-[#EEEEEC] border border-[#DEDEDC] flex items-center justify-center flex-shrink-0">
+        <div className="h-4 w-px bg-[#E9E9E7]"/>
+        <div className="w-7 h-7 rounded-lg bg-[#EEEEEC] border border-[#E9E9E7] flex items-center justify-center flex-shrink-0">
           <BlockIcon id={block.id} size={13} color="#0A0A0A"/>
         </div>
         <p className="font-semibold text-[14px] text-[#0A0A0A] leading-tight flex-1 min-w-0 truncate">{block.title}</p>
@@ -1409,8 +1409,8 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
                   <p className="mt-1 text-[10px] text-black/35">Optional. Without it, iPhone visitors open Google Maps.</p>
                 </div>
               </MoreOptions>
-              <p className="text-[11px] text-[#98A2B3] leading-relaxed">
-                Reviews and your star rating moved to the <strong className="text-[#667085] font-semibold">Business</strong> tab — they show in your page header, not on this card.
+              <p className="text-[11px] text-[#9A9A97] leading-relaxed">
+                Reviews and your star rating moved to the <strong className="text-[#777777] font-semibold">Business</strong> tab — they show in your page header, not on this card.
               </p>
             </div>
           )}
@@ -1432,7 +1432,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
           {block.id==='hours' && (
             <div className="space-y-6">
               <BlockStylePicker blockId="hours" selected={block.blockStyle??'minimal'} onSelect={v=>onUpdateBlock({blockStyle:v})}/>
-              <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#F7F7F5] border-[#DEDEDC]'}`}>
+              <div className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 border ${status==='open'?'bg-[#F0FDF4] border-[#BBF7D0]':'bg-[#F4F5F6] border-[#E9E9E7]'}`}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
                 <div>
                   <p className="text-sm font-semibold text-[#0A0A0A]">{status==='open'?'Open now':'Closed right now'}</p>
@@ -1446,7 +1446,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
                     Copy Mon → weekdays
                   </button>
                 </div>
-                <div className="rounded-2xl border border-[#DEDEDC] overflow-hidden">
+                <div className="rounded-2xl border border-[#E9E9E7] overflow-hidden">
                   {DAYS.map(({key,label},i)=>{
                     const day=hours[key];
                     return (
@@ -1454,7 +1454,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
                         <span className="text-[13px] font-medium text-[#0A0A0A] w-10 flex-shrink-0">{label.slice(0,3)}</span>
                         <button
                           onClick={()=>onUpdateConfig({weeklyHours:{...hours,[key]:{...day,closed:!day.closed}}})}
-                          className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all flex-shrink-0 font-semibold ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
+                          className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all flex-shrink-0 font-semibold ${day.closed?'border-[#E9E9E7] text-[#858585] bg-white':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
                         >
                           {day.closed?'Closed':'Open'}
                         </button>
@@ -1487,19 +1487,19 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={()=>onUpdateBlock({menuType:'pdf'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='pdf'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}>
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='pdf'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
                   <LucideFileText size={20} color={block.menuType==='pdf'?'#0A0A0A':'#858585'}/>
                   <span className="text-[11px] font-semibold text-[#0A0A0A]">Upload PDF</span>
                 </button>
                 <button
                   onClick={()=>onUpdateBlock({menuType:'photos'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='photos'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}>
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='photos'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
                   <LucideImage size={20} color={block.menuType==='photos'?'#0A0A0A':'#858585'}/>
                   <span className="text-[11px] font-semibold text-[#0A0A0A]">Photos</span>
                 </button>
                 <button
                   onClick={()=>onUpdateBlock({menuType:'url'})}
-                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='url'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#DEDEDC] hover:border-[#0A0A0A]'}`}>
+                  className={`flex flex-col items-center gap-2 rounded-xl border px-4 py-4 transition-all ${block.menuType==='url'?'border-[#0A0A0A] bg-[#EEEEEC]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
                   <LucideGlobe size={20} color={block.menuType==='url'?'#0A0A0A':'#858585'}/>
                   <span className="text-[11px] font-semibold text-[#0A0A0A]">Link</span>
                 </button>
@@ -1589,7 +1589,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
                         className="flex flex-col items-center gap-1.5 group"
                         style={{width:sz.span===2?86:44}}>
                         <span className="w-full rounded-lg border-2 transition-all group-hover:scale-105 flex items-end justify-start p-1"
-                          style={{aspectRatio:sz.ratio,borderColor:on?'#0A0A0A':'#DEDEDC',background:on?'#EEEEEC':'#FAFAF9'}}>
+                          style={{aspectRatio:sz.ratio,borderColor:on?'#0A0A0A':'#E9E9E7',background:on?'#EEEEEC':'#F7F7F6'}}>
                           <span className="block w-1/2 h-[3px] rounded-full" style={{background:on?'#0A0A0A':'#D4D4D4'}}/>
                         </span>
                         <span className={`text-[10px] font-semibold ${on?'text-[#0A0A0A]':'text-[#858585]'}`}>{sz.label}</span>
@@ -1597,7 +1597,7 @@ function BlockEditPanel({ block,config,onUpdateBlock,onUpdateConfig,onClose,time
                     );
                   })}
                 </div>
-                <p className="mt-2.5 text-[10px] text-[#98A2B3]">
+                <p className="mt-2.5 text-[10px] text-[#9A9A97]">
                   {blockAllowsPhoto(cur)
                     ? 'Square and Large can hold a cover photo.'
                     : 'Small is text only — switch to Square or Large to add a photo.'}
@@ -1629,7 +1629,7 @@ function BlockPicker({ blocks, onAdd, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/15"/>
-      <div className="relative bg-white rounded-2xl w-full max-w-[380px] shadow-[0_12px_48px_rgba(0,0,0,0.12)] border border-[#DEDEDC] overflow-hidden" onClick={e=>e.stopPropagation()}>
+      <div className="relative bg-white rounded-2xl w-full max-w-[380px] shadow-[0_12px_48px_rgba(0,0,0,0.12)] border border-[#E9E9E7] overflow-hidden" onClick={e=>e.stopPropagation()}>
         {/* search */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#F0F0F0]">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C0C0C0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1654,8 +1654,8 @@ function BlockPicker({ blocks, onAdd, onClose }: {
                   return (
                     <button key={def.id}
                       onClick={()=>{ onAdd(def.id); onClose(); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#F7F7F5] transition-colors text-left">
-                      <div className="w-8 h-8 rounded-xl bg-[#EEEEEC] border border-[#DEDEDC] flex items-center justify-center flex-shrink-0">
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#F4F5F6] transition-colors text-left">
+                      <div className="w-8 h-8 rounded-xl bg-[#EEEEEC] border border-[#E9E9E7] flex items-center justify-center flex-shrink-0">
                         <BlockIcon id={def.id} size={14} color="#0A0A0A"/>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -1727,9 +1727,9 @@ function TutorialOverlay({ onDone }: { onDone: () => void }) {
         <h3 className="text-[16px] font-semibold text-[#0A0A0A] mb-2 leading-snug">{current.title}</h3>
         <p className="text-[13px] text-[#6B6B6B] leading-relaxed mb-5">{current.body}</p>
         <div className="flex items-center justify-between">
-          <button onClick={onDone} className="text-[12px] text-[#858585] hover:text-[#111] font-medium transition-colors">Skip</button>
+          <button onClick={onDone} className="text-[12px] text-[#858585] hover:text-[#0A0A0A] font-medium transition-colors">Skip</button>
           <div className="flex items-center gap-2">
-            {step>0&&<button onClick={()=>setStep(s=>s-1)} className="px-4 py-1.5 text-[12px] font-semibold rounded-full border border-[#E0E0E0] text-[#6B6B6B] hover:border-[#111] transition-colors">Back</button>}
+            {step>0&&<button onClick={()=>setStep(s=>s-1)} className="px-4 py-1.5 text-[12px] font-semibold rounded-full border border-[#E0E0E0] text-[#6B6B6B] hover:border-[#0A0A0A] transition-colors">Back</button>}
             <button onClick={next} className="px-4 py-1.5 text-[12px] font-semibold rounded-full bg-[#7C3AED] text-white hover:bg-[#6D28D9] transition-colors">{isLast?'Done':'Next →'}</button>
           </div>
         </div>
@@ -1778,7 +1778,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   for (let h = 0; h < 24; h++) for (const m of [0, 30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
   return (
     <select value={value} onChange={e => onChange(e.target.value)}
-      className="flex-1 min-w-0 bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-2 sm:px-3 py-2 text-[12px] sm:text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
+      className="flex-1 min-w-0 bg-[#EEEEEC] border border-[#E9E9E7] rounded-xl px-2 sm:px-3 py-2 text-[12px] sm:text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
       {times.map(t => <option key={t} value={t}>{fmt12(t)}</option>)}
     </select>
   );
@@ -1836,14 +1836,14 @@ function GoogleHoursSync({initialPlaceId,googleConnected,onSync,getWeeklyHours}:
     finally{setSyncing(false);}
   }
   return(
-    <div className="rounded-2xl border border-[#DEDEDC] bg-white p-4 space-y-3">
+    <div className="rounded-2xl border border-[#E9E9E7] bg-white p-4 space-y-3">
       <div className="flex items-center gap-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4285F4"/></svg>
         <p className="text-[13px] font-semibold text-[#0A0A0A]">Sync from Google Business</p>
       </div>
       <p className="text-[11px] text-[#858585]">Paste your Place ID (starts with ChIJ…) or a Google Maps link to pull in your hours automatically.</p>
       <div className="flex gap-2">
-        <input value={placeInput} onChange={e=>setPlaceInput(e.target.value)} placeholder="ChIJ... or Google Maps URL" className="flex-1 text-[12px] border border-[#DEDEDC] rounded-xl px-3 py-2 outline-none focus:border-[#0A0A0A] bg-[#FAFAFA]"/>
+        <input value={placeInput} onChange={e=>setPlaceInput(e.target.value)} placeholder="ChIJ... or Google Maps URL" className="flex-1 text-[12px] border border-[#E9E9E7] rounded-xl px-3 py-2 outline-none focus:border-[#0A0A0A] bg-[#FAFAFA]"/>
         <button onClick={syncFromGoogle} disabled={syncing} className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap hover:bg-[#6D28D9] transition-colors">{syncing?'Syncing…':'Sync hours'}</button>
       </div>
       {syncMsg&&<p className={`text-[11px] font-medium ${syncMsg.startsWith('✓')?'text-green-600':'text-red-500'}`}>{syncMsg}</p>}
@@ -1953,9 +1953,9 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }:
       >
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 8px', flexShrink: 0 }}>
           <div style={{ position: 'absolute', left: '50%', top: 6, transform: 'translateX(-50%)', width: 36, height: 4, borderRadius: 2, background: '#E4E7EC' }} />
-          <p style={{ fontSize: 15, fontWeight: 600, color: '#111', margin: 0, letterSpacing: '-0.02em' }}>{title}</p>
+          <p style={{ fontSize: 15, fontWeight: 600, color: '#0A0A0A', margin: 0, letterSpacing: '-0.02em' }}>{title}</p>
           <button type="button" onClick={onClose} aria-label="Close"
-            style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: '#F2F4F7', color: '#667085', fontSize: 15, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>
+            style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: '#F2F4F7', color: '#777777', fontSize: 15, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>
             ×
           </button>
         </div>
@@ -2562,7 +2562,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </span>
         <button
           onClick={()=>setConfig(c=>({...c,weeklyHours:{...(c.weeklyHours??DEFAULT_WEEK_HOURS),[dayKey]:{...day,closed:!day.closed}}}))}
-          className={`text-[11px] px-2.5 sm:px-3 py-1.5 rounded-full border font-semibold flex-shrink-0 transition-all ${day.closed?'border-[#DEDEDC] text-[#858585] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
+          className={`text-[11px] px-2.5 sm:px-3 py-1.5 rounded-full border font-semibold flex-shrink-0 transition-all ${day.closed?'border-[#E9E9E7] text-[#858585] bg-white hover:border-[#D0D0D0]':'border-[#BBF7D0] text-[#166534] bg-[#F0FDF4]'}`}
         >
           {day.closed?'Closed':'● Open'}
         </button>
@@ -2581,8 +2581,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const SIDEBAR_NAV: { key:SidebarTab; label:string; icon:React.ReactNode; badge?:React.ReactNode }[] = [
     { key:'business', label:'Business', icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
     { key:'hours',    label:'Status',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-      badge:<span className="ml-auto flex items-center gap-1.5 text-[10px] font-medium leading-none" style={{color:liveStatus==='open'?'#16A34A':'#98A2B3'}}>
-        <span className="w-1.5 h-1.5 rounded-full" style={{background:liveStatus==='open'?'#16A34A':'#98A2B3'}}/>
+      badge:<span className="ml-auto flex items-center gap-1.5 text-[10px] font-medium leading-none" style={{color:liveStatus==='open'?'#16A34A':'#9A9A97'}}>
+        <span className="w-1.5 h-1.5 rounded-full" style={{background:liveStatus==='open'?'#16A34A':'#9A9A97'}}/>
         {liveStatus==='open'?'Open':'Closed'}
       </span> },
     { key:'design',   label:'Blocks',   icon:<svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
@@ -2842,11 +2842,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[#F0F2F5] text-[#111111]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
+    <div className="flex h-[100dvh] overflow-hidden bg-[#F0F2F5] text-[#0A0A0A]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
 
       {/* ── Undo block removal ── */}
       {undoBlock&&(
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-full bg-[#111] shadow-[0_10px_40px_rgba(0,0,0,0.28)]">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-full bg-[#0A0A0A] shadow-[0_10px_40px_rgba(0,0,0,0.28)]">
           <span className="text-[12px] text-white/85">
             <strong className="font-semibold text-white">{undoBlock.title}</strong> removed
           </span>
@@ -2862,16 +2862,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
           style={{background:'rgba(17,17,17,0.35)',backdropFilter:'blur(3px)'}}
           onClick={()=>setHelpOpen(false)}>
-          <div className="w-full max-w-[380px] rounded-2xl bg-white border border-[#EBEBEA] shadow-[0_20px_60px_rgba(0,0,0,0.18)] p-6"
+          <div className="w-full max-w-[380px] rounded-2xl bg-white border border-[#E9E9E7] shadow-[0_20px_60px_rgba(0,0,0,0.18)] p-6"
             onClick={e=>e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3 mb-2">
-              <h3 className="text-[16px] font-semibold text-[#111]">Need a hand?</h3>
+              <h3 className="text-[16px] font-semibold text-[#0A0A0A]">Need a hand?</h3>
               <button onClick={()=>setHelpOpen(false)} aria-label="Close"
-                className="w-7 h-7 rounded-full bg-[#F4F6FA] flex items-center justify-center text-[#667085] hover:text-[#111] transition-colors flex-shrink-0">
+                className="w-7 h-7 rounded-full bg-[#F7F7F6] flex items-center justify-center text-[#777777] hover:text-[#0A0A0A] transition-colors flex-shrink-0">
                 <LucideX size={12} color="currentColor"/>
               </button>
             </div>
-            <p className="text-[13px] text-[#667085] leading-relaxed mb-5">
+            <p className="text-[13px] text-[#777777] leading-relaxed mb-5">
               Email us and a real person will get back to you. Tell us what you were trying to do and we&apos;ll sort it out.
             </p>
             <a href="mailto:info@openstatus.co?subject=OpenStatus%20help"
@@ -2886,67 +2886,94 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
 
       {/* ── LEFT SIDEBAR (desktop) ── */}
-      <aside className="w-[220px] flex-shrink-0 flex-col bg-white/80 backdrop-blur border-r border-[#EBEBEA]" style={{display:isMobile?"none":"flex"}}>
-        {/* Wordmark */}
-        <div className="px-5 h-14 flex items-center flex-shrink-0">
-          <span className="font-semibold text-[18px] tracking-[-0.03em] text-[#111111]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
+      <aside className="w-[220px] flex-shrink-0 flex-col bg-white/80 backdrop-blur border-r border-[#E9E9E7]" style={{display:isMobile?"none":"flex"}}>
+        {/* Mark + wordmark. A plain word read like placeholder text. */}
+        <div className="px-5 h-[60px] flex items-center gap-2.5 flex-shrink-0">
+          <span className="w-7 h-7 rounded-lg bg-[#0A0A0A] grid place-items-center flex-shrink-0" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="9" r="3.2"/><path d="M12 12.2 10.7 19h2.6L12 12.2Z"/>
+            </svg>
+          </span>
+          <span className="font-semibold text-[16px] tracking-[-0.03em] text-[#0A0A0A]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>OpenStatus</span>
         </div>
         {/* Nav */}
         <nav className="flex-1 py-3 px-2.5 overflow-y-auto space-y-0.5">
           {SIDEBAR_NAV.map(({key,label,icon,badge})=>(
             <button key={key} onClick={()=>{setSidebarTab(key);setMobileSheetOpen(true);}}
               className={`relative w-full flex items-center gap-2.5 pl-3.5 pr-3 py-2.5 rounded-xl text-[13px] font-medium text-left transition-all ${
-                sidebarTab===key ? 'bg-[#F5F3FF]' : 'hover:bg-[#FAFAF9]'
+                sidebarTab===key ? 'bg-[#ECECEA]' : 'hover:bg-[#F7F7F6]'
               }`}
-              style={{color:sidebarTab===key?'#6D28D9':'#667085'}}>
-              {/* purple left-edge marker on the active item */}
+              style={{color:sidebarTab===key?'#0A0A0A':'#777777',fontWeight:sidebarTab===key?600:500}}>
+              {/* A hairline accent is enough to mark the page. */}
               {sidebarTab===key&&(
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full" style={{background:'#7C3AED'}}/>
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-4 rounded-full" style={{background:'#7C3AED'}}/>
               )}
-              <span style={{color:sidebarTab===key?'#7C3AED':'#98A2B3'}}>{icon}</span>
+              <span style={{color:sidebarTab===key?'#0A0A0A':'#9A9A97'}}>{icon}</span>
               {label}
               {badge}
             </button>
           ))}
         </nav>
-        {/* Bottom CTAs */}
-        <div className="px-4 py-4 border-t border-[#EBEBEA] flex-shrink-0 space-y-2.5">
+        {/* Bottom: the live page, then who you are signed in as */}
+        <div className="px-4 py-4 flex-shrink-0 space-y-2.5">
+          {business?.slug&&(
+            <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
+              className="w-full flex items-center gap-2 text-[12px] font-medium text-[#777777] hover:text-[#0A0A0A] transition-colors">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              View live page
+            </a>
+          )}
           <button
             onClick={async()=>{ await supabase.auth.signOut(); window.location.href='/login'; }}
-            className="w-full flex items-center gap-2 text-[11px] font-normal text-[#667085] hover:text-[#6D28D9] transition-colors">
+            className="w-full flex items-center gap-2 text-[11px] font-normal text-[#777777] hover:text-[#6D28D9] transition-colors">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Log out
           </button>
-          <button onClick={()=>setHelpOpen(true)} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#667085] hover:text-[#6D28D9] transition-colors">
+          <button onClick={()=>setHelpOpen(true)} className="w-full flex items-center gap-2 text-[11px] font-normal text-[#777777] hover:text-[#6D28D9] transition-colors">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Help
           </button>
+
+          {/* Identity row */}
+          <div className="flex items-center gap-2.5 pt-3 mt-1 border-t border-[#E9E9E7]">
+            {business?.avatar_url
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={business.avatar_url.startsWith('storage:')?`/api/assets?businessId=${business.id}&kind=avatar`:business.avatar_url}
+                  alt="" className="w-7 h-7 rounded-lg object-cover flex-shrink-0"/>
+              : <span className="w-7 h-7 rounded-lg bg-[#ECECEA] grid place-items-center text-[10px] font-bold text-[#777777] flex-shrink-0">
+                  {(business?.name??'?').slice(0,2).toUpperCase()}
+                </span>}
+            <span className="min-w-0 flex-1">
+              <span className="block text-[12px] font-semibold text-[#0A0A0A] truncate leading-tight">{business?.name??'Your business'}</span>
+              <span className="block text-[10.5px] text-[#9A9A97] leading-tight">OpenStatus</span>
+            </span>
+          </div>
         </div>
       </aside>
 
       {/* ── MAIN AREA ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F7F7F5]">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F4F5F6]">
 
         {/* ── TOP NAV BAR ── */}
-        <header className="relative h-14 items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm border-b border-[#EBEBEA]" style={{display:isMobile?"none":"flex"}}>
-          <span className="text-[13px] font-medium text-[#111111]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>{sidebarLabel}</span>
+        <header className="relative h-14 items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm border-b border-[#E9E9E7]" style={{display:isMobile?"none":"flex"}}>
+          <span aria-hidden="true"/>
           <div className="flex items-center gap-3">
             {business?.slug&&(
               <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1 text-[12px] font-medium text-[#667085] hover:text-[#6D28D9] transition-colors">
-                View your link <span className="text-[#98A2B3]">↗</span>
+                className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E9E9E7] bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#0A0A0A] transition-colors hover:bg-[#F7F7F6]">
+                Preview <span className="text-[#9A9A97]">↗</span>
               </a>
             )}
 
             <div className="flex flex-col items-end gap-0.5">
               {showSaveButton&&(
               <button onClick={save} disabled={saving} data-tut="tut-save"
-                className={`px-4 py-1.5 rounded-full text-[12px] md:text-[13px] md:px-5 font-semibold transition-all flex-shrink-0 ${saved?'bg-[#EDE9FE] text-[#5B21B6]':saving?'bg-[#F4F6FA] text-[#98A2B3]':saveError?'bg-red-100 text-red-600':hasPublished?'bg-[#F5F3FF] text-[#6D28D9] hover:bg-[#EDE9FE]':'bg-[#7C3AED] text-white hover:bg-[#6D28D9]'}`}>
+                className={`px-4 py-2 rounded-xl text-[12.5px] md:text-[13px] md:px-5 font-semibold transition-colors flex-shrink-0 ${saved?'bg-[#F0FDF4] text-[#15803D]':saving?'bg-[#F7F7F6] text-[#9A9A97]':saveError?'bg-red-50 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#242424]'}`}>
                 {saving?'Saving…':saved?'✓ Saved':saveError?'Error':hasPublished?'Save':'Publish'}
               </button>
               )}
               {sidebarTab==='hours'&&(
-                <span className="text-[11px] text-[#98A2B3] hidden sm:block">Changes here go live right away</span>
+                <span className="text-[11px] text-[#9A9A97] hidden sm:block">Changes here go live right away</span>
               )}
               {saveError&&<p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{saveError}</p>}
               {googleConnected&&googleSyncStatus==='syncing'&&<p className="text-[10px] text-[#4285F4] text-right">Syncing to Google…</p>}
@@ -2984,7 +3011,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {/* Google recovery — only when Google itself reports the listing closed */}
                 {googleConnected&&gStatus?.isClosed&&(
                   <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4 mb-5">
-                    <p className="text-[13px] font-semibold text-[#111] mb-1">
+                    <p className="text-[13px] font-semibold text-[#0A0A0A] mb-1">
                       Google lists you as {gStatus.status==='CLOSED_TEMPORARILY'?'temporarily closed':(gStatus.status??'closed')}
                     </p>
                     <p className="text-[12px] text-[#B54708] leading-relaxed mb-3">
@@ -3011,15 +3038,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   const active = statusUpdates.filter(u=>u.status!=='needs_review');
                   const isOverridden = active.length>0;
                   return (
-                    <div className={`rounded-[22px] border px-7 py-8 mb-5 transition-colors ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E9E9E7] bg-[#FAFAF9]'}`}>
-                      <p className="mb-4 text-[12px] font-medium text-[#667085]">What customers see today</p>
+                    <div className={`rounded-[22px] border px-7 py-8 mb-5 transition-colors ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E9E9E7] bg-[#F7F7F6]'}`}>
+                      <p className="mb-4 text-[12px] font-medium text-[#777777]">What customers see today</p>
                       <div className="flex items-start gap-3 mb-1">
                         <span className={`mt-3 w-2.5 h-2.5 shrink-0 rounded-full ${isOverridden?'bg-amber-500':liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
-                        <p className="text-[32px] font-semibold leading-tight text-[#111] tracking-[-0.045em]">
+                        <p className="text-[32px] font-semibold leading-tight text-[#0A0A0A] tracking-[-0.045em]">
                           {isOverridden ? active[0].headline : liveStatus==='open' ? 'You’re open' : 'Closed right now'}
                         </p>
                       </div>
-                      <p className="pl-[22px] text-[13px] text-[#667085] mb-6 leading-relaxed">
+                      <p className="pl-[22px] text-[13px] text-[#777777] mb-6 leading-relaxed">
                         {isOverridden
                           ? 'This is what customers see instead of your normal hours today.'
                           : liveStatus==='open'
@@ -3039,7 +3066,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         <button
                           onClick={()=>postStatus('closed_today')}
                           disabled={statusPosting}
-                          className="w-full sm:w-auto px-7 py-3 rounded-full bg-[#111] text-white text-[14px] font-semibold hover:bg-black transition-colors disabled:opacity-40"
+                          className="w-full sm:w-auto px-7 py-3 rounded-full bg-[#0A0A0A] text-white text-[14px] font-semibold hover:bg-black transition-colors disabled:opacity-40"
                         >
                           {statusPosting?'Working…':'Close for today'}
                         </button>
@@ -3048,7 +3075,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       {gMsg&&<p className={`text-[12px] mt-3 ${gMsg.startsWith('✓')?'text-[#166534]':'text-[#EF4444]'}`}>{gMsg}</p>}
                       {reopenMsg&&<p className={`text-[12px] mt-2 ${reopenMsg.startsWith('✓')?'text-emerald-600':'text-[#EF4444]'}`}>{reopenMsg}</p>}
                       {googleConnected&&(
-                        <p className="text-[11.5px] text-[#98A2B3] mt-3 leading-relaxed">
+                        <p className="text-[11.5px] text-[#9A9A97] mt-3 leading-relaxed">
                           Your page updates instantly. Google usually catches up within about 10 minutes — that delay is on their end, not yours.
                         </p>
                       )}
@@ -3059,7 +3086,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {/* Everything else is a rarer case, so it stays out of the way. */}
                 <button
                   onClick={()=>setStatusMore(v=>!v)}
-                  className="flex items-center gap-1.5 text-[13px] font-medium text-[#667085] hover:text-[#111] transition-colors"
+                  className="flex items-center gap-1.5 text-[13px] font-medium text-[#777777] hover:text-[#0A0A0A] transition-colors"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
                     style={{transform:statusMore?'rotate(90deg)':'none',transition:'transform .18s'}}>
@@ -3072,19 +3099,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <div className="mt-4 space-y-3">
                     {/* Different hours today — the common case that wasn't
                         covered by "closed" or "closing early". */}
-                    <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                      <p className="text-[13px] font-semibold text-[#111]">Different hours today</p>
+                    <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                      <p className="text-[13px] font-semibold text-[#0A0A0A]">Different hours today</p>
                       <p className="text-[11.5px] text-[#858585] mt-0.5 mb-3">
                         {googleConnected?'Sets today\u2019s opening and closing on your page and on Google.':'Sets today\u2019s opening and closing on your page.'}
                       </p>
                       <div className="flex items-center gap-2 max-w-[400px]">
                         <select value={todayOpen} onChange={e=>setTodayOpen(e.target.value)}
-                          className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer">
+                          className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none cursor-pointer">
                           {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                         </select>
-                        <span className="text-[12px] text-[#98A2B3]">to</span>
+                        <span className="text-[12px] text-[#9A9A97]">to</span>
                         <select value={todayClose} onChange={e=>setTodayClose(e.target.value)}
-                          className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer">
+                          className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none cursor-pointer">
                           {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                         </select>
                         <button onClick={()=>postStatus('custom_hours')} disabled={statusPosting||todayClose<=todayOpen}
@@ -3098,15 +3125,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
 
                     {/* Closing early */}
-                    <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                      <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
+                    <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                      <p className="text-[13px] font-semibold text-[#0A0A0A]">Closing early today</p>
                       <p className="text-[11.5px] text-[#858585] mt-0.5 mb-3">
                         {googleConnected?'Your page and Google show the earlier time, today only.':'Your page shows the earlier time, today only.'}
                       </p>
                       <div className="flex items-center gap-2 max-w-[320px]">
                         <div className="relative flex-1">
                           <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
-                            className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none cursor-pointer">
+                            className="w-full bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none cursor-pointer">
                             {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                           </select>
                           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={11} color="#858585"/></div>
@@ -3119,14 +3146,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
 
                     {/* Note */}
-                    <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                      <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
+                    <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                      <p className="text-[13px] font-semibold text-[#0A0A0A]">Add a note for today</p>
                       <p className="text-[11.5px] text-[#858585] mt-0.5 mb-3">
                         Shows beside your hours without marking you closed. Your page only — Google has nowhere to put free text.
                       </p>
                       <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
                         placeholder="Running about 20 minutes behind today…" rows={2}
-                        className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
+                        className="w-full bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
                         <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
@@ -3137,8 +3164,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
 
                     {/* Dated closures — the old "Special hours" tab, now just a row of buttons */}
-                    <div className="p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                      <p className="text-[13px] font-semibold text-[#111]">Closing on another day</p>
+                    <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                      <p className="text-[13px] font-semibold text-[#0A0A0A]">Closing on another day</p>
                       <p className="text-[11.5px] text-[#858585] mt-0.5 mb-3">
                         Has real dates on it, so your hours come back by themselves
                         {googleConnected?' — and it updates Google too.':'.'}
@@ -3160,9 +3187,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                               }
                               void googleCloseDates(from,to,`Closed ${label.toLowerCase()}`);
                             }}
-                            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] hover:border-[#7C3AED] transition-colors disabled:opacity-40">
+                            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] hover:border-[#7C3AED] transition-colors disabled:opacity-40">
                             <LucideCalendar size={13} color="#7C3AED"/>
-                            <span className="text-[12px] font-semibold text-[#111]">{label}</span>
+                            <span className="text-[12px] font-semibold text-[#0A0A0A]">{label}</span>
                           </button>
                         ))}
                       </div>
@@ -3192,14 +3219,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
 
                     {/* Active blocks */}
-                    <div className="rounded-2xl border border-[#DEDEDC] overflow-hidden mb-1">
+                    <div className="rounded-2xl border border-[#E9E9E7] overflow-hidden mb-1">
                       {activeBlocks.length===0&&(
                         <div className="px-4 py-8 text-center text-[13px] text-[#858585]">No blocks yet — hit + Add block below.</div>
                       )}
                       {activeBlocks.map((block,i)=>(
                         <div key={block.id}
                           data-tut={i===0&&block.id==='hours'?'tut-hours':undefined}
-                          className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#F7F7F5]
+                          className={`flex items-center gap-3 px-4 cursor-pointer transition-colors hover:bg-[#F4F5F6]
                             ${i<activeBlocks.length-1?'border-b border-[#F5F5F5]':''}
                             ${openId===block.id?'bg-[#F8F8F8]':''}
                             ${dragOverId===block.id&&dragId!==block.id?'border-l-[3px] border-l-[#0A0A0A]':''}
@@ -3220,7 +3247,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             </div>
                             :<div className="w-[14px] flex-shrink-0"/>
                           }
-                          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#DEDEDC] bg-[#EEEEEC]"
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border border-[#E9E9E7] bg-[#EEEEEC]"
                             style={block.color?{backgroundColor:`${block.color}12`,borderColor:`${block.color}28`}:{}}>
                             <BlockIcon id={block.id} size={14} color={block.color??'#0A0A0A'}/>
                           </div>
@@ -3284,7 +3311,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         <div className="flex items-center gap-4 mb-3">
                           {localBusiness?.avatar_url
                             ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                                className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
+                                className="w-14 h-14 rounded-full object-cover border border-[#E9E9E7] flex-shrink-0" alt="Logo"/>
                             :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
                           }
                           <div className="flex-1 min-w-0">
@@ -3301,7 +3328,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                 }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
                                 finally{setLogoUploading(false);e.target.value='';}
                               }}/>
-                              <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#111] hover:bg-[#DEDEDC] transition-colors ${logoUploading?'opacity-60':''}`}>
+                              <span className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEEEEC] text-[12px] font-semibold text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors ${logoUploading?'opacity-60':''}`}>
                                 <LucideImage size={13} color="#6B6B6B"/>
                                 {logoUploading?'Uploading…':'Upload logo'}
                               </span>
@@ -3326,7 +3353,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                   }catch(err){setLogoUploadError(err instanceof Error?err.message:'Failed');}
                                   finally{setLogoUploading(false);}
                                 }}
-                                className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#DEDEDC] hover:border-[#0A0A0A]`}
+                                className={`relative w-14 h-14 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${logoUploading?'opacity-50 pointer-events-none':''} border-[#E9E9E7] hover:border-[#0A0A0A]`}
                                 title={`Use Google photo ${i+1}`}>
                                   <img src={url} className="w-full h-full object-cover" alt=""/>
                                 </button>
@@ -3362,14 +3389,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
                           finally{setBgUploading(false);e.target.value='';}
                         }}/>
-                        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-semibold text-[#111111] hover:bg-[#E8EBF0] transition-colors">
-                          <LucideImage size={13} color="#667085"/>
+                        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-semibold text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
+                          <LucideImage size={13} color="#777777"/>
                           {bgUploading?'Uploading…':'Upload photo'}
                         </span>
                       </label>
                       {googlePhotos.map((url,i)=>(
                         <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                          className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#111111]':'border-[#E8EBF0] hover:border-[#111111]'}`}>
+                          className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
                           <img src={url} className="w-full h-full object-cover" alt=""/>
                         </button>
                       ))}
@@ -3386,14 +3413,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {sidebarTab==='business'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 <div className="mb-7">
-                  <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Business</h2>
-                  <p className="text-[#667085] text-[13px] mt-1">Your page, your Google connection, and how you&apos;re doing.</p>
+                  <h2 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.03em]">Business</h2>
+                  <p className="text-[#777777] text-[13px] mt-1">Your page, your Google connection, and how you&apos;re doing.</p>
                 </div>
 
                 {/* ── Analytics snapshot ── */}
                 {analyticsData&&(
                   <div className="mb-7">
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Last 30 days</p>
+                    <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Last 30 days</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {[
                         {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
@@ -3401,38 +3428,38 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',data:(analyticsData.trend??[]).map(t=>t.views)},
                         {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
                       ].map(({label,value,color,data})=>(
-                        <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-3.5">
+                        <div key={label} className="rounded-2xl border border-[#E9E9E7] bg-white p-3.5">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center"
                                 style={{background:`${color}14`,color}}>
                                 {METRIC_ICONS[label]}
                               </span>
-                              <p className="text-[11px] font-medium text-[#98A2B3] truncate">{label}</p>
+                              <p className="text-[11px] font-medium text-[#9A9A97] truncate">{label}</p>
                             </div>
                             <BuilderSparkline data={data} color={color}/>
                           </div>
-                          <p className="text-[22px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
+                          <p className="text-[22px] font-semibold text-[#0A0A0A] leading-none">{value.toLocaleString()}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
                 {analyticsLoading&&(
-                  <div className="mb-7 rounded-2xl border border-[#EBEBEA] bg-white p-5 text-center">
-                    <p className="text-[13px] text-[#98A2B3]">Loading analytics…</p>
+                  <div className="mb-7 rounded-2xl border border-[#E9E9E7] bg-white p-5 text-center">
+                    <p className="text-[13px] text-[#9A9A97]">Loading analytics…</p>
                   </div>
                 )}
 
                 {/* ── Live page link ── */}
                 {localBusiness?.slug&&(
-                  <div className="mb-5 flex items-center gap-3 p-4 rounded-2xl border border-[#DEDEDC] bg-[#F9FAFB]">
+                  <div className="mb-5 flex items-center gap-3 p-4 rounded-2xl border border-[#E9E9E7] bg-[#F7F7F6]">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-0.5">Your page</p>
-                      <p className="text-[13px] font-medium text-[#111] truncate">{SITE_DOMAIN}/{localBusiness.slug}</p>
+                      <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-0.5">Your page</p>
+                      <p className="text-[13px] font-medium text-[#0A0A0A] truncate">{SITE_DOMAIN}/{localBusiness.slug}</p>
                     </div>
                     <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[12px] font-medium hover:border-[#0A0A0A] hover:bg-[#F7F7F6] transition-colors">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       View
                     </a>
@@ -3450,9 +3477,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                      type where socials is an array. The normalizer converts
                      between them on load. Two types with one name is asking
                      for trouble, but it is not this change's job to fix. */}
-                <div className="mb-5 p-4 rounded-2xl border border-[#DEDEDC] bg-white">
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-0.5">Social links</p>
-                  <p className="text-[12px] text-[#667085] mb-3.5">Shown as icons near the bottom of your page. Clear a field to remove it.</p>
+                <div className="mb-5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-0.5">Social links</p>
+                  <p className="text-[12px] text-[#777777] mb-3.5">Shown as icons near the bottom of your page. Clear a field to remove it.</p>
                   <div className="space-y-2.5">
                     {SOCIAL_PLATFORMS.map(({key,label})=>(
                       <div key={key} className="flex items-center gap-3">
@@ -3468,14 +3495,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
 
                 {/* ── Google connection status ── */}
-                <div className={`mb-5 p-4 rounded-2xl border ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E8EBF0] bg-[#F9FAFB]'}`}>
+                <div className={`mb-5 p-4 rounded-2xl border ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E9E9E7] bg-[#F7F7F6]'}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-white border border-[#E8EBF0] flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-white border border-[#E9E9E7] flex items-center justify-center flex-shrink-0">
                       <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-medium text-[#111]">Google Business</p>
-                      <p className="text-[11px] text-[#98A2B3]">{googleConnected?'Syncing hours, photos & reviews':'Sync your hours, photos & reviews'}</p>
+                      <p className="text-[12px] font-medium text-[#0A0A0A]">Google Business</p>
+                      <p className="text-[11px] text-[#9A9A97]">{googleConnected?'Syncing hours, photos & reviews':'Sync your hours, photos & reviews'}</p>
                     </div>
                     {googleConnected&&(
                       <span className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#BBF7D0] text-[#166534] text-[10px] font-semibold">
@@ -3486,7 +3513,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                   {!googleConnected&&(
                     <a href="/connect/google"
-                      className="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
+                      className="mt-3 inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[12px] font-medium hover:border-[#0A0A0A] hover:bg-[#F7F7F6] transition-colors">
                       <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                       Connect Google Business
                     </a>
@@ -3498,19 +3525,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 {/* ── Tips for success ── */}
                 <div className="mb-5">
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Tips for success</p>
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Tips for success</p>
                   <div className="space-y-2">
                     {([
-                      {tab:'hours' as SidebarTab, bg:'#ECFDF3', fg:'#16A34A', text:"Set your hours so customers always know when you're open"},
-                      {tab:'style' as SidebarTab, bg:'#F5F3FF', fg:'#7C3AED', text:'Add a cover photo and pick a background that feels like you'},
-                      {tab:'design' as SidebarTab, bg:'#EFF6FF', fg:'#2563EB', text:'Turn on the blocks your customers actually need'},
+                      {tab:'hours' as SidebarTab, bg:'#F7F7F6', fg:'#0A0A0A', text:"Set your hours so customers always know when you're open"},
+                      {tab:'style' as SidebarTab, bg:'#F7F7F6', fg:'#0A0A0A', text:'Add a cover photo and pick a background that feels like you'},
+                      {tab:'design' as SidebarTab, bg:'#F7F7F6', fg:'#0A0A0A', text:'Turn on the blocks your customers actually need'},
                     ]).map(({tab,bg,fg,text})=>(
                       <button key={tab} onClick={()=>setSidebarTab(tab)}
-                        className="flex items-center gap-3 w-full p-3 rounded-2xl border border-[#E8EBF0] hover:border-[#111] hover:bg-[#F9FAFB] transition-all text-left">
+                        className="flex items-center gap-3 w-full p-3 rounded-2xl border border-[#E9E9E7] hover:border-[#0A0A0A] hover:bg-[#F7F7F6] transition-all text-left">
                         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{background:bg,color:fg}}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         </div>
-                        <p className="text-[12px] text-[#667085] leading-relaxed flex-1">{text}</p>
+                        <p className="text-[12px] text-[#777777] leading-relaxed flex-1">{text}</p>
                         <LucideChevronRight size={14} color="#C0C0C0"/>
                       </button>
                     ))}
@@ -3523,46 +3550,44 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {sidebarTab==='links'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px]">
                 <div className="mb-7">
-                  <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Your link</h2>
-                  <p className="text-[#667085] text-[13px] mt-1">Share this anywhere — it always shows your live status.</p>
+                  <h2 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.03em]">Your link</h2>
+                  <p className="text-[#777777] text-[13px] mt-1">Share this anywhere — it always shows your live status.</p>
                 </div>
                 {localBusiness?.slug
                   ?(
-                    <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#DEDEDC] bg-[#F9FAFB]">
-                      <p className="flex-1 min-w-0 text-[13px] font-medium text-[#111] truncate">{SITE_DOMAIN}/{localBusiness.slug}</p>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl border border-[#E9E9E7] bg-[#F7F7F6]">
+                      <p className="flex-1 min-w-0 text-[13px] font-medium text-[#0A0A0A] truncate">{SITE_DOMAIN}/{localBusiness.slug}</p>
                       <button
                         onClick={()=>{ void navigator.clipboard?.writeText(`${SITE_URL}/${localBusiness.slug}`); }}
-                        className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
+                        className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[12px] font-medium hover:border-[#0A0A0A] transition-colors">
                         Copy
                       </button>
                       <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
-                        className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
+                        className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[12px] font-medium hover:border-[#0A0A0A] transition-colors">
                         View
                       </a>
                     </div>
                   )
-                  :<p className="text-[13px] text-[#667085]">No link set yet.</p>
+                  :<p className="text-[13px] text-[#777777]">No link set yet.</p>
                 }
               </div>
             )}
 
             {/* ══ STYLE ══ */}
             {sidebarTab==='style'&&(
-              <div className="px-4 md:px-8 py-6 md:py-8 max-w-[700px] space-y-8">
+              <div className="px-4 md:px-10 py-7 md:py-10 max-w-[760px] space-y-11">
                 <div>
-                  <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Style</h2>
-                  <p className="text-[#667085] text-[13px] mt-1">Background, imagery, brand and type.</p>
+                  <h2 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.03em]">Style</h2>
+                  <p className="text-[#777777] text-[13px] mt-1">Background, imagery, brand and type.</p>
                 </div>
 
-                <p className="text-[13px] font-semibold text-[#111111] tracking-[-0.01em] -mb-3">Background</p>
-
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Page background</p>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">3. Background</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Choose a background for your page.</p>
                   <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(pc=>({...pc,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Cover photo</p>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">Cover photo</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Adds personality to the top of your page.</p>
                   {config.bgImage&&(
                     <CoverPhotoCrop
                       src={config.bgImage}
@@ -3583,14 +3608,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         }catch(err){setBgUploadError(err instanceof Error?err.message:'Upload failed');}
                         finally{setBgUploading(false);e.target.value='';}
                       }}/>
-                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-medium text-[#111111] hover:bg-[#E8EBF0] transition-colors">
-                        <LucideImage size={13} color="#667085"/>
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-medium text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
+                        <LucideImage size={13} color="#777777"/>
                         {bgUploading?'Uploading…':'Upload photo'}
                       </span>
                     </label>
                     {googlePhotos.map((url,i)=>(
                       <button key={i} onClick={()=>setConfig(c=>({...c,bgImage:url}))}
-                        className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#111111]':'border-[#E8EBF0] hover:border-[#111111]'}`}>
+                        className={`relative w-10 h-10 rounded-xl overflow-hidden border-2 transition-colors flex-shrink-0 ${config.bgImage===url?'border-[#0A0A0A]':'border-[#E9E9E7] hover:border-[#0A0A0A]'}`}>
                         <img src={url} className="w-full h-full object-cover" alt=""/>
                       </button>
                     ))}
@@ -3600,19 +3625,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 {/* ── Image appearance ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Image appearance</p>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">Image appearance</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Soften a photo so it sits behind your page, not in front of it.</p>
                   <ImageAppearanceControls config={config} onChange={patch=>setConfig(c=>({...c,...patch}))}/>
                 </div>
 
-                <p className="text-[13px] font-semibold text-[#111111] tracking-[-0.01em] -mb-3">Brand</p>
-
                 {/* ── Logo ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Logo</p>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">Logo</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Shown above your business name.</p>
                   <div className="flex items-center gap-4">
                     {localBusiness?.avatar_url
                       ?<img src={localBusiness.avatar_url.startsWith('storage:')&&localBusiness.id?`/api/assets?businessId=${localBusiness.id}&kind=avatar`:localBusiness.avatar_url}
-                          className="w-14 h-14 rounded-full object-cover border border-[#DEDEDC] flex-shrink-0" alt="Logo"/>
+                          className="w-14 h-14 rounded-full object-cover border border-[#E9E9E7] flex-shrink-0" alt="Logo"/>
                       :<div className="w-14 h-14 rounded-full bg-[#EEEEEC] flex items-center justify-center flex-shrink-0"><LucideImage size={18} color="#C0C0C0"/></div>
                     }
                     <label className={`cursor-pointer ${logoUploading?'pointer-events-none opacity-60':''}`}>
@@ -3628,8 +3651,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                         }catch(err){setLogoUploadError(err instanceof Error?err.message:'Upload failed');}
                         finally{setLogoUploading(false);e.target.value='';}
                       }}/>
-                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F4F6FA] border border-[#E8EBF0] text-[12px] font-medium text-[#111111] hover:bg-[#E8EBF0] transition-colors">
-                        <LucideImage size={13} color="#667085"/>
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F7F7F6] border border-[#E9E9E7] text-[12px] font-medium text-[#0A0A0A] hover:bg-[#E9E9E7] transition-colors">
+                        <LucideImage size={13} color="#777777"/>
                         {logoUploading?'Uploading…':'Upload logo'}
                       </span>
                     </label>
@@ -3639,8 +3662,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 {/* ── Business name colour ── */}
                 <div>
-                  <p className="text-[13px] font-semibold text-[#111111] tracking-[-0.01em] mb-3">Typography</p>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Business name color</p>
+                  <p className="text-[15px] font-semibold text-[#0A0A0A] tracking-[-0.015em]">Typography</p><p className="text-[12.5px] text-[#777777] mt-0.5 mb-3.5">Set the font and how your name looks.</p>
                   <NameColorPicker
                     value={config.nameColor}
                     autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
@@ -3650,8 +3672,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 {/* ── Tags on the link preview ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-1">Tags</p>
-                  <p className="text-[11px] text-[#98A2B3] mb-3">Pick up to 3 — these show under your business name.</p>
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-1">Tags</p>
+                  <p className="text-[11px] text-[#9A9A97] mb-3">Pick up to 3 — these show under your business name.</p>
                   {/* custom tag entry */}
                   <div className="flex items-center gap-2 mb-3">
                     <input
@@ -3659,7 +3681,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       onChange={e=>setTagDraft(e.target.value.slice(0,24))}
                       onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); addCustomTag(); } }}
                       placeholder="Add your own…"
-                      className="flex-1 min-w-0 bg-white border border-[#DEDEDC] rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-[#7C3AED] transition-colors"/>
+                      className="flex-1 min-w-0 bg-white border border-[#E9E9E7] rounded-xl px-3 py-2 text-[12px] focus:outline-none focus:border-[#7C3AED] transition-colors"/>
                     <button onClick={addCustomTag}
                       disabled={!tagDraft.trim()||(config.tags??[]).length>=3||(config.tags??[]).includes(tagDraft.trim())}
                       className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
@@ -3693,9 +3715,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                             return {...c, tags: cur.includes(tag) ? cur.filter(t=>t!==tag) : (cur.length>=3?cur:[...cur,tag])};
                           })}
                           className={`px-2.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
-                            sel ? 'bg-[#7C3AED] text-white border-[#111]'
-                                : full ? 'border-[#EBEBEA] text-[#D0D5DD] cursor-not-allowed'
-                                       : 'border-[#DEDEDC] text-[#667085] hover:border-[#111] hover:text-[#111]'
+                            sel ? 'bg-[#7C3AED] text-white border-[#0A0A0A]'
+                                : full ? 'border-[#E9E9E7] text-[#D0D5DD] cursor-not-allowed'
+                                       : 'border-[#E9E9E7] text-[#777777] hover:border-[#0A0A0A] hover:text-[#0A0A0A]'
                           }`}>
                           {tag}
                         </button>
@@ -3705,16 +3727,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-1">Font</p>
-                  <p className="text-[11px] text-[#98A2B3] mb-3">Applies to everything on your page.</p>
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-1">Font</p>
+                  <p className="text-[11px] text-[#9A9A97] mb-3">Applies to everything on your page.</p>
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                     {FONT_OPTIONS.map(opt=>{
                       const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
                       return (
                         <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
-                          className={`flex flex-col items-start px-3 py-2.5 rounded-2xl border transition-all text-left ${isActive?'border-[#111] bg-[#111]':'border-[#E8EBF0] bg-[#F9FAFB] hover:border-[#111]'}`}>
-                          <span className={`text-[16px] leading-tight ${isActive?'text-white':'text-[#111]'}`} style={{fontFamily:opt.family}}>Aa</span>
-                          <span className={`text-[10px] font-medium mt-0.5 ${isActive?'text-white/70':'text-[#98A2B3]'}`}>{opt.label}</span>
+                          className={`flex flex-col items-start px-3 py-2.5 rounded-2xl border transition-all text-left ${isActive?'border-[#0A0A0A] bg-[#0A0A0A]':'border-[#E9E9E7] bg-[#F7F7F6] hover:border-[#0A0A0A]'}`}>
+                          <span className={`text-[16px] leading-tight ${isActive?'text-white':'text-[#0A0A0A]'}`} style={{fontFamily:opt.family}}>Aa</span>
+                          <span className={`text-[10px] font-medium mt-0.5 ${isActive?'text-white/70':'text-[#9A9A97]'}`}>{opt.label}</span>
                         </button>
                       );
                     })}
@@ -3728,13 +3750,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[760px] space-y-7">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Analytics</h2>
-                    <p className="text-[#667085] text-[13px] mt-1">What people actually do when they land on your page.</p>
+                    <h2 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.03em]">Analytics</h2>
+                    <p className="text-[#777777] text-[13px] mt-1">What people actually do when they land on your page.</p>
                   </div>
-                  <div className="flex gap-1 p-1 rounded-full bg-[#F4F6FA]">
+                  <div className="flex gap-1 p-1 rounded-full bg-[#F7F7F6]">
                     {[7,30,90].map(d=>(
                       <button key={d} onClick={()=>setAnalyticsDays(d)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${analyticsDays===d?'bg-white text-[#6D28D9] shadow-sm':'text-[#98A2B3] hover:text-[#111]'}`}>
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${analyticsDays===d?'bg-white text-[#6D28D9] shadow-sm':'text-[#9A9A97] hover:text-[#0A0A0A]'}`}>
                         {d} days
                       </button>
                     ))}
@@ -3742,14 +3764,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
 
                 {analyticsLoading&&(
-                  <div className="rounded-2xl border border-[#EBEBEA] bg-white p-10 text-center">
-                    <p className="text-[13px] text-[#98A2B3]">Loading…</p>
+                  <div className="rounded-2xl border border-[#E9E9E7] bg-white p-10 text-center">
+                    <p className="text-[13px] text-[#9A9A97]">Loading…</p>
                   </div>
                 )}
 
                 {!analyticsLoading&&!analyticsData&&(
-                  <div className="rounded-2xl border border-[#EBEBEA] bg-white p-10 text-center">
-                    <p className="text-[13px] text-[#98A2B3]">No data yet. Share your link and check back.</p>
+                  <div className="rounded-2xl border border-[#E9E9E7] bg-white p-10 text-center">
+                    <p className="text-[13px] text-[#9A9A97]">No data yet. Share your link and check back.</p>
                   </div>
                 )}
 
@@ -3770,20 +3792,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       {/* headline numbers */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {TILES.map(({label,value,color})=>(
-                          <div key={label} className="rounded-2xl border border-[#EBEBEA] bg-white p-3.5">
+                          <div key={label} className="rounded-2xl border border-[#E9E9E7] bg-white p-3.5">
                             <span className="inline-flex w-7 h-7 rounded-lg items-center justify-center mb-2"
                               style={{background:`${color}14`,color}}>{METRIC_ICONS[label]}</span>
-                            <p className="text-[24px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
-                            <p className="text-[11px] text-[#98A2B3] mt-1.5">{label}</p>
+                            <p className="text-[24px] font-semibold text-[#0A0A0A] leading-none">{value.toLocaleString()}</p>
+                            <p className="text-[11px] text-[#9A9A97] mt-1.5">{label}</p>
                           </div>
                         ))}
                       </div>
 
                       {/* views over time */}
-                      <div className="rounded-2xl border border-[#EBEBEA] bg-white p-5">
+                      <div className="rounded-2xl border border-[#E9E9E7] bg-white p-5">
                         <div className="flex items-baseline justify-between mb-4">
-                          <p className="text-[13px] font-semibold text-[#111]">Page views over time</p>
-                          <p className="text-[11px] text-[#98A2B3]">Peak {maxV.toLocaleString()}</p>
+                          <p className="text-[13px] font-semibold text-[#0A0A0A]">Page views over time</p>
+                          <p className="text-[11px] text-[#9A9A97]">Peak {maxV.toLocaleString()}</p>
                         </div>
                         {trend.length>0
                           ?(
@@ -3792,64 +3814,64 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                                 <div key={t.date} className="group relative flex-1 min-w-[3px] h-full flex items-end">
                                   <div className="w-full rounded-t-[3px] bg-[#7C3AED]/80 group-hover:bg-[#6D28D9] transition-colors"
                                     style={{height:`${Math.max(2,(t.views/maxV)*100)}%`}}/>
-                                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded-lg bg-[#111] px-2 py-1 text-[10px] text-white">
+                                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block whitespace-nowrap rounded-lg bg-[#0A0A0A] px-2 py-1 text-[10px] text-white">
                                     {t.date}: {t.views}
                                   </span>
                                 </div>
                               ))}
                             </div>
                           )
-                          :<p className="text-[12px] text-[#98A2B3] py-10 text-center">No visits recorded yet.</p>
+                          :<p className="text-[12px] text-[#9A9A97] py-10 text-center">No visits recorded yet.</p>
                         }
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* what people tap */}
-                        <div className="rounded-2xl border border-[#EBEBEA] bg-white p-5">
-                          <p className="text-[13px] font-semibold text-[#111] mb-3.5">What people tap</p>
+                        <div className="rounded-2xl border border-[#E9E9E7] bg-white p-5">
+                          <p className="text-[13px] font-semibold text-[#0A0A0A] mb-3.5">What people tap</p>
                           {analyticsData.topActions.length>0
                             ?(
                               <div className="space-y-2.5">
                                 {analyticsData.topActions.slice(0,6).map(({id,count})=>(
                                   <div key={id} className="flex items-center gap-2.5">
-                                    <span className="text-[12px] text-[#111] w-24 truncate capitalize">{id}</span>
-                                    <div className="flex-1 h-2 bg-[#F4F6FA] rounded-full overflow-hidden">
+                                    <span className="text-[12px] text-[#0A0A0A] w-24 truncate capitalize">{id}</span>
+                                    <div className="flex-1 h-2 bg-[#F7F7F6] rounded-full overflow-hidden">
                                       <div className="h-full bg-[#7C3AED] rounded-full" style={{width:`${Math.round((count/topMax)*100)}%`}}/>
                                     </div>
-                                    <span className="text-[11px] text-[#667085] w-8 text-right tabular-nums">{count}</span>
+                                    <span className="text-[11px] text-[#777777] w-8 text-right tabular-nums">{count}</span>
                                   </div>
                                 ))}
                               </div>
                             )
-                            :<p className="text-[12px] text-[#98A2B3]">Nothing tapped yet.</p>
+                            :<p className="text-[12px] text-[#9A9A97]">Nothing tapped yet.</p>
                           }
                         </div>
 
                         {/* where they came from */}
-                        <div className="rounded-2xl border border-[#EBEBEA] bg-white p-5">
-                          <p className="text-[13px] font-semibold text-[#111] mb-3.5">Where they came from</p>
+                        <div className="rounded-2xl border border-[#E9E9E7] bg-white p-5">
+                          <p className="text-[13px] font-semibold text-[#0A0A0A] mb-3.5">Where they came from</p>
                           {analyticsData.trafficSources.length>0
                             ?(
                               <div className="space-y-2.5">
                                 {analyticsData.trafficSources.slice(0,6).map(({source,count})=>(
                                   <div key={source} className="flex items-center justify-between gap-2">
-                                    <span className="text-[12px] text-[#111] truncate">{source||'Direct'}</span>
-                                    <span className="text-[11px] text-[#667085] tabular-nums">{count}</span>
+                                    <span className="text-[12px] text-[#0A0A0A] truncate">{source||'Direct'}</span>
+                                    <span className="text-[11px] text-[#777777] tabular-nums">{count}</span>
                                   </div>
                                 ))}
                               </div>
                             )
-                            :<p className="text-[12px] text-[#98A2B3]">No referrers yet — most link-in-bio traffic shows as Direct.</p>
+                            :<p className="text-[12px] text-[#9A9A97]">No referrers yet — most link-in-bio traffic shows as Direct.</p>
                           }
                         </div>
                       </div>
 
                       {/* one honest summary line */}
-                      <div className="rounded-2xl border border-[#DDD6FE] bg-[#F5F3FF] p-5">
-                        <p className="text-[13px] font-semibold text-[#6D28D9]">
+                      <div className="rounded-2xl border border-[#E9E9E7] bg-[#F7F7F6] p-5">
+                        <p className="text-[13px] font-semibold text-[#0A0A0A]">
                           {actionRate}% of visitors did something
                         </p>
-                        <p className="text-[12px] text-[#667085] mt-1 leading-relaxed">
+                        <p className="text-[12px] text-[#777777] mt-1 leading-relaxed">
                           {m.clicks.toLocaleString()} taps from {m.views.toLocaleString()} views in the last {analyticsDays} days.
                           Your own visits aren&apos;t counted.
                         </p>
@@ -3864,17 +3886,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {sidebarTab==='settings'&&(
               <div className="px-4 md:px-8 py-6 md:py-8 max-w-[640px] space-y-8">
                 <div>
-                  <h2 className="text-[22px] font-semibold text-[#111111] leading-tight tracking-[-0.03em]">Settings</h2>
-                  <p className="text-[#667085] text-[13px] mt-1">Your business, your link, your account.</p>
+                  <h2 className="text-[22px] font-semibold text-[#0A0A0A] leading-tight tracking-[-0.03em]">Settings</h2>
+                  <p className="text-[#777777] text-[13px] mt-1">Your business, your link, your account.</p>
                 </div>
 
                 {/* ── Business name ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Business name</p>
-                  <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Business name</p>
+                  <div className="rounded-2xl border border-[#E9E9E7] p-4 bg-white space-y-3">
                     <input value={bizEdit.name} onChange={e=>setBizEdit(bz=>({...bz,name:e.target.value}))}
                       placeholder="Your business name"
-                      className="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#111] transition-colors"/>
+                      className="w-full bg-white border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                     <div className="flex items-center gap-2">
                       <button onClick={saveBizInfo} disabled={bizSaving||!bizEdit.name.trim()}
                         className="px-4 py-2 rounded-xl bg-[#7C3AED] text-white text-[12px] font-semibold hover:bg-[#6D28D9] transition-colors disabled:opacity-40">
@@ -3882,19 +3904,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </button>
                     </div>
                     {bizSaveError&&<p className="text-[11px] text-red-500">{bizSaveError}</p>}
-                    <p className="text-[11px] text-[#98A2B3]">This is the name shown at the top of your page.</p>
+                    <p className="text-[11px] text-[#9A9A97]">This is the name shown at the top of your page.</p>
                   </div>
                 </div>
 
                 {/* ── Link name (slug) ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Your link</p>
-                  <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Your link</p>
+                  <div className="rounded-2xl border border-[#E9E9E7] p-4 bg-white space-y-3">
                     <div className="flex items-stretch gap-0">
-                      <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-[#DEDEDC] bg-[#F9FAFB] text-[12px] text-[#98A2B3] whitespace-nowrap">{SITE_DOMAIN}/</span>
+                      <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-[#E9E9E7] bg-[#F7F7F6] text-[12px] text-[#9A9A97] whitespace-nowrap">{SITE_DOMAIN}/</span>
                       <input value={slugEdit} onChange={e=>{setSlugEdit(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,48));setSlugMsg('');}}
                         placeholder="your-business"
-                        className="flex-1 min-w-0 bg-white border border-[#DEDEDC] rounded-r-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#111] transition-colors"/>
+                        className="flex-1 min-w-0 bg-white border border-[#E9E9E7] rounded-r-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#0A0A0A] transition-colors"/>
                     </div>
                     <div className="flex items-center gap-2">
                       <button onClick={saveSlug} disabled={slugSaving||!slugEdit||slugEdit===localBusiness?.slug}
@@ -3903,39 +3925,39 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </button>
                       {localBusiness?.slug&&(
                         <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
-                          className="px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
+                          className="px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[12px] font-medium hover:border-[#0A0A0A] transition-colors">
                           Open ↗
                         </a>
                       )}
                     </div>
                     {slugMsg&&<p className={`text-[11px] ${slugMsg.startsWith('✓')?'text-[#166534]':'text-red-500'}`}>{slugMsg}</p>}
-                    <p className="text-[11px] text-[#98A2B3]">Changing this breaks any link you&apos;ve already shared. Letters, numbers and dashes only.</p>
+                    <p className="text-[11px] text-[#9A9A97]">Changing this breaks any link you&apos;ve already shared. Letters, numbers and dashes only.</p>
                   </div>
                 </div>
 
                 {/* ── Plan ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Plan</p>
-                  <div className="rounded-2xl border border-[#E8EBF0] bg-white overflow-hidden">
-                    <div className="p-4 flex items-center gap-3 border-b border-[#F4F6FA]">
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Plan</p>
+                  <div className="rounded-2xl border border-[#E9E9E7] bg-white overflow-hidden">
+                    <div className="p-4 flex items-center gap-3 border-b border-[#F7F7F6]">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-[#111]">Free</p>
-                        <p className="text-[11px] text-[#98A2B3] mt-0.5">Your current plan.</p>
+                        <p className="text-[13px] font-semibold text-[#0A0A0A]">Free</p>
+                        <p className="text-[11px] text-[#9A9A97] mt-0.5">Your current plan.</p>
                       </div>
-                      <span className="flex-shrink-0 px-2.5 py-1 rounded-full bg-[#F4F6FA] text-[#667085] text-[10px] font-semibold">Active</span>
+                      <span className="flex-shrink-0 px-2.5 py-1 rounded-full bg-[#F7F7F6] text-[#777777] text-[10px] font-semibold">Active</span>
                     </div>
                     <div className="p-4">
-                      <p className="text-[13px] font-semibold text-[#111] mb-2">Pro</p>
+                      <p className="text-[13px] font-semibold text-[#0A0A0A] mb-2">Pro</p>
                       <div className="space-y-1.5 mb-3">
                         {['Remove OpenStatus branding from your page','Full visitor analytics'].map(f=>(
                           <div key={f} className="flex items-center gap-2">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span className="text-[12px] text-[#667085]">{f}</span>
+                            <span className="text-[12px] text-[#777777]">{f}</span>
                           </div>
                         ))}
                       </div>
                       <button disabled
-                        className="w-full py-2.5 rounded-xl bg-[#F4F6FA] text-[#98A2B3] text-[12px] font-semibold cursor-not-allowed">
+                        className="w-full py-2.5 rounded-xl bg-[#F7F7F6] text-[#9A9A97] text-[12px] font-semibold cursor-not-allowed">
                         Coming soon
                       </button>
                     </div>
@@ -3944,15 +3966,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
                 {/* ── Account ── */}
                 <div>
-                  <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-3">Account</p>
-                  <div className="rounded-2xl border border-[#E8EBF0] p-4 bg-white space-y-3">
+                  <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-3">Account</p>
+                  <div className="rounded-2xl border border-[#E9E9E7] p-4 bg-white space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-[#111]">Password</p>
-                        <p className="text-[11px] text-[#98A2B3] mt-0.5">We&apos;ll email you a reset link.</p>
+                        <p className="text-[13px] font-semibold text-[#0A0A0A]">Password</p>
+                        <p className="text-[11px] text-[#9A9A97] mt-0.5">We&apos;ll email you a reset link.</p>
                       </div>
                       <button onClick={sendPasswordReset} disabled={pwSending}
-                        className="flex-shrink-0 px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors disabled:opacity-40">
+                        className="flex-shrink-0 px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[12px] font-medium hover:border-[#0A0A0A] transition-colors disabled:opacity-40">
                         {pwSending?'Sending…':'Reset password'}
                       </button>
                     </div>
@@ -3964,8 +3986,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <div>
                   <p className="text-[11px] font-semibold text-[#B42318] uppercase tracking-[0.12em] mb-3">Danger zone</p>
                   <div className="rounded-2xl border border-[#FECDCA] bg-[#FFFBFA] p-4">
-                    <p className="text-[13px] font-semibold text-[#111]">Delete account</p>
-                    <p className="text-[11px] text-[#667085] mt-1 leading-relaxed">
+                    <p className="text-[13px] font-semibold text-[#0A0A0A]">Delete account</p>
+                    <p className="text-[11px] text-[#777777] mt-1 leading-relaxed">
                       Permanently deletes your business, your page, your hours and your analytics. Your link stops working immediately. This cannot be undone.
                     </p>
                     {!deleteArmed
@@ -3977,7 +3999,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       )
                       :(
                         <div className="mt-3 space-y-2.5">
-                          <p className="text-[11px] text-[#667085]">Type <strong className="text-[#B42318]">DELETE</strong> to confirm.</p>
+                          <p className="text-[11px] text-[#777777]">Type <strong className="text-[#B42318]">DELETE</strong> to confirm.</p>
                           <input value={deleteConfirm} onChange={e=>setDeleteConfirm(e.target.value)}
                             placeholder="DELETE"
                             className="w-full bg-white border border-[#FDA29B] rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#B42318] transition-colors"/>
@@ -3987,7 +4009,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                               {deleting?'Deleting…':'Permanently delete'}
                             </button>
                             <button onClick={()=>{setDeleteArmed(false);setDeleteConfirm('');setDeleteMsg('');}}
-                              className="px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-medium hover:border-[#111] transition-colors">
+                              className="px-4 py-2 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[12px] font-medium hover:border-[#0A0A0A] transition-colors">
                               Cancel
                             </button>
                           </div>
@@ -4003,7 +4025,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <div className="p-5 space-y-4">
                 <p className="text-[13px] font-semibold text-[#0A0A0A]">Integrations</p>
                 {/* Google Business Profile card */}
-                <div className={`rounded-2xl border p-4 ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#DEDEDC] bg-white'}`}>
+                <div className={`rounded-2xl border p-4 ${googleConnected?'border-[#BBF7D0] bg-[#F0FDF4]':'border-[#E9E9E7] bg-white'}`}>
                   <div className="flex items-start gap-3">
                     <div className="w-9 h-9 rounded-xl bg-white border border-[#EBEBEB] flex items-center justify-center flex-shrink-0 shadow-sm">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -4065,7 +4087,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </>
                     ):(
                       <a href="/connect/google"
-                        className="inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#111] text-[12px] font-semibold hover:border-[#111] hover:bg-[#FAFAF9] transition-colors">
+                        className="inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-white border border-[#D0D5DD] text-[#0A0A0A] text-[12px] font-semibold hover:border-[#0A0A0A] hover:bg-[#F7F7F6] transition-colors">
                         <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                         Connect Google Business
                       </a>
@@ -4096,19 +4118,19 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 style={{
                   minWidth: 280,
                   overflow: 'hidden',
-                  backgroundImage:'linear-gradient(rgba(139,92,246,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.12) 1px,transparent 1px)',
+                  backgroundImage:'linear-gradient(rgba(10,10,10,0.030) 1px,transparent 1px),linear-gradient(90deg,rgba(10,10,10,0.030) 1px,transparent 1px)',
                   backgroundSize:'24px 24px',
                   backgroundColor:'#f5f3ff',
                 }}
               >
                 {/* Phone / Web toggle */}
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex gap-0.5 p-1 rounded-full bg-white/85 backdrop-blur border border-[#EBEBEA] shadow-sm">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex gap-0.5 p-1 rounded-full bg-white/85 backdrop-blur border border-[#E9E9E7] shadow-sm">
                   {([
                     {key:'mobile'  as const, label:'Phone', icon:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>},
                     {key:'desktop' as const, label:'Web',   icon:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>},
                   ]).map(({key,label,icon})=>(
                     <button key={key} onClick={()=>setPreviewMode(key)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${previewMode===key?'bg-[#F5F3FF] text-[#6D28D9]':'text-[#98A2B3] hover:text-[#111]'}`}>
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${previewMode===key?'bg-white text-[#0A0A0A] shadow-[0_1px_2px_rgba(10,10,10,0.06)]':'text-[#777777] hover:text-[#0A0A0A]'}`}>
                       {icon}{label}
                     </button>
                   ))}
@@ -4130,14 +4152,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </div>
                     )
                     :(
-                      <div className="rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-[#DEDEDC] bg-white"
+                      <div className="rounded-xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-[#E9E9E7] bg-white"
                         style={{width:'100%'}}>
                         {/* browser chrome, so "Web" reads as a real page */}
-                        <div className="flex items-center gap-1.5 px-3 py-2 bg-[#F4F6FA] border-b border-[#E8EBF0]">
+                        <div className="flex items-center gap-1.5 px-3 py-2 bg-[#F7F7F6] border-b border-[#E9E9E7]">
                           <span className="w-2 h-2 rounded-full bg-[#FF5F57]"/>
                           <span className="w-2 h-2 rounded-full bg-[#FEBC2E]"/>
                           <span className="w-2 h-2 rounded-full bg-[#28C840]"/>
-                          <span className="ml-2 flex-1 truncate text-[9px] text-[#98A2B3] bg-white rounded px-2 py-0.5 border border-[#E8EBF0]">
+                          <span className="ml-2 flex-1 truncate text-[9px] text-[#9A9A97] bg-white rounded px-2 py-0.5 border border-[#E9E9E7]">
                             {SITE_DOMAIN}/{localBusiness?.slug??'your-page'}
                           </span>
                         </div>
@@ -4153,7 +4175,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       </div>
                     )
                   }
-                  <p className="text-center text-[11px] font-medium" style={{color:mDragId?'#8B5CF6':'#98A2B3'}}>
+                  <p className="text-center text-[11px] font-medium" style={{color:mDragId?'#8B5CF6':'#9A9A97'}}>
                     {mDragId?'Drag to rearrange, let go to drop':'Click a widget to edit \u00b7 drag it to move'}
                   </p>
                   {localBusiness?.slug&&(
@@ -4184,9 +4206,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            ══════════════════════════════════════════════════════════ */}
 
       {/* ── TOP BAR ── names the section you're in; Save only where it means something */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/92 backdrop-blur-md border-b border-[#EBEBEA] flex items-center justify-between px-4 gap-3"
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/92 backdrop-blur-md border-b border-[#E9E9E7] flex items-center justify-between px-4 gap-3"
         style={{display:isMobile?"flex":"none",height:'calc(52px + env(safe-area-inset-top))',paddingTop:'env(safe-area-inset-top)',fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
-        <span className="text-[#111111] font-semibold text-[17px] tracking-[-0.03em] truncate">
+        <span className="text-[#0A0A0A] font-semibold text-[17px] tracking-[-0.03em] truncate">
           {isEditSubTab?'Edit page'
             :sidebarTab==='business'?'Business'
             :sidebarTab==='hours'?'Status'
@@ -4197,15 +4219,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <div className="flex items-center gap-2 flex-shrink-0">
           {business?.slug&&isEditSubTab&&(
             <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-              className="text-[12px] font-medium text-[#667085] px-2 py-1">View ↗</a>
+              className="text-[12px] font-medium text-[#777777] px-2 py-1">View ↗</a>
           )}
           {showSaveButton?(
             <button onClick={save} disabled={saving}
-              className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#EDE9FE] text-[#5B21B6]':saving?'bg-[#F4F6FA] text-[#98A2B3]':hasPublished?'bg-[#F5F3FF] text-[#6D28D9]':'bg-[#7C3AED] text-white'}`}>
+              className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${saved?'bg-[#F0FDF4] text-[#15803D]':saving?'bg-[#F7F7F6] text-[#9A9A97]':'bg-[#0A0A0A] text-white'}`}>
               {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
             </button>
           ):sidebarTab==='hours'?(
-            <span className="text-[11px] text-[#98A2B3]">Goes live right away</span>
+            <span className="text-[11px] text-[#9A9A97]">Goes live right away</span>
           ):null}
         </div>
       </div>
@@ -4223,11 +4245,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 {/* ── BUSINESS tab content ── */}
         {sidebarTab==='business'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Business</h2>
+            <h2 className="text-[20px] font-semibold text-[#0A0A0A] pt-1 pb-3">Business</h2>
             {/* Analytics snapshot - mobile */}
             {analyticsData&&(
               <div className="mb-4">
-                <p className="text-[10px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Last 30 days</p>
+                <p className="text-[10px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Last 30 days</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     {label:'Page views',value:analyticsData.metrics.views,color:'#12B76A',data:(analyticsData.trend??[]).map(t=>t.views)},
@@ -4235,18 +4257,18 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {label:'Menu taps',value:analyticsData.metrics.menu,color:'#7C3AED',data:(analyticsData.trend??[]).map((_,i)=>i%3===0?analyticsData.metrics.menu:0)},
                     {label:'Link clicks',value:analyticsData.metrics.clicks,color:'#D97706',data:(analyticsData.trend??[]).map(t=>t.clicks)},
                   ].map(({label,value,color,data})=>(
-                    <div key={label} className="rounded-2xl border border-[#E8EBF0] bg-white p-3">
+                    <div key={label} className="rounded-2xl border border-[#E9E9E7] bg-white p-3">
                       <div className="flex items-start justify-between mb-1.5">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center"
+                          <span className="flex-shrink-0 w-5 h-5 rounded-lg flex items-center justify-center"
                             style={{background:`${color}14`,color}}>
                             {METRIC_ICONS[label]}
                           </span>
-                          <p className="text-[10px] font-normal text-[#98A2B3] truncate">{label}</p>
+                          <p className="text-[10px] font-normal text-[#9A9A97] truncate">{label}</p>
                         </div>
                         <BuilderSparkline data={data} color={color}/>
                       </div>
-                      <p className="text-[20px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
+                      <p className="text-[20px] font-semibold text-[#0A0A0A] leading-none">{value.toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
@@ -4254,16 +4276,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
 
             {/* Hours & Status */}
-            <div className="mb-3 p-3 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
+            <div className="mb-3 p-3 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7]">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-[13px] font-semibold text-[#111]">Hours & Status</p>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F4F6FA] text-[#667085]'}`}>
+                <p className="text-[13px] font-semibold text-[#0A0A0A]">Hours & Status</p>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${liveStatus==='open'?'bg-emerald-100 text-emerald-700':'bg-[#F7F7F6] text-[#777777]'}`}>
                   {liveStatus==='open'?'● Open now':'● Closed'}
                 </span>
               </div>
-              <p className="text-[12px] text-[#667085] mb-2">{todayLabel}</p>
+              <p className="text-[12px] text-[#777777] mb-2">{todayLabel}</p>
               <button onClick={()=>setSidebarTab('hours' as SidebarTab)}
-                className="text-[12px] font-semibold text-[#667085] hover:text-[#111] underline underline-offset-2">
+                className="text-[12px] font-semibold text-[#777777] hover:text-[#0A0A0A] underline underline-offset-2">
                 Edit hours →
               </button>
             </div>
@@ -4272,7 +4294,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <ReviewsCard block={allBlocks.find(b=>b.id==='location')} placeId={config.placeId} onUpdateBlock={u=>updateBlock('location',u)}/>
 
             {/* Social Profiles */}
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Social Profiles</p>
+            <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Social Profiles</p>
             <div className="space-y-2 mb-3">
               {[
                 {key:'instagram', label:'Instagram', placeholder:'@username or full URL'},
@@ -4281,32 +4303,32 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {key:'twitter',   label:'Twitter / X',placeholder:'@username or full URL'},
                 {key:'youtube',   label:'YouTube',   placeholder:'Channel URL'},
               ].map(({key,label,placeholder})=>(
-                <div key={key} className="flex items-center gap-2 bg-[#F9FAFB] rounded-xl border border-[#E8EBF0] px-3 py-2">
-                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">{label}</span>
+                <div key={key} className="flex items-center gap-2 bg-[#F7F7F6] rounded-xl border border-[#E9E9E7] px-3 py-2">
+                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">{label}</span>
                   <input value={(config.socials??{})[key]??''}
                     onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
                     placeholder={placeholder}
-                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
               ))}
             </div>
 
             {/* ── Business Profile inline editor ── */}
             <div className="mb-3">
-              <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2">Business Profile</p>
-              <div className="rounded-2xl border border-[#E8EBF0] bg-[#F9FAFB] overflow-hidden divide-y divide-[#E8EBF0]">
+              <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2">Business Profile</p>
+              <div className="rounded-2xl border border-[#E9E9E7] bg-[#F7F7F6] overflow-hidden divide-y divide-[#E9E9E7]">
                 {/* Name */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Name</span>
+                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Name</span>
                   <input value={bizEdit.name} onChange={e=>setBizEdit(b=>({...b,name:e.target.value}))}
                     placeholder="Business name"
-                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
                 {/* Category */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Category</span>
+                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Category</span>
                   <select value={bizEdit.category} onChange={e=>setBizEdit(b=>({...b,category:e.target.value}))}
-                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none appearance-none cursor-pointer">
+                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none appearance-none cursor-pointer">
                     <option value="">— Select —</option>
                     {CATEGORIES.map(c=>(
                       <option key={c.id} value={c.id}>{c.label}</option>
@@ -4315,24 +4337,24 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </div>
                 {/* Phone */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Phone</span>
+                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Phone</span>
                   <input value={bizEdit.phone} onChange={e=>setBizEdit(b=>({...b,phone:e.target.value}))}
                     placeholder="+1 (555) 000-0000" type="tel"
-                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
                 {/* Website */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Website</span>
+                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Website</span>
                   <input value={bizEdit.website} onChange={e=>setBizEdit(b=>({...b,website:e.target.value}))}
                     placeholder="https://yoursite.com" type="url"
-                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
                 {/* Address */}
                 <div className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="text-[11px] font-normal text-[#667085] w-20 flex-shrink-0">Address</span>
+                  <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Address</span>
                   <input value={bizEdit.address} onChange={e=>setBizEdit(b=>({...b,address:e.target.value}))}
                     placeholder="123 Main St, City, State"
-                    className="flex-1 text-[12px] text-[#111] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                    className="flex-1 text-[12px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                 </div>
               </div>
               <div className="flex items-center justify-between mt-2">
@@ -4353,7 +4375,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             {googleConnected&&gStatus?.isClosed&&(
               <div className="rounded-2xl border border-[#FEC84B] bg-[#FFFCF5] p-4 mt-3">
-                <p className="text-[13px] font-semibold text-[#111] mb-1">
+                <p className="text-[13px] font-semibold text-[#0A0A0A] mb-1">
                   Google lists you as {gStatus.status==='CLOSED_TEMPORARILY'?'temporarily closed':(gStatus.status??'closed')}
                 </p>
                 <p className="text-[11.5px] text-[#B54708] leading-relaxed mb-3">
@@ -4371,15 +4393,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               const active = statusUpdates.filter(u=>u.status!=='needs_review');
               const isOverridden = active.length>0;
               return (
-                <div className={`rounded-[20px] border p-6 mt-4 ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E9E9E7] bg-[#FAFAF9]'}`}>
-                  <p className="mb-4 text-[12px] font-medium text-[#667085]">What customers see today</p>
+                <div className={`rounded-[20px] border p-6 mt-4 ${isOverridden?'border-[#FDE68A] bg-[#FFFCF5]':'border-[#E9E9E7] bg-[#F7F7F6]'}`}>
+                  <p className="mb-4 text-[12px] font-medium text-[#777777]">What customers see today</p>
                   <div className="flex items-start gap-3 mb-1">
                     <span className={`mt-2.5 w-2.5 h-2.5 shrink-0 rounded-full ${isOverridden?'bg-amber-500':liveStatus==='open'?'bg-emerald-500':'bg-[#C0C0C0]'}`}/>
-                    <p className="text-[29px] font-semibold leading-tight text-[#111] tracking-[-0.045em]">
+                    <p className="text-[29px] font-semibold leading-tight text-[#0A0A0A] tracking-[-0.045em]">
                       {isOverridden ? active[0].headline : liveStatus==='open' ? 'You’re open' : 'Closed right now'}
                     </p>
                   </div>
-                  <p className="pl-[22px] text-[12.5px] text-[#667085] mb-6 leading-relaxed">
+                  <p className="pl-[22px] text-[12.5px] text-[#777777] mb-6 leading-relaxed">
                     {isOverridden
                       ? 'This is what customers see instead of your normal hours today.'
                       : `Your normal hours for today — ${todayLabel}.`}
@@ -4392,7 +4414,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </button>
                   ) : (
                     <button onClick={()=>postStatus('closed_today')} disabled={statusPosting}
-                      className="w-full py-3.5 rounded-2xl bg-[#111] text-white text-[15px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+                      className="w-full py-3.5 rounded-2xl bg-[#0A0A0A] text-white text-[15px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
                       {statusPosting?'Working…':'Close for today'}
                     </button>
                   )}
@@ -4400,7 +4422,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   {gMsg&&<p className={`text-[12px] mt-3 ${gMsg.startsWith('✓')?'text-[#166534]':'text-[#EF4444]'}`}>{gMsg}</p>}
                   {reopenMsg&&<p className={`text-[12px] mt-2 ${reopenMsg.startsWith('✓')?'text-emerald-600':'text-[#EF4444]'}`}>{reopenMsg}</p>}
                   {googleConnected&&(
-                    <p className="text-[11.5px] text-[#98A2B3] mt-3 leading-relaxed">
+                    <p className="text-[11.5px] text-[#9A9A97] mt-3 leading-relaxed">
                       Your page updates instantly. Google usually takes about 10 minutes.
                     </p>
                   )}
@@ -4409,7 +4431,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             })()}
 
             <button onClick={()=>setStatusMore(v=>!v)}
-              className="flex items-center gap-1.5 mt-4 text-[13px] font-medium text-[#667085] active:opacity-60">
+              className="flex items-center gap-1.5 mt-4 text-[13px] font-medium text-[#777777] active:opacity-60">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
                 style={{transform:statusMore?'rotate(90deg)':'none',transition:'transform .18s'}}>
                 <polyline points="9 18 15 12 9 6"/>
@@ -4419,17 +4441,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             {statusMore&&(
               <div className="mt-3 space-y-2.5">
-                <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
-                  <p className="text-[13px] font-semibold text-[#111]">Different hours today</p>
-                  <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
+                <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Different hours today</p>
+                  <p className="text-[11px] text-[#777777] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
                   <div className="flex items-center gap-2">
                     <select value={todayOpen} onChange={e=>setTodayOpen(e.target.value)}
-                      className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
+                      className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
                       {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                     </select>
-                    <span className="text-[11px] text-[#98A2B3]">to</span>
+                    <span className="text-[11px] text-[#9A9A97]">to</span>
                     <select value={todayClose} onChange={e=>setTodayClose(e.target.value)}
-                      className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
+                      className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
                       {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                     </select>
                   </div>
@@ -4439,12 +4461,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </button>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
-                  <p className="text-[13px] font-semibold text-[#111]">Closing early today</p>
-                  <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
+                <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Closing early today</p>
+                  <p className="text-[11px] text-[#777777] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
                   <div className="flex items-center gap-2">
                     <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
-                      className="flex-1 bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#111] focus:outline-none appearance-none">
+                      className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
                       {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                     </select>
                     <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
@@ -4454,12 +4476,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
-                  <p className="text-[13px] font-semibold text-[#111]">Add a note for today</p>
-                  <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">Shows beside your hours. Your page only.</p>
+                <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Add a note for today</p>
+                  <p className="text-[11px] text-[#777777] mt-0.5 mb-2.5">Shows beside your hours. Your page only.</p>
                   <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
                     placeholder="Running about 20 minutes behind today…" rows={2}
-                    className="w-full bg-[#F4F6FA] border border-[#E8EBF0] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
+                    className="w-full bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
                     <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
@@ -4469,9 +4491,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-[#E8EBF0] bg-white">
-                  <p className="text-[13px] font-semibold text-[#111]">Closing on another day</p>
-                  <p className="text-[11px] text-[#667085] mt-0.5 mb-2.5">
+                <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Closing on another day</p>
+                  <p className="text-[11px] text-[#777777] mt-0.5 mb-2.5">
                     Dated, so your hours return on their own{googleConnected?' — updates Google too.':'.'}
                   </p>
                   <div className="flex gap-2">
@@ -4491,9 +4513,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                           }
                           void googleCloseDates(from,to,`Closed ${label.toLowerCase()}`);
                         }}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#E8EBF0] bg-[#F9FAFB] active:scale-95 transition-transform disabled:opacity-40">
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] active:scale-95 transition-transform disabled:opacity-40">
                         <LucideCalendar size={13} color="#7C3AED"/>
-                        <span className="text-[12px] font-semibold text-[#111]">{label}</span>
+                        <span className="text-[12px] font-semibold text-[#0A0A0A]">{label}</span>
                       </button>
                     ))}
                   </div>
@@ -4501,8 +4523,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
 
-            <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mt-7 mb-2">Your normal week</p>
-            <div className="rounded-2xl border border-[#E8EBF0] overflow-hidden bg-white">
+            <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mt-7 mb-2">Your normal week</p>
+            <div className="rounded-2xl border border-[#E9E9E7] overflow-hidden bg-white">
               {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
             </div>
           </div>
@@ -4512,17 +4534,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {sidebarTab==='analytics'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
             <div className="flex items-center justify-between pt-1 pb-3">
-              <h2 className="text-[20px] font-semibold text-[#111]">Analytics</h2>
+              <h2 className="text-[20px] font-semibold text-[#0A0A0A]">Analytics</h2>
               <div className="flex gap-1.5">
                 {[7,30,90].map(d=>(
                   <button key={d} onClick={()=>setAnalyticsDays(d)}
-                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#7C3AED] text-white':'bg-[#F4F6FA] text-[#667085]'}`}>
+                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${analyticsDays===d?'bg-[#7C3AED] text-white':'bg-[#F7F7F6] text-[#777777]'}`}>
                     {d}d
                   </button>
                 ))}
               </div>
             </div>
-            {analyticsLoading&&<div className="text-center py-10 text-[13px] text-[#98A2B3]">Loading…</div>}
+            {analyticsLoading&&<div className="text-center py-10 text-[13px] text-[#9A9A97]">Loading…</div>}
             {!analyticsLoading&&analyticsData&&(
               <div className="space-y-3">
                 {/* Key metrics */}
@@ -4533,30 +4555,30 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     {label:'Block taps',value:analyticsData.metrics.clicks},
                     {label:'Directions',value:analyticsData.metrics.directions},
                   ].map(({label,value})=>(
-                    <div key={label} className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
+                    <div key={label} className="bg-[#F7F7F6] border border-[#E9E9E7] rounded-2xl p-3">
                       <span className="inline-flex w-6 h-6 rounded-lg items-center justify-center mb-2"
-                        style={{background:'#F5F3FF',color:'#7C3AED'}}>
+                        style={{background:'#FFFFFF',color:'#0A0A0A'}}>
                         {METRIC_ICONS[label]}
                       </span>
-                      <p className="text-[22px] font-semibold text-[#111] leading-none">{value.toLocaleString()}</p>
-                      <p className="text-[10px] text-[#98A2B3] font-medium mt-1">{label}</p>
+                      <p className="text-[22px] font-semibold text-[#0A0A0A] leading-none">{value.toLocaleString()}</p>
+                      <p className="text-[10px] text-[#9A9A97] font-medium mt-1">{label}</p>
                     </div>
                   ))}
                 </div>
                 {/* Top blocks */}
                 {analyticsData.topActions.length>0&&(
-                  <div className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2.5">Top blocks</p>
+                  <div className="bg-[#F7F7F6] border border-[#E9E9E7] rounded-2xl p-3">
+                    <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2.5">Top blocks</p>
                     <div className="space-y-2">
                       {analyticsData.topActions.slice(0,6).map(({id,count})=>{
                         const max=analyticsData.topActions[0]?.count||1;
                         return (
                           <div key={id} className="flex items-center gap-2">
-                            <span className="text-[12px] text-[#111] font-medium w-20 truncate capitalize">{id}</span>
-                            <div className="flex-1 h-2 bg-[#E8EBF0] rounded-full overflow-hidden">
-                              <div className="h-full bg-[#111] rounded-full" style={{width:`${Math.round(count/max*100)}%`}}/>
+                            <span className="text-[12px] text-[#0A0A0A] font-medium w-20 truncate capitalize">{id}</span>
+                            <div className="flex-1 h-2 bg-[#E9E9E7] rounded-full overflow-hidden">
+                              <div className="h-full bg-[#0A0A0A] rounded-full" style={{width:`${Math.round(count/max*100)}%`}}/>
                             </div>
-                            <span className="text-[11px] text-[#667085] w-6 text-right">{count}</span>
+                            <span className="text-[11px] text-[#777777] w-6 text-right">{count}</span>
                           </div>
                         );
                       })}
@@ -4565,13 +4587,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 )}
                 {/* Traffic sources */}
                 {analyticsData.trafficSources.length>0&&(
-                  <div className="bg-[#F9FAFB] border border-[#E8EBF0] rounded-2xl p-3">
-                    <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-2.5">Traffic sources</p>
+                  <div className="bg-[#F7F7F6] border border-[#E9E9E7] rounded-2xl p-3">
+                    <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-2.5">Traffic sources</p>
                     <div className="space-y-1.5">
                       {analyticsData.trafficSources.slice(0,5).map(({source,count})=>(
                         <div key={source} className="flex items-center justify-between">
-                          <span className="text-[12px] text-[#111] font-medium">{source}</span>
-                          <span className="text-[11px] text-[#667085]">{count} visits</span>
+                          <span className="text-[12px] text-[#0A0A0A] font-medium">{source}</span>
+                          <span className="text-[11px] text-[#777777]">{count} visits</span>
                         </div>
                       ))}
                     </div>
@@ -4581,7 +4603,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             )}
             {!analyticsLoading&&!analyticsData&&(
               <div className="text-center py-10">
-                <p className="text-[13px] text-[#98A2B3]">No data yet — share your link to start tracking.</p>
+                <p className="text-[13px] text-[#9A9A97]">No data yet — share your link to start tracking.</p>
               </div>
             )}
           </div>
@@ -4589,15 +4611,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 {/* ── SETTINGS tab ── */}
         {sidebarTab==='settings'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-10" style={{scrollbarWidth:'none'}}>
-            <h2 className="text-[20px] font-semibold text-[#111] pt-1 pb-3">Settings</h2>
+            <h2 className="text-[20px] font-semibold text-[#0A0A0A] pt-1 pb-3">Settings</h2>
             {/* Your link */}
             {business?.slug&&(
-              <div className="mb-4 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-                <p className="text-[11px] font-semibold text-[#98A2B3] uppercase tracking-[0.12em] mb-1">Your Link</p>
+              <div className="mb-4 p-4 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7]">
+                <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mb-1">Your Link</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-[14px] font-semibold text-[#111] flex-1 truncate">{SITE_DOMAIN}/{business.slug}</p>
+                  <p className="text-[14px] font-semibold text-[#0A0A0A] flex-1 truncate">{SITE_DOMAIN}/{business.slug}</p>
                   <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
-                    className="text-[11px] font-normal text-[#667085] hover:text-[#111] flex items-center gap-1">
+                    className="text-[11px] font-normal text-[#777777] hover:text-[#0A0A0A] flex items-center gap-1">
                     Open ↗
                   </a>
                 </div>
@@ -4606,22 +4628,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             {/* Settings menu */}
             <div className="space-y-2">
-              <button onClick={()=>setSidebarTab('business')} className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] w-full text-left">
-                <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              <button onClick={()=>setSidebarTab('business')} className="flex items-center gap-3 p-3.5 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7] w-full text-left">
+                <div className="w-9 h-9 rounded-xl bg-[#E9E9E7] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 </div>
-                <span className="text-[13px] font-semibold text-[#111] flex-1">Edit business info</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <span className="text-[13px] font-semibold text-[#0A0A0A] flex-1">Edit business info</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
-              <a href="mailto:info@openstatus.co?subject=Help" className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0]">
-                <div className="w-9 h-9 rounded-xl bg-[#E8EBF0] flex items-center justify-center flex-shrink-0">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+              <a href="mailto:info@openstatus.co?subject=Help" className="flex items-center gap-3 p-3.5 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7]">
+                <div className="w-9 h-9 rounded-xl bg-[#E9E9E7] flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
                 </div>
-                <span className="text-[13px] font-semibold text-[#111] flex-1">Help & Support</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#98A2B3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <span className="text-[13px] font-semibold text-[#0A0A0A] flex-1">Help & Support</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </a>
               <button onClick={async()=>{await supabase.auth.signOut();window.location.href='/login';}}
-                className="flex items-center gap-3 p-3.5 bg-[#F9FAFB] rounded-2xl border border-[#E8EBF0] w-full text-left">
+                className="flex items-center gap-3 p-3.5 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7] w-full text-left">
                 <div className="w-9 h-9 rounded-xl bg-[#FFF0F0] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E53935" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
                 </div>
@@ -4652,7 +4674,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             : 'calc(112px + env(safe-area-inset-bottom))',
           transition:'bottom .3s cubic-bezier(.32,.72,0,1)',
           backgroundColor:'#f5f3ff',
-          backgroundImage:'linear-gradient(rgba(139,92,246,0.12) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.12) 1px,transparent 1px)',
+          backgroundImage:'linear-gradient(rgba(10,10,10,0.030) 1px,transparent 1px),linear-gradient(90deg,rgba(10,10,10,0.030) 1px,transparent 1px)',
           backgroundSize:'24px 24px',
           touchAction: mDragId ? 'none' : undefined,
         }}>
@@ -4690,7 +4712,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           pointerEvents:isEditSubTab?'auto':'none',
           transition:'transform .25s cubic-bezier(.32,.72,0,1), opacity .2s ease',
         }}>
-        <div className="flex w-full max-w-[420px] bg-white/92 backdrop-blur border border-[#EBEBEA] rounded-2xl p-1 gap-1 shadow-[0_6px_24px_rgba(124,58,237,0.16)]">
+        <div className="flex w-full max-w-[420px] bg-white/92 backdrop-blur border border-[#E9E9E7] rounded-2xl p-1 gap-1 shadow-[0_6px_24px_rgba(124,58,237,0.16)]">
           {([
             {key:'add'        as const, label:'Block',      svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>},
             {key:'font'       as const, label:'Font',       svg:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>},
@@ -4699,7 +4721,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           ]).map(({key,label,svg})=>(
             <button key={key}
               onClick={()=>{ setSidebarTab('design'); setOpenId(null); setMSheet(m=>m===key?null:key); }}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10.5px] font-semibold transition-all active:scale-95 ${mSheet===key?'bg-[#F5F3FF] text-[#6D28D9]':'text-[#667085]'}`}>
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[10.5px] font-semibold transition-all active:scale-95 ${mSheet===key?'bg-[#ECECEA] text-[#0A0A0A]':'text-[#777777]'}`}>
               {svg}{label}
             </button>
           ))}
@@ -4734,7 +4756,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             const isOn = allBlocks.find(b=>b.id===def.id)?.on;
             return (
               <div key={def.id}
-                className="flex items-center gap-2.5 py-2 px-2.5 rounded-xl border border-[#E8EBF0] bg-white">
+                className="flex items-center gap-2.5 py-2 px-2.5 rounded-xl border border-[#E9E9E7] bg-white">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{backgroundColor:`${def.color}18`}}>
                   <BlockIcon id={def.id} size={14} color={def.color}/>
@@ -4742,7 +4764,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <button
                   onClick={()=>{ if(!isOn){ enableBlock(def.id); } setOpenId(def.id); setMSheet('block'); }}
                   className="flex-1 min-w-0 text-left active:opacity-60">
-                  <p className="text-[13px] font-medium text-[#111] leading-tight truncate">{def.title}</p>
+                  <p className="text-[13px] font-medium text-[#0A0A0A] leading-tight truncate">{def.title}</p>
                 </button>
                 <button
                   onClick={()=>{ if(isOn){ removeBlock(def.id); } else { enableBlock(def.id); } }}
@@ -4752,7 +4774,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <span className={`w-5 h-5 rounded-full flex items-center justify-center border ${isOn?'bg-[#7C3AED] border-[#7C3AED]':'border-[#D0D5DD] bg-white'}`}>
                     {isOn
                       ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      : <span className="text-[13px] leading-none text-[#98A2B3]">+</span>}
+                      : <span className="text-[13px] leading-none text-[#9A9A97]">+</span>}
                   </span>
                 </button>
               </div>
@@ -4762,7 +4784,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
         <button
           onClick={()=>{ addCustomLink(); setMSheet('block'); }}
-          className="mt-2.5 w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-[#D0D5DD] text-[12.5px] font-semibold text-[#667085] active:scale-[0.98] transition-transform"
+          className="mt-2.5 w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-[#D0D5DD] text-[12.5px] font-semibold text-[#777777] active:scale-[0.98] transition-transform"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add any other link
@@ -4770,15 +4792,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </MobileSheet>
 
       <MobileSheet open={isMobile&&mSheet==='font'} title="Font" onClose={()=>setMSheet(null)} maxVh={46} dim={false}>
-        <p className="text-[11.5px] text-[#667085] mb-3">Changes every bit of text on your page.</p>
+        <p className="text-[11.5px] text-[#777777] mb-3">Changes every bit of text on your page.</p>
         <div className="grid grid-cols-2 gap-2.5">
           {FONT_OPTIONS.map(opt=>{
             const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
             return (
               <button key={opt.family} onClick={()=>setConfig(c=>({...c,font:opt.family}))}
-                className={`flex flex-col items-start px-3 py-3 rounded-2xl border transition-all active:scale-95 ${isActive?'border-[#7C3AED] bg-[#F5F3FF]':'border-[#E8EBF0] bg-[#F9FAFB]'}`}>
-                <span className={`text-[19px] leading-tight ${isActive?'text-[#6D28D9]':'text-[#111]'}`} style={{fontFamily:opt.family}}>Aa</span>
-                <span className={`text-[10px] font-semibold mt-1 ${isActive?'text-[#7C3AED]':'text-[#98A2B3]'}`}>{opt.label}</span>
+                className={`flex flex-col items-start px-3 py-3 rounded-2xl border transition-all active:scale-95 ${isActive?'border-[#7C3AED] bg-[rgba(124,58,237,0.07)]':'border-[#E9E9E7] bg-white'}`}>
+                <span className={`text-[19px] leading-tight ${isActive?'text-[#6D28D9]':'text-[#0A0A0A]'}`} style={{fontFamily:opt.family}}>Aa</span>
+                <span className={`text-[10px] font-semibold mt-1 ${isActive?'text-[#7C3AED]':'text-[#9A9A97]'}`}>{opt.label}</span>
               </button>
             );
           })}
@@ -4786,7 +4808,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </MobileSheet>
 
       <MobileSheet open={isMobile&&mSheet==='color'} title="Business name colour" onClose={()=>setMSheet(null)} maxVh={44} dim={false}>
-        <p className="text-[11.5px] text-[#667085] mb-3">Pick a colour that reads clearly on your background.</p>
+        <p className="text-[11.5px] text-[#777777] mb-3">Pick a colour that reads clearly on your background.</p>
         <NameColorPicker
           value={config.nameColor}
           autoColor={isDarkBg(config.bg)?'#FFFFFF':'#0A0A0A'}
@@ -4795,13 +4817,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </MobileSheet>
 
       <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={50} dim={false}>
-        <p className="text-[11.5px] text-[#667085] mb-3">Your widgets lighten or darken automatically to stay readable.</p>
+        <p className="text-[11.5px] text-[#777777] mb-3">Your widgets lighten or darken automatically to stay readable.</p>
         <PageBackgroundPicker value={config.bg} onChange={(v,a,sp)=>setConfig(p=>({...p,bg:v,bgAnim:a,bgAnimSpeed:sp}))}/>
       </MobileSheet>
 
 
       {/* ── BOTTOM NAV ── always visible, on every page */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-[#E8EBF0] flex items-stretch"
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-[#E9E9E7] flex items-stretch"
         style={{display:isMobile?"flex":"none", paddingBottom:'env(safe-area-inset-bottom)', height:'calc(56px + env(safe-area-inset-bottom))', fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
         {([
           {key:'business'  as SidebarTab, label:'Business',  active:sidebarTab==='business',
@@ -4818,9 +4840,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           <button key={label}
             onClick={()=>{ setSidebarTab(key); setMSheet(null); setOpenId(null); }}
             className="relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 active:opacity-70 transition-opacity">
-            {active&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-11 h-7 rounded-xl bg-[#F5F3FF]"/>}
-            <span className="relative z-10" style={{color:active?'#6D28D9':'#98A2B3'}}>{svg}</span>
-            <span className={`text-[9px] font-medium leading-none relative z-10 ${active?'text-[#6D28D9]':'text-[#98A2B3]'}`}>{label}</span>
+            {active&&<div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-11 h-7 rounded-xl bg-[#ECECEA]"/>}
+            <span className="relative z-10" style={{color:active?'#6D28D9':'#9A9A97'}}>{svg}</span>
+            <span className={`text-[9px] font-medium leading-none relative z-10 ${active?'text-[#6D28D9]':'text-[#9A9A97]'}`}>{label}</span>
           </button>
         ))}
       </nav>
@@ -4830,17 +4852,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       {quickAction&&(
         <div className="fixed inset-0 z-50 flex" onClick={()=>setQuickAction(null)}>
           <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"/>
-          <div className="relative ml-auto w-[320px] h-full bg-white shadow-2xl flex flex-col border-l border-[#DEDEDC]" onClick={e=>e.stopPropagation()}>
+          <div className="relative ml-auto w-[320px] h-full bg-white shadow-2xl flex flex-col border-l border-[#E9E9E7]" onClick={e=>e.stopPropagation()}>
             {/* Flyout header */}
             <div className="px-5 py-4 border-b border-[#F0F0F0] flex items-center justify-between flex-shrink-0">
-              <p className="text-[15px] font-semibold text-[#111]">
+              <p className="text-[15px] font-semibold text-[#0A0A0A]">
                 {quickAction==='close-early'?'Close Early'
                 :quickAction==='close-today'?'Close Today'
                 :quickAction==='open-today'?'Open Today'
                 :quickAction==='special-hours'?'Special Hours'
                 :'Out of Office'}
               </p>
-              <button onClick={()=>setQuickAction(null)} className="w-7 h-7 rounded-full bg-[#EEEEEC] flex items-center justify-center hover:bg-[#DEDEDC] transition-colors">
+              <button onClick={()=>setQuickAction(null)} className="w-7 h-7 rounded-full bg-[#EEEEEC] flex items-center justify-center hover:bg-[#E9E9E7] transition-colors">
                 <LucideX size={13} color="#6B6B6B"/>
               </button>
             </div>
@@ -4852,7 +4874,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <p className="text-[12px] font-semibold text-[#6B6B6B] mb-2">Close at</p>
                     <div className="relative">
                       <select value={closeEarlyTime} onChange={e=>setCloseEarlyTime(e.target.value)}
-                        className="w-full bg-[#EEEEEC] border border-[#DEDEDC] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#111] focus:outline-none focus:border-[#0A0A0A] appearance-none cursor-pointer">
+                        className="w-full bg-[#EEEEEC] border border-[#E9E9E7] rounded-xl px-4 py-3 text-[14px] font-semibold text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] appearance-none cursor-pointer">
                         {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
                       </select>
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"><IconChevronDown size={14} color="#858585"/></div>
@@ -4863,7 +4885,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <textarea value={quickMsg} onChange={e=>setQuickMsg(e.target.value.slice(0,100))}
                       placeholder="e.g. Closing early for a private event…"
                       rows={3}
-                      className="w-full bg-white border border-[#DEDEDC] rounded-xl px-3 py-2.5 text-[13px] text-[#111] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"/>
+                      className="w-full bg-white border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] resize-none transition-colors"/>
                     <p className="text-right text-[10px] text-[#C0C0C0] mt-1">{quickMsg.length}/100</p>
                   </div>
                 </>
@@ -4887,7 +4909,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {/* Flyout footer */}
             <div className="px-5 py-4 border-t border-[#F0F0F0] flex gap-3 flex-shrink-0">
               <button onClick={()=>setQuickAction(null)}
-                className="flex-1 py-2.5 rounded-full border border-[#DEDEDC] text-[13px] font-semibold text-[#6B6B6B] hover:border-[#111] transition-colors">
+                className="flex-1 py-2.5 rounded-full border border-[#E9E9E7] text-[13px] font-semibold text-[#6B6B6B] hover:border-[#0A0A0A] transition-colors">
                 Cancel
               </button>
               <button
