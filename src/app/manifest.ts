@@ -10,14 +10,16 @@ import type { MetadataRoute } from 'next';
  * product is a thing to explain; one is a thing to use. So the app installs
  * as the app, opening on the builder.
  *
- * Three manifests, each for a different thing being installed:
- *   - this one        — OpenStatus, the owner's app        → /builder
- *   - me/…            — the quick hours controls, named after the business,
- *                       for an owner who was handed the phone link
- *   - [slug]/…        — a customer adding a shop's page    → /<slug>
+ * Two manifests now, for the two different things someone installs:
+ *   - this one    — OpenStatus, the owner's app  → /builder
+ *   - [slug]/…    — a customer adding a shop     → /<slug>
  *
- * A page that wants one of the other two overrides `manifest` in its own
- * metadata; everything else lands here.
+ * There was a third, for a password-less phone page that only did hours. It
+ * is gone, along with the page: two icons for one product is a thing to
+ * explain, one is a thing to use.
+ *
+ * The shop page overrides `manifest` in its own metadata; everything else
+ * lands here.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {

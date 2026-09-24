@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mergeSpecialPeriods, type SpecialPeriod, type GDate } from '@/lib/special-hours';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import { OWNER_COOKIE, readOwnerSession, sessionVersionOk, type OwnerSession } from '@/lib/owner-link';
 
 /**
  * Google Business Profile open-state + special hours.
@@ -45,40 +44,25 @@ async function refreshAccessToken(refresh: string, clientId: string, clientSecre
 async function resolveGoogle(req: NextRequest) {
   const admin = getAdminClient();
 
-  // A Supabase session (the builder) or the owner-link cookie (the phone).
-  // See the note in api/status: an owner on their phone has no Supabase
-  // session, so requiring one locked them out of their own controls.
+  // A Supabase session, and only that. The owner-link cookie used to be a
+  // second way in, for a phone page that no longer exists: the whole app
+  // installs to the home screen now, so whatever is behind the icon has a real
+  // session. A password-less credential is not worth keeping for a
+  // convenience nothing needs any more.
   const auth = req.headers.get('authorization') ?? '';
   const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!jwt) return { error: 'Not signed in', status: 401 as const };
 
-  let ownerBusinessId: string | null = null;
-  let ownerSession: OwnerSession | null = null;
-  if (!jwt) {
-    ownerSession = readOwnerSession(req.cookies.get(OWNER_COOKIE)?.value);
-    if (!ownerSession) return { error: 'Not signed in', status: 401 as const };
-    ownerBusinessId = ownerSession.businessId;
-  }
+  const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+  if (userErr || !userData.user) return { error: 'Not signed in', status: 401 as const };
 
-  let userId: string | null = null;
-  if (jwt) {
-    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-    if (userErr || !userData.user) return { error: 'Not signed in', status: 401 as const };
-    userId = userData.user.id;
-  }
-
-  const query = admin
+  const { data: business } = await admin
     .from('businesses')
-    .select('id, google_location_id, owner_session_version');
-  const { data: business } = await (ownerBusinessId
-    ? query.eq('id', ownerBusinessId)
-    : query.eq('user_id', userId!)
-  ).single();
+    .select('id, google_location_id')
+    .eq('user_id', userData.user.id)
+    .single();
 
   if (!business) return { error: 'No business found', status: 404 as const };
-  // The phone's cookie must also survive the owner's last "Get a new link".
-  if (ownerSession && !sessionVersionOk(ownerSession, business.owner_session_version as number | null)) {
-    return { error: 'Not signed in', status: 401 as const };
-  }
   if (!business.google_location_id) {
     return { error: 'Google Business Profile not connected.', status: 400 as const };
   }

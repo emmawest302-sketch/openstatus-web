@@ -9,7 +9,7 @@ import { getBusinessStatus, applyOverride, type TodayOverride, type WeeklySchedu
 import { swapById, canDrag } from '@/lib/reorder';
 import { prepareImageForUpload } from '@/lib/image-upload';
 import { googlePlanForToday, pagePlanForToday, samePlan, describePlan, type GooglePeriod } from '@/lib/google-sync';
-import OwnerLinkCard from '@/components/owner-link-card';
+import AddToHomeScreen from '@/components/add-to-home-screen';
 import { imageTreatment } from '@/lib/image-treatment';
 import { shortAddress } from '@/lib/address';
 import { localDay, activeOffers, newOfferId, MAX_OFFERS, OFFER_TITLE_MAX, OFFER_DESC_MAX, OFFER_CODE_MAX, type Offer } from '@/lib/offers';
@@ -3493,7 +3493,11 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   </div>
                 )}
 
-                <OwnerLinkCard/>
+                {/* A QR code and a separate phone-only hours page used to live
+                    here. Both are gone: the app itself installs to the home
+                    screen, so there is nothing to hand across to a second
+                    device and nothing to scan. The walkthrough is at the end of
+                    setup and in Settings, on the phone, where it belongs. */}
 
                 {/* Business details and social links used to sit here. They are
                     settings, not a dashboard: an owner types them once at setup
@@ -4434,8 +4438,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-[#0A0A0A]">Put your controls on your home screen</p>
-                <p className="text-[11.5px] text-[#777777] mt-0.5">One tap to close early. No password.</p>
+                <p className="text-[13px] font-semibold text-[#0A0A0A]">Add OpenStatus to your home screen</p>
+                <p className="text-[11.5px] text-[#777777] mt-0.5">One tap to close early, change a photo, post a notice.</p>
               </div>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
@@ -4701,12 +4705,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
             )}
 
-            {/* Getting the controls onto a home screen had no mobile route at
-                all: this card lived only in the desktop Business tab, which is
-                display:none on a phone. So an owner setting up on the device
-                she wanted the icon on was shown nothing. The card already knows
-                it is on a phone and offers the link rather than a QR code. */}
-            <OwnerLinkCard/>
+            {/* Setup walks through this once. Here is where someone finds it
+                again — a new phone, a second one behind the counter, or the
+                first time they skipped it. */}
+            <div className="mb-4">
+              <AddToHomeScreen
+                businessName={localBusiness?.name?.trim() || undefined}
+                blurb="Your page, your hours and your editor, in one icon next to Instagram."
+              />
+            </div>
 
             {/* Settings menu */}
             <div className="space-y-2">

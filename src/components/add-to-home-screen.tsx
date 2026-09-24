@@ -62,9 +62,9 @@ export default function AddToHomeScreen({ businessName, blurb }: {
   /**
    * What the icon will be, in the caller's words.
    *
-   * The default describes the hours controls, which is what /me installs. The
-   * same component runs at the end of setup, where the icon is the whole app
-   * and "no password" would be a lie — the builder does ask for one.
+   * The default still describes a plain hours shortcut. Every caller now
+   * passes its own line, because what gets installed is the whole app and
+   * "no password" would be a lie — the builder does ask for one.
    */
   blurb?: string;
 }) {

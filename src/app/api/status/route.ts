@@ -1,51 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabaseAdmin';
-import { OWNER_COOKIE, readOwnerSession, sessionVersionOk } from '@/lib/owner-link';
 
 /**
- * Two ways to be the owner here.
+ * One way to be the owner: a Supabase session.
  *
- * A Supabase session, which is how the builder calls this. Or the owner-link
- * cookie, which is how the phone does — a shop owner tapping their own link
- * has no Supabase session, because they arrived through an installed shortcut
- * or an Instagram webview with its own cookie jar.
- *
- * Both resolve to the same business, so everything below this is unchanged.
+ * There used to be a second — a signed owner-link cookie, so a shop owner
+ * could tap a home-screen shortcut and change today's hours with no password.
+ * That page is gone: the whole app installs to the home screen now, so the
+ * thing behind the icon is the app, and the app has a real session. A second
+ * credential with no password on it was a standing risk for a convenience
+ * nothing needs any more.
  */
 async function getBusiness(req: NextRequest) {
   const admin = getAdminClient();
 
   const auth = req.headers.get('authorization') ?? '';
   const jwt = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!jwt) return null;
 
-  if (jwt) {
-    const { data: userData, error: userError } = await admin.auth.getUser(jwt);
-    if (userError || !userData.user) return null;
-
-    const { data: business } = await admin
-      .from('businesses')
-      .select('id, timezone')
-      .eq('user_id', userData.user.id)
-      .maybeSingle();
-
-    return business ? { admin, businessId: business.id, timezone: business.timezone } : null;
-  }
-
-  const session = readOwnerSession(req.cookies.get(OWNER_COOKIE)?.value);
-  if (!session) return null;
+  const { data: userData, error: userError } = await admin.auth.getUser(jwt);
+  if (userError || !userData.user) return null;
 
   const { data: business } = await admin
     .from('businesses')
-    .select('id, timezone, owner_session_version')
-    .eq('id', session.businessId)
+    .select('id, timezone')
+    .eq('user_id', userData.user.id)
     .maybeSingle();
 
-  if (!business) return null;
-  // A signed cookie is not enough: it also has to predate no rotation. See
-  // lib/owner-session for why this check lives at every call site.
-  if (!sessionVersionOk(session, business.owner_session_version as number | null)) return null;
-
-  return { admin, businessId: business.id, timezone: business.timezone };
+  return business ? { admin, businessId: business.id, timezone: business.timezone } : null;
 }
 
 function localDateParts(timeZone: string) {
