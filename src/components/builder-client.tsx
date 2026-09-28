@@ -20,7 +20,7 @@ import { externalUrl } from '@/lib/url';
 import { socialHref } from '@/lib/social-url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS, fontScaleStyle } from '@/lib/page-metrics';
 import { BUILDER_UI, BUILDER_FONT, BUILDER_TYPE, BUILDER_RADIUS } from '@/lib/builder-theme';
-import { applyVibe, activeVibe } from '@/lib/page-vibes';
+import { applyVibe, activeVibe, VIBES } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
@@ -5364,42 +5364,91 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
 
 {/* ══ STYLE ══
-             A page of settings with the page itself at the top, so a change
-             to the background is visible the instant it happens rather than
-             after a trip back out of a sheet. The preview is the real public
-             components at MOBILE_EDITOR_SCALE — a transform, not a second
-             renderer — clipped to a window rather than scaled to fit, because
-             a whole page shrunk to 200px tells you nothing about type. */}
+             Pick a visual direction here. The actual page opens in a separate
+             fit-to-screen view, so a cropped preview does not crowd the tools. */}
         {mobileTab==='style'&&(
           <div className="flex-1 overflow-y-auto" style={{scrollbarWidth:'none'}}>
+            <div className="px-4 pt-4 pb-8">
+              <button onClick={()=>setPreviewExpanded(true)}
+                className="w-full flex items-center justify-between p-4 rounded-[18px] text-left active:scale-[0.99] transition-transform"
+                style={{background:BUILDER_UI.ink,color:'#FFFFFF'}}>
+                <span>
+                  <span className="block text-[11px] font-semibold tracking-[0.08em] uppercase text-white/60">Your page</span>
+                  <strong className="block mt-1 text-[16px] font-semibold">Preview the full page</strong>
+                  <span className="block mt-0.5 text-[12px] text-white/65">See the whole look in one view</span>
+                </span>
+                <span className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-[18px] flex-shrink-0" aria-hidden>↗</span>
+              </button>
 
-            {mobilePreview}
-
-            <div className="px-4 pt-4 pb-8 space-y-1.5">
-              <div className="pb-2">
-                <p style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Make it yours</p>
-                <p className="mt-1" style={{...BUILDER_TYPE.body,color:BUILDER_UI.muted}}>Start with a look, then change only what you want.</p>
+              <div className="flex items-center justify-between mt-6 mb-2.5">
+                <div>
+                  <p style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Choose a look</p>
+                  <p style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>One tap changes the page style.</p>
+                </div>
+                <button onClick={()=>setMSheet('vibe')}
+                  className="px-2 py-2 text-[12px] font-semibold text-[#0A0A0A]">All looks ↗</button>
               </div>
-              {([
-                {key:'vibe'       as const, label:'Choose a look', value: activeVibe(config)?.label ?? 'Custom'},
-                {key:'cover'      as const, label:'Photos & logo', value: config.bgImage ? 'Cover set' : 'Add a cover'},
-                {key:'accent'     as const, label:'Brand color',   value: (config.themeColor ?? '#0A0A0A').toUpperCase(), swatch: config.themeColor ?? '#0A0A0A'},
-              ]).map(({key,label,value,swatch})=>(
-                <button key={key} onClick={()=>setMSheet(key)}
-                  className="w-full flex items-center gap-3 px-3.5 py-3.5 rounded-[14px] text-left active:scale-[0.99] transition-transform"
-                  style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
-                  {swatch&&(
-                    <span className="flex-shrink-0 rounded-full"
-                      style={{width:18, height:18, background:swatch, border:`1px solid ${BUILDER_UI.border}`}}/>
-                  )}
-                  <span className="flex-1 min-w-0" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>{label}</span>
-                  <span className="truncate" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted, maxWidth:150, textAlign:'right'}}>{value}</span>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              ))}
+              <div className="grid grid-cols-3 gap-2">
+                {VIBES.filter(v=>['clean','coastal','night'].includes(v.key)).map(v=>{
+                  const selected=activeVibe(config)?.key===v.key;
+                  return (
+                    <button key={v.key} onClick={()=>setConfig(c=>applyVibe(c,v))} aria-pressed={selected}
+                      className="p-1.5 rounded-[14px] text-left transition-colors"
+                      style={{border:selected?`2px solid ${BUILDER_UI.ink}`:`1px solid ${BUILDER_UI.border}`}}>
+                      <span className="block h-[72px] rounded-[9px] p-2 flex flex-col justify-end gap-1"
+                        style={{background:v.swatch.bg,border:`1px solid ${isDarkBg(v.swatch.bg)?'transparent':'#E8E8E8'}`}}>
+                        <span className="block w-1/2 h-1.5 rounded-full" style={{background:v.swatch.ink,opacity:.8}}/>
+                        <span className="block h-4 rounded-[5px]" style={{background:v.swatch.ink,opacity:.16}}/>
+                        <span className="block w-2/3 h-2 rounded-[4px]" style={{background:v.apply.themeColor,opacity:.75}}/>
+                      </span>
+                      <span className="block px-1 pt-1.5 pb-0.5 text-[12px] font-semibold text-[#0A0A0A]">{v.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between mt-6 mb-2.5">
+                <p style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Make it yours</p>
+              </div>
+              <button onClick={()=>setMSheet('cover')}
+                className="w-full flex items-center gap-3 p-3 rounded-[14px] text-left"
+                style={{border:`1px solid ${BUILDER_UI.border}`}}>
+                <span className="w-11 h-11 rounded-[10px] overflow-hidden flex-shrink-0 flex items-center justify-center"
+                  style={{background:BUILDER_UI.surfaceSoft}}>
+                  {config.bgImage
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ?<img src={config.bgImage} alt="" className="w-full h-full object-cover"/>
+                    :localBusiness?.avatar_url
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ?<img src={assetUrl(localBusiness.id,'avatar',localBusiness.avatar_url) ?? ''} alt="" className="w-full h-full object-cover"/>
+                    :<LucideImage size={19} color={BUILDER_UI.muted}/>}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <strong className="block" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>Photos & logo</strong>
+                  <span style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>{config.bgImage||localBusiness?.avatar_url?'Change your cover or logo':'Add a cover or logo'}</span>
+                </span>
+                <LucideChevronRight size={16} color={BUILDER_UI.muted}/>
+              </button>
+
+              <div className="flex items-center justify-between mt-5 mb-2.5">
+                <p style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Accent color</p>
+                <button onClick={()=>setMSheet('accent')} className="px-2 py-1 text-[12px] font-semibold text-[#0A0A0A]">More colors ↗</button>
+              </div>
+              <div className="flex items-center gap-3">
+                {['#0A0A0A','#608197','#A06E50','#315DE8','#C9B58B'].map(color=>{
+                  const selected=(config.themeColor??'#0A0A0A').toLowerCase()===color.toLowerCase();
+                  return (
+                    <button key={color} onClick={()=>setConfig(c=>({...c,themeColor:color}))}
+                      aria-label={`Accent color ${color}`} aria-pressed={selected}
+                      className="w-9 h-9 rounded-full flex-shrink-0 active:scale-90 transition-transform"
+                      style={{background:color,border:'2px solid white',boxShadow:selected?`0 0 0 2px ${BUILDER_UI.ink}`:`0 0 0 1px ${BUILDER_UI.border}`}}/>
+                  );
+                })}
+              </div>
+
               <button onClick={()=>setShowStyleAdvanced(v=>!v)} aria-expanded={showStyleAdvanced}
-                className="w-full flex items-center justify-between px-3.5 py-3.5 mt-2 rounded-[14px] text-left"
-                style={{background:BUILDER_UI.surfaceSoft,color:BUILDER_UI.ink}}>
+                className="w-full flex items-center justify-between py-3 mt-5 border-t text-left"
+                style={{borderColor:BUILDER_UI.border,color:BUILDER_UI.ink}}>
                 <span style={BUILDER_TYPE.cardTitle}>More design options</span>
                 <span style={BUILDER_TYPE.helper}>{showStyleAdvanced?'Hide':'Show'}</span>
               </button>
@@ -5409,7 +5458,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 {key:'buttons'    as const, label:'Button appearance', value: (config.buttonStyle ?? 'filled').replace(/^./,c=>c.toUpperCase())},
               ]).map(({key,label,value})=>(
                 <button key={key} onClick={()=>setMSheet(key)}
-                  className="w-full flex items-center gap-3 px-3.5 py-3.5 rounded-[14px] text-left"
+                  className="w-full flex items-center gap-3 px-3.5 py-3.5 mb-1.5 rounded-[14px] text-left"
                   style={{background:BUILDER_UI.surface,border:`1px solid ${BUILDER_UI.border}`}}>
                   <span className="flex-1" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>{label}</span>
                   <span className="truncate" style={{...BUILDER_TYPE.body,color:BUILDER_UI.muted,maxWidth:135}}>{value}</span>
