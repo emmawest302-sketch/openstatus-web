@@ -126,14 +126,17 @@ const CATEGORIES: Category[] = [
 ];
 
 function buildBlocks(blockIds: string[]): OpenStatusBlock[] {
+  // Category suggestions are a starting list, not published links. Several
+  // legacy categories still name rows the current builder cannot configure.
+  const supported = new Set(['order', 'shop', 'book', 'menu', 'website', 'gallery', 'reviews', 'location']);
   return blockIds
-    .filter(id => ALL_BLOCKS[id])
+    .filter(id => supported.has(id) && ALL_BLOCKS[id])
     .map(id => ({
       id,
       title: ALL_BLOCKS[id].title,
       sub: ALL_BLOCKS[id].sub,
       icon: '',
-      on: true,
+      on: false,
       tone: 'glass',
       url: '',
       size: ALL_BLOCKS[id].size,
@@ -389,7 +392,13 @@ export default function SetupPage() {
     setError('');
 
     const category = CATEGORIES.find(c => c.id === categoryId);
-    const blocks = buildBlocks(category?.blockIds ?? ['website', 'call', 'email']);
+    const blocks = buildBlocks(category?.blockIds ?? ['website']);
+    // Google content can appear immediately. A booking or ordering button
+    // cannot, because setup has not asked for its destination yet.
+    for (const block of blocks) {
+      if (block.id === 'gallery') block.on = !!selectedPlace;
+      if (block.id === 'reviews') block.on = !!placeDetails?.rating;
+    }
 
     // ── Carry the Google rating we pulled during search onto the location block ──
     // The star rating in the page header reads from the location block's
@@ -409,7 +418,7 @@ export default function SetupPage() {
           title: ALL_BLOCKS.location.title,
           sub: ALL_BLOCKS.location.sub,
           icon: '',
-          on: true,
+          on: false,
           tone: 'glass',
           url: '',
           size: ALL_BLOCKS.location.size,
@@ -420,7 +429,7 @@ export default function SetupPage() {
 
     const pageConfig: OpenStatusPageConfig = {
       blocks,
-      bg: '#F7F7F5',
+      bg: '#FFFFFF',
       socials: [] as OpenStatusSocial[],
       location: placeDetails?.address ?? '',
       // Tags are a builder decision now. Setup collected up to eight of them
@@ -487,7 +496,10 @@ export default function SetupPage() {
 
     // Last, because this is the flag that says "finished".
     const finalSlug = toSlug(slug);
-    const { error: slugErr } = await supabase.from('businesses').update({ slug: finalSlug }).eq('id', businessId);
+    const { error: slugErr } = await supabase.from('businesses').update({
+      slug: finalSlug,
+      onboarded_at: new Date().toISOString(),
+    }).eq('id', businessId);
     if (slugErr) { setError(slugErr.message); setSaving(false); return; }
     setInitialSlug(finalSlug);
 
@@ -503,7 +515,7 @@ export default function SetupPage() {
   // ── STYLES ────────────────────────────────────────────────────────────────
   const base: React.CSSProperties = {
     fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-    background: '#F7F7F5',
+    background: '#FFFFFF',
     minHeight: '100dvh',
     display: 'flex',
     flexDirection: 'column',
@@ -836,11 +848,11 @@ export default function SetupPage() {
         {step === 3 && (
           <div style={{ flex: 1 }}>
             <p style={eyebrow}>Step 3 of {TOTAL_STEPS}</p>
-            <h1 style={heading}>Your page<br />is live</h1>
+            <h1 style={heading}>Your hours<br />are live</h1>
             <p style={{ fontSize: 14.5, color: '#858585', marginBottom: 22, lineHeight: 1.5 }}>
               {slug
-                ? <>It&apos;s at <strong style={{ color: '#0A0A0A' }}>{SITE_DOMAIN}/{slug}</strong>. Put OpenStatus on your home screen and it opens in one tap — hours, photos, offers, all of it.</>
-                : <>Put OpenStatus on your home screen and it opens in one tap — hours, photos, offers, all of it.</>}
+                ? <>Your link is <strong style={{ color: '#0A0A0A' }}>{SITE_DOMAIN}/{slug}</strong>. Add a booking, ordering or menu link and choose a look in the builder.</>
+                : <>Add a booking, ordering or menu link and choose a look in the builder.</>}
             </p>
 
             <AddToHomeScreen
@@ -850,7 +862,7 @@ export default function SetupPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
               <button onClick={() => router.push('/builder?new=1')} style={primaryBtn}>
-                <span>Open my builder</span>
+                <span>Finish my page</span>
                 <span>→</span>
               </button>
               {slug && (
