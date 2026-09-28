@@ -20,7 +20,7 @@ import { externalUrl } from '@/lib/url';
 import { socialHref } from '@/lib/social-url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS, fontScaleStyle } from '@/lib/page-metrics';
 import { BUILDER_UI, BUILDER_FONT, BUILDER_TYPE, BUILDER_RADIUS } from '@/lib/builder-theme';
-import { applyVibe, activeVibe, VIBES } from '@/lib/page-vibes';
+import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
@@ -755,21 +755,18 @@ function LiveDesktopPreview(props: React.ComponentProps<typeof LivePhonePreview>
   );
 }
 
-/** Show the complete customer page in one phone viewport, regardless of length. */
-function FullPagePreview({business,config,timeZone,override,onClose}: {
+/** Fit the actual customer page into the available canvas without clipping it. */
+function FittedPageCanvas({business,config,timeZone,override}: {
   business:Business|null;
   config:OpenStatusPageConfig;
   timeZone?:string|null;
   override?:TodayOverride;
-  onClose:()=>void;
 }) {
-  const [fit,setFit]=useState(true);
   const viewportRef=useRef<HTMLDivElement>(null);
   const pageRef=useRef<HTMLDivElement>(null);
   const [size,setSize]=useState({width:390,height:0,scale:1});
 
   useEffect(()=>{
-    if(!fit)return;
     const viewport=viewportRef.current;
     const page=pageRef.current;
     if(!viewport||!page)return;
@@ -787,7 +784,32 @@ function FullPagePreview({business,config,timeZone,override,onClose}: {
     observer.observe(page);
     measure();
     return ()=>observer.disconnect();
-  },[fit]);
+  },[]);
+
+  return (
+    <div ref={viewportRef} className="flex-1 min-h-0 flex items-center justify-center overflow-hidden"
+      style={{background:'#F3F4F5'}}>
+      <div style={{position:'relative',width:size.width*size.scale,height:size.height*size.scale,flexShrink:0}}>
+        <div ref={pageRef} style={{position:'absolute',top:0,left:0,width:size.width,pointerEvents:'none',
+          transform:`scale(${size.scale})`,transformOrigin:'top left',
+          boxShadow:'0 8px 28px rgba(10,10,10,0.12)',outline:'1px solid rgba(10,10,10,0.07)'}}>
+          <LivePhonePreview business={business} config={config} timeZone={timeZone} override={override}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Full-page inspection also offers a readable, scrollable view. */
+function FullPagePreview({business,config,timeZone,override,onClose,initialFit=true}: {
+  business:Business|null;
+  config:OpenStatusPageConfig;
+  timeZone?:string|null;
+  override?:TodayOverride;
+  onClose:()=>void;
+  initialFit?:boolean;
+}) {
+  const [fit,setFit]=useState(initialFit);
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Full page preview"
@@ -812,15 +834,7 @@ function FullPagePreview({business,config,timeZone,override,onClose}: {
         </div>
       </div>
       {fit?(
-        <div ref={viewportRef} className="flex-1 min-h-0 flex items-center justify-center overflow-hidden"
-          style={{background:'#F6F6F6'}}>
-          <div style={{position:'relative',width:size.width*size.scale,height:size.height*size.scale,flexShrink:0}}>
-            <div ref={pageRef} style={{position:'absolute',top:0,left:0,width:size.width,pointerEvents:'none',
-              transform:`scale(${size.scale})`,transformOrigin:'top left'}}>
-              <LivePhonePreview business={business} config={config} timeZone={timeZone} override={override}/>
-            </div>
-          </div>
-        </div>
+        <FittedPageCanvas business={business} config={config} timeZone={timeZone} override={override}/>
       ):(
         <div className="flex-1 min-h-0 overflow-y-auto" style={{background:config.bg}}>
           <div style={{maxWidth:560,margin:'0 auto'}}>
@@ -2088,7 +2102,7 @@ const NAV_BAR_HEIGHT = 58;
 const NAV_BAR_GAP = 12;
 const NAV_SPACE = NAV_BAR_HEIGHT + NAV_BAR_GAP;
 
-function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }: {
+function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, onSizeChange }: {
   open: boolean;
   title: string;
   onClose: () => void;
@@ -2096,9 +2110,11 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }:
   maxVh?: number;
   /** false = no scrim, so you can watch the page change behind the sheet. */
   dim?: boolean;
+  onSizeChange?:(height:number)=>void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
+  const panelRef=useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -2111,6 +2127,15 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }:
     const t = setTimeout(() => setMounted(false), 300);
     return () => clearTimeout(t);
   }, [open]);
+
+  useEffect(()=>{
+    if(!mounted||!open||!onSizeChange||!panelRef.current)return;
+    const observer=new ResizeObserver(([entry])=>{
+      onSizeChange(Math.ceil(entry.target.getBoundingClientRect().height));
+    });
+    observer.observe(panelRef.current);
+    return ()=>observer.disconnect();
+  },[mounted,open,onSizeChange]);
 
   if (!mounted) return null;
 
@@ -2128,6 +2153,7 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true }:
         />
       )}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal={dim ? true : undefined}
         aria-label={title}
@@ -2243,8 +2269,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   /** Which small sheet is up over the phone canvas. null = just the canvas. */
   // 'color' was the business-name colour and is now folded into 'accent'.
-  type MSheetKind = null | 'block' | 'add' | 'vibe' | 'cover' | 'background' | 'accent' | 'buttons' | 'font';
+  type MSheetKind = null | 'block' | 'add' | 'vibe' | 'cover' | 'background' | 'accent' | 'buttons' | 'font' | 'styleMore';
   const [mSheet,setMSheet] = useState<MSheetKind>(null);
+  const [styleSheetHeight,setStyleSheetHeight]=useState(0);
+  const updateStyleSheetHeight=useCallback((height:number)=>setStyleSheetHeight(height),[]);
 
   /** Widget currently picked up by a long press on the phone canvas. */
   const [mDragId,setMDragId] = useState<string|null>(null);
@@ -2459,15 +2487,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [localBusiness,setLocalBusiness]=useState<Business|null>(business);
   const localBusinessSlugRef=useRef<string|null>(business?.slug??null);
   useEffect(()=>{ localBusinessSlugRef.current=localBusiness?.slug??null; },[localBusiness?.slug]);
-  /** What to call the current background on the Style overview row. */
-  const backgroundLabel=useCallback((bg:string)=>{
-    const gradient=BG_DESIGNS.find(g=>g.css===bg);
-    if(gradient) return gradient.label;
-    if(/^#[0-9a-fA-F]{6}$/.test(bg)) return bg.toUpperCase();
-    // A page still carrying one of the retired animated wallpapers.
-    return bg.startsWith('#')?bg.toUpperCase():'Custom';
-  },[]);
-
   /**
    * Nothing the owner does in here is customer behaviour.
    *
@@ -2483,7 +2502,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   const [previewOpen,setPreviewOpen]=useState(true);
   const [previewExpanded,setPreviewExpanded]=useState(false);
-  const [showStyleAdvanced,setShowStyleAdvanced]=useState(false);
   const blocksListRef=useRef<HTMLDivElement>(null);
   /**
    * Open a block's editor, having first moved the block out from under it.
@@ -2659,6 +2677,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const showEditPanel = !!openBlock && sidebarTab==='design';
   const isEditSubTab = ['design','style'].includes(sidebarTab);
   const mobileTab = toMobileTab(sidebarTab);
+  const styleToolOpen=mobileTab==='style'&&mSheet!==null&&
+    ['vibe','cover','accent','font','background','buttons','styleMore'].includes(mSheet);
 
   function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
     setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));
@@ -4880,13 +4900,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           borderBottom:`1px solid ${BUILDER_UI.border}`,
           fontFamily:BUILDER_FONT,
         }}>
-        <span className="truncate" style={{...BUILDER_TYPE.screenTitle, color:BUILDER_UI.ink}}>
-          {mobileTab==='home'?'Home'
-            :mobileTab==='status'?'Status'
-            :mobileTab==='blocks'?'Your page'
-            :mobileTab==='style'?'Style'
-            :'More'}
-        </span>
+        {mobileTab==='style'?(
+          <button onClick={()=>{setMSheet(null);setSidebarTab('business');}}
+            className="flex items-center gap-2 py-2 text-[14px] font-semibold text-[#0A0A0A]">
+            <span aria-hidden className="text-[20px] leading-none">‹</span> Home
+          </button>
+        ):(
+          <span className="truncate" style={{...BUILDER_TYPE.screenTitle, color:BUILDER_UI.ink}}>
+            {mobileTab==='home'?'Home':mobileTab==='status'?'Status':mobileTab==='blocks'?'Your page':'More'}
+          </span>
+        )}
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Page and Style have their own full-page preview action. */}
           {business?.slug&&mobileTab!=='blocks'&&mobileTab!=='style'&&(
@@ -4922,7 +4945,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         style={{
           display: isMobile ? 'flex' : 'none',
           top:'calc(52px + env(safe-area-inset-top))',
-          bottom:`calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
+          bottom:`calc(${NAV_SPACE + (styleToolOpen?styleSheetHeight:0)}px + env(safe-area-inset-bottom))`,
           background: BUILDER_UI.app,
           fontFamily: BUILDER_FONT,
         }}>
@@ -5363,108 +5386,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
 
 {/* ══ STYLE ══
-             Pick a visual direction here. The actual page opens in a separate
-             fit-to-screen view, so a cropped preview does not crowd the tools. */}
+             The page is the canvas. Bottom tools open over it so every choice
+             can be judged on the actual customer page as it changes. */}
         {mobileTab==='style'&&(
-          <div className="flex-1 overflow-y-auto" style={{scrollbarWidth:'none'}}>
-            <div className="px-4 pt-4 pb-8">
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2 flex-shrink-0"
+              style={{background:'#F3F4F5'}}>
+              <span style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.muted}}>Your page</span>
               <button onClick={()=>setPreviewExpanded(true)}
-                className="w-full flex items-center justify-between p-4 rounded-[18px] text-left active:scale-[0.99] transition-transform"
-                style={{background:BUILDER_UI.ink,color:'#FFFFFF'}}>
-                <span>
-                  <span className="block text-[11px] font-semibold tracking-[0.08em] uppercase text-white/60">Your page</span>
-                  <strong className="block mt-1 text-[16px] font-semibold">Preview the full page</strong>
-                  <span className="block mt-0.5 text-[12px] text-white/65">See the whole look in one view</span>
-                </span>
-                <span className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-[18px] flex-shrink-0" aria-hidden>↗</span>
+                className="px-2 py-1" style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.ink}}>
+                Actual size ↗
               </button>
-
-              <div className="flex items-center justify-between mt-6 mb-2.5">
-                <div>
-                  <p style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Choose a look</p>
-                  <p style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>One tap changes the page style.</p>
-                </div>
-                <button onClick={()=>setMSheet('vibe')}
-                  className="px-2 py-2 text-[12px] font-semibold text-[#0A0A0A]">All looks ↗</button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {VIBES.filter(v=>['clean','coastal','night'].includes(v.key)).map(v=>{
-                  const selected=activeVibe(config)?.key===v.key;
-                  return (
-                    <button key={v.key} onClick={()=>setConfig(c=>applyVibe(c,v))} aria-pressed={selected}
-                      className="p-1.5 rounded-[14px] text-left transition-colors"
-                      style={{border:selected?`2px solid ${BUILDER_UI.ink}`:`1px solid ${BUILDER_UI.border}`}}>
-                      <span className="block h-[72px] rounded-[9px] p-2 flex flex-col justify-end gap-1"
-                        style={{background:v.swatch.bg,border:`1px solid ${isDarkBg(v.swatch.bg)?'transparent':'#E8E8E8'}`}}>
-                        <span className="block w-1/2 h-1.5 rounded-full" style={{background:v.swatch.ink,opacity:.8}}/>
-                        <span className="block h-4 rounded-[5px]" style={{background:v.swatch.ink,opacity:.16}}/>
-                        <span className="block w-2/3 h-2 rounded-[4px]" style={{background:v.apply.themeColor,opacity:.75}}/>
-                      </span>
-                      <span className="block px-1 pt-1.5 pb-0.5 text-[12px] font-semibold text-[#0A0A0A]">{v.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center justify-between mt-6 mb-2.5">
-                <p style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Make it yours</p>
-              </div>
-              <button onClick={()=>setMSheet('cover')}
-                className="w-full flex items-center gap-3 p-3 rounded-[14px] text-left"
-                style={{border:`1px solid ${BUILDER_UI.border}`}}>
-                <span className="w-11 h-11 rounded-[10px] overflow-hidden flex-shrink-0 flex items-center justify-center"
-                  style={{background:BUILDER_UI.surfaceSoft}}>
-                  {config.bgImage
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ?<img src={config.bgImage} alt="" className="w-full h-full object-cover"/>
-                    :localBusiness?.avatar_url
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ?<img src={assetUrl(localBusiness.id,'avatar',localBusiness.avatar_url) ?? ''} alt="" className="w-full h-full object-cover"/>
-                    :<LucideImage size={19} color={BUILDER_UI.muted}/>}
-                </span>
-                <span className="flex-1 min-w-0">
-                  <strong className="block" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>Photos & logo</strong>
-                  <span style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>{config.bgImage||localBusiness?.avatar_url?'Change your cover or logo':'Add a cover or logo'}</span>
-                </span>
-                <LucideChevronRight size={16} color={BUILDER_UI.muted}/>
-              </button>
-
-              <div className="flex items-center justify-between mt-5 mb-2.5">
-                <p style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Accent color</p>
-                <button onClick={()=>setMSheet('accent')} className="px-2 py-1 text-[12px] font-semibold text-[#0A0A0A]">More colors ↗</button>
-              </div>
-              <div className="flex items-center gap-3">
-                {['#0A0A0A','#608197','#A06E50','#315DE8','#C9B58B'].map(color=>{
-                  const selected=(config.themeColor??'#0A0A0A').toLowerCase()===color.toLowerCase();
-                  return (
-                    <button key={color} onClick={()=>setConfig(c=>({...c,themeColor:color}))}
-                      aria-label={`Accent color ${color}`} aria-pressed={selected}
-                      className="w-9 h-9 rounded-full flex-shrink-0 active:scale-90 transition-transform"
-                      style={{background:color,border:'2px solid white',boxShadow:selected?`0 0 0 2px ${BUILDER_UI.ink}`:`0 0 0 1px ${BUILDER_UI.border}`}}/>
-                  );
-                })}
-              </div>
-
-              <button onClick={()=>setShowStyleAdvanced(v=>!v)} aria-expanded={showStyleAdvanced}
-                className="w-full flex items-center justify-between py-3 mt-5 border-t text-left"
-                style={{borderColor:BUILDER_UI.border,color:BUILDER_UI.ink}}>
-                <span style={BUILDER_TYPE.cardTitle}>More design options</span>
-                <span style={BUILDER_TYPE.helper}>{showStyleAdvanced?'Hide':'Show'}</span>
-              </button>
-              {showStyleAdvanced&&([
-                {key:'background' as const, label:'Page background', value: backgroundLabel(config.bg)},
-                {key:'font'       as const, label:'Font & size', value: `${FONT_OPTIONS.find(f=>f.family===config.font)?.label ?? 'Inter'} \u00b7 ${(config.fontScale ?? 'standard').replace(/^./,c=>c.toUpperCase())}`},
-                {key:'buttons'    as const, label:'Button appearance', value: (config.buttonStyle ?? 'filled').replace(/^./,c=>c.toUpperCase())},
-              ]).map(({key,label,value})=>(
-                <button key={key} onClick={()=>setMSheet(key)}
-                  className="w-full flex items-center gap-3 px-3.5 py-3.5 mb-1.5 rounded-[14px] text-left"
-                  style={{background:BUILDER_UI.surface,border:`1px solid ${BUILDER_UI.border}`}}>
-                  <span className="flex-1" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>{label}</span>
-                  <span className="truncate" style={{...BUILDER_TYPE.body,color:BUILDER_UI.muted,maxWidth:135}}>{value}</span>
-                  <LucideChevronRight size={16} color={BUILDER_UI.muted}/>
-                </button>
-              ))}
             </div>
+            <FittedPageCanvas business={localBusiness} config={config}
+              timeZone={bizTimeZone} override={todayOverride}/>
           </div>
         )}
 
@@ -5742,7 +5677,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {isMobile&&previewExpanded&&(
         <FullPagePreview business={localBusiness} config={config} timeZone={bizTimeZone}
-          override={todayOverride} onClose={()=>setPreviewExpanded(false)}/>
+          override={todayOverride} initialFit={mobileTab!=='style'} onClose={()=>setPreviewExpanded(false)}/>
       )}
 
       {/*
@@ -5845,7 +5780,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            list. No scrim: the page is right above them and the whole point is
            watching it change. */}
 
-      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Presets" onClose={()=>setMSheet(null)} maxVh={62} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Looks" onClose={()=>setMSheet(null)} maxVh={50} dim={false} onSizeChange={updateStyleSheetHeight}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
           A whole look in one tap — background, type, colour and how loud a photo is allowed to be.
           Change any part of it afterwards.
@@ -5853,7 +5788,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <VibePicker config={config} onPick={v=>setConfig(c=>applyVibe(c,v))}/>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='cover'} title="Cover" onClose={()=>setMSheet(null)} maxVh={64} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='cover'} title="Photos & logo" onClose={()=>setMSheet(null)} maxVh={50} dim={false} onSizeChange={updateStyleSheetHeight}>
         {config.bgImage&&(
           <CoverPhotoCrop
             src={config.bgImage}
@@ -5931,7 +5866,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={56} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={46} dim={false} onSizeChange={updateStyleSheetHeight}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
           Your cards lighten or darken automatically to stay readable on whatever you pick.
         </p>
@@ -5941,7 +5876,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       {/* Accent, not "business name colour". It is one decision that reaches
           the name, the links and the small details — and deliberately does NOT
           reach open/closed, which stays green because green means open. */}
-      <MobileSheet open={isMobile&&mSheet==='accent'} title="Accent" onClose={()=>setMSheet(null)} maxVh={54} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='accent'} title="Color" onClose={()=>setMSheet(null)} maxVh={46} dim={false} onSizeChange={updateStyleSheetHeight}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
           Used on links, small icons and the share button. Open and closed keep their own
           colours, so nobody has to guess what green means.
@@ -5958,7 +5893,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         />
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='buttons'} title="Buttons" onClose={()=>setMSheet(null)} maxVh={44} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='buttons'} title="Buttons" onClose={()=>setMSheet(null)} maxVh={40} dim={false} onSizeChange={updateStyleSheetHeight}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
           Changes how Website, Directions and Share look. To change their links, open Your page → Page details.
         </p>
@@ -5968,7 +5903,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         />
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='font'} title="Typography" onClose={()=>setMSheet(null)} maxVh={62} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='font'} title="Type" onClose={()=>setMSheet(null)} maxVh={50} dim={false} onSizeChange={updateStyleSheetHeight}>
         <div className="grid grid-cols-2 gap-2">
           {FONT_OPTIONS.map(opt=>{
             const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
@@ -6009,6 +5944,51 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </MobileSheet>
 
+      <MobileSheet open={isMobile&&mSheet==='styleMore'} title="More design tools" onClose={()=>setMSheet(null)} maxVh={42} dim={false} onSizeChange={updateStyleSheetHeight}>
+        {([
+          {key:'background' as const,label:'Page background',sub:'Change the color behind your page'},
+          {key:'buttons' as const,label:'Button appearance',sub:'Choose filled, outline or glass'},
+        ]).map(tool=>(
+          <button key={tool.key} onClick={()=>setMSheet(tool.key)}
+            className="w-full flex items-center justify-between py-3.5 border-b text-left"
+            style={{borderColor:BUILDER_UI.border}}>
+            <span>
+              <strong className="block" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>{tool.label}</strong>
+              <span style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>{tool.sub}</span>
+            </span>
+            <LucideChevronRight size={16} color={BUILDER_UI.muted}/>
+          </button>
+        ))}
+      </MobileSheet>
+
+      {/* Focused design tools replace the app navigation while Style is open. */}
+      <nav aria-label="Design tools" className="fixed left-0 right-0 z-40 items-start justify-around border-t"
+        style={{
+          display:isMobile&&mobileTab==='style'?'flex':'none',
+          bottom:0,
+          height:`calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
+          paddingBottom:'env(safe-area-inset-bottom)',
+          borderColor:BUILDER_UI.border,
+          background:'#FFFFFF',
+          fontFamily:BUILDER_FONT,
+        }}>
+        {([
+          {key:'vibe' as const,label:'Looks',icon:<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="9" r="1"/><circle cx="15" cy="8" r="1"/><path d="M16 15a2 2 0 0 0-2 2"/></svg>},
+          {key:'cover' as const,label:'Photos',icon:<LucideImage size={21} color="currentColor"/>},
+          {key:'accent' as const,label:'Color',icon:<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3a9 9 0 1 0 9 9c0-2-1.5-3-3-3h-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2Z"/><circle cx="7.5" cy="12" r=".8" fill="currentColor"/><circle cx="11" cy="8" r=".8" fill="currentColor"/></svg>},
+          {key:'font' as const,label:'Type',icon:<span className="text-[22px] font-medium leading-none">T</span>},
+          {key:'styleMore' as const,label:'More',icon:<svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>},
+        ]).map(tool=>(
+          <button key={tool.key} onClick={()=>setMSheet(tool.key)} aria-label={tool.label}
+            aria-pressed={mSheet===tool.key}
+            className="flex-1 min-h-[58px] flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+            style={{color:mSheet===tool.key?BUILDER_UI.ink:BUILDER_UI.muted}}>
+            {tool.icon}
+            <span style={{...BUILDER_TYPE.navLabel,fontWeight:mSheet===tool.key?600:500}}>{tool.label}</span>
+          </button>
+        ))}
+      </nav>
+
 
       {/* ── BOTTOM NAV ── the one navigation system on a phone.
            Quieter than it was: no purple, no oversized selected pill, labels
@@ -6016,7 +5996,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            real page, and nothing else floating over the content. */}
       <nav className="fixed z-40 flex items-stretch"
         style={{
-          display:isMobile?"flex":"none",
+          display:isMobile&&mobileTab!=='style'?"flex":"none",
           left:NAV_BAR_GAP, right:NAV_BAR_GAP,
           bottom:`calc(${NAV_BAR_GAP}px + env(safe-area-inset-bottom))`,
           height:NAV_BAR_HEIGHT,
