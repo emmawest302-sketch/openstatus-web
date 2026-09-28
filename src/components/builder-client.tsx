@@ -760,9 +760,9 @@ function FittedPageCanvas({business,config,timeZone,override,inset=24,onSelectBl
   business:Business|null;
   config:OpenStatusPageConfig;
   timeZone?:string|null;
+  override?:TodayOverride;
   inset?:number;
   onSelectBlock?:(id:string)=>void;
-  override?:TodayOverride;
 }) {
   const viewportRef=useRef<HTMLDivElement>(null);
   const pageRef=useRef<HTMLDivElement>(null);
@@ -2098,10 +2098,10 @@ function BuilderSparkline({data,color}:{data:number[];color:string}){
  */
 const NAV_BAR_HEIGHT = 58;
 const NAV_BAR_GAP = 12;
+const NAV_SPACE = NAV_BAR_HEIGHT + NAV_BAR_GAP;
 const EDIT_DOCK_HEIGHT = 52;
 const EDIT_DOCK_BOTTOM = NAV_SPACE + 8;
 const EDIT_DOCK_SPACE = EDIT_DOCK_BOTTOM + EDIT_DOCK_HEIGHT + 8;
-const NAV_SPACE = NAV_BAR_HEIGHT + NAV_BAR_GAP;
 
 function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, onSizeChange, bottomOffset = NAV_SPACE }: {
   open: boolean;
@@ -2111,8 +2111,8 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, o
   maxVh?: number;
   /** false = no scrim, so you can watch the page change behind the sheet. */
   dim?: boolean;
-  bottomOffset?:number;
   onSizeChange?:(height:number)=>void;
+  bottomOffset?:number;
 }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
@@ -5271,10 +5271,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 className="px-2 py-1" style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.ink}}>
                 Actual size ↗
               </button>
+            </div>
             <FittedPageCanvas business={localBusiness} config={config}
               timeZone={bizTimeZone} override={todayOverride} inset={26}
               onSelectBlock={openBlockSheet}/>
-            </div>
           </div>
         )}
 
