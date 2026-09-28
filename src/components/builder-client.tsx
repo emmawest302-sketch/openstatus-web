@@ -755,6 +755,83 @@ function LiveDesktopPreview(props: React.ComponentProps<typeof LivePhonePreview>
   );
 }
 
+/** Show the complete customer page in one phone viewport, regardless of length. */
+function FullPagePreview({business,config,timeZone,override,onClose}: {
+  business:Business|null;
+  config:OpenStatusPageConfig;
+  timeZone?:string|null;
+  override?:TodayOverride;
+  onClose:()=>void;
+}) {
+  const [fit,setFit]=useState(true);
+  const viewportRef=useRef<HTMLDivElement>(null);
+  const pageRef=useRef<HTMLDivElement>(null);
+  const [size,setSize]=useState({width:390,height:0,scale:1});
+
+  useEffect(()=>{
+    if(!fit)return;
+    const viewport=viewportRef.current;
+    const page=pageRef.current;
+    if(!viewport||!page)return;
+    const measure=()=>{
+      const width=viewport.clientWidth;
+      const height=viewport.clientHeight;
+      const pageHeight=page.scrollHeight;
+      if(!width||!height||!pageHeight)return;
+      const scale=Math.min(1,(width-24)/width,(height-24)/pageHeight);
+      setSize(current=>current.width===width&&current.height===pageHeight&&current.scale===scale
+        ?current:{width,height:pageHeight,scale});
+    };
+    const observer=new ResizeObserver(measure);
+    observer.observe(viewport);
+    observer.observe(page);
+    measure();
+    return ()=>observer.disconnect();
+  },[fit]);
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Full page preview"
+      className="fixed inset-0 z-[60] bg-white flex flex-col"
+      style={{fontFamily:BUILDER_FONT,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}}>
+      <div className="flex-shrink-0 px-4 pt-3 pb-2 border-b" style={{borderColor:BUILDER_UI.border}}>
+        <div className="flex items-center justify-between">
+          <span style={{...BUILDER_TYPE.screenTitle,color:BUILDER_UI.ink}}>Your page</span>
+          <button onClick={onClose} className="px-3 py-2 rounded-xl"
+            style={{...BUILDER_TYPE.button,background:BUILDER_UI.surfaceSoft,color:BUILDER_UI.ink}}>
+            Done
+          </button>
+        </div>
+        <div className="flex gap-1 mt-2 p-1 rounded-xl" style={{background:BUILDER_UI.surfaceSoft}}>
+          {([{label:'Fit whole page',value:true},{label:'Actual size',value:false}] as const).map(option=>(
+            <button key={option.label} onClick={()=>setFit(option.value)} aria-pressed={fit===option.value}
+              className="flex-1 py-2 rounded-lg"
+              style={{...BUILDER_TYPE.button,background:fit===option.value?'#FFFFFF':'transparent',color:fit===option.value?BUILDER_UI.ink:BUILDER_UI.muted}}>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {fit?(
+        <div ref={viewportRef} className="flex-1 min-h-0 flex items-center justify-center overflow-hidden"
+          style={{background:'#F6F6F6'}}>
+          <div style={{position:'relative',width:size.width*size.scale,height:size.height*size.scale,flexShrink:0}}>
+            <div ref={pageRef} style={{position:'absolute',top:0,left:0,width:size.width,pointerEvents:'none',
+              transform:`scale(${size.scale})`,transformOrigin:'top left'}}>
+              <LivePhonePreview business={business} config={config} timeZone={timeZone} override={override}/>
+            </div>
+          </div>
+        </div>
+      ):(
+        <div className="flex-1 min-h-0 overflow-y-auto" style={{background:config.bg}}>
+          <div style={{maxWidth:560,margin:'0 auto'}}>
+            <LivePhonePreview business={business} config={config} timeZone={timeZone} override={override}/>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * The page's accent.
  *
@@ -5616,21 +5693,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </div>{/* end of the full-page container */}
 
       {isMobile&&previewExpanded&&(
-        <div role="dialog" aria-modal="true" aria-label="Full page preview"
-          className="fixed inset-0 z-[60] bg-white flex flex-col" style={{fontFamily:BUILDER_FONT}}>
-          <div className="flex items-center justify-between px-4 border-b" style={{height:56,borderColor:BUILDER_UI.border}}>
-            <span style={{...BUILDER_TYPE.screenTitle,color:BUILDER_UI.ink}}>Your page</span>
-            <button onClick={()=>setPreviewExpanded(false)} className="px-3 py-2 rounded-xl"
-              style={{...BUILDER_TYPE.button,background:BUILDER_UI.surfaceSoft,color:BUILDER_UI.ink}}>
-              Done
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto" style={{background:config.bg}}>
-            <div style={{maxWidth:560,margin:'0 auto'}}>
-              <LivePhonePreview business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}/>
-            </div>
-          </div>
-        </div>
+        <FullPagePreview business={localBusiness} config={config} timeZone={bizTimeZone}
+          override={todayOverride} onClose={()=>setPreviewExpanded(false)}/>
       )}
 
       {/*
