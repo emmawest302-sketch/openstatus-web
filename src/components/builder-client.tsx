@@ -1844,7 +1844,7 @@ function TimeSelectInline({ value, onChange }: { value: string; onChange: (v: st
   for (let h = 0; h < 24; h++) for (const m of [0, 30]) times.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
   return (
     <select value={value} onChange={e => onChange(e.target.value)}
-      className="flex-1 min-w-0 bg-[#EEEEEC] border border-[#E9E9E7] rounded-xl px-2 sm:px-3 py-2 text-[12px] sm:text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
+      className="flex-1 min-w-0 bg-[#EEEEEC] border border-[#E9E9E7] rounded-xl px-2 sm:px-3 py-2 text-[16px] sm:text-[13px] font-medium text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors cursor-pointer hover:bg-[#EEEEEE]">
       {times.map(t => <option key={t} value={t}>{fmt12(t)}</option>)}
     </select>
   );
@@ -2089,6 +2089,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // "Different hours today" — a full window, not just an early close.
   const [todayOpen,setTodayOpen]=useState('09:00');
   const [todayClose,setTodayClose]=useState('17:00');
+  /**
+   * Which of the four "just for today" panels is open on a phone, if any.
+   *
+   * These used to sit behind a "Something else" disclosure, four cards deep,
+   * every one of them expanded at once. Closing early — the single most
+   * common thing a shop does after closing for the day — was three taps and
+   * a scroll away. They are four buttons now and at most one panel is open,
+   * so the screen never grows past a thumb's reach.
+   */
+  const [statusPanel,setStatusPanel]=useState<'early'|'hours'|'note'|'day'|null>(null);
+  // Bulk weekly hours: most small businesses keep one set of hours and vary a
+  // day or two, so the week starts as one decision and the rows are the
+  // exceptions rather than seven separate chores.
+  const [weekBulkOpen,setWeekBulkOpen]=useState(false);
+  const [bulkFrom,setBulkFrom]=useState('09:00');
+  const [bulkTo,setBulkTo]=useState('17:00');
   // Status and Analytics don't edit the page config: every Status action posts the
   // moment it's tapped, and Analytics is read-only. A Save button there implies
   // there are unsaved changes to lose, so it's hidden on those tabs.
@@ -2960,6 +2976,26 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     if(error){setBizSaveError(error.message);return;}
     setLocalBusiness(b=>b?{...b,...update,name:update.name??b.name}:b);
     setBizSaved(true);setTimeout(()=>setBizSaved(false),2500);
+  }
+
+  /**
+   * Set one open/close window across a run of days in a single press.
+   *
+   * Seven rows of two dropdowns is fourteen decisions to describe a week that
+   * is usually one decision with an exception or two. This makes the common
+   * case a button and leaves the rows for the exceptions.
+   */
+  function applyBulkHours(scope:'all'|'weekdays') {
+    const keys = scope==='weekdays'
+      ? (['mon','tue','wed','thu','fri'] as WeekDay[])
+      : DAYS.map(d=>d.key);
+    setConfig(c=>{
+      const cur = c.weeklyHours ?? DEFAULT_WEEK_HOURS;
+      const next: WeeklyHours = { ...cur };
+      for (const k of keys) next[k] = { ...cur[k], open:bulkFrom, close:bulkTo, closed:false };
+      return { ...c, weeklyHours: next };
+    });
+    setWeekBulkOpen(false);
   }
 
   // Hours table row
@@ -4791,21 +4827,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             {googleMismatchCard}
 
-            {/* ── Google, as a row. It only earns a card when it needs you. ── */}
+            {/* ── Google ──────────────────────────────────────────────────
+                 Connected is the state it is in almost every day of its life,
+                 and in that state this row was a disabled button reporting a
+                 fact nobody needed. It appears when there is something to do
+                 about it; otherwise Home is one row shorter. */}
+            {!googleConnected&&(
             <button
-              onClick={()=>{ if(!googleConnected) window.location.href='/connect/google'; }}
-              disabled={googleConnected}
+              onClick={()=>{ window.location.href='/connect/google'; }}
               className="mt-2.5 w-full flex items-center gap-3 px-3.5 py-3 rounded-[14px] text-left"
               style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
               <svg width="16" height="16" viewBox="0 0 24 24" className="flex-shrink-0"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-              <span className="flex-1 min-w-0" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Google Business</span>
-              <span style={{...BUILDER_TYPE.body, color:googleConnected?BUILDER_UI.success:BUILDER_UI.warning}}>
-                {googleConnected?'Connected':'Not connected'}
-              </span>
-              {!googleConnected&&(
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              )}
+              <span className="flex-1 min-w-0" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Connect Google Business</span>
+              <span style={{...BUILDER_TYPE.body, color:BUILDER_UI.warning}}>Not connected</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
+            )}
 
             {/* ── The link itself ── */}
             {localBusiness?.slug&&(
@@ -4855,18 +4892,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <p className="mt-1" style={{...BUILDER_TYPE.helper, color:BUILDER_UI.muted}}>actions</p>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 space-y-1.5" style={{borderTop:`1px solid ${BUILDER_UI.border}`}}>
-                    {[
-                      {label:'Directions', value:analyticsData.metrics.directions},
-                      {label:'Menu',       value:analyticsData.metrics.menu},
-                      {label:'Links',      value:analyticsData.metrics.clicks},
-                    ].map(({label,value})=>(
-                      <div key={label} className="flex items-center justify-between">
-                        <span style={{...BUILDER_TYPE.body, color:BUILDER_UI.text}}>{label}</span>
-                        <span style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted, fontVariantNumeric:'tabular-nums'}}>{value.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
                 </>
               ):(
                 <p className="mt-2" style={{...BUILDER_TYPE.body, color:BUILDER_UI.quiet}}>
@@ -4875,9 +4900,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               )}
             </div>
 
-            <div className="mt-2.5">
-              <ReviewsCard block={allBlocks.find(b=>b.id==='location')} placeId={config.placeId} onUpdateBlock={u=>updateBlock('location',u)}/>
-            </div>
           </div>
         )}
 
@@ -4947,100 +4969,174 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               );
             })()}
 
-            <button onClick={()=>setStatusMore(v=>!v)}
-              className="flex items-center gap-1.5 mt-4 text-[13px] font-medium text-[#777777] active:opacity-60">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-                style={{transform:statusMore?'rotate(90deg)':'none',transition:'transform .18s'}}>
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-              Something else
-            </button>
-
-            {statusMore&&(
-              <div className="mt-3 space-y-2.5">
-                <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
-                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Different hours today</p>
-                  <p className="text-[11px] text-[#777777] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
-                  <div className="flex items-center gap-2">
-                    <select value={todayOpen} onChange={e=>setTodayOpen(e.target.value)}
-                      className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
-                      {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
-                    </select>
-                    <span className="text-[11px] text-[#9A9A97]">to</span>
-                    <select value={todayClose} onChange={e=>setTodayClose(e.target.value)}
-                      className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-2.5 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
-                      {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
-                    </select>
-                  </div>
-                  <button onClick={()=>postStatus('custom_hours')} disabled={statusPosting||todayClose<=todayOpen}
-                    className="mt-2.5 w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
-                    {statusPosting?'…':'Set today\u2019s hours'}
+            {/* ── Just for today ──────────────────────────────────────────
+                 Four buttons, at most one panel. These used to live behind a
+                 "Something else" chevron with all four cards stacked open
+                 underneath it, so closing early — the commonest thing a shop
+                 does short of closing outright — was a tap, a scroll and a
+                 hunt. Nothing here is hidden and nothing here is tall. */}
+            <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mt-6 mb-2">
+              Just for today
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                {key:'early' as const, label:'Closing early'},
+                {key:'hours' as const, label:'Different hours'},
+                {key:'note'  as const, label:'Add a note'},
+                {key:'day'   as const, label:'Another day'},
+              ]).map(({key,label})=>{
+                const on = statusPanel===key;
+                return (
+                  <button key={key} onClick={()=>setStatusPanel(v=>v===key?null:key)}
+                    className="px-3.5 py-3.5 rounded-2xl text-left active:scale-[0.98] transition-transform"
+                    style={{
+                      ...BUILDER_TYPE.cardTitle,
+                      background: on ? BUILDER_UI.ink : BUILDER_UI.surface,
+                      color:      on ? '#FFFFFF'      : BUILDER_UI.ink,
+                      border: `1px solid ${on ? BUILDER_UI.ink : BUILDER_UI.border}`,
+                    }}>
+                    {label}
                   </button>
-                </div>
+                );
+              })}
+            </div>
 
-                <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
-                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Closing early today</p>
-                  <p className="text-[11px] text-[#777777] mt-0.5 mb-2.5">{googleConnected?'Page + Google, today only.':'Today only.'}</p>
-                  <div className="flex items-center gap-2">
-                    <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
-                      className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
-                      {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
-                    </select>
-                    <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
-                      className="px-4 py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
-                      {statusPosting?'…':'Set'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
-                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Add a note for today</p>
-                  <p className="text-[11px] text-[#777777] mt-0.5 mb-2.5">Shows beside your hours. Your page only.</p>
-                  <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
-                    placeholder="Running about 20 minutes behind today…" rows={2}
-                    className="w-full bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[13px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
-                    <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
-                      className="px-4 py-2 rounded-full bg-[#0A0A0A] text-white text-[12px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
-                      {statusPosting?'…':'Add note'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl border border-[#E9E9E7] bg-white">
-                  <p className="text-[13px] font-semibold text-[#0A0A0A]">Closing on another day</p>
-                  <p className="text-[11px] text-[#777777] mt-0.5 mb-2.5">
-                    Dated, so your hours return on their own{googleConnected?' — updates Google too.':'.'}
-                  </p>
-                  <div className="flex gap-2">
-                    {([
-                      {label:'Tomorrow',     days:1 },
-                      {label:'This weekend', days:-1},
-                    ]).map(({label,days})=>(
-                      <button key={label} disabled={gBusy}
-                        onClick={()=>{
-                          const now=new Date();
-                          let from=new Date(now), to=new Date(now);
-                          if(days===1){ from.setDate(now.getDate()+1); to=new Date(from); }
-                          if(days===-1){
-                            const dow=now.getDay();
-                            from=new Date(now); from.setDate(now.getDate()+((6-dow+7)%7));
-                            to=new Date(from);  to.setDate(from.getDate()+1);
-                          }
-                          void googleCloseDates(from,to,`Closed ${label.toLowerCase()}`);
-                        }}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] active:scale-95 transition-transform disabled:opacity-40">
-                        <LucideCalendar size={13} color="#3F3F3C"/>
-                        <span className="text-[12px] font-semibold text-[#0A0A0A]">{label}</span>
-                      </button>
-                    ))}
-                  </div>
+            {statusPanel==='early'&&(
+              <div className="mt-2.5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                <p className="text-[11.5px] text-[#777777] mb-2.5">
+                  {googleConnected?'Closes your page and your Google listing at this time, today only.':'Closes your page at this time, today only.'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <select value={statusCloseTime} onChange={e=>setStatusCloseTime(e.target.value)}
+                    className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[16px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
+                    {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                  </select>
+                  <button onClick={()=>postStatus('early_close')} disabled={statusPosting}
+                    className="px-5 py-2.5 rounded-xl bg-[#0A0A0A] text-white text-[13px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
+                    {statusPosting?'…':'Set'}
+                  </button>
                 </div>
               </div>
             )}
 
-            <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em] mt-7 mb-2">Your normal week</p>
+            {statusPanel==='hours'&&(
+              <div className="mt-2.5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                <p className="text-[11.5px] text-[#777777] mb-2.5">
+                  {googleConnected?'A different window for today, on your page and on Google.':'A different window, today only.'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <select value={todayOpen} onChange={e=>setTodayOpen(e.target.value)}
+                    className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-2.5 py-2.5 text-[16px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
+                    {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                  </select>
+                  <span className="text-[12px] text-[#9A9A97]">to</span>
+                  <select value={todayClose} onChange={e=>setTodayClose(e.target.value)}
+                    className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-2.5 py-2.5 text-[16px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
+                    {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                  </select>
+                </div>
+                {todayClose<=todayOpen&&(
+                  <p className="text-[11.5px] text-[#B54708] mt-2">Closing time needs to be after opening time.</p>
+                )}
+                <button onClick={()=>postStatus('custom_hours')} disabled={statusPosting||todayClose<=todayOpen}
+                  className="mt-2.5 w-full py-3 rounded-xl bg-[#0A0A0A] text-white text-[13px] font-semibold active:scale-[0.98] transition-transform disabled:opacity-40">
+                  {statusPosting?'…':'Set today’s hours'}
+                </button>
+              </div>
+            )}
+
+            {statusPanel==='note'&&(
+              <div className="mt-2.5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                <p className="text-[11.5px] text-[#777777] mb-2.5">Shows beside your hours. Your page only.</p>
+                <textarea value={statusNote} onChange={e=>setStatusNote(e.target.value.slice(0,100))}
+                  placeholder="Running about 20 minutes behind today…" rows={2}
+                  className="w-full bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-3 py-2.5 text-[16px] text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none resize-none"/>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[11px] text-[#C0C0C0]">{statusNote.length}/100</span>
+                  <button onClick={()=>postStatus('note_today')} disabled={statusPosting||!statusNote.trim()}
+                    className="px-5 py-2.5 rounded-full bg-[#0A0A0A] text-white text-[13px] font-semibold active:scale-95 transition-transform disabled:opacity-40">
+                    {statusPosting?'…':'Add note'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {statusPanel==='day'&&(
+              <div className="mt-2.5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                <p className="text-[11.5px] text-[#777777] mb-2.5">
+                  Dated, so your hours come back on their own{googleConnected?' — updates Google too.':'.'}
+                </p>
+                <div className="flex gap-2">
+                  {([
+                    {label:'Tomorrow',     days:1 },
+                    {label:'This weekend', days:-1},
+                  ]).map(({label,days})=>(
+                    <button key={label} disabled={gBusy}
+                      onClick={()=>{
+                        const now=new Date();
+                        let from=new Date(now), to=new Date(now);
+                        if(days===1){ from.setDate(now.getDate()+1); to=new Date(from); }
+                        if(days===-1){
+                          const dow=now.getDay();
+                          from=new Date(now); from.setDate(now.getDate()+((6-dow+7)%7));
+                          to=new Date(from);  to.setDate(from.getDate()+1);
+                        }
+                        void googleCloseDates(from,to,`Closed ${label.toLowerCase()}`);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] active:scale-95 transition-transform disabled:opacity-40">
+                      <LucideCalendar size={13} color="#3F3F3C"/>
+                      <span className="text-[13px] font-semibold text-[#0A0A0A]">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Your normal week ────────────────────────────────────────
+                 Fourteen dropdowns to describe a week that is usually one
+                 pair of times with an exception or two. The pair goes at the
+                 top as a button; the rows below are for the exceptions. */}
+            <div className="flex items-center justify-between mt-7 mb-2">
+              <p className="text-[11px] font-semibold text-[#9A9A97] uppercase tracking-[0.12em]">Your normal week</p>
+              <button onClick={()=>setWeekBulkOpen(v=>!v)}
+                className="text-[12px] font-medium text-[#777777] active:opacity-60">
+                {weekBulkOpen?'Close':'Set all at once'}
+              </button>
+            </div>
+
+            {weekBulkOpen&&(
+              <div className="mb-2.5 p-4 rounded-2xl border border-[#E9E9E7] bg-white">
+                <div className="flex items-center gap-2">
+                  <select value={bulkFrom} onChange={e=>setBulkFrom(e.target.value)}
+                    className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-2.5 py-2.5 text-[16px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
+                    {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                  </select>
+                  <span className="text-[12px] text-[#9A9A97]">to</span>
+                  <select value={bulkTo} onChange={e=>setBulkTo(e.target.value)}
+                    className="flex-1 bg-[#F7F7F6] border border-[#E9E9E7] rounded-xl px-2.5 py-2.5 text-[16px] font-semibold text-[#0A0A0A] focus:outline-none appearance-none">
+                    {closeEarlyTimes.map(t=><option key={t} value={t}>{fmt12(t)}</option>)}
+                  </select>
+                </div>
+                {bulkTo<=bulkFrom?(
+                  <p className="text-[11.5px] text-[#B54708] mt-2">Closing time needs to be after opening time.</p>
+                ):(
+                  <div className="flex gap-2 mt-2.5">
+                    <button onClick={()=>applyBulkHours('weekdays')}
+                      className="flex-1 py-3 rounded-xl border border-[#E9E9E7] bg-[#F7F7F6] text-[13px] font-semibold text-[#0A0A0A] active:scale-95 transition-transform">
+                      Mon–Fri
+                    </button>
+                    <button onClick={()=>applyBulkHours('all')}
+                      className="flex-1 py-3 rounded-xl bg-[#0A0A0A] text-white text-[13px] font-semibold active:scale-[0.98] transition-transform">
+                      Every day
+                    </button>
+                  </div>
+                )}
+                <p className="text-[11px] text-[#9A9A97] mt-2.5 leading-relaxed">
+                  Then close any odd days on the rows below. Press Save when you&apos;re done.
+                </p>
+              </div>
+            )}
+
             <div className="rounded-2xl border border-[#E9E9E7] overflow-hidden bg-white">
               {DAYS.map(({key,label},i)=><HoursRow key={key} dayKey={key} label={label} idx={i}/>)}
             </div>
@@ -5232,6 +5328,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
 
+            {/* Reviews & rating — a thing you set up once and check now and
+                then, which is what More is for. It was the last card on Home,
+                below the daily status and the daily numbers, where it only
+                ever added scroll. */}
+            <div className="mt-2.5 mb-4">
+              <ReviewsCard block={allBlocks.find(b=>b.id==='location')} placeId={config.placeId} onUpdateBlock={u=>updateBlock('location',u)}/>
+            </div>
+
             {/* Your link */}
             {business?.slug&&(
               <div className="mb-4 p-4 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7]">
@@ -5278,12 +5382,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Name</span>
                     <input value={bizEdit.name} onChange={e=>setBizEdit(b=>({...b,name:e.target.value}))}
                       placeholder="Business name"
-                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                      className="flex-1 text-[16px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-2.5">
                     <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Category</span>
                     <select value={bizEdit.category} onChange={e=>setBizEdit(b=>({...b,category:e.target.value}))}
-                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none appearance-none cursor-pointer">
+                      className="flex-1 text-[16px] text-[#0A0A0A] bg-transparent outline-none appearance-none cursor-pointer">
                       <option value="">— Select —</option>
                       {CATEGORIES.map(c=>(<option key={c.id} value={c.id}>{c.label}</option>))}
                     </select>
@@ -5292,25 +5396,25 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Phone</span>
                     <input value={bizEdit.phone} onChange={e=>setBizEdit(b=>({...b,phone:e.target.value}))}
                       placeholder="+1 (555) 000-0000" type="tel"
-                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                      className="flex-1 text-[16px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-2.5">
                     <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Website</span>
                     <input value={bizEdit.website} onChange={e=>setBizEdit(b=>({...b,website:e.target.value}))}
                       placeholder="https://yoursite.com" type="url"
-                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                      className="flex-1 text-[16px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-2.5">
                     <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Address</span>
                     <input value={bizEdit.address} onChange={e=>setBizEdit(b=>({...b,address:e.target.value}))}
                       placeholder="123 Main St, City, State"
-                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                      className="flex-1 text-[16px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-2.5">
                     <span className="text-[11px] font-normal text-[#777777] w-20 flex-shrink-0">Directions</span>
                     <input value={config.directionsUrl ?? ''} onChange={e=>setConfig(c=>({...c,directionsUrl:e.target.value}))}
                       placeholder="Maps link (optional)" type="url"
-                      className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                      className="flex-1 text-[16px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                   </div>
                   {/* Tags followed the Business info fields out of Style:
                       "Dog friendly" is a fact, not a design decision. */}
@@ -5352,7 +5456,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                       <input value={config.socials?.[key] ?? ''}
                         onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
                         placeholder={`${label} link…`}
-                        className="flex-1 text-[12.5px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                        className="flex-1 text-[16px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
                     </div>
                   ))}
                   <div className="flex items-center gap-3 px-3 py-3">

@@ -171,7 +171,7 @@ function CategoryIcon({ id, active }: { id: string; active: boolean }) {
 
 function StepBar({ step, total }: { step: number; total: number }) {
   return (
-    <div style={{ display: 'flex', gap: 6, marginBottom: 40 }}>
+    <div style={{ display: 'flex', gap: 6, marginBottom: 32 }}>
       {Array.from({ length: total }).map((_, i) => (
         <div key={i} style={{
           height: 3,
@@ -201,6 +201,20 @@ type PlaceDetails = {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
+/**
+ * Three screens, not five.
+ *
+ * The old wizard asked for the name, then the web address, then the type of
+ * business, then a list of tags, on four separate screens — and only the
+ * first of those needed a screen of its own. On a phone that is four
+ * keyboard-dismiss-scroll-tap cycles before anything exists, and the tags
+ * step in particular collected up to eight tags for a builder that only ever
+ * shows three.
+ *
+ * Now: find it, check it, done. Tags are edited in the builder, next to the
+ * page they appear on, which is the only place you can tell whether they read
+ * well.
+ */
 export default function SetupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -208,10 +222,9 @@ export default function SetupPage() {
   const [error, setError] = useState('');
   const [businessId, setBusinessId] = useState<string | null>(null);
 
-  // Step state — 4 steps total
-  // 1: Find on Google, 2: Confirm name+slug, 3: Category, 4: Tags
+  // 1: Find on Google · 2: Confirm name + link + type · 3: Live
   const [step, setStep] = useState(1);
-  const TOTAL_STEPS = 5;
+  const TOTAL_STEPS = 3;
 
   // Step 1: Google Places search
   const [placeQuery, setPlaceQuery] = useState('');
@@ -222,22 +235,15 @@ export default function SetupPage() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const placeDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Step 2: Business name + slug
+  // Step 2: Business name + link + type, all on one screen
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
   const [slugState, setSlugState] = useState<'idle' | 'checking' | 'free' | 'taken' | 'error'>('idle');
-  /** Google's own words for why, e.g. "That one is reserved". */
+  /** Why not, in the validator's own words, e.g. "That one is reserved". */
   const [slugReason, setSlugReason] = useState<string | null>(null);
   const [initialSlug, setInitialSlug] = useState('');
-
-  // Step 3: Category
   const [categoryId, setCategoryId] = useState('');
-  const [categorySearch, setCategorySearch] = useState('');
-
-  // Step 4: Tags
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
 
   // ── Load existing business on mount ──
   const load = useCallback(async () => {
@@ -257,11 +263,11 @@ export default function SetupPage() {
       setInitialSlug(existing.slug ?? '');
       if (existing.slug) setSlugState('free');
 
-      // An owner who already finished setup does not belong here. finish()
+      // An owner who already finished setup does not belong here. createPage()
       // rebuilds business_page_config from category defaults, so walking back
       // through the wizard silently replaced their blocks, socials and
-      // background with a fresh set. Slug present means they got past step 2,
-      // which is the only step that writes one.
+      // background with a fresh set. The slug is only written once the whole
+      // page exists, so its presence means finished.
       if (existing.slug) { router.replace('/builder'); return; }
     } else {
       const newId = crypto.randomUUID();
@@ -343,11 +349,9 @@ export default function SetupPage() {
       if (res.ok) {
         const details = await res.json() as PlaceDetails;
         setPlaceDetails(details);
-        // Pre-fill name from Google (user can edit in step 2)
         setName(details.name || place.name);
         setSlugEdited(false); // let slug re-derive from name
       } else {
-        // Details failed — still use the suggestion data
         setName(place.name);
         setSlugEdited(false);
       }
@@ -359,43 +363,28 @@ export default function SetupPage() {
     }
   };
 
-  // ── Skip Google — go straight to manual name entry ──
+  // ── Skip Google — go straight to manual entry ──
   const skipGoogle = () => {
     setSelectedPlace(null);
     setPlaceDetails(null);
     setStep(2);
   };
 
-  // ── Step 1 → 2: confirm place or skip ──
-  const confirmPlace = () => {
-    setStep(2);
-  };
+  // ── Computed ──
+  const canCreate = name.trim().length > 0 && slugState === 'free' && categoryId !== '';
+  const slugColor = slugState === 'free' ? '#22C55E'
+    : slugState === 'taken' || slugState === 'error' ? '#EF4444' : '#858585';
 
-  // ── Step 2 save ──
-  const saveStep2 = async () => {
-    if (!businessId || slugState !== 'free' || !name.trim()) return;
-    setSaving(true);
-    const { error: e } = await supabase
-      .from('businesses')
-      .update({ name: name.trim(), slug: toSlug(slug) })
-      .eq('id', businessId);
-    setSaving(false);
-    if (e) { setError(e.message); return; }
-    setInitialSlug(toSlug(slug));
-    setError('');
-    setStep(3);
-  };
-
-  // ── Step 3: category ──
-  const saveStep3 = () => {
-    if (!categoryId) return;
-    setSelectedTags([]);
-    setStep(4);
-  };
-
-  // ── Step 4: finish ──
-  const finish = async () => {
-    if (!businessId) return;
+  /**
+   * Everything that used to be steps 2, 3 and 4, in one press.
+   *
+   * Order matters. The page config is written FIRST and the slug LAST,
+   * because the slug is what load() reads to decide someone has finished:
+   * writing it up front meant a failure halfway through locked the owner out
+   * of setup with a half-built page and no way back in.
+   */
+  const createPage = async () => {
+    if (!businessId || !canCreate) return;
     setSaving(true);
     setError('');
 
@@ -434,20 +423,20 @@ export default function SetupPage() {
       bg: '#F7F7F5',
       socials: [] as OpenStatusSocial[],
       location: placeDetails?.address ?? '',
-      tags: selectedTags,
-      // Store imported contact info in page config so builder can use it
+      // Tags are a builder decision now. Setup collected up to eight of them
+      // on a screen of their own, for a builder that caps them at three and
+      // is the only place you can see how they read against the page.
+      tags: [],
       ...(placeDetails?.phone ? { phone: placeDetails.phone } : {}),
       ...(placeDetails?.website ? { website: placeDetails.website } : {}),
       ...(placeDetails?.hours ? { weeklyHours: placeDetails.hours as WeeklyHours } : {}),
     };
 
-    // Goes to business_page_config, falling back to auth metadata if the
-    // migration has not been run yet. businessId is set earlier in this flow.
     const { error: metaErr } = await savePageConfig(businessId, pageConfig);
     if (metaErr) { setError(metaErr.message); setSaving(false); return; }
 
-    // Save business fields to DB
     const businessUpdate: Record<string, string | null> = {
+      name: name.trim(),
       category: categoryId || null,
     };
     // Without this every business defaults to America/Chicago and its
@@ -473,10 +462,6 @@ export default function SetupPage() {
     // page said "Hours not set" until they happened to open the builder and
     // press Save. For a product whose whole promise is live hours, that was
     // the first thing every new customer saw.
-    //
-    // Not fatal if it fails: the page config is already saved, and the builder
-    // mirrors hours on every save. But the owner is told, rather than
-    // discovering it from a customer.
     const weeklyHours = placeDetails?.hours ?? DEFAULT_WEEK_HOURS;
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -495,28 +480,25 @@ export default function SetupPage() {
         }
       }
     } catch {
-      setError('Your page is set up, but the hours didn\u2019t publish. Open the builder and press Save.');
+      setError('Your page is set up, but the hours didn’t publish. Open the builder and press Save.');
       setSaving(false);
       return;
     }
 
-    setSaving(false);
-    // The page is built and live at this point. One more screen before the
-    // builder, because the moment right after setup is the only moment an
-    // owner will ever willingly follow home-screen instructions — and an icon
-    // next to Instagram is the difference between a tool they use every
-    // morning and one they remember they have.
-    setStep(5);
-  };
+    // Last, because this is the flag that says "finished".
+    const finalSlug = toSlug(slug);
+    const { error: slugErr } = await supabase.from('businesses').update({ slug: finalSlug }).eq('id', businessId);
+    if (slugErr) { setError(slugErr.message); setSaving(false); return; }
+    setInitialSlug(finalSlug);
 
-  // ── Computed ──
-  const selectedCategory = CATEGORIES.find(c => c.id === categoryId);
-  const filteredCategories = categorySearch
-    ? CATEGORIES.filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()))
-    : CATEGORIES;
-  const canGoStep2 = name.trim().length > 0 && slugState === 'free';
-  const slugColor = slugState === 'free' ? '#22C55E'
-    : slugState === 'taken' || slugState === 'error' ? '#EF4444' : '#858585';
+    setSaving(false);
+    // The page is live at this point. One more screen before the builder,
+    // because the moment right after setup is the only moment an owner will
+    // ever willingly follow home-screen instructions — and an icon next to
+    // Instagram is the difference between a tool they use every morning and
+    // one they remember they have.
+    setStep(3);
+  };
 
   // ── STYLES ────────────────────────────────────────────────────────────────
   const base: React.CSSProperties = {
@@ -526,7 +508,10 @@ export default function SetupPage() {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: '40px 20px 60px',
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingTop: 'calc(32px + env(safe-area-inset-top, 0px))',
+    paddingBottom: 'calc(48px + env(safe-area-inset-bottom, 0px))',
   };
   const card: React.CSSProperties = {
     width: '100%',
@@ -535,12 +520,20 @@ export default function SetupPage() {
     display: 'flex',
     flexDirection: 'column',
   };
+  /**
+   * 16px is not a style choice.
+   *
+   * iOS Safari zooms the whole page in whenever you focus an input whose text
+   * is smaller than 16px, and it does not zoom back out. That is most of what
+   * "messy on iPhone" was: type your business name, and the layout is stuck
+   * at 1.3x with the buttons off the right edge for the rest of the wizard.
+   */
   const inputStyle: React.CSSProperties = {
     width: '100%',
     border: '1.5px solid #EBEBEA',
     borderRadius: 16,
     padding: '14px 16px',
-    fontSize: 15,
+    fontSize: 16,
     color: '#0A0A0A',
     background: '#fff',
     outline: 'none',
@@ -553,8 +546,8 @@ export default function SetupPage() {
     color: '#FFFFFF',
     border: 'none',
     borderRadius: 99,
-    padding: '15px 24px',
-    fontSize: 14,
+    padding: '16px 24px',
+    fontSize: 15,
     fontWeight: 700,
     cursor: 'pointer',
     display: 'flex',
@@ -562,6 +555,18 @@ export default function SetupPage() {
     alignItems: 'center',
     transition: 'opacity 0.15s',
     fontFamily: 'var(--font-poppins), system-ui, sans-serif',
+  };
+  const eyebrow: React.CSSProperties = {
+    fontSize: 11, fontWeight: 700, color: '#858585',
+    letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12,
+  };
+  const heading: React.CSSProperties = {
+    fontFamily: 'var(--font-poppins), system-ui, sans-serif',
+    fontSize: 36, fontWeight: 800, color: '#0A0A0A',
+    letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
+  };
+  const fieldLabel: React.CSSProperties = {
+    fontSize: 12, fontWeight: 600, color: '#777777', marginBottom: 7,
   };
 
   if (loading) {
@@ -579,7 +584,7 @@ export default function SetupPage() {
     <main style={base}>
       <div style={card}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
           <OpenStatusMark size={24}/>
           <span style={{ fontSize: 15, fontWeight: 700, color: '#0A0A0A', letterSpacing: '-0.02em' }}>OpenStatus</span>
         </div>
@@ -589,73 +594,68 @@ export default function SetupPage() {
         {/* ── STEP 1: Find on Google ──────────────────────────────────────── */}
         {step === 1 && (
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Step 1 of {TOTAL_STEPS}
-            </p>
-            <h1 style={{
-              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
-              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
-            }}>
-              Find your<br />business
-            </h1>
-            <p style={{ fontSize: 14, color: '#858585', marginBottom: 28, lineHeight: 1.5 }}>
-              Search Google to auto-fill your name, address, hours, and more.
+            <p style={eyebrow}>Step 1 of {TOTAL_STEPS}</p>
+            <h1 style={heading}>Find your<br />business</h1>
+            <p style={{ fontSize: 14.5, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
+              One search fills in your name, address, phone and opening hours.
             </p>
 
-            {/* Search input */}
             <div style={{ position: 'relative' }}>
-              <div style={{ position: 'relative' }}>
-                <svg
-                  style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-                  viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ABABAB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                >
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="e.g. Emma's Coffee Franklin TN"
-                  value={placeQuery}
-                  onChange={e => onPlaceInput(e.target.value)}
-                  style={{ ...inputStyle, paddingLeft: 44 }}
-                />
-              </div>
-
-              {/* Suggestions */}
-              {placeSuggestions.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0,
-                  background: '#fff', border: '1.5px solid #EBEBEA',
-                  borderRadius: 16, marginTop: 6, overflow: 'hidden',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.10)', zIndex: 10,
-                }}>
-                  {placeSuggestions.map(place => (
-                    <button
-                      key={place.id}
-                      onClick={() => void selectPlace(place)}
-                      style={{
-                        width: '100%', padding: '12px 16px', border: 'none',
-                        background: 'none', cursor: 'pointer', textAlign: 'left',
-                        display: 'flex', flexDirection: 'column', gap: 2,
-                        borderBottom: '1px solid #EEEEEC',
-                        fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-                      }}
-                    >
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#0A0A0A' }}>{place.name}</span>
-                      <span style={{ fontSize: 12, color: '#858585' }}>{place.address}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {placeLoading && (
-                <p style={{ fontSize: 12, color: '#858585', marginTop: 8 }}>Searching…</p>
-              )}
-              {detailsLoading && (
-                <p style={{ fontSize: 12, color: '#858585', marginTop: 8 }}>Loading business info…</p>
-              )}
+              <svg
+                style={{ position: 'absolute', left: 16, top: 25, transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ABABAB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                autoFocus
+                type="search"
+                enterKeyHint="search"
+                autoCapitalize="words"
+                autoCorrect="off"
+                placeholder="e.g. Emma's Coffee Franklin TN"
+                value={placeQuery}
+                onChange={e => onPlaceInput(e.target.value)}
+                style={{ ...inputStyle, paddingLeft: 44 }}
+              />
             </div>
+
+            {/*
+              The suggestion list used to float on top of the page. On a phone
+              the keyboard covers the bottom half of the screen, so an overlay
+              anchored under the input landed behind it and the owner was
+              scrolling a list they could not see. It pushes the page down now.
+            */}
+            {placeSuggestions.length > 0 && (
+              <div style={{
+                background: '#fff', border: '1.5px solid #EBEBEA',
+                borderRadius: 16, marginTop: 8, overflow: 'hidden',
+              }}>
+                {placeSuggestions.map((place, i) => (
+                  <button
+                    key={place.id}
+                    onClick={() => void selectPlace(place)}
+                    style={{
+                      width: '100%', padding: '14px 16px', border: 'none',
+                      background: 'none', cursor: 'pointer', textAlign: 'left',
+                      display: 'flex', flexDirection: 'column', gap: 3,
+                      borderTop: i === 0 ? 'none' : '1px solid #EEEEEC',
+                      fontFamily: 'var(--font-poppins), system-ui, sans-serif',
+                    }}
+                  >
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#0A0A0A' }}>{place.name}</span>
+                    <span style={{ fontSize: 12.5, color: '#858585' }}>{place.address}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {placeLoading && (
+              <p style={{ fontSize: 12.5, color: '#858585', marginTop: 10 }}>Searching…</p>
+            )}
+            {detailsLoading && (
+              <p style={{ fontSize: 12.5, color: '#858585', marginTop: 10 }}>Loading business info…</p>
+            )}
 
             {/* Selected place preview */}
             {selectedPlace && !detailsLoading && (
@@ -688,7 +688,6 @@ export default function SetupPage() {
                   </div>
                 </div>
 
-                {/* Info chips */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {placeDetails?.phone && (
                     <span style={{ fontSize: 11, color: '#555', background: '#F0F0EE', borderRadius: 99, padding: '4px 10px' }}>
@@ -717,7 +716,7 @@ export default function SetupPage() {
 
             <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
-                onClick={confirmPlace}
+                onClick={() => setStep(2)}
                 disabled={!selectedPlace || detailsLoading}
                 style={{ ...primaryBtn, opacity: (!selectedPlace || detailsLoading) ? 0.35 : 1 }}
               >
@@ -727,8 +726,8 @@ export default function SetupPage() {
               <button
                 onClick={skipGoogle}
                 style={{
-                  background: 'none', border: 'none', fontSize: 13,
-                  color: '#858585', cursor: 'pointer', padding: '8px 0',
+                  background: 'none', border: 'none', fontSize: 13.5,
+                  color: '#858585', cursor: 'pointer', padding: '10px 0',
                   fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                 }}
               >
@@ -738,112 +737,75 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* ── STEP 2: Confirm name + URL ────────────────────────────────── */}
+        {/* ── STEP 2: Name, link and type — one screen, one button ───────── */}
         {step === 2 && (
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Step 2 of {TOTAL_STEPS}
-            </p>
-            <h1 style={{
-              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
-              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
-            }}>
-              {selectedPlace ? 'Confirm your\nbusiness name' : "What's your\nbusiness called?"}
+            <p style={eyebrow}>Step 2 of {TOTAL_STEPS}</p>
+            <h1 style={heading}>
+              {selectedPlace ? 'Check this over' : 'Tell us about it'}
             </h1>
-            <p style={{ fontSize: 14, color: '#858585', marginBottom: 32, lineHeight: 1.5 }}>
-              {selectedPlace ? 'This is your public name — edit it if needed.' : 'This is your public name. You can change it later.'}
+            <p style={{ fontSize: 14.5, color: '#858585', marginBottom: 26, lineHeight: 1.5 }}>
+              {selectedPlace
+                ? 'This all came from Google. Change anything that looks off.'
+                : 'Three things, and your page is live.'}
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <input
-                autoFocus
-                type="text"
-                placeholder="Sunrise Coffee Co."
-                value={name}
-                onChange={e => setName(e.target.value)}
-                style={{ ...inputStyle, fontSize: 18, fontWeight: 600 }}
-                onKeyDown={e => e.key === 'Enter' && canGoStep2 && void saveStep2()}
-              />
-
-              <div style={{
-                display: 'flex', alignItems: 'center',
-                border: '1.5px solid #EBEBEA', borderRadius: 16,
-                background: '#fff', overflow: 'hidden',
-              }}>
-                <span style={{ padding: '14px 4px 14px 16px', fontSize: 14, color: '#858585', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  {SITE_DOMAIN}/
-                </span>
-                <input
-                  type="text"
-                  value={slug}
-                  onChange={e => { setSlugEdited(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, HANDLE_MAX)); }}
-                  style={{
-                    flex: 1, border: 'none', outline: 'none',
-                    fontSize: 14, fontWeight: 600, color: '#0A0A0A',
-                    padding: '14px 8px', background: 'transparent',
-                    fontFamily: 'var(--font-poppins), system-ui, sans-serif', minWidth: 0,
-                  }}
-                />
-                <span style={{ padding: '0 14px', fontSize: 10, fontWeight: 700, color: slugColor, flexShrink: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  {slugState === 'checking' ? '...' : slugState === 'free' ? '✓' : slugState === 'taken' ? 'taken' : slugState === 'error' ? '!' : ''}
-                </span>
-              </div>
-              {slugReason && slugState !== 'free' && (
-                <p style={{ marginTop: 8, fontSize: 12.5, color: '#EF4444' }}>{slugReason}</p>
-              )}
-            </div>
-
-            {error && <p style={{ marginTop: 12, fontSize: 13, color: '#EF4444' }}>{error}</p>}
-
-            <button
-              onClick={() => void saveStep2()}
-              disabled={saving || !canGoStep2}
-              style={{ ...primaryBtn, marginTop: 32, opacity: (!canGoStep2 || saving) ? 0.35 : 1 }}
-            >
-              <span>Continue</span>
-              <span>→</span>
-            </button>
-          </div>
-        )}
-
-        {/* ── STEP 3: Category ──────────────────────────────────────────── */}
-        {step === 3 && (
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Step 3 of {TOTAL_STEPS}
-            </p>
-            <h1 style={{
-              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
-              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
-            }}>
-              What type of<br />business is it?
-            </h1>
-            <p style={{ fontSize: 14, color: '#858585', marginBottom: 24, lineHeight: 1.5 }}>
-              This sets up the right links and layout for your page.
-            </p>
-
+            <p style={fieldLabel}>Business name</p>
             <input
               type="text"
-              placeholder="Search…"
-              value={categorySearch}
-              onChange={e => setCategorySearch(e.target.value)}
-              style={{ ...inputStyle, marginBottom: 16 }}
+              enterKeyHint="next"
+              autoCapitalize="words"
+              placeholder="Sunrise Coffee Co."
+              value={name}
+              onChange={e => setName(e.target.value)}
+              style={{ ...inputStyle, fontSize: 17, fontWeight: 600 }}
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 32 }}>
-              {filteredCategories.map(cat => (
+            <p style={{ ...fieldLabel, marginTop: 20 }}>Your link</p>
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              border: '1.5px solid #EBEBEA', borderRadius: 16,
+              background: '#fff', overflow: 'hidden',
+            }}>
+              <span style={{ padding: '14px 2px 14px 16px', fontSize: 15, color: '#858585', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {SITE_DOMAIN}/
+              </span>
+              <input
+                type="text"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={slug}
+                onChange={e => { setSlugEdited(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, HANDLE_MAX)); }}
+                style={{
+                  flex: 1, border: 'none', outline: 'none',
+                  fontSize: 16, fontWeight: 600, color: '#0A0A0A',
+                  padding: '14px 4px', background: 'transparent',
+                  fontFamily: 'var(--font-poppins), system-ui, sans-serif', minWidth: 0,
+                }}
+              />
+              <span style={{ padding: '0 14px', fontSize: 10, fontWeight: 700, color: slugColor, flexShrink: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                {slugState === 'checking' ? '...' : slugState === 'free' ? '✓' : slugState === 'taken' ? 'taken' : slugState === 'error' ? '!' : ''}
+              </span>
+            </div>
+            {slugReason && slugState !== 'free' && (
+              <p style={{ marginTop: 8, fontSize: 12.5, color: '#EF4444' }}>{slugReason}</p>
+            )}
+
+            <p style={{ ...fieldLabel, marginTop: 22 }}>What kind of business?</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+              {CATEGORIES.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setCategoryId(cat.id)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '12px 14px', borderRadius: 16,
+                    display: 'flex', alignItems: 'center', gap: 9,
+                    padding: '13px 12px', borderRadius: 16,
                     border: `1.5px solid ${categoryId === cat.id ? '#0A0A0A' : '#EBEBEA'}`,
                     background: categoryId === cat.id ? '#0A0A0A' : '#fff',
                     color: categoryId === cat.id ? '#F7F7F5' : '#0A0A0A',
-                    cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
                     textAlign: 'left', transition: 'all 0.12s ease',
                     fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                   }}
@@ -853,155 +815,29 @@ export default function SetupPage() {
                 </button>
               ))}
             </div>
+            <p style={{ fontSize: 12, color: '#ABABAB', marginTop: 10, lineHeight: 1.5 }}>
+              This picks your starting links and layout. You can change all of it afterwards.
+            </p>
+
+            {error && <p style={{ marginTop: 16, fontSize: 13, color: '#EF4444' }}>{error}</p>}
 
             <button
-              onClick={saveStep3}
-              disabled={!categoryId}
-              style={{ ...primaryBtn, opacity: !categoryId ? 0.35 : 1 }}
+              onClick={() => void createPage()}
+              disabled={saving || !canCreate}
+              style={{ ...primaryBtn, marginTop: 24, opacity: (!canCreate || saving) ? 0.35 : 1 }}
             >
-              <span>Continue</span>
-              <span>→</span>
+              <span>{saving ? 'Building your page…' : 'Create my page'}</span>
+              {!saving && <span>→</span>}
             </button>
           </div>
         )}
 
-        {/* ── STEP 4: Tags + Finish ──────────────────────────────────────── */}
-        {step === 4 && (
+        {/* ── STEP 3: Live ───────────────────────────────────────────────── */}
+        {step === 3 && (
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Step 4 of {TOTAL_STEPS}
-            </p>
-            <h1 style={{
-              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
-              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
-            }}>
-              Describe what<br />you offer
-            </h1>
-            <p style={{ fontSize: 14, color: '#858585', marginBottom: 20, lineHeight: 1.5 }}>
-              Add short tags customers will see on your page. Type one and press Enter.
-            </p>
-
-            {/* Tag input */}
-            <div style={{
-              display: 'flex', alignItems: 'center',
-              border: '1.5px solid #EBEBEA', borderRadius: 16,
-              background: '#fff', padding: '4px 8px 4px 16px',
-              marginBottom: 12, flexWrap: 'wrap', gap: 6,
-            }}>
-              {selectedTags.map(tag => (
-                <span key={tag} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  background: '#0A0A0A', color: '#FFFFFF',
-                  borderRadius: 99, padding: '5px 10px',
-                  fontSize: 12, fontWeight: 600,
-                  fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-                }}>
-                  {tag}
-                  <button
-                    onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
-                    style={{ background: 'none', border: 'none', color: 'rgba(247,247,245,0.6)', cursor: 'pointer', padding: 0, fontSize: 14, lineHeight: 1, fontFamily: 'inherit' }}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              <input
-                type="text"
-                placeholder={selectedTags.length === 0 ? 'e.g. Outdoor seating' : 'Add another...'}
-                value={tagInput}
-                onChange={e => setTagInput(e.target.value)}
-                onKeyDown={e => {
-                  if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
-                    e.preventDefault();
-                    const val = tagInput.trim().replace(/,$/, '');
-                    if (val && !selectedTags.includes(val) && selectedTags.length < 8) {
-                      setSelectedTags(prev => [...prev, val]);
-                    }
-                    setTagInput('');
-                  }
-                  if (e.key === 'Backspace' && !tagInput && selectedTags.length > 0) {
-                    setSelectedTags(prev => prev.slice(0, -1));
-                  }
-                }}
-                style={{
-                  flex: 1, minWidth: 120, border: 'none', outline: 'none',
-                  fontSize: 14, color: '#0A0A0A', padding: '8px 4px',
-                  background: 'transparent', fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-                }}
-              />
-            </div>
-
-            {/* Suggestions */}
-            {selectedCategory && selectedCategory.tags.length > 0 && (
-              <div>
-                <p style={{ fontSize: 11, color: '#ABABAB', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-                  Examples
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 32 }}>
-                  {selectedCategory.tags.filter(t => !selectedTags.includes(t)).map(tag => (
-                    <button
-                      key={tag}
-                      onClick={() => {
-                        if (!selectedTags.includes(tag) && selectedTags.length < 8) {
-                          setSelectedTags(prev => [...prev, tag]);
-                        }
-                      }}
-                      style={{
-                        padding: '7px 13px', borderRadius: 99,
-                        border: '1.5px solid #EBEBEA', background: '#fff',
-                        color: '#555', fontSize: 12, fontWeight: 500,
-                        cursor: 'pointer', fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-                      }}
-                    >
-                      + {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {error && <p style={{ marginBottom: 16, fontSize: 13, color: '#EF4444' }}>{error}</p>}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: selectedCategory && selectedCategory.tags.length > 0 ? 0 : 32 }}>
-              <button
-                onClick={() => void finish()}
-                disabled={saving}
-                style={{ ...primaryBtn, opacity: saving ? 0.5 : 1 }}
-              >
-                <span>{saving ? 'Setting up your page…' : 'Open my builder'}</span>
-                {!saving && <span>→</span>}
-              </button>
-              {selectedTags.length === 0 && (
-                <button
-                  onClick={() => void finish()}
-                  disabled={saving}
-                  style={{
-                    background: 'none', border: 'none', fontSize: 13,
-                    color: '#858585', cursor: 'pointer', padding: '8px 0',
-                    fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-                  }}
-                >
-                  Skip for now
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {step === 5 && (
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#858585', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
-              Step 5 of {TOTAL_STEPS}
-            </p>
-            <h1 style={{
-              fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-              fontSize: 38, fontWeight: 800, color: '#0A0A0A',
-              letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: 8,
-            }}>
-              Your page<br />is live
-            </h1>
-            <p style={{ fontSize: 14, color: '#858585', marginBottom: 22, lineHeight: 1.5 }}>
+            <p style={eyebrow}>Step 3 of {TOTAL_STEPS}</p>
+            <h1 style={heading}>Your page<br />is live</h1>
+            <p style={{ fontSize: 14.5, color: '#858585', marginBottom: 22, lineHeight: 1.5 }}>
               {slug
                 ? <>It&apos;s at <strong style={{ color: '#0A0A0A' }}>{SITE_DOMAIN}/{slug}</strong>. Put OpenStatus on your home screen and it opens in one tap — hours, photos, offers, all of it.</>
                 : <>Put OpenStatus on your home screen and it opens in one tap — hours, photos, offers, all of it.</>}
@@ -1023,8 +859,8 @@ export default function SetupPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    textAlign: 'center', fontSize: 13, color: '#858585',
-                    padding: '8px 0', textDecoration: 'none',
+                    textAlign: 'center', fontSize: 13.5, color: '#858585',
+                    padding: '10px 0', textDecoration: 'none',
                     fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                   }}
                 >
@@ -1035,16 +871,16 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* Back button — not on the last step, where setup has already run and
-            going back would offer to run it a second time. */}
-        {step > 1 && step < 5 && (
+        {/* Back only from step 2. Step 3 has already built the page, and going
+            back from there would offer to build it a second time. */}
+        {step === 2 && (
           <button
-            onClick={() => setStep(s => s - 1)}
+            onClick={() => setStep(1)}
             style={{
-              marginTop: 32,
+              marginTop: 28,
               background: 'none', border: 'none',
-              fontSize: 13, color: '#ABABAB',
-              cursor: 'pointer', padding: '8px 0',
+              fontSize: 13.5, color: '#ABABAB',
+              cursor: 'pointer', padding: '10px 0',
               display: 'flex', alignItems: 'center', gap: 6,
               fontFamily: 'var(--font-poppins), system-ui, sans-serif',
             }}
