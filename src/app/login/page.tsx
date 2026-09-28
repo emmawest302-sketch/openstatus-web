@@ -112,7 +112,7 @@ export default function LoginPage() {
   return (
     <main
       className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-12"
-      style={{ background: '#F7F7F5', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}
+      style={{ background: '#FFFFFF', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}
     >
       {/* Mark / wordmark */}
       <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40, textDecoration: 'none' }}>

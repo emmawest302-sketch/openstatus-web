@@ -92,9 +92,9 @@ export const VIBES: Vibe[] = [
     key: 'clean',
     label: 'Clean',
     blurb: PRESET_BLURBS.clean,
-    swatch: { bg: '#F7F7F5', ink: '#0A0A0A' },
+    swatch: { bg: '#FFFFFF', ink: '#0A0A0A' },
     apply: {
-      bg: '#F7F7F5', font: 'Inter, system-ui, sans-serif', nameColor: '#0A0A0A',
+      bg: '#FFFFFF', font: 'Inter, system-ui, sans-serif', nameColor: '#0A0A0A',
       themeColor: '#111111', imageIntensity: 82, imageBlur: 'none', imageOverlay: 'none',
     },
   },

@@ -238,7 +238,7 @@ export function normalizeOpenStatusPageConfig(raw: unknown): OpenStatusPageConfi
     : ordered;
   return {
     blocks:       defaultBlocks,
-    bg:           typeof r.bg==='string'?r.bg:(isEmpty?'#FFAB40':'#f8f5f0'),
+    bg:           typeof r.bg==='string'?r.bg:'#FFFFFF',
     bgImage:      typeof r.bgImage==='string'?r.bgImage:undefined,
     bgImagePosition: typeof r.bgImagePosition==='string'?r.bgImagePosition:undefined,
     socials:      (r.socials&&typeof r.socials==='object')?r.socials as Record<string,string>:{},
@@ -1755,7 +1755,7 @@ const TUT_STEPS = [
   { id: 'tut-hours',  title: 'Start with your hours',         body: 'Click the Hours block to set your open/closed times. This powers your live status that customers see instantly.', align: 'right' as const },
   { id: 'tut-preview',title: 'This is your live page',        body: "The phone preview shows exactly what customers see. Click any block on the preview to jump straight into editing it.", align: 'left' as const },
   { id: 'tut-add',    title: 'Add more features',             body: 'Hit "+ Add block" to turn on menus, online ordering, reservations, socials, and your website link.', align: 'right' as const },
-  { id: 'tut-save',   title: 'You\'re already live! 🎉',      body: 'Your page is live at your link the moment you save. Hit Save any time to publish your latest changes.', align: 'center' as const },
+  { id: null,         title: 'Your changes go live',           body: 'Page edits save automatically. The top bar shows when they are live, and warns you if a save fails.', align: 'center' as const },
 ];
 
 function TutorialOverlay({ onDone }: { onDone: () => void }) {
@@ -2089,7 +2089,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   business:Business|null; initialConfig:OpenStatusPageConfig; isFirstRun?:boolean; onboardedAt?:string|null; googleConnected?:boolean;
 }) {
   const [config,setConfig]=useState<OpenStatusPageConfig>(initialConfig??normalizeOpenStatusPageConfig(undefined));
-  const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt);
+  const lastSavedConfigRef=useRef(config);
+  const [lastSavedConfig,setLastSavedConfig]=useState(config);
+  const latestConfigRef=useRef(config);
+  useEffect(()=>{latestConfigRef.current=config;},[config]);
+  // Setup already creates a public slug and hours page. Older accounts may
+  // have no onboarded_at stamp, but their page is still live at that slug.
+  const [hasPublished,setHasPublished]=useState<boolean>(!!onboardedAt || !!business?.slug);
   const [sidebarTab,setSidebarTab]=useState<SidebarTab>('business');
   const [hoursSubTab,setHoursSubTab]=useState<HoursSubTab>('status');
   // Status is now one decision with an escape hatch; the rest folds away.
@@ -2119,7 +2125,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   // The header Save writes the PAGE config. Business and Settings have their own
   // save buttons for their own fields, so showing this one there invited people
   // to press it and believe their phone number had been saved.
-  const showSaveButton = sidebarTab==='design' || sidebarTab==='style' || sidebarTab==='blocks';
+  const isPageEditing = sidebarTab==='design' || sidebarTab==='style' || sidebarTab==='blocks';
+  const configDirty = config !== lastSavedConfig;
   const [previewMode,setPreviewMode]=useState<'mobile'|'desktop'>('mobile');
   const [previewKey,setPreviewKey]=useState(0);
   const [quickAction,setQuickAction]=useState<string|null>(null);
@@ -2138,6 +2145,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const [saving,setSaving]=useState(false);
   const [saved,setSaved]=useState(false);
   const [saveError,setSaveError]=useState('');
+  const showSaveButton = (isPageEditing && !hasPublished) || !!saveError;
   // 'pending' exists because /api/google/hours answers a Google 429 with HTTP 202
   // ("saved here, Google hasn't accepted it"). fetch treats 202 as ok, so the old
   // `if (r.ok)` rendered "✓ Synced to Google" for a sync that had not happened.
@@ -2397,6 +2405,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   },[]);
 
   const [previewOpen,setPreviewOpen]=useState(true);
+  const [previewExpanded,setPreviewExpanded]=useState(false);
+  const [showStyleAdvanced,setShowStyleAdvanced]=useState(false);
   const blocksListRef=useRef<HTMLDivElement>(null);
   /**
    * Open a block's editor, having first moved the block out from under it.
@@ -2427,6 +2437,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     }catch{/* blocked; the link is on screen to read */}
   },[]);
   const [bizInfoOpen,setBizInfoOpen]=useState(false);
+  const bizInfoRef=useRef<HTMLButtonElement>(null);
+  useEffect(()=>{
+    if (isMobile && sidebarTab==='settings' && bizInfoOpen) {
+      requestAnimationFrame(()=>bizInfoRef.current?.scrollIntoView({block:'start',behavior:'smooth'}));
+    }
+  },[isMobile,sidebarTab,bizInfoOpen]);
   const [bizEdit,setBizEdit]=useState({name:business?.name??'',category:normalizeCategory(business?.category)??'',phone:business?.phone??'',website:business?.website??'',address:business?.address??''});
   const [slugEdit,setSlugEdit]=useState(business?.slug??'');
   const [slugSaving,setSlugSaving]=useState(false);
@@ -2517,6 +2533,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     return pin(a.id) - pin(b.id);
   });
   const activeBlocks = orderedBlocks.filter(b=>b.on);
+  const hasCustomerAction = publishedBlocks(config.blocks).some(b =>
+    ['book','order','shop','menu'].includes(b.id) || b.id.startsWith('custom-')
+  );
   const openBlock = allBlocks.find(b=>b.id===openId)??null;
   // What the owner has set for today, if anything. Passed into every preview so
   // the Hours block shows what customers actually see — previously the preview
@@ -2650,47 +2669,52 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     }
   }
 
+  function syncHoursToGoogle(weeklyHours: WeeklyHours) {
+    if(!googleConnected)return;
+    setGoogleSyncStatus('syncing');
+    supabase.auth.getSession().then(async ({data:{session}})=>{
+      if(!session?.access_token){setGoogleSyncStatus({error:'Session expired'});return;}
+      try{
+        const r=await fetch('/api/google/hours',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify({weeklyHours}),
+        });
+        const body=await r.json().catch(()=>({}));
+        if(r.status===202){
+          setGoogleSyncStatus('pending');
+        } else if(r.ok){
+          setGoogleSyncStatus('ok');
+          setTimeout(()=>setGoogleSyncStatus(null),4000);
+        } else {
+          setGoogleSyncStatus({error:body?.error??`Google sync failed (${r.status})`});
+        }
+      }catch(e){setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});}
+    }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
+  }
+
   async function save() {
     setSaving(true);setSaveError('');
     const {error}=await savePageConfig(business?.id,config);
+    let hoursError: string | null = null;
     // Mirror hours to the table the public page actually reads
     if(business?.id&&config.weeklyHours&&!error){
       try{ await syncHoursToDb(business.id, config.weeklyHours); }
-      catch(e){ setSaveError(e instanceof Error?e.message:'Hours failed to publish'); }
+      catch(e){ hoursError = e instanceof Error?e.message:'Hours failed to publish'; }
     }
     // On first publish, stamp onboarded_at in the businesses table
-    if(!hasPublished&&business?.id&&!error){
+    if(!hasPublished&&business?.id&&!error&&!hoursError){
       await supabase.from('businesses').update({onboarded_at:new Date().toISOString()}).eq('id',business.id);
       setHasPublished(true);
     }
     setSaving(false);
     if(error){setSaveError(error.message);return;}
+    if(hoursError){setSaveError(hoursError);return;}
+    lastSavedConfigRef.current=config;
+    setLastSavedConfig(config);
     setSaved(true);setTimeout(()=>setSaved(false),2500);
     // Auto-sync hours to Google if connected
-    if(googleConnected && config.weeklyHours){
-      setGoogleSyncStatus('syncing');
-      supabase.auth.getSession().then(async ({data:{session}})=>{
-        if(!session?.access_token){setGoogleSyncStatus({error:'Session expired'});return;}
-        try{
-          const r=await fetch('/api/google/hours',{
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-            body:JSON.stringify({weeklyHours:config.weeklyHours}),
-          });
-          const body=await r.json().catch(()=>({}));
-          if(r.status===202){
-            setGoogleSyncStatus('pending');
-          } else if(r.ok){
-            setGoogleSyncStatus('ok');
-            setTimeout(()=>setGoogleSyncStatus(null),4000);
-          } else {
-            setGoogleSyncStatus({error:body?.error??`Google sync failed (${r.status})`});
-          }
-        }catch(e){
-          setGoogleSyncStatus({error:e instanceof Error?e.message:'Could not reach server'});
-        }
-      }).catch(e=>{setGoogleSyncStatus({error:e instanceof Error?e.message:'Session error'});});
-    }
+    if(config.weeklyHours)syncHoursToGoogle(config.weeklyHours);
   }
 
   async function googleStatusRequest(payload: Record<string, unknown>, verb: 'GET'|'POST'='POST') {
@@ -2790,19 +2814,25 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
    */
   const mobilePreview = (
     <div className="mx-4 mt-3">
-      <button onClick={()=>setPreviewOpen(v=>!v)}
-        className="flex items-center gap-1.5 mb-1.5 px-0.5 py-1"
-        style={{...BUILDER_TYPE.helper, fontWeight:500, color:BUILDER_UI.muted}}>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
-          style={{transform:previewOpen?'rotate(90deg)':'none',transition:'transform .18s'}}>
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
-        Preview
-      </button>
+      <div className="flex items-center justify-between mb-1.5">
+        <button onClick={()=>setPreviewOpen(v=>!v)}
+          className="flex items-center gap-1.5 px-0.5 py-1"
+          style={{...BUILDER_TYPE.helper, fontWeight:600, color:BUILDER_UI.ink}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+            style={{transform:previewOpen?'rotate(90deg)':'none',transition:'transform .18s'}}>
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          Your page preview
+        </button>
+        <button onClick={()=>setPreviewExpanded(true)}
+          className="px-2 py-1" style={{...BUILDER_TYPE.helper, fontWeight:600, color:BUILDER_UI.ink}}>
+          See full page ↗
+        </button>
+      </div>
       {previewOpen&&(
         <div className="rounded-[16px] overflow-hidden"
           style={{
-            height:'min(46vh, 400px)',
+            height:'min(28vh, 250px)',
             border:`1px solid ${BUILDER_UI.border}`,
             background:BUILDER_UI.surface,
             WebkitOverflowScrolling:'touch',
@@ -3259,14 +3289,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   // Auto-save after publish: debounce config changes and silently save
   const autosaveTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const autosaveQueue=useRef<Promise<void>>(Promise.resolve());
   const isInitialMount=useRef(true);
   useEffect(()=>{
     if(isInitialMount.current){isInitialMount.current=false;return;}
     if(!hasPublished)return; // only autosave once published
     if(autosaveTimer.current)clearTimeout(autosaveTimer.current);
+    if(config===lastSavedConfigRef.current&&!saving)return;
     autosaveTimer.current=setTimeout(()=>{
       setSaving(true);setSaveError('');
-      savePageConfig(business?.id,config).then(async ({error})=>{
+      // A slow earlier request must not overwrite a more recent choice.
+      autosaveQueue.current=autosaveQueue.current.catch(()=>{}).then(async ()=>{
+        if(config===lastSavedConfigRef.current){
+          if(config===latestConfigRef.current){setLastSavedConfig(config);setSaving(false);setSaveError('');}
+          return;
+        }
+        const {error}=await savePageConfig(business?.id,config);
         // Hours are not just another config field. The public page reads them
         // from business_hours, not from the config blob — so if this mirror
         // fails, the saved config says one thing and every customer sees
@@ -3278,10 +3316,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           try{ await syncHoursToDb(business.id, config.weeklyHours); }
           catch(e){ hoursError = e instanceof Error ? e.message : 'Hours could not be published'; }
         }
+        if(!error&&!hoursError){
+          const hoursChanged=config.weeklyHours!==lastSavedConfigRef.current.weeklyHours;
+          lastSavedConfigRef.current=config;
+          setLastSavedConfig(config);
+          if(hoursChanged&&config.weeklyHours)syncHoursToGoogle(config.weeklyHours);
+        }
+        // Only the latest edit may claim that the current view is live.
+        if(config!==latestConfigRef.current)return;
         setSaving(false);
         if(error){ setSaveError(error.message); return; }
         if(hoursError){ setSaveError(`Your hours didn’t publish — customers still see the old ones. ${hoursError}`); return; }
         setSaved(true);setTimeout(()=>setSaved(false),2000);
+      }).catch(e=>{
+        if(config!==latestConfigRef.current)return;
+        setSaving(false);
+        setSaveError(e instanceof Error?e.message:'Could not save your page');
       });
     },1500);
     return ()=>{if(autosaveTimer.current)clearTimeout(autosaveTimer.current);};
@@ -3292,7 +3342,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   for(let h=7;h<22;h++) for(const m of [0,30]) closeEarlyTimes.push(`${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`);
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-[#F0F2F5] text-[#0A0A0A]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
+    <div className="flex h-[100dvh] overflow-hidden bg-white text-[#0A0A0A]" style={{fontFamily:'var(--font-poppins), system-ui, sans-serif'}}>
 
       {/* ── Undo block removal ── */}
       {undoBlock&&(
@@ -3404,7 +3454,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       </aside>
 
       {/* ── MAIN AREA ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F4F5F6]">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
 
         {/* ── TOP NAV BAR ── */}
         <header className="relative h-14 items-center justify-between px-4 md:px-6 flex-shrink-0 bg-white/90 backdrop-blur-sm border-b border-[#E9E9E7]" style={{display:isMobile?"none":"flex"}}>
@@ -3435,8 +3485,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               {showSaveButton&&(
               <button onClick={save} disabled={saving} data-tut="tut-save"
                 className={`px-4 py-2 rounded-xl text-[12.5px] md:text-[13px] md:px-5 font-semibold transition-colors flex-shrink-0 ${saved?'bg-[#F0FDF4] text-[#15803D]':saving?'bg-[#F7F7F6] text-[#9A9A97]':saveError?'bg-red-50 text-red-600':'bg-[#0A0A0A] text-white hover:bg-[#242424]'}`}>
-                {saving?'Saving…':saved?'✓ Saved':saveError?'Error':hasPublished?'Save':'Publish'}
+                {saving?'Saving…':saveError?'Retry save':'Publish'}
               </button>
+              )}
+              {isPageEditing&&!showSaveButton&&(
+                <span style={{...BUILDER_TYPE.helper,color:saving||configDirty?BUILDER_UI.muted:BUILDER_UI.success}}>
+                  {saving?'Saving…':configDirty?'Saving soon…':'✓ Live'}
+                </span>
               )}
               {sidebarTab==='hours'&&(
                 <span className="text-[11px] text-[#9A9A97] hidden sm:block">Changes here go live right away</span>
@@ -4664,9 +4719,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 style={{
                   minWidth: 280,
                   overflow: 'hidden',
-                  backgroundImage:'linear-gradient(rgba(10,10,10,0.030) 1px,transparent 1px),linear-gradient(90deg,rgba(10,10,10,0.030) 1px,transparent 1px)',
-                  backgroundSize:'24px 24px',
-                  backgroundColor:'#F1F2F3',
+                  backgroundColor:'#F6F6F6',
                 }}
               >
                 {/* Centered preview */}
@@ -4753,7 +4806,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <span className="truncate" style={{...BUILDER_TYPE.screenTitle, color:BUILDER_UI.ink}}>
           {mobileTab==='home'?'Home'
             :mobileTab==='status'?'Status'
-            :mobileTab==='blocks'?'Blocks'
+            :mobileTab==='blocks'?'Your page'
             :mobileTab==='style'?'Style'
             :'More'}
         </span>
@@ -4772,8 +4825,12 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 background: saved?BUILDER_UI.successSoft : saving?BUILDER_UI.surfaceSoft : BUILDER_UI.ink,
                 color:      saved?BUILDER_UI.success     : saving?BUILDER_UI.quiet       : '#FFFFFF',
               }}>
-              {saving?'Saving…':saved?'✓ Saved':hasPublished?'Save':'Publish'}
+              {saving?'Saving…':saveError?'Retry':'Publish'}
             </button>
+          ):isPageEditing?(
+            <span role="status" style={{...BUILDER_TYPE.helper,fontWeight:600,color:saving||configDirty?BUILDER_UI.muted:BUILDER_UI.success}}>
+              {saving?'Saving…':configDirty?'Saving soon…':'✓ Live'}
+            </span>
           ):mobileTab==='status'?(
             <span style={{...BUILDER_TYPE.helper, color:BUILDER_UI.quiet}}>Goes live right away</span>
           ):null}
@@ -4838,6 +4895,21 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
             {googleMismatchCard}
 
+            {!hasCustomerAction&&(
+              <div className="mt-2.5 p-4 rounded-[16px]"
+                style={{background:BUILDER_UI.ink,color:'#FFFFFF'}}>
+                <p style={{...BUILDER_TYPE.cardTitle,color:'#FFFFFF'}}>Finish your page</p>
+                <p className="mt-1" style={{...BUILDER_TYPE.body,color:'rgba(255,255,255,0.76)'}}>
+                  Add one thing customers can do next, like book, order or view your menu.
+                </p>
+                <button onClick={()=>{setSidebarTab('blocks');setMSheet('add');}}
+                  className="mt-3 px-4 py-2.5 rounded-xl"
+                  style={{...BUILDER_TYPE.button,background:'#FFFFFF',color:BUILDER_UI.ink}}>
+                  Add a customer link
+                </button>
+              </div>
+            )}
+
             {/* ── Google ──────────────────────────────────────────────────
                  Connected is the state it is in almost every day of its life,
                  and in that state this row was a disabled button reporting a
@@ -4859,10 +4931,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {localBusiness?.slug&&(
               <div className="mt-2.5 px-3.5 py-3 rounded-[14px]"
                 style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+                <p className="mb-1" style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>Your public page</p>
                 <p className="truncate" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>
                   {SITE_DOMAIN}/{localBusiness.slug}
                 </p>
-                <div className="flex items-center gap-2 mt-2.5">
+                <button onClick={()=>setSidebarTab('blocks')}
+                  className="w-full mt-3 py-2.5 rounded-xl"
+                  style={{...BUILDER_TYPE.button,background:BUILDER_UI.ink,color:'#FFFFFF'}}>
+                  Edit your page
+                </button>
+                <div className="flex items-center gap-2 mt-2">
                   <button onClick={()=>void copyLiveLink()}
                     className="flex-1 py-2 rounded-lg active:scale-[0.98] transition-transform"
                     style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink}}>
@@ -5166,9 +5244,17 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <div className="-mx-0">{mobilePreview}</div>
             <div className="px-4">
             <p className="pt-3 pb-2.5" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
-              What sits on your page, in order. Website and directions are buttons under your
-              name, not rows — they live in Business info.
+              Tap a section to edit it. Drag its handle to change the order.
             </p>
+            <button onClick={()=>{setSidebarTab('settings');setBizInfoOpen(true);}}
+              className="w-full flex items-center justify-between px-3.5 py-3.5 mb-3 rounded-[14px] text-left"
+              style={{background:BUILDER_UI.surface,border:`1px solid ${BUILDER_UI.border}`}}>
+              <span>
+                <strong className="block" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>Page details</strong>
+                <span style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>Name, website, directions, tags and socials</span>
+              </span>
+              <LucideChevronRight size={16} color={BUILDER_UI.muted}/>
+            </button>
 
             <div className="space-y-1.5">
               {orderedBlocks.map(b=>(
@@ -5213,13 +5299,14 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {mobilePreview}
 
             <div className="px-4 pt-4 pb-8 space-y-1.5">
+              <div className="pb-2">
+                <p style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Make it yours</p>
+                <p className="mt-1" style={{...BUILDER_TYPE.body,color:BUILDER_UI.muted}}>Start with a look, then change only what you want.</p>
+              </div>
               {([
-                {key:'vibe'       as const, label:'Presets',    value: activeVibe(config)?.label ?? 'Custom'},
-                {key:'cover'      as const, label:'Cover',      value: config.bgImage ? 'Photo set' : 'None'},
-                {key:'background' as const, label:'Background', value: backgroundLabel(config.bg)},
-                {key:'accent'     as const, label:'Accent',     value: (config.themeColor ?? '#0A0A0A').toUpperCase(), swatch: config.themeColor ?? '#0A0A0A'},
-                {key:'buttons'    as const, label:'Buttons',    value: (config.buttonStyle ?? 'filled').replace(/^./,c=>c.toUpperCase())},
-                {key:'font'       as const, label:'Typography', value: `${FONT_OPTIONS.find(f=>f.family===config.font)?.label ?? 'Inter'} \u00b7 ${(config.fontScale ?? 'standard').replace(/^./,c=>c.toUpperCase())}`},
+                {key:'vibe'       as const, label:'Choose a look', value: activeVibe(config)?.label ?? 'Custom'},
+                {key:'cover'      as const, label:'Photos & logo', value: config.bgImage ? 'Cover set' : 'Add a cover'},
+                {key:'accent'     as const, label:'Brand color',   value: (config.themeColor ?? '#0A0A0A').toUpperCase(), swatch: config.themeColor ?? '#0A0A0A'},
               ]).map(({key,label,value,swatch})=>(
                 <button key={key} onClick={()=>setMSheet(key)}
                   className="w-full flex items-center gap-3 px-3.5 py-3.5 rounded-[14px] text-left active:scale-[0.99] transition-transform"
@@ -5231,6 +5318,25 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <span className="flex-1 min-w-0" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>{label}</span>
                   <span className="truncate" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted, maxWidth:150, textAlign:'right'}}>{value}</span>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              ))}
+              <button onClick={()=>setShowStyleAdvanced(v=>!v)} aria-expanded={showStyleAdvanced}
+                className="w-full flex items-center justify-between px-3.5 py-3.5 mt-2 rounded-[14px] text-left"
+                style={{background:BUILDER_UI.surfaceSoft,color:BUILDER_UI.ink}}>
+                <span style={BUILDER_TYPE.cardTitle}>More design options</span>
+                <span style={BUILDER_TYPE.helper}>{showStyleAdvanced?'Hide':'Show'}</span>
+              </button>
+              {showStyleAdvanced&&([
+                {key:'background' as const, label:'Page background', value: backgroundLabel(config.bg)},
+                {key:'font'       as const, label:'Font & size', value: `${FONT_OPTIONS.find(f=>f.family===config.font)?.label ?? 'Inter'} \u00b7 ${(config.fontScale ?? 'standard').replace(/^./,c=>c.toUpperCase())}`},
+                {key:'buttons'    as const, label:'Button appearance', value: (config.buttonStyle ?? 'filled').replace(/^./,c=>c.toUpperCase())},
+              ]).map(({key,label,value})=>(
+                <button key={key} onClick={()=>setMSheet(key)}
+                  className="w-full flex items-center gap-3 px-3.5 py-3.5 rounded-[14px] text-left"
+                  style={{background:BUILDER_UI.surface,border:`1px solid ${BUILDER_UI.border}`}}>
+                  <span className="flex-1" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>{label}</span>
+                  <span className="truncate" style={{...BUILDER_TYPE.body,color:BUILDER_UI.muted,maxWidth:135}}>{value}</span>
+                  <LucideChevronRight size={16} color={BUILDER_UI.muted}/>
                 </button>
               ))}
             </div>
@@ -5376,7 +5482,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               {/* This used to be a chevron that dropped you on the Business
                   dashboard and left you hunting for the fields. The fields are
                   here now, which is what the row always said it would do. */}
-              <button onClick={()=>setBizInfoOpen(v=>!v)} className="flex items-center gap-3 p-3.5 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7] w-full text-left">
+              <button ref={bizInfoRef} onClick={()=>setBizInfoOpen(v=>!v)} className="flex items-center gap-3 p-3.5 bg-[#F7F7F6] rounded-2xl border border-[#E9E9E7] w-full text-left">
                 <div className="w-9 h-9 rounded-xl bg-[#E9E9E7] flex items-center justify-center flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 </div>
@@ -5508,6 +5614,24 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
 
       </div>{/* end of the full-page container */}
+
+      {isMobile&&previewExpanded&&(
+        <div role="dialog" aria-modal="true" aria-label="Full page preview"
+          className="fixed inset-0 z-[60] bg-white flex flex-col" style={{fontFamily:BUILDER_FONT}}>
+          <div className="flex items-center justify-between px-4 border-b" style={{height:56,borderColor:BUILDER_UI.border}}>
+            <span style={{...BUILDER_TYPE.screenTitle,color:BUILDER_UI.ink}}>Your page</span>
+            <button onClick={()=>setPreviewExpanded(false)} className="px-3 py-2 rounded-xl"
+              style={{...BUILDER_TYPE.button,background:BUILDER_UI.surfaceSoft,color:BUILDER_UI.ink}}>
+              Done
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto" style={{background:config.bg}}>
+            <div style={{maxWidth:560,margin:'0 auto'}}>
+              <LivePhonePreview business={localBusiness} config={config} timeZone={bizTimeZone} override={todayOverride}/>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/*
         The edit canvas, the floating edit toolbar and the coach pill all used
@@ -5724,7 +5848,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       <MobileSheet open={isMobile&&mSheet==='buttons'} title="Buttons" onClose={()=>setMSheet(null)} maxVh={44} dim={false}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
-          How Website, Directions and Share are drawn. One choice for all three.
+          Changes how Website, Directions and Share look. To change their links, open Your page → Page details.
         </p>
         <ButtonStylePicker
           value={config.buttonStyle ?? 'filled'}
@@ -5797,7 +5921,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
            svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>},
           {key:'hours'    as SidebarTab, tab:'status' as MobileTab, label:'Status',
            svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>},
-          {key:'blocks'   as SidebarTab, tab:'blocks' as MobileTab, label:'Blocks',
+          {key:'blocks'   as SidebarTab, tab:'blocks' as MobileTab, label:'Page',
            svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.6"/><rect x="3" y="12.5" width="18" height="5" rx="1.6"/><line x1="7" y1="21" x2="17" y2="21"/></svg>},
           {key:'style'    as SidebarTab, tab:'style'  as MobileTab, label:'Style',
            svg:<svg width={19} height={19} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".6" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".6" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".6" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".6" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>},
@@ -5936,7 +6060,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {/* Tutorial overlay */}
       {showTutorial&&!showPicker&&(
-        <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{}}}/>
+        <div className="hidden md:block">
+          <TutorialOverlay onDone={()=>{setShowTutorial(false);try{localStorage.setItem('os_tutorial_done','1')}catch{}}}/>
+        </div>
       )}
 
       {/* Block picker overlay */}

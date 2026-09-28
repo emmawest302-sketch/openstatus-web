@@ -19,16 +19,16 @@
  */
 export const BUILDER_UI = {
   /** The page behind everything. */
-  app: '#F5F5F3',
+  app: '#FFFFFF',
   /** A card, a sheet, a field. */
   surface: '#FFFFFF',
   /** A card that sits ON a surface, or a resting control. */
-  surfaceSoft: '#F1F1EF',
+  surfaceSoft: '#F4F4F4',
   /** That control, held down. */
-  surfacePressed: '#EAEAE7',
+  surfacePressed: '#ECECEC',
 
-  border: '#E7E7E3',
-  borderStrong: '#D8D8D3',
+  border: '#E8E8E8',
+  borderStrong: '#D5D5D5',
 
   /** Headings, primary buttons, the active nav item. */
   ink: '#0A0A0A',
@@ -77,11 +77,11 @@ export const BUILDER_TYPE = {
   /** A group of rows. */
   sectionTitle: { fontSize: 14,   fontWeight: 600, letterSpacing: '-0.01em' },
   /** The name of one row or card. */
-  cardTitle:    { fontSize: 13,   fontWeight: 600, letterSpacing: '-0.005em' },
-  body:         { fontSize: 12,   fontWeight: 400 },
-  helper:       { fontSize: 11,   fontWeight: 400 },
-  button:       { fontSize: 12.5, fontWeight: 600, letterSpacing: '-0.005em' },
-  navLabel:     { fontSize: 10,   fontWeight: 500 },
+  cardTitle:    { fontSize: 14,   fontWeight: 600, letterSpacing: '-0.005em' },
+  body:         { fontSize: 13,   fontWeight: 400 },
+  helper:       { fontSize: 12,   fontWeight: 400 },
+  button:       { fontSize: 13,   fontWeight: 600, letterSpacing: '-0.005em' },
+  navLabel:     { fontSize: 11,   fontWeight: 500 },
 } as const;
 
 /** Corner radii, so a sheet and a card agree about what round means. */

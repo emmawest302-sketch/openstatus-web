@@ -41,7 +41,7 @@ function dbHoursToWeekly(rows: DbHoursRow[]): Record<WeeklyKey, { open:string; c
 }
 
 const LoadingScreen = () => (
-  <main className="grid min-h-screen place-items-center" style={{ background: '#F7F7F5', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}>
+  <main className="grid min-h-screen place-items-center" style={{ background: '#FFFFFF', fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}>
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
       <OpenStatusMark size={28}/>
       <p style={{ fontSize: 13, color: '#858585' }}>Loading your builder…</p>
