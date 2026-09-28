@@ -35,6 +35,16 @@ describe('externalUrl', () => {
     expect(externalUrl('?x=1')).toBe('');
   });
 
+  it('refuses malformed hosts even when they have an https scheme', () => {
+    for (const value of ['.com', 'https://.com', 'https://foo..com', 'https://', 'example', 'https://example']) {
+      expect(externalUrl(value)).toBe('');
+    }
+  });
+
+  it('refuses credentials in a link that could disguise its destination', () => {
+    expect(externalUrl('https://shop.com@elsewhere.com')).toBe('');
+  });
+
   it('is empty for empty input', () => {
     expect(externalUrl()).toBe('');
     expect(externalUrl(null)).toBe('');

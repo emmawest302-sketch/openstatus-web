@@ -15,6 +15,9 @@
  * and rendered by the page itself.
  */
 
+import { externalUrl } from './url';
+import { menuDestination } from './menu';
+
 /** The order a new page starts in. Owners reorder from here. */
 export const ROW_ORDER = [
   'hours',
@@ -84,8 +87,15 @@ export function isCustomRow(id: string): boolean {
  */
 export function blockHasDestination(b: RowSource): boolean {
   if (SELF_CONTAINED_IDS.has(b.id)) return true;
-  return [b.url, b.menuFile, b.googleUrl, b.appleMapsUrl, b.yelpUrl, b.tripAdvisorUrl]
-    .some((v) => !!v && v.trim().length > 0);
+  if (b.id === 'menu') return !!menuDestination(b);
+  return !!blockLinkDestination(b);
+}
+
+/** The same destination used by the published action row. */
+export function blockLinkDestination(b: RowSource): string {
+  return [b.url, b.googleUrl, b.yelpUrl, b.tripAdvisorUrl, b.appleMapsUrl]
+    .map(value => externalUrl(value))
+    .find(Boolean) ?? '';
 }
 
 /** Position in the starting order. Kept for the block picker's own sorting. */
