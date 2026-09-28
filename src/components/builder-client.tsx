@@ -756,11 +756,13 @@ function LiveDesktopPreview(props: React.ComponentProps<typeof LivePhonePreview>
 }
 
 /** Fit the actual customer page into the available canvas without clipping it. */
-function FittedPageCanvas({business,config,timeZone,override}: {
+function FittedPageCanvas({business,config,timeZone,override,inset=24,onSelectBlock}: {
   business:Business|null;
   config:OpenStatusPageConfig;
   timeZone?:string|null;
   override?:TodayOverride;
+  inset?:number;
+  onSelectBlock?:(id:string)=>void;
 }) {
   const viewportRef=useRef<HTMLDivElement>(null);
   const pageRef=useRef<HTMLDivElement>(null);
@@ -775,7 +777,8 @@ function FittedPageCanvas({business,config,timeZone,override}: {
       const height=viewport.clientHeight;
       const pageHeight=page.scrollHeight;
       if(!width||!height||!pageHeight)return;
-      const scale=Math.min(1,(width-24)/width,(height-24)/pageHeight);
+      const space=Math.min(inset,Math.floor(height*0.12));
+      const scale=Math.min(1,(width-space*2)/width,(height-space*2)/pageHeight);
       setSize(current=>current.width===width&&current.height===pageHeight&&current.scale===scale
         ?current:{width,height:pageHeight,scale});
     };
@@ -784,13 +787,19 @@ function FittedPageCanvas({business,config,timeZone,override}: {
     observer.observe(page);
     measure();
     return ()=>observer.disconnect();
-  },[]);
+  },[inset]);
 
   return (
     <div ref={viewportRef} className="flex-1 min-h-0 flex items-center justify-center overflow-hidden"
       style={{background:'#F3F4F5'}}>
       <div style={{position:'relative',width:size.width*size.scale,height:size.height*size.scale,flexShrink:0}}>
-        <div ref={pageRef} style={{position:'absolute',top:0,left:0,width:size.width,pointerEvents:'none',
+        <div ref={pageRef} onClickCapture={e=>{
+          if(!onSelectBlock)return;
+          e.preventDefault();
+          e.stopPropagation();
+          const id=(e.target as HTMLElement).closest('[data-block-id]')?.getAttribute('data-block-id');
+          if(id)onSelectBlock(id);
+        }} style={{position:'absolute',top:0,left:0,width:size.width,pointerEvents:onSelectBlock?'auto':'none',
           transform:`scale(${size.scale})`,transformOrigin:'top left',
           boxShadow:'0 8px 28px rgba(10,10,10,0.12)',outline:'1px solid rgba(10,10,10,0.07)'}}>
           <LivePhonePreview business={business} config={config} timeZone={timeZone} override={override}/>
@@ -1969,17 +1978,6 @@ function toMobileTab(tab: SidebarTab): MobileTab {
   return 'home';
 }
 
-/**
- * How much smaller the page renders while you are editing it.
- *
- * The customer's page is 100%. This is a plain visual zoom-out of the SAME
- * components — a transform, not a second set of sizes — so nothing can drift
- * between the two. It exists because a phone editing a phone-sized page shows
- * you one card at a time, and design decisions need more of the page than
- * that. 0.88 buys back about a row and a half without making anything
- * unreadable.
- */
-const MOBILE_EDITOR_SCALE = 0.88;
 type HoursSubTab = 'special'|'status';
 
 // ── Google Business hours sync card ────────────────────────────────────────────
@@ -2101,8 +2099,11 @@ function BuilderSparkline({data,color}:{data:number[];color:string}){
 const NAV_BAR_HEIGHT = 58;
 const NAV_BAR_GAP = 12;
 const NAV_SPACE = NAV_BAR_HEIGHT + NAV_BAR_GAP;
+const EDIT_DOCK_HEIGHT = 52;
+const EDIT_DOCK_BOTTOM = NAV_SPACE + 8;
+const EDIT_DOCK_SPACE = EDIT_DOCK_BOTTOM + EDIT_DOCK_HEIGHT + 8;
 
-function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, onSizeChange }: {
+function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, onSizeChange, bottomOffset = NAV_SPACE }: {
   open: boolean;
   title: string;
   onClose: () => void;
@@ -2111,6 +2112,7 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, o
   /** false = no scrim, so you can watch the page change behind the sheet. */
   dim?: boolean;
   onSizeChange?:(height:number)=>void;
+  bottomOffset?:number;
 }) {
   const [mounted, setMounted] = useState(false);
   const [shown, setShown] = useState(false);
@@ -2159,7 +2161,7 @@ function MobileSheet({ open, title, onClose, children, maxVh = 62, dim = true, o
         aria-label={title}
         style={{
           position: 'fixed', left: 0, right: 0, zIndex: 45,
-          bottom: `calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
+          bottom: `calc(${bottomOffset}px + env(safe-area-inset-bottom))`,
           background: '#fff',
           borderTopLeftRadius: BUILDER_RADIUS.sheet, borderTopRightRadius: BUILDER_RADIUS.sheet,
           boxShadow: '0 -12px 32px rgba(10,10,10,0.10)',
@@ -2269,10 +2271,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
   /** Which small sheet is up over the phone canvas. null = just the canvas. */
   // 'color' was the business-name colour and is now folded into 'accent'.
-  type MSheetKind = null | 'block' | 'add' | 'vibe' | 'cover' | 'background' | 'accent' | 'buttons' | 'font' | 'styleMore';
+  type MSheetKind = null | 'block' | 'add' | 'manageBlocks' | 'vibe' | 'cover' | 'background' | 'accent' | 'buttons' | 'font' | 'styleMore';
   const [mSheet,setMSheet] = useState<MSheetKind>(null);
-  const [styleSheetHeight,setStyleSheetHeight]=useState(0);
-  const updateStyleSheetHeight=useCallback((height:number)=>setStyleSheetHeight(height),[]);
+  const [editorSheetHeight,setEditorSheetHeight]=useState(0);
+  const updateEditorSheetHeight=useCallback((height:number)=>setEditorSheetHeight(height),[]);
 
   /** Widget currently picked up by a long press on the phone canvas. */
   const [mDragId,setMDragId] = useState<string|null>(null);
@@ -2500,24 +2502,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     return ()=>{ resetAnalyticsAudience(); };
   },[]);
 
-  const [previewOpen,setPreviewOpen]=useState(true);
   const [previewExpanded,setPreviewExpanded]=useState(false);
-  const blocksListRef=useRef<HTMLDivElement>(null);
-  /**
-   * Open a block's editor, having first moved the block out from under it.
-   *
-   * The sheet covers the bottom half of the screen. Tapping the last row and
-   * then editing a thing you can no longer see is the single most annoying
-   * way for a sheet to behave, so the row scrolls to the top of the list as
-   * the sheet comes up. The scroll and the sheet animate together, which
-   * reads as the row leading you to its editor rather than two things moving.
-   */
   const openBlockSheet=useCallback((id:string)=>{
     setOpenId(id);
     setMSheet('block');
-    const list=blocksListRef.current;
-    const row=list?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(id)}"]`);
-    if(list&&row) list.scrollTo({ top: list.scrollTop + row.getBoundingClientRect().top - list.getBoundingClientRect().top - 8, behavior:'smooth' });
   },[]);
 
   const [linkCopied,setLinkCopied]=useState(false);
@@ -2677,8 +2665,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const showEditPanel = !!openBlock && sidebarTab==='design';
   const isEditSubTab = ['design','style'].includes(sidebarTab);
   const mobileTab = toMobileTab(sidebarTab);
-  const styleToolOpen=mobileTab==='style'&&mSheet!==null&&
-    ['vibe','cover','accent','font','background','buttons','styleMore'].includes(mSheet);
+  const canvasMode=mobileTab==='style'||mobileTab==='blocks';
+  const editorToolOpen=canvasMode&&mSheet!==null&&
+    ['vibe','cover','accent','font','background','buttons','styleMore','add','block','manageBlocks'].includes(mSheet);
 
   function updateBlock(id:string,u:Partial<OpenStatusBlock>) {
     setConfig(c=>({...c,blocks:c.blocks.map(b=>b.id===id?{...b,...u}:b)}));
@@ -2897,57 +2886,6 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     setTimeout(()=>setFixMsg(''),8000);
   };
 
-  /**
-   * The page, on the screens where you are changing it.
-   *
-   * A 230px window showed the cover photo and the top of the name card — the
-   * two things least affected by anything on the list underneath it. This is
-   * tall enough to hold the hours block and a couple of rows, and it scrolls,
-   * so the whole page is reachable without leaving the editor.
-   *
-   * MOBILE_EDITOR_SCALE is a transform on the real public components. The
-   * width compensation (100 / scale) is what stops the scaled page leaving a
-   * gap down the right-hand side.
-   */
-  const mobilePreview = (
-    <div className="mx-4 mt-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <button onClick={()=>setPreviewOpen(v=>!v)}
-          className="flex items-center gap-1.5 px-0.5 py-1"
-          style={{...BUILDER_TYPE.helper, fontWeight:600, color:BUILDER_UI.ink}}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
-            style={{transform:previewOpen?'rotate(90deg)':'none',transition:'transform .18s'}}>
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-          Your page preview
-        </button>
-        <button onClick={()=>setPreviewExpanded(true)}
-          className="px-2 py-1" style={{...BUILDER_TYPE.helper, fontWeight:600, color:BUILDER_UI.ink}}>
-          See full page ↗
-        </button>
-      </div>
-      {previewOpen&&(
-        <div className="rounded-[16px] overflow-hidden"
-          style={{
-            height:'min(28vh, 250px)',
-            border:`1px solid ${BUILDER_UI.border}`,
-            background:BUILDER_UI.surface,
-            WebkitOverflowScrolling:'touch',
-            overflowY:'auto',
-            overscrollBehavior:'contain',
-          }}>
-          <div style={{
-            width:`${100/MOBILE_EDITOR_SCALE}%`,
-            transform:`scale(${MOBILE_EDITOR_SCALE})`,
-            transformOrigin:'top left',
-          }}>
-            <LivePhonePreview key={previewKey} business={localBusiness} config={config}
-              timeZone={bizTimeZone} override={todayOverride}/>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 
   /**
    * An element, not a component.
@@ -4900,16 +4838,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           borderBottom:`1px solid ${BUILDER_UI.border}`,
           fontFamily:BUILDER_FONT,
         }}>
-        {mobileTab==='style'?(
-          <button onClick={()=>{setMSheet(null);setSidebarTab('business');}}
-            className="flex items-center gap-2 py-2 text-[14px] font-semibold text-[#0A0A0A]">
-            <span aria-hidden className="text-[20px] leading-none">‹</span> Home
-          </button>
-        ):(
-          <span className="truncate" style={{...BUILDER_TYPE.screenTitle, color:BUILDER_UI.ink}}>
-            {mobileTab==='home'?'Home':mobileTab==='status'?'Status':mobileTab==='blocks'?'Your page':'More'}
-          </span>
-        )}
+        <span className="truncate" style={{...BUILDER_TYPE.screenTitle, color:BUILDER_UI.ink}}>
+          {mobileTab==='home'?'Home':mobileTab==='status'?'Status':mobileTab==='blocks'?'Your page':mobileTab==='style'?'Style':'More'}
+        </span>
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Page and Style have their own full-page preview action. */}
           {business?.slug&&mobileTab!=='blocks'&&mobileTab!=='style'&&(
@@ -4936,16 +4867,13 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </div>
 
-      {/* ══ FULL PAGES ══
-           All five destinations are real pages now. There is no canvas mode
-           and no floating edit toolbar: a phone had a bottom nav, a toolbar, a
-           coach pill and a sheet all competing for the same thumb, and the
-           page being edited was the smallest thing on screen. */}
+      {/* Main destinations remain full pages. Page and Style fit the customer
+          page above their tools and any open editor sheet. */}
       <div className="fixed left-0 right-0 z-20 flex flex-col"
         style={{
           display: isMobile ? 'flex' : 'none',
           top:'calc(52px + env(safe-area-inset-top))',
-          bottom:`calc(${NAV_SPACE + (styleToolOpen?styleSheetHeight:0)}px + env(safe-area-inset-bottom))`,
+          bottom:`calc(${(canvasMode?EDIT_DOCK_SPACE:NAV_SPACE) + (editorToolOpen?editorSheetHeight:0)}px + env(safe-area-inset-bottom))`,
           background: BUILDER_UI.app,
           fontFamily: BUILDER_FONT,
         }}>
@@ -5331,57 +5259,22 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           </div>
         )}
 
-{/* ══ BLOCKS ══
-             A management list, not a canvas. Every row says what it is, what
-             state it is in, and whether it is on — which is the whole job.
-             Dragging happens here now rather than on the preview: a list has
-             one axis, so a drag can only mean one thing, and the grip is the
-             only thing on the row with touch-action:none so the browser never
-             mistakes the gesture for a scroll. */}
+{/* ══ PAGE ══
+             The full customer page stays visible while blocks are added and
+             edited. The manage sheet keeps toggles and reorder handles. */}
         {mobileTab==='blocks'&&(
-          <div ref={blocksListRef} className="flex-1 overflow-y-auto pb-8" style={{scrollbarWidth:'none', touchAction: mDragId?'none':undefined}}>
-            <div className="-mx-0">{mobilePreview}</div>
-            <div className="px-4">
-            <p className="pt-3 pb-2.5" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
-              Tap a section to edit it. Drag its handle to change the order.
-            </p>
-            <button onClick={()=>{setSidebarTab('settings');setBizInfoOpen(true);}}
-              className="w-full flex items-center justify-between px-3.5 py-3.5 mb-3 rounded-[14px] text-left"
-              style={{background:BUILDER_UI.surface,border:`1px solid ${BUILDER_UI.border}`}}>
-              <span>
-                <strong className="block" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>Page details</strong>
-                <span style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>Name, website, directions, tags and socials</span>
-              </span>
-              <LucideChevronRight size={16} color={BUILDER_UI.muted}/>
-            </button>
-
-            <div className="space-y-1.5">
-              {orderedBlocks.map(b=>(
-                <BlocksRow
-                  key={b.id}
-                  block={b}
-                  on={b.on !== false}
-                  needsSetup={b.on !== false && !blockHasDestination(b)}
-                  summary={blockSummary(b)}
-                  movable={canDrag(b.id)}
-                  isDragging={mDragId === b.id}
-                  anyDragging={mDragId !== null}
-                  onTapAllowed={rowTapAllowed}
-                  onOpen={openBlockSheet}
-                  onToggle={(id,next)=>updateBlock(id,{on:next})}
-                  onDragBegin={beginRowDrag}
-                  onDragOver={dragRowOver}
-                  onDragEnd={endDrag}
-                />
-              ))}
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2 flex-shrink-0"
+              style={{background:'#F3F4F5'}}>
+              <span style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.muted}}>Tap a section to edit</span>
+              <button onClick={()=>setPreviewExpanded(true)}
+                className="px-2 py-1" style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.ink}}>
+                Actual size ↗
+              </button>
             </div>
-
-            <button onClick={()=>setMSheet('add')}
-              className="mt-3 w-full py-3 rounded-[14px] active:scale-[0.99] transition-transform"
-              style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink, border:`1px solid ${BUILDER_UI.border}`}}>
-              + Add a block
-            </button>
-            </div>
+            <FittedPageCanvas business={localBusiness} config={config}
+              timeZone={bizTimeZone} override={todayOverride} inset={26}
+              onSelectBlock={openBlockSheet}/>
           </div>
         )}
 
@@ -5399,7 +5292,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </button>
             </div>
             <FittedPageCanvas business={localBusiness} config={config}
-              timeZone={bizTimeZone} override={todayOverride}/>
+              timeZone={bizTimeZone} override={todayOverride} inset={44}/>
           </div>
         )}
 
@@ -5680,22 +5573,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           override={todayOverride} initialFit={mobileTab!=='style'} onClose={()=>setPreviewExpanded(false)}/>
       )}
 
-      {/*
-        The edit canvas, the floating edit toolbar and the coach pill all used
-        to live here.
-
-        The canvas was a full-bleed preview you tapped to edit. On top of it
-        sat a five-button toolbar, and on top of THAT a permanent pill
-        explaining the gesture. Four layers of chrome over the one thing the
-        owner came to look at, and a bottom nav underneath all of it. Blocks
-        and Style are real destinations now, each with its own list, so none
-        of the three has a job. The preview lives at the top of Style, and
-        "View ↗" in the top bar opens the real page.
-      */}
-
       {/* ══ SMALL SHEETS ══ one per toolbar button, plus the per-widget editor */}
 
-      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={52} dim={false}>
+      <MobileSheet open={isMobile&&mSheet==='block'} title={openBlock?.title||'Edit widget'} onClose={()=>{setMSheet(null);setOpenId(null);}} maxVh={50} dim={false}
+        bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
         {openBlock&&canDrag(openBlock.id)&&(()=>{
           const rows=orderedBlocks.filter(b=>b.id!=='hours');
           const i=rows.findIndex(b=>b.id===openBlock.id);
@@ -5726,7 +5607,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         )}
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={46}>
+      <MobileSheet open={isMobile&&mSheet==='add'} title="Add a block" onClose={()=>setMSheet(null)} maxVh={50} dim={false}
+        bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
         {/*
           There are seven blocks. Filtering seven things into six categories was
           never going to help, and two of those tabs ("Social", "More") mapped to
@@ -5776,11 +5658,27 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </button>
       </MobileSheet>
 
-      {/* ══ STYLE SHEETS ══ one focused editor each, opened from the Style
-           list. No scrim: the page is right above them and the whole point is
-           watching it change. */}
+      <MobileSheet open={isMobile&&mSheet==='manageBlocks'} title="Manage blocks" onClose={()=>setMSheet(null)} maxVh={54} dim={false}
+        bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
+        <p className="mb-3" style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>
+          Turn sections on or off. Drag a handle to change their order.
+        </p>
+        <div className="space-y-1.5" style={{touchAction:mDragId?'none':undefined}}>
+          {orderedBlocks.map(b=>(
+            <BlocksRow key={b.id} block={b} on={b.on!==false}
+              needsSetup={b.on!==false&&!blockHasDestination(b)}
+              summary={blockSummary(b)} movable={canDrag(b.id)}
+              isDragging={mDragId===b.id} anyDragging={mDragId!==null}
+              onTapAllowed={rowTapAllowed} onOpen={openBlockSheet}
+              onToggle={(id,next)=>updateBlock(id,{on:next})}
+              onDragBegin={beginRowDrag} onDragOver={dragRowOver} onDragEnd={endDrag}/>
+          ))}
+        </div>
+      </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Looks" onClose={()=>setMSheet(null)} maxVh={50} dim={false} onSizeChange={updateStyleSheetHeight}>
+      {/* The page remains visible above every tool sheet. */}
+
+      <MobileSheet open={isMobile&&mSheet==='vibe'} title="Looks" onClose={()=>setMSheet(null)} maxVh={50} dim={false} bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
           A whole look in one tap — background, type, colour and how loud a photo is allowed to be.
           Change any part of it afterwards.
@@ -5788,7 +5686,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         <VibePicker config={config} onPick={v=>setConfig(c=>applyVibe(c,v))}/>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='cover'} title="Photos & logo" onClose={()=>setMSheet(null)} maxVh={50} dim={false} onSizeChange={updateStyleSheetHeight}>
+      <MobileSheet open={isMobile&&mSheet==='cover'} title="Cover photo & logo" onClose={()=>setMSheet(null)} maxVh={50} dim={false} bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
+        <p className="mb-3" style={{...BUILDER_TYPE.sectionTitle,color:BUILDER_UI.ink}}>Cover photo</p>
         {config.bgImage&&(
           <CoverPhotoCrop
             src={config.bgImage}
@@ -5866,7 +5765,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={46} dim={false} onSizeChange={updateStyleSheetHeight}>
+      <MobileSheet open={isMobile&&mSheet==='background'} title="Background" onClose={()=>setMSheet(null)} maxVh={46} dim={false} bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
           Your cards lighten or darken automatically to stay readable on whatever you pick.
         </p>
@@ -5876,7 +5775,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
       {/* Accent, not "business name colour". It is one decision that reaches
           the name, the links and the small details — and deliberately does NOT
           reach open/closed, which stays green because green means open. */}
-      <MobileSheet open={isMobile&&mSheet==='accent'} title="Color" onClose={()=>setMSheet(null)} maxVh={46} dim={false} onSizeChange={updateStyleSheetHeight}>
+      <MobileSheet open={isMobile&&mSheet==='accent'} title="Color" onClose={()=>setMSheet(null)} maxVh={46} dim={false} bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
           Used on links, small icons and the share button. Open and closed keep their own
           colours, so nobody has to guess what green means.
@@ -5893,7 +5792,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         />
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='buttons'} title="Buttons" onClose={()=>setMSheet(null)} maxVh={40} dim={false} onSizeChange={updateStyleSheetHeight}>
+      <MobileSheet open={isMobile&&mSheet==='buttons'} title="Buttons" onClose={()=>setMSheet(null)} maxVh={40} dim={false} bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
         <p className="mb-3" style={{...BUILDER_TYPE.body, color:BUILDER_UI.muted}}>
           Changes how Website, Directions and Share look. To change their links, open Your page → Page details.
         </p>
@@ -5903,7 +5802,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         />
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='font'} title="Type" onClose={()=>setMSheet(null)} maxVh={50} dim={false} onSizeChange={updateStyleSheetHeight}>
+      <MobileSheet open={isMobile&&mSheet==='font'} title="Type" onClose={()=>setMSheet(null)} maxVh={50} dim={false} bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
         <div className="grid grid-cols-2 gap-2">
           {FONT_OPTIONS.map(opt=>{
             const isActive=(config.font??FONT_OPTIONS[0].family)===opt.family;
@@ -5944,7 +5843,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         </div>
       </MobileSheet>
 
-      <MobileSheet open={isMobile&&mSheet==='styleMore'} title="More design tools" onClose={()=>setMSheet(null)} maxVh={42} dim={false} onSizeChange={updateStyleSheetHeight}>
+      <MobileSheet open={isMobile&&mSheet==='styleMore'} title="More design tools" onClose={()=>setMSheet(null)} maxVh={42} dim={false} bottomOffset={EDIT_DOCK_SPACE} onSizeChange={updateEditorSheetHeight}>
         {([
           {key:'background' as const,label:'Page background',sub:'Change the color behind your page'},
           {key:'buttons' as const,label:'Button appearance',sub:'Choose filled, outline or glass'},
@@ -5961,42 +5860,65 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         ))}
       </MobileSheet>
 
-      {/* Focused design tools replace the app navigation while Style is open. */}
-      <nav aria-label="Design tools" className="fixed left-0 right-0 z-40 items-start justify-around border-t"
+      {/* Contextual tools float above the persistent app navigation. */}
+      <nav aria-label="Design tools" className="fixed z-40 items-stretch justify-around"
         style={{
           display:isMobile&&mobileTab==='style'?'flex':'none',
-          bottom:0,
-          height:`calc(${NAV_SPACE}px + env(safe-area-inset-bottom))`,
-          paddingBottom:'env(safe-area-inset-bottom)',
-          borderColor:BUILDER_UI.border,
-          background:'#FFFFFF',
+          left:18,right:18,
+          bottom:`calc(${EDIT_DOCK_BOTTOM}px + env(safe-area-inset-bottom))`,
+          height:EDIT_DOCK_HEIGHT,
+          borderRadius:18,
+          background:'#0A0A0A',
+          boxShadow:'0 8px 24px rgba(0,0,0,0.22)',
           fontFamily:BUILDER_FONT,
         }}>
         {([
           {key:'vibe' as const,label:'Looks',icon:<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="9" r="1"/><circle cx="15" cy="8" r="1"/><path d="M16 15a2 2 0 0 0-2 2"/></svg>},
-          {key:'cover' as const,label:'Photos',icon:<LucideImage size={21} color="currentColor"/>},
+          {key:'cover' as const,label:'Cover + logo',icon:<LucideImage size={19} color="currentColor"/>},
           {key:'accent' as const,label:'Color',icon:<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3a9 9 0 1 0 9 9c0-2-1.5-3-3-3h-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2Z"/><circle cx="7.5" cy="12" r=".8" fill="currentColor"/><circle cx="11" cy="8" r=".8" fill="currentColor"/></svg>},
           {key:'font' as const,label:'Type',icon:<span className="text-[22px] font-medium leading-none">T</span>},
           {key:'styleMore' as const,label:'More',icon:<svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>},
         ]).map(tool=>(
           <button key={tool.key} onClick={()=>setMSheet(tool.key)} aria-label={tool.label}
             aria-pressed={mSheet===tool.key}
-            className="flex-1 min-h-[58px] flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
-            style={{color:mSheet===tool.key?BUILDER_UI.ink:BUILDER_UI.muted}}>
+            className="flex-1 min-w-0 min-h-[44px] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+            style={{color:mSheet===tool.key?'#FFFFFF':'#BCBCBC'}}>
             {tool.icon}
-            <span style={{...BUILDER_TYPE.navLabel,fontWeight:mSheet===tool.key?600:500}}>{tool.label}</span>
+            <span className="whitespace-nowrap" style={{fontSize:9,lineHeight:'11px',fontWeight:mSheet===tool.key?700:500}}>{tool.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <nav aria-label="Page tools" className="fixed z-40 items-stretch justify-around"
+        style={{
+          display:isMobile&&mobileTab==='blocks'?'flex':'none',
+          left:36,right:36,
+          bottom:`calc(${EDIT_DOCK_BOTTOM}px + env(safe-area-inset-bottom))`,
+          height:EDIT_DOCK_HEIGHT,
+          borderRadius:18,
+          background:'#0A0A0A',
+          boxShadow:'0 8px 24px rgba(0,0,0,0.22)',
+          fontFamily:BUILDER_FONT,
+        }}>
+        {([
+          {key:'add' as const,label:'Add block',icon:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>},
+          {key:'manageBlocks' as const,label:'Manage',icon:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>},
+        ]).map(tool=>(
+          <button key={tool.key} onClick={()=>setMSheet(tool.key)} aria-label={tool.label}
+            aria-pressed={mSheet===tool.key}
+            className="flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+            style={{color:mSheet===tool.key?'#FFFFFF':'#BCBCBC'}}>
+            {tool.icon}
+            <span style={{fontSize:10,lineHeight:'11px',fontWeight:mSheet===tool.key?700:500}}>{tool.label}</span>
           </button>
         ))}
       </nav>
 
 
-      {/* ── BOTTOM NAV ── the one navigation system on a phone.
-           Quieter than it was: no purple, no oversized selected pill, labels
-           back at a size someone can actually read. Five destinations, each a
-           real page, and nothing else floating over the content. */}
+      {/* The five main destinations remain available while a tool is open. */}
       <nav className="fixed z-40 flex items-stretch"
         style={{
-          display:isMobile&&mobileTab!=='style'?"flex":"none",
+          display:isMobile?"flex":"none",
           left:NAV_BAR_GAP, right:NAV_BAR_GAP,
           bottom:`calc(${NAV_BAR_GAP}px + env(safe-area-inset-bottom))`,
           height:NAV_BAR_HEIGHT,
