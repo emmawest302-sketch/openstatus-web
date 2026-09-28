@@ -18,7 +18,13 @@
  * billboard.
  *
  * The ratios came down about 12% once the phone builder stopped rendering the
- * page in a 340px card and started rendering it full width. That was not a
+ * page in a 340px card and started rendering it full width. That correction
+ * then overshot at the small end: measured on a real 390px phone, the row
+ * subtitles resolved to 11px and the three header actions to 11.3px, and the
+ * headline the whole product exists to deliver — "Open now, closes at 5" —
+ * came out at 16px, smaller than the business name above it. The floors and
+ * ratios for type have been raised back; the cover, the logo and the row
+ * heights were right and have not moved. That was not a
  * regression in the preview — it was the first time the preview told the
  * truth, and the truth was that the page read as zoomed in on a real phone.
  * Tuning here fixes it everywhere at once, which is the whole point of having
@@ -42,8 +48,8 @@ export const PAGE_METRICS_CSS = `
 
   /* Identity */
   --os-logo: clamp(46px, calc(13.5cqw * var(--os-scale, 1)), 58px);
-  --os-name: clamp(19px, calc(5.5cqw * var(--os-scale, 1)), 24px);
-  --os-addr: clamp(12px, calc(3.2cqw * var(--os-scale, 1)), 13.5px);
+  --os-name: clamp(21px, calc(6cqw * var(--os-scale, 1)), 26px);
+  --os-addr: clamp(12.5px, calc(3.3cqw * var(--os-scale, 1)), 14px);
   --os-tag: clamp(9.5px, calc(2.6cqw * var(--os-scale, 1)), 10.5px);
 
   /* Card padding and radii, so a narrow column doesn't spend a fifth of its
@@ -54,16 +60,16 @@ export const PAGE_METRICS_CSS = `
 
   /* Rows */
   --os-row-min: clamp(56px, calc(16.5cqw * var(--os-scale, 1)), 68px);
-  --os-row-title: clamp(13px, calc(3.4cqw * var(--os-scale, 1)), 14px);
-  --os-row-sub: clamp(11px, calc(2.9cqw * var(--os-scale, 1)), 12px);
+  --os-row-title: clamp(14px, calc(3.7cqw * var(--os-scale, 1)), 15.5px);
+  --os-row-sub: clamp(12px, calc(3.1cqw * var(--os-scale, 1)), 13px);
   --os-icon: clamp(30px, calc(8.6cqw * var(--os-scale, 1)), 35px);
 
   /* Hours is allowed to be the loudest thing here, but not by much. */
-  --os-hours-headline: clamp(16px, calc(4.3cqw * var(--os-scale, 1)), 17.5px);
-  --os-hours-detail: clamp(12px, calc(3.1cqw * var(--os-scale, 1)), 13px);
+  --os-hours-headline: clamp(18px, calc(4.9cqw * var(--os-scale, 1)), 20.5px);
+  --os-hours-detail: clamp(12.5px, calc(3.3cqw * var(--os-scale, 1)), 14px);
 
   /* Actions */
-  --os-action-fs: clamp(11px, calc(2.9cqw * var(--os-scale, 1)), 12px);
+  --os-action-fs: clamp(12.5px, calc(3.3cqw * var(--os-scale, 1)), 13.5px);
   --os-action-pad-y: clamp(7.5px, calc(2.1cqw * var(--os-scale, 1)), 8.5px);
   --os-action-pad-x: clamp(9px, calc(2.7cqw * var(--os-scale, 1)), 11px);
 }

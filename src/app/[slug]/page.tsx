@@ -504,8 +504,8 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
               note={lead ? { headline: lead.headline, detail: lead.detail } : null}
               today={dayRow(today, 'Today')}
               tomorrow={dayRow((today + 1) % 7, 'Tomorrow')}
-              week={DAY_NAMES.map((name, i) => ({
-                label: name,
+              week={[1, 2, 3, 4, 5, 6, 0].map((i) => ({
+                label: DAY_NAMES[i],
                 hours: rowLabel(hours.find((h) => h.day_of_week === i)),
                 isToday: i === today,
                 closed: !!hours.find((h) => h.day_of_week === i)?.is_closed,
@@ -537,7 +537,7 @@ export default async function LiveStatus({ params }: { params: Promise<{ slug: s
         </div>
 
         {/* ── Social icons ── */}
-        <PublicSocialLinks businessId={business.id} socials={enrichedConfig.socials}/>
+        <PublicSocialLinks businessId={business.id} socials={enrichedConfig.socials} dark={bgIsDark}/>
 
         {/* Footer */}
         <Link

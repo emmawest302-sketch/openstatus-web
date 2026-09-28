@@ -7,9 +7,9 @@ export default function NotFound() {
       style={{ fontFamily: 'var(--font-poppins)' }}
     >
       <div className="text-center px-5">
-        <p className="text-[10px] font-bold tracking-[.16em] text-black/35">404</p>
+        <p className="text-[10px] font-bold tracking-[.16em] text-white/45">404</p>
         <h1 className="mt-4 text-5xl font-semibold tracking-[-0.06em]">Page not found.</h1>
-        <p className="mt-4 text-sm text-black/50">
+        <p className="mt-4 text-sm text-white/65">
           This business page doesn&apos;t exist or may have moved.
         </p>
         <Link

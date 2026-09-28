@@ -58,7 +58,10 @@ export default function PublicRow({
   };
 
   const ink = dark ? '#FFFFFF' : '#0A0A0A';
-  const muted = dark ? 'rgba(255,255,255,0.60)' : 'rgba(21,21,21,0.52)';
+  // 0.52 on a white card is about a 3:1 contrast ratio, and it was carrying
+  // 11px subtitles — the line that says which provider a booking goes to, or
+  // how many photos there are. Raised until body text passes.
+  const muted = dark ? 'rgba(255,255,255,0.72)' : 'rgba(21,21,21,0.64)';
   // An owner's brand colour is chosen against their light page. Dropped onto
   // a dark one it can be all but invisible, so lift it rather than make them
   // keep a second colour for the dark theme.

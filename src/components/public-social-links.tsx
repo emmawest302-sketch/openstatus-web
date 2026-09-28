@@ -2,15 +2,10 @@
 
 import { brandGlyph } from '@/lib/brand-icons';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
+import { platformKeyFor, socialHref } from '@/lib/social-url';
 
 // Accepts both Record<string,string> (builder format) and legacy Social[] format
 type SocialsInput = Record<string, string> | Array<{ id?: string; label: string; url?: string; on?: boolean }>;
-
-function href(value: string) {
-  const v = value.trim();
-  if (!v) return '';
-  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
-}
 
 /**
  * Official marks, one ink. These were hand-drawn approximations (the YouTube
@@ -39,21 +34,45 @@ const PLATFORMS = [
 });
 
 function normalizeSocials(socials: SocialsInput): Array<{ key: string; url: string; label: string }> {
+  const out: Array<{ key: string; url: string; label: string }> = [];
+
   if (Array.isArray(socials)) {
-    // Legacy array format: [{id, label, url, on}]
-    return socials
-      .filter(s => s.on !== false && s.url?.trim())
-      .map(s => ({ key: s.label.toLowerCase(), url: s.url ?? '', label: s.label }));
+    for (const s of socials) {
+      if (s.on === false) continue;
+      const href = socialHref(s.url ?? '');
+      if (!href) continue;
+      const key = platformKeyFor(s.id ?? s.label ?? '') ?? platformKeyFor(href) ?? '';
+      if (!key) continue;
+      out.push({ key, url: href, label: PLATFORMS.find(p => p.key === key)?.label ?? s.label });
+    }
+  } else {
+    for (const p of PLATFORMS) {
+      const href = socialHref(socials[p.key] ?? '');
+      if (!href) continue;
+      out.push({ key: p.key, url: href, label: p.label });
+    }
   }
-  // Record format: {instagram: 'url', tiktok: ''}
-  return PLATFORMS
-    .filter(p => socials[p.key]?.trim())
-    .map(p => ({ key: p.key, url: socials[p.key], label: p.label }));
+
+  // One button per platform, in the order PLATFORMS declares, so two legacy
+  // entries for the same network don't render twice.
+  const seen = new Set<string>();
+  return out
+    .filter(i => (seen.has(i.key) ? false : (seen.add(i.key), true)))
+    .sort((a, b) => PLATFORMS.findIndex(p => p.key === a.key) - PLATFORMS.findIndex(p => p.key === b.key));
 }
 
-export default function PublicSocialLinks({ socials, businessId }: { socials: SocialsInput; businessId: string }) {
+export default function PublicSocialLinks({
+  socials, businessId, dark = false,
+}: { socials: SocialsInput; businessId: string; dark?: boolean }) {
   const items = normalizeSocials(socials);
   if (!items.length) return null;
+
+  // These were a hardcoded #292929 on a 6%-black circle, with no idea whether
+  // the page behind them was light or dark. On any dark background the whole
+  // row was charcoal on charcoal.
+  const ink = dark ? 'rgba(255,255,255,0.86)' : '#292929';
+  const chip = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)';
+  const chipHover = dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
 
   return (
     <div style={{
@@ -65,11 +84,10 @@ export default function PublicSocialLinks({ socials, businessId }: { socials: So
     }}>
       {items.map(({ key, url, label }) => {
         const platform = PLATFORMS.find(p => p.key === key);
-        const u = href(url);
         return (
           <a
             key={key}
-            href={u}
+            href={url}
             target="_blank"
             rel="noreferrer"
             aria-label={label}
@@ -80,13 +98,13 @@ export default function PublicSocialLinks({ socials, businessId }: { socials: So
               borderRadius: '50%',
               display: 'grid',
               placeItems: 'center',
-              background: 'rgba(0,0,0,0.06)',
-              color: '#292929',
+              background: chip,
+              color: ink,
               textDecoration: 'none',
               transition: 'background 0.15s, transform 0.15s',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.12)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.06)'; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = chipHover; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = chip; (e.currentTarget as HTMLElement).style.transform = 'none'; }}
           >
             {platform?.icon ?? <span style={{ fontSize: 13, fontWeight: 700 }}>{label.slice(0, 2)}</span>}
           </a>

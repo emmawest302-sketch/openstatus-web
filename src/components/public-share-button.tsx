@@ -138,8 +138,13 @@ export default function PublicShareButton({
         aria-label={`Share ${businessName}`}
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '9px 10px', borderRadius: 999,
-          fontSize: 12.5, fontWeight: 650, letterSpacing: '-0.01em',
+          // Share sits in the same row as Website and Directions, so it reads
+          // from the same --os-action-* scale rather than carrying its own
+          // copy of the numbers — which is how it ended up 5px taller than
+          // its neighbours and a different type size on a narrow screen.
+          padding: 'var(--os-action-pad-y, 9px) var(--os-action-pad-x, 10px)', borderRadius: 999,
+          minHeight: 44,
+          fontSize: 'var(--os-action-fs, 12.5px)', fontWeight: 650, letterSpacing: '-0.01em',
           whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer',
           backdropFilter: 'blur(20px) saturate(130%)',
           WebkitBackdropFilter: 'blur(20px) saturate(130%)',

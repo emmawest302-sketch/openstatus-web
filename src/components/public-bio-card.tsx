@@ -67,7 +67,7 @@ export default function PublicBioCard({
     borderRadius: 'var(--os-radius, 22px)',
   };
 
-  const muted = dark ? 'rgba(255,255,255,0.68)' : 'rgba(21,21,21,0.58)';
+  const muted = dark ? 'rgba(255,255,255,0.74)' : 'rgba(21,21,21,0.66)';
 
   return (
     <div style={{ ...glass, padding: '0 var(--os-card-pad, 16px) var(--os-card-pad, 16px)', marginTop: 'calc(var(--os-logo, 68px) * -0.53)', position: 'relative', zIndex: 2 }}>
@@ -183,6 +183,12 @@ const actionBase: React.CSSProperties = {
   // 12px of side padding made the three pills 297px wide, which bleeds
   // past the card's own padding on a 320px screen.
   padding: 'var(--os-action-pad-y, 9px) var(--os-action-pad-x, 10px)', borderRadius: 999,
+  // Measured on a real phone these came out 32, 34 and 39px tall. They are
+  // the three most-tapped things on the page and all three were under the
+  // 44px minimum, which is why Directions felt like it needed aiming at.
+  // Height is floored here rather than bought with padding, so the pills stay
+  // narrow enough for three of them to fit a 320px screen.
+  minHeight: 44,
   fontSize: 'var(--os-action-fs, 12.5px)', fontWeight: 650, letterSpacing: '-0.01em',
   textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
 };
