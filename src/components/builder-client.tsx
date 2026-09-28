@@ -17,6 +17,7 @@ import { localDay, activeOffers, newOfferId, MAX_OFFERS, OFFER_TITLE_MAX, OFFER_
 import { menuDestination } from '@/lib/menu';
 import { excludeFromAnalytics, resetAnalyticsAudience } from '@/components/analytics-tracker';
 import { externalUrl } from '@/lib/url';
+import { socialHref } from '@/lib/social-url';
 import { PAGE_METRICS_CSS, PAGE_CONTAINER_CLASS, fontScaleStyle } from '@/lib/page-metrics';
 import { BUILDER_UI, BUILDER_FONT, BUILDER_TYPE, BUILDER_RADIUS } from '@/lib/builder-theme';
 import { applyVibe, activeVibe } from '@/lib/page-vibes';
@@ -283,6 +284,10 @@ function Input({ value,onChange,placeholder,type='text' }: { value:string; onCha
       className="w-full bg-white border border-[#E9E9E7] rounded-xl px-4 py-2.5 text-sm text-[#0A0A0A] placeholder:text-[#C0C0C0] focus:outline-none focus:border-[#0A0A0A] transition-colors"
     />
   );
+}
+function InvalidLinkHint({ value, social = false }: { value?: string; social?: boolean }) {
+  if (!value?.trim() || (social ? socialHref(value) : externalUrl(value))) return null;
+  return <p role="status" className="mt-1 text-[11px] text-[#B54708]">Enter a complete link, such as example.com/page.</p>;
 }
 function PillSelect({ options,selected,onSelect }: { options:string[]; selected:string; onSelect:(v:string)=>void }) {
   return (
@@ -1424,6 +1429,7 @@ function BlockEditPanel({ block,config,businessId,today,onUpdateBlock,onUpdateCo
               <div>
                 <FieldLabel>Where it goes</FieldLabel>
                 <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/>
+                <InvalidLinkHint value={block.url}/>
                 <p className="mt-1 text-[10px] text-black/35">Opens in a new tab. Without a link this block won&apos;t publish.</p>
               </div>
             </div>
@@ -1489,6 +1495,7 @@ function BlockEditPanel({ block,config,businessId,today,onUpdateBlock,onUpdateCo
               <div>
                 <FieldLabel>Menu link</FieldLabel>
                 <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://…"/>
+                <InvalidLinkHint value={block.url}/>
                 <p className="mt-1 text-[10px] text-black/35">
                   Wherever your menu already lives — your site, a Google Doc, a Toast or Square page.
                   Without a link this block won&apos;t publish.
@@ -1514,7 +1521,7 @@ function BlockEditPanel({ block,config,businessId,today,onUpdateBlock,onUpdateCo
                   onSelect={(key,label)=>onUpdateBlock({ provider:key, sub:label })}
                 />
               </div>
-              <div><FieldLabel>Link to your listing</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste your DoorDash / Uber Eats / Grubhub link…"/></div>
+              <div><FieldLabel>Link to your listing</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste your DoorDash / Uber Eats / Grubhub link…"/><InvalidLinkHint value={block.url}/></div>
             </div>
           )}
 
@@ -1529,7 +1536,7 @@ function BlockEditPanel({ block,config,businessId,today,onUpdateBlock,onUpdateCo
                   onSelect={(key,label)=>onUpdateBlock({ provider:key, sub:label })}
                 />
               </div>
-              <div><FieldLabel>Booking link</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste your Resy / OpenTable / Calendly link…"/></div>
+              <div><FieldLabel>Booking link</FieldLabel><Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="Paste your Resy / OpenTable / Calendly link…"/><InvalidLinkHint value={block.url}/></div>
             </div>
           )}
 
@@ -1618,6 +1625,7 @@ function BlockEditPanel({ block,config,businessId,today,onUpdateBlock,onUpdateCo
               <div>
                 <FieldLabel>Shop link</FieldLabel>
                 <Input value={block.url??''} onChange={v=>onUpdateBlock({url:v})} placeholder="https://\u2026 your store"/>
+                <InvalidLinkHint value={block.url}/>
                 <p className="mt-1 text-[10px] text-black/35">Without a link this block won&apos;t publish.</p>
               </div>
             </div>
@@ -4430,13 +4438,16 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     <p className="text-[12px] text-[#777777] mb-3.5">Shown as icons near the bottom of your page. Clear a field to remove it.</p>
                     <div className="space-y-2.5">
                       {SOCIAL_PLATFORMS.map(({key,label})=>(
-                        <div key={key} className="flex items-center gap-3">
-                          <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
-                          <Input
-                            value={config.socials?.[key] ?? ''}
-                            onChange={v=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:v}}))}
-                            placeholder={`${label} URL…`}
-                          />
+                        <div key={key}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0 w-7"><SocialIcon platform={key} size={22}/></div>
+                            <Input
+                              value={config.socials?.[key] ?? ''}
+                              onChange={v=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:v}}))}
+                              placeholder={`${label} URL…`}
+                            />
+                          </div>
+                          <div className="ml-10"><InvalidLinkHint value={config.socials?.[key]} social/></div>
                         </div>
                       ))}
                     </div>
@@ -5451,12 +5462,15 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                     </div>
                   </div>
                   {SOCIAL_PLATFORMS.map(({key,label})=>(
-                    <div key={key} className="flex items-center gap-2 px-3 py-2.5">
-                      <span className="flex-shrink-0 w-5"><SocialIcon platform={key} size={17}/></span>
-                      <input value={config.socials?.[key] ?? ''}
-                        onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
-                        placeholder={`${label} link…`}
-                        className="flex-1 text-[16px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                    <div key={key} className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="flex-shrink-0 w-5"><SocialIcon platform={key} size={17}/></span>
+                        <input value={config.socials?.[key] ?? ''}
+                          onChange={e=>setConfig(c=>({...c,socials:{...(c.socials??{}),[key]:e.target.value}}))}
+                          placeholder={`${label} link…`}
+                          className="flex-1 min-w-0 text-[16px] text-[#0A0A0A] bg-transparent outline-none placeholder:text-[#D0D5DD]"/>
+                      </div>
+                      <div className="ml-7"><InvalidLinkHint value={config.socials?.[key]} social/></div>
                     </div>
                   ))}
                   <div className="flex items-center gap-3 px-3 py-3">

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
-import { externalUrl } from '@/lib/url';
+import { blockLinkDestination } from '@/lib/page-rows';
 import { liftColor } from '@/lib/page-theme';
 
 type Props = {
@@ -58,7 +58,7 @@ export default function PublicActionBlock({ block, businessId, dark = false, acc
   // A Reviews row keeps its destination in googleUrl, a listing might only
   // have Yelp. Reading block.url alone made those rows tappable-looking and
   // inert.
-  const href = externalUrl(block.url || block.googleUrl || block.yelpUrl || block.tripAdvisorUrl || block.appleMapsUrl);
+  const href = blockLinkDestination(block);
   const [hovered, setHovered] = useState(false);
 
   // Blocks used to be able to carry their own cover photo, which rendered the

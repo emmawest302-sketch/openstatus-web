@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  publishedBlocks, blockHasDestination, rowRank, isCustomRow,
+  publishedBlocks, blockHasDestination, blockLinkDestination, rowRank, isCustomRow,
   ROW_ORDER, HEADER_ACTION_IDS, PINNED_ROWS, type RowSource,
 } from './page-rows';
 
@@ -62,6 +62,18 @@ describe('publishedBlocks — the one filter the page and the preview share', ()
 
   it('drops a block that goes nowhere', () => {
     expect(publishedBlocks([{ id: 'order', on: true, url: '   ' }])).toEqual([]);
+  });
+
+  it('does not publish a malformed booking, shop or menu link', () => {
+    for (const id of ['book', 'shop', 'menu']) {
+      expect(publishedBlocks([{ id, on: true, url: '.com' }])).toEqual([]);
+    }
+  });
+
+  it('uses a valid alternate link when the first saved value is invalid', () => {
+    const block = { id: 'custom-1', on: true, url: '.com', googleUrl: 'https://maps.google.com/place' };
+    expect(blockLinkDestination(block)).toBe('https://maps.google.com/place');
+    expect(publishedBlocks([block])).toEqual([block]);
   });
 
   it('drops hours, header actions and retired rows', () => {

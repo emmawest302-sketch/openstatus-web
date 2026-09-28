@@ -10,18 +10,32 @@
  * the typo hurts most.
  */
 
-const ALLOWED = /^(https?:\/\/|tel:|mailto:)/i;
-
 export function externalUrl(value?: string | null): string {
   const raw = value?.trim();
   if (!raw) return '';
-  if (ALLOWED.test(raw)) return raw;
+  if (/^(tel:|mailto:)/i.test(raw)) return raw;
+  if (/^https?:\/\//i.test(raw)) return validWebUrl(raw);
   // A protocol we don't allow — javascript:, data:, anything else — is not
   // something to "fix" by prefixing https://, which would produce nonsense.
   if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return '';
   // Protocol-relative, e.g. "//example.com".
-  if (raw.startsWith('//')) return `https:${raw}`;
+  if (raw.startsWith('//')) return validWebUrl(`https:${raw}`);
   // A path, not a site. Nothing sensible to link to.
   if (raw.startsWith('/') || raw.startsWith('?') || raw.startsWith('#')) return '';
-  return `https://${raw}`;
+  return validWebUrl(`https://${raw}`);
+}
+
+function validWebUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    // URL() accepts `https://.com` in some runtimes. Such a row looks live
+    // but leads nowhere, as happened with the social links on a real page.
+    const labels = url.hostname.split('.');
+    if (labels.length < 2 || labels.some(label => !label || label.startsWith('-') || label.endsWith('-'))) return '';
+    if (url.username || url.password) return '';
+    return value;
+  } catch {
+    return '';
+  }
 }
