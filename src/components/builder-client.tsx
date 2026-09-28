@@ -4888,9 +4888,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             :'More'}
         </span>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* The page is no longer the editing surface on a phone, so a way to
-              go and look at it belongs everywhere, not only in the editor. */}
-          {business?.slug&&(
+          {/* Page and Style have their own full-page preview action. */}
+          {business?.slug&&mobileTab!=='blocks'&&mobileTab!=='style'&&(
             <a href={`/${business.slug}`} target="_blank" rel="noopener noreferrer"
               className="px-2 py-1" style={{...BUILDER_TYPE.helper, fontWeight:500, color:BUILDER_UI.muted}}>View ↗</a>
           )}
