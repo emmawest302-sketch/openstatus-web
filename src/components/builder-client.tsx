@@ -67,7 +67,7 @@ import {
   LucidePin,
   LucideShare,
   LucideShoppingBag,
-  
+
   LucideThumbsDown,
   LucideThumbsUp,
   LucideX,
@@ -663,17 +663,28 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
     >
       <style>{PAGE_METRICS_CSS}</style>
       {config.bannerOn !== false && <PublicBanner text={config.banner}/>}
-      {config.bgImage && (
-        <div style={{ position:'relative', height:'var(--os-cover-h, 214px)', overflow:'hidden' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={config.bgImage} alt="" style={{
-            width:'100%', height:'100%', objectFit:'cover',
-            objectPosition: config.bgImagePosition ?? 'center 60%', display:'block',
-            opacity: cover.opacity,
-            filter: cover.blur ? `blur(${cover.blur}px)` : undefined,
-            transform: cover.scale !== 1 ? `scale(${cover.scale})` : undefined,
-          }}/>
-          {cover.overlay && <div style={{ position:'absolute', inset:0, background: cover.overlay }}/>}
+      {(config.bgImage || showDrafts) && (
+        <div data-block-id="cover" style={{ position:'relative', height:'var(--os-cover-h, 214px)', overflow:'hidden' }}>
+          {config.bgImage ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={config.bgImage} alt="" style={{
+                width:'100%', height:'100%', objectFit:'cover',
+                objectPosition: config.bgImagePosition ?? 'center 60%', display:'block',
+                opacity: cover.opacity,
+                filter: cover.blur ? `blur(${cover.blur}px)` : undefined,
+                transform: cover.scale !== 1 ? `scale(${cover.scale})` : undefined,
+              }}/>
+              {cover.overlay && <div style={{ position:'absolute', inset:0, background: cover.overlay }}/>}
+            </>
+          ) : (
+            <div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:7,
+              background:'linear-gradient(135deg,#E9F1ED,#F7F2EC)',color:'#3F5148'}}>
+              <LucideImage size={27} color="currentColor"/>
+              <span style={{fontSize:15,fontWeight:650}}>Add a cover photo</span>
+              <span style={{fontSize:11}}>Only visible in the editor until you add one</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -2636,6 +2647,9 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
   const hasCustomerAction = publishedBlocks(config.blocks).some(b =>
     ['book','order','shop','menu'].includes(b.id) || b.id.startsWith('custom-')
   );
+  const hasDraftCustomerAction = enabledPageBlocks(config.blocks).some(b =>
+    ['book','order','shop','menu'].includes(b.id) || b.id.startsWith('custom-')
+  );
   const openBlock = allBlocks.find(b=>b.id===openId)??null;
   // What the owner has set for today, if anything. Passed into every preview so
   // the Hours block shows what customers actually see — previously the preview
@@ -2646,6 +2660,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
     return { kind: active.kind, closesAt: active.closes_at, opensAt: active.opens_at ?? null };
   })();
   const bizTimeZone = localBusiness?.timezone ?? null;
+  const unfinishedCount=enabledPageBlocks(config.blocks).filter(b=>
+    !blockHasDestination(b) ||
+    (b.id==='offers'&&activeOffers(b.offers??[],localDay(new Date(),bizTimeZone||'America/Chicago')).length===0)
+  ).length;
 
   /**
    * The second line on a Blocks row.
@@ -3541,8 +3559,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </button>
               )}
               {isPageEditing&&!showSaveButton&&(
-                <span style={{...BUILDER_TYPE.helper,color:saving||configDirty?BUILDER_UI.muted:BUILDER_UI.success}}>
-                  {saving?'Saving…':configDirty?'Saving soon…':'✓ Live'}
+                <span style={{...BUILDER_TYPE.helper,color:saving||configDirty?BUILDER_UI.muted:unfinishedCount?BUILDER_UI.warning:BUILDER_UI.success}}>
+                  {saving?'Saving…':configDirty?'Saving soon…':unfinishedCount?`${unfinishedCount} to finish`:'✓ Live'}
                 </span>
               )}
               {sidebarTab==='hours'&&(
@@ -4856,7 +4874,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           fontFamily:BUILDER_FONT,
         }}>
         <span className="truncate" style={{...BUILDER_TYPE.screenTitle, color:BUILDER_UI.ink}}>
-          {mobileTab==='home'?'Home':mobileTab==='status'?'Status':mobileTab==='blocks'?'Your page':mobileTab==='style'?'Style':'More'}
+          {mobileTab==='home'?'Home':mobileTab==='status'?'Status':mobileTab==='blocks'?'Your page':mobileTab==='style'?'Style':bizInfoOpen?'Business info':'More'}
         </span>
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Page and Style have their own full-page preview action. */}
@@ -4875,8 +4893,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               {saving?'Saving…':saveError?'Retry':'Publish'}
             </button>
           ):isPageEditing?(
-            <span role="status" style={{...BUILDER_TYPE.helper,fontWeight:600,color:saving||configDirty?BUILDER_UI.muted:BUILDER_UI.success}}>
-              {saving?'Saving…':configDirty?'Saving soon…':'✓ Live'}
+            <span role="status" style={{...BUILDER_TYPE.helper,fontWeight:600,color:saving||configDirty?BUILDER_UI.muted:unfinishedCount?BUILDER_UI.warning:BUILDER_UI.success}}>
+              {saving?'Saving…':configDirty?'Saving soon…':unfinishedCount?`${unfinishedCount} to finish`:'✓ Live'}
             </span>
           ):mobileTab==='status'?(
             <span style={{...BUILDER_TYPE.helper, color:BUILDER_UI.quiet}}>Goes live right away</span>
@@ -4904,13 +4922,39 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
         {mobileTab==='home'&&(
           <div className="flex-1 overflow-y-auto px-4 pb-8" style={{scrollbarWidth:'none'}}>
 
-            {/* ── Status, the reason the product exists ── */}
-            <div className="mt-3 rounded-[18px] p-4"
-              style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
-              <p className="truncate" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.muted}}>
-                {localBusiness?.name?.trim()||'Your business'}
-              </p>
-              <div className="flex items-center gap-2.5 mt-2">
+            {/* Business identity and today's status belong together. */}
+            <div className="mt-3 rounded-[20px] p-4"
+              style={{background:liveStatus==='open'?'#F2F7F4':'#F6F6F5', border:`1px solid ${liveStatus==='open'?'#DCEAE0':'#E8E8E8'}`}}>
+              <div className="flex items-center gap-3">
+                {localBusiness?.avatar_url
+                  ? <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={assetUrl(localBusiness.id,'avatar',localBusiness.avatar_url)??''} alt=""
+                        className="w-11 h-11 rounded-full object-cover flex-shrink-0 bg-white"
+                        style={{border:'1px solid #DCEAE0'}}/>
+                    </>
+                  : <span className="w-11 h-11 rounded-full bg-white flex-shrink-0 grid place-items-center text-[13px] font-semibold"
+                      style={{color:BUILDER_UI.ink,border:'1px solid #DCEAE0'}}>
+                      {(localBusiness?.name??'B').split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase()}
+                    </span>}
+                <div className="flex-1 min-w-0">
+                  <p className="truncate" style={{fontSize:16,fontWeight:650,color:BUILDER_UI.ink,letterSpacing:'-0.02em'}}>
+                    {localBusiness?.name?.trim()||'Your business'}
+                  </p>
+                  <p className="truncate mt-0.5" style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>
+                    {localBusiness?.address?shortAddress(localBusiness.address):'Add your business details'}
+                  </p>
+                </div>
+                <button onClick={()=>{setSidebarTab('settings');setBizInfoOpen(true);}}
+                  className="px-3 min-h-[44px] rounded-full bg-white flex-shrink-0 active:scale-95 transition-transform"
+                  style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.ink,border:'1px solid #DCEAE0'}}>
+                  Edit info
+                </button>
+              </div>
+              <div className="mt-4 pt-3.5" style={{borderTop:'1px solid #DCEAE0'}}>
+                <p style={{...BUILDER_TYPE.helper,fontWeight:600,color:liveStatus==='open'?'#4B6855':BUILDER_UI.muted}}>TODAY</p>
+              </div>
+              <div className="flex items-center gap-2.5 mt-1.5">
                 {/* The dot answers one question: are they open. It used to go
                     amber whenever an override existed, which put a warning
                     colour next to the words "Open now" and read as a
@@ -4931,8 +4975,8 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                 </p>
               )}
               <button onClick={()=>setSidebarTab('hours' as SidebarTab)}
-                className="mt-3 w-full py-2.5 rounded-xl active:scale-[0.99] transition-transform"
-                style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink}}>
+                className="mt-3 w-full min-h-[44px] rounded-xl active:scale-[0.99] transition-transform"
+                style={{...BUILDER_TYPE.button, background:'#FFFFFF',color:BUILDER_UI.ink,border:'1px solid #DCEAE0'}}>
                 Change today&apos;s status
               </button>
             </div>
@@ -4940,18 +4984,20 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             {googleMismatchCard}
 
             {!hasCustomerAction&&(
-              <div className="mt-2.5 p-4 rounded-[16px]"
-                style={{background:BUILDER_UI.ink,color:'#FFFFFF'}}>
-                <p style={{...BUILDER_TYPE.cardTitle,color:'#FFFFFF'}}>Finish your page</p>
-                <p className="mt-1" style={{...BUILDER_TYPE.body,color:'rgba(255,255,255,0.76)'}}>
-                  Add one thing customers can do next, like book, order or view your menu.
-                </p>
-                <button onClick={()=>{setSidebarTab('blocks');setMSheet('add');}}
-                  className="mt-3 px-4 py-2.5 rounded-xl"
-                  style={{...BUILDER_TYPE.button,background:'#FFFFFF',color:BUILDER_UI.ink}}>
-                  Add a customer link
-                </button>
-              </div>
+              <button onClick={()=>{setSidebarTab('blocks');setMSheet(hasDraftCustomerAction?'manageBlocks':'add');}}
+                className="mt-2.5 w-full p-3.5 rounded-[16px] flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                style={{background:'#FFF8EA',border:'1px solid #F3E5C8'}}>
+                <span className="w-9 h-9 rounded-xl bg-white flex-shrink-0 grid place-items-center" style={{color:'#A66A16'}}>+</span>
+                <span className="flex-1 min-w-0">
+                  <strong className="block" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>
+                    {hasDraftCustomerAction?'Finish a customer link':'Add your first customer link'}
+                  </strong>
+                  <span className="block mt-0.5" style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>
+                    {hasDraftCustomerAction?'Add a destination to a block you turned on':'Booking, ordering, menu or any link'}
+                  </span>
+                </span>
+                <LucideChevronRight size={16} color={BUILDER_UI.muted}/>
+              </button>
             )}
 
             {/* ── Google ──────────────────────────────────────────────────
@@ -4963,47 +5009,44 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             <button
               onClick={()=>{ window.location.href='/connect/google'; }}
               className="mt-2.5 w-full flex items-center gap-3 px-3.5 py-3 rounded-[14px] text-left"
-              style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+              style={{background:'#F2F6FB',border:'1px solid #E0EAF5'}}>
               <svg width="16" height="16" viewBox="0 0 24 24" className="flex-shrink-0"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-              <span className="flex-1 min-w-0" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>Connect Google Business</span>
-              <span style={{...BUILDER_TYPE.body, color:BUILDER_UI.warning}}>Not connected</span>
+              <span className="flex-1 min-w-0">
+                <strong className="block" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>Connect Google Business</strong>
+                <span style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>Keep your listing in sync</span>
+              </span>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={BUILDER_UI.quiet} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
             )}
 
             {/* ── The link itself ── */}
             {localBusiness?.slug&&(
-              <div className="mt-2.5 px-3.5 py-3 rounded-[14px]"
-                style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
-                <p className="mb-1" style={{...BUILDER_TYPE.helper,color:BUILDER_UI.muted}}>Your public page</p>
-                <p className="truncate" style={{...BUILDER_TYPE.cardTitle, color:BUILDER_UI.ink}}>
-                  {SITE_DOMAIN}/{localBusiness.slug}
-                </p>
-                <button onClick={()=>setSidebarTab('blocks')}
-                  className="w-full mt-3 py-2.5 rounded-xl"
-                  style={{...BUILDER_TYPE.button,background:BUILDER_UI.ink,color:'#FFFFFF'}}>
-                  Edit your page
-                </button>
-                <div className="flex items-center gap-2 mt-2">
-                  <button onClick={()=>void copyLiveLink()}
-                    className="flex-1 py-2 rounded-lg active:scale-[0.98] transition-transform"
-                    style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink}}>
+              <div className="mt-5">
+                <p className="mb-2 px-0.5" style={{...BUILDER_TYPE.helper,fontWeight:650,color:BUILDER_UI.muted}}>YOUR PAGE</p>
+                <div className="px-3.5 py-3 rounded-[16px] flex items-center gap-2"
+                  style={{background:'#F7F7F6',border:`1px solid ${BUILDER_UI.border}`}}>
+                  <span className="flex-1 min-w-0 truncate" style={{...BUILDER_TYPE.cardTitle,color:BUILDER_UI.ink}}>
+                    {SITE_DOMAIN}/{localBusiness.slug}
+                  </span>
+                  <button onClick={()=>void copyLiveLink()} aria-label="Copy your page link"
+                    className="px-3 min-h-[44px] rounded-lg bg-white active:scale-95 transition-transform"
+                    style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.ink,border:`1px solid ${BUILDER_UI.border}`}}>
                     {linkCopied?'Copied':'Copy'}
                   </button>
                   <a href={`/${localBusiness.slug}`} target="_blank" rel="noopener noreferrer"
-                    className="flex-1 py-2 rounded-lg text-center"
-                    style={{...BUILDER_TYPE.button, background:BUILDER_UI.surfaceSoft, color:BUILDER_UI.ink}}>
-                    View
+                    aria-label="Open your public page"
+                    className="px-3 min-h-[44px] inline-flex items-center rounded-lg bg-white"
+                    style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.ink,border:`1px solid ${BUILDER_UI.border}`}}>
+                    Open ↗
                   </a>
                 </div>
               </div>
             )}
 
-            {/* ── A snapshot, not a dashboard. The full view is under More. ── */}
-            <div className="mt-2.5 px-3.5 py-3.5 rounded-[14px]"
-              style={{background:BUILDER_UI.surface, border:`1px solid ${BUILDER_UI.border}`}}>
+            {/* Activity is a quiet summary. The full report lives under More. */}
+            <div className="mt-5 pt-4 px-0.5" style={{borderTop:`1px solid ${BUILDER_UI.border}`}}>
               <div className="flex items-baseline justify-between">
-                <p style={{...BUILDER_TYPE.helper, color:BUILDER_UI.muted}}>Last 30 days</p>
+                <p style={{...BUILDER_TYPE.helper,fontWeight:650,color:BUILDER_UI.muted}}>ACTIVITY · LAST 30 DAYS</p>
                 <button onClick={()=>setSidebarTab('analytics' as SidebarTab)}
                   style={{...BUILDER_TYPE.helper, fontWeight:500, color:BUILDER_UI.muted}}>
                   All analytics ›
@@ -5011,7 +5054,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
               </div>
               {analyticsData?(
                 <>
-                  <div className="flex items-baseline gap-6 mt-2.5">
+                  <div className="flex items-baseline gap-8 mt-3">
                     <div>
                       <p style={{fontSize:24, fontWeight:600, letterSpacing:'-0.03em', color:BUILDER_UI.ink, lineHeight:1}}>
                         {analyticsData.metrics.views.toLocaleString()}
@@ -5283,7 +5326,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
           <div className="flex-1 min-h-0 flex flex-col">
             <div className="flex items-center justify-between px-4 py-2 flex-shrink-0"
               style={{background:'#F3F4F5'}}>
-              <span style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.muted}}>Tap a section to edit</span>
+              <button onClick={()=>{setSidebarTab('style');setMSheet('cover');}}
+                className="px-2 py-1 -ml-2" style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.ink}}>
+                {config.bgImage?'Change cover photo':'＋ Add cover photo'}
+              </button>
               <button onClick={()=>setPreviewExpanded(true)}
                 className="px-2 py-1" style={{...BUILDER_TYPE.helper,fontWeight:600,color:BUILDER_UI.ink}}>
                 Actual size ↗
@@ -5291,7 +5337,10 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
             </div>
             <FittedPageCanvas business={localBusiness} config={config}
               timeZone={bizTimeZone} override={todayOverride} inset={26}
-              onSelectBlock={openBlockSheet}/>
+              onSelectBlock={id=>{
+                if(id==='cover'){setSidebarTab('style');setMSheet('cover');}
+                else openBlockSheet(id);
+              }}/>
           </div>
         )}
 
@@ -5587,7 +5636,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
 
       {isMobile&&previewExpanded&&(
         <FullPagePreview business={localBusiness} config={config} timeZone={bizTimeZone}
-          override={todayOverride} initialFit={mobileTab!=='style'} onClose={()=>setPreviewExpanded(false)}/>
+          override={todayOverride} initialFit={false} onClose={()=>setPreviewExpanded(false)}/>
       )}
 
       {/* ══ SMALL SHEETS ══ one per toolbar button, plus the per-widget editor */}
