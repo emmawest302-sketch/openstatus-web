@@ -30,17 +30,19 @@ export type PublicBlockRowProps = {
   accent?: string;
   /** Today where the shop is — offers expire on a calendar date. */
   today: string;
+  /** Builder only: show an editable setup row when remote content is empty. */
+  emptyFallback?: React.ReactNode;
 };
 
-export default function PublicBlockRow({ block, businessId, placeId, dark = false, accent, today }: PublicBlockRowProps) {
+export default function PublicBlockRow({ block, businessId, placeId, dark = false, accent, today, emptyFallback }: PublicBlockRowProps) {
   if (block.id === 'gallery') {
-    return <PublicPhotosRow block={block} businessId={businessId} placeId={placeId} dark={dark} accent={accent}/>;
+    return <PublicPhotosRow block={block} businessId={businessId} placeId={placeId} dark={dark} accent={accent} emptyFallback={emptyFallback}/>;
   }
   if (block.id === 'reviews') {
-    return <PublicReviewsRow block={block} businessId={businessId} placeId={placeId} dark={dark} accent={accent}/>;
+    return <PublicReviewsRow block={block} businessId={businessId} placeId={placeId} dark={dark} accent={accent} emptyFallback={emptyFallback}/>;
   }
   if (block.id === 'offers') {
-    return <PublicOffersRow block={block} businessId={businessId} today={today} dark={dark} accent={accent}/>;
+    return <PublicOffersRow block={block} businessId={businessId} today={today} dark={dark} accent={accent} emptyFallback={emptyFallback}/>;
   }
   if (block.id === 'shop') {
     return <PublicShopRow block={block} businessId={businessId} dark={dark} accent={accent}/>;

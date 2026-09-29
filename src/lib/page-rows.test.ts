@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  publishedBlocks, blockHasDestination, blockLinkDestination, rowRank, isCustomRow,
+  publishedBlocks, enabledPageBlocks, blockHasDestination, blockLinkDestination, rowRank, isCustomRow,
   ROW_ORDER, HEADER_ACTION_IDS, PINNED_ROWS, type RowSource,
 } from './page-rows';
 
@@ -37,7 +37,7 @@ describe('the hierarchy', () => {
   });
 });
 
-describe('publishedBlocks — the one filter the page and the preview share', () => {
+describe('publishedBlocks — customer-facing rows', () => {
   it('keeps a block whose destination is a plain url', () => {
     expect(publishedBlocks([{ id: 'menu', on: true, url: 'https://x.test/menu' }])).toHaveLength(1);
   });
@@ -115,6 +115,21 @@ describe('publishedBlocks — the one filter the page and the preview share', ()
     ];
     expect(publishedBlocks(noisy)).toEqual([]);
     expect(noisy.every(b => !blockHasDestination(b))).toBe(true);
+  });
+});
+
+describe('enabledPageBlocks — editor canvas', () => {
+  it('shows newly enabled blocks in saved order before their links are set', () => {
+    const rows = [
+      { id: 'hours', on: true },
+      { id: 'book', on: true, url: '' },
+      { id: 'custom-new', on: true, url: '' },
+      { id: 'menu', on: true, url: 'https://example.com/menu' },
+      { id: 'shop', on: false, url: 'https://example.com/shop' },
+      { id: 'website', on: true, url: 'https://example.com' },
+    ];
+    expect(enabledPageBlocks(rows).map(b => b.id)).toEqual(['book', 'custom-new', 'menu']);
+    expect(publishedBlocks(rows).map(b => b.id)).toEqual(['menu']);
   });
 });
 

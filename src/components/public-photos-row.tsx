@@ -5,6 +5,7 @@ import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import PublicRow from '@/components/public-row';
 import { trackOpenStatusEvent } from '@/components/analytics-tracker';
 import BodyPortal from '@/components/body-portal';
+import { externalUrl } from '@/lib/url';
 
 /**
  * Photos, as a row.
@@ -26,11 +27,12 @@ type Props = {
   placeId?: string | null;
   dark?: boolean;
   accent?: string;
+  emptyFallback?: React.ReactNode;
 };
 
 const photoUrl = (ref: string) => `/api/place-photo?ref=${encodeURIComponent(ref)}`;
 
-export default function PublicPhotosRow({ block, businessId, placeId, dark = false, accent }: Props) {
+export default function PublicPhotosRow({ block, businessId, placeId, dark = false, accent, emptyFallback = null }: Props) {
   const [photos, setPhotos] = useState<string[]>([]);
   const [lightbox, setLightbox] = useState<number | null>(null);
 
@@ -62,10 +64,10 @@ export default function PublicPhotosRow({ block, businessId, placeId, dark = fal
     return () => window.removeEventListener('keydown', onKey);
   }, [lightbox, close, step]);
 
-  const link = block.url?.trim() || '';
+  const link = externalUrl(block.url);
 
   // Nothing to show. A row that says "no photos" is a row spent on an absence.
-  if (photos.length === 0 && !link) return null;
+  if (photos.length === 0 && !link) return emptyFallback;
 
   const icon = (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
