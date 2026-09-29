@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { OpenStatusBlock } from '@/lib/openstatus-page-config';
 import PublicRow from '@/components/public-row';
+import { blockLinkDestination } from '@/lib/page-rows';
 
 /**
  * Reviews, read from the business's own Google listing.
@@ -35,9 +36,10 @@ type Props = {
   placeId?: string | null;
   dark?: boolean;
   accent?: string;
+  emptyFallback?: React.ReactNode;
 };
 
-export default function PublicReviewsRow({ block, businessId, placeId, dark = false, accent }: Props) {
+export default function PublicReviewsRow({ block, businessId, placeId, dark = false, accent, emptyFallback = null }: Props) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [rating, setRating] = useState<number | null>(null);
   const [count, setCount] = useState(0);
@@ -59,7 +61,7 @@ export default function PublicReviewsRow({ block, businessId, placeId, dark = fa
     return () => { cancelled = true; };
   }, [businessId, placeId]);
 
-  const fallbackUrl = block.googleUrl?.trim() || block.yelpUrl?.trim() || block.tripAdvisorUrl?.trim() || '';
+  const fallbackUrl = blockLinkDestination(block);
   const outbound = url || fallbackUrl;
 
   // A rating with no written reviews is common and completely normal — plenty
@@ -70,7 +72,7 @@ export default function PublicReviewsRow({ block, businessId, placeId, dark = fa
   const hasScore = rating !== null && count > 0;
 
   // Only now is there genuinely nothing to say.
-  if (!hasWords && !hasScore) return null;
+  if (!hasWords && !hasScore && !outbound) return emptyFallback;
 
   const ink = dark ? '#FFFFFF' : '#0A0A0A';
   const muted = dark ? 'rgba(255,255,255,0.58)' : 'rgba(21,21,21,0.50)';
@@ -85,7 +87,7 @@ export default function PublicReviewsRow({ block, businessId, placeId, dark = fa
 
   const subtitle = rating !== null
     ? `${rating.toFixed(1)} · ${count.toLocaleString()} on Google`
-    : `${reviews.length} on Google`;
+    : hasWords ? `${reviews.length} on Google` : block.sub?.trim() || 'Read our reviews';
 
   // Nothing to expand into, so the row navigates instead — and takes the
   // outbound arrow rather than a chevron that would open an empty panel.

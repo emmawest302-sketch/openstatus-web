@@ -26,15 +26,16 @@ type Props = {
   today: string;
   dark?: boolean;
   accent?: string;
+  emptyFallback?: React.ReactNode;
 };
 
-export default function PublicOffersRow({ block, businessId, today, dark = false, accent }: Props) {
+export default function PublicOffersRow({ block, businessId, today, dark = false, accent, emptyFallback = null }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
   const offers = activeOffers(block.offers, today);
 
   // An expired offer is worse than no offer, and a row announcing that a shop
   // has no deals is worse than both.
-  if (offers.length === 0) return null;
+  if (offers.length === 0) return emptyFallback;
 
   const ink = dark ? '#FFFFFF' : '#0A0A0A';
   const muted = dark ? 'rgba(255,255,255,0.58)' : 'rgba(21,21,21,0.50)';

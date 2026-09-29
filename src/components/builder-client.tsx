@@ -24,11 +24,12 @@ import { applyVibe } from '@/lib/page-vibes';
 import VibePicker from '@/components/builder/vibe-picker';
 // The preview renders the published page's own components, so the two cannot
 // drift. See the note on LivePhonePreview.
-import { publishedBlocks, blockHasDestination, HEADER_ACTION_IDS } from '@/lib/page-rows';
+import { publishedBlocks, enabledPageBlocks, blockHasDestination, HEADER_ACTION_IDS } from '@/lib/page-rows';
 import PublicBioCard from '@/components/public-bio-card';
 import PublicBanner from '@/components/public-banner';
 import PublicHoursRow from '@/components/public-hours-row';
 import PublicBlockRow from '@/components/public-block-row';
+import PublicRow from '@/components/public-row';
 import PublicUpdatesPlaceholder from '@/components/public-updates-placeholder';
 import PublicSocialLinks from '@/components/public-social-links';
 import type { OpenStatusBlock as LibBlock } from '@/lib/openstatus-page-config';
@@ -533,13 +534,14 @@ function TagsRow({ tags, isDark }: { tags: string[]; isDark: boolean }) {
  * selection outline, click-to-edit, drag — on top without touching what is
  * underneath.
  */
-function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,dragHandleProps,timeZone,override }: {
+function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,dragHandleProps,timeZone,override,showDrafts=false }: {
   business:Business|null;
   config:OpenStatusPageConfig;
   selectedId?:string|null;
   onSelectBlock?:(id:string)=>void;
   timeZone?:string|null;
   override?:TodayOverride;
+  showDrafts?:boolean;
   /** Long-press drag hook. Returns extra DOM props per block. */
   blockProps?:(id:string)=>{ style?:React.CSSProperties } & React.DOMAttributes<HTMLDivElement> & Record<string,unknown>;
   /**
@@ -558,9 +560,9 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
   const accent = config.themeColor || '#DB6B8F';
   const pageFont = config.font ?? 'Inter, system-ui, sans-serif';
 
-  // Same filter the published page runs. The preview used to have its own,
-  // looser one, so it showed rows the live page then dropped.
-  const activeBlocks = publishedBlocks(config.blocks);
+  // The editor shows every enabled row, even before it is ready to publish.
+  // The full customer preview and the live page still use publishedBlocks.
+  const activeBlocks = showDrafts ? enabledPageBlocks(config.blocks) : publishedBlocks(config.blocks);
   const hoursOn = config.blocks.find(b => b.id === 'hours')?.on !== false;
 
   // Header actions. Same precedence as the live page: the business's own
@@ -644,6 +646,13 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
     );
   };
 
+  const setupRow = (block: OpenStatusBlock, detail: string) => (
+    <PublicRow id={block.id} businessId={business?.id ?? ''}
+      icon={<BlockIcon id={block.id} size={18} color="currentColor"/>}
+      title={block.title?.trim() || 'New block'} subtitle={detail}
+      badge="Setup" dark={isDark} accent={accent}/>
+  );
+
   return (
     <div
       className={PAGE_CONTAINER_CLASS}
@@ -706,20 +715,28 @@ function LivePhonePreview({ business,config,selectedId,onSelectBlock,blockProps,
           />
         ))}
 
-        {activeBlocks.map(b => editable(b.id, (
-          // Instagram updates reads the database on the server, so the preview
-          // shows a stand-in rather than an empty gap the owner can't explain.
-          b.id === 'updates'
-            ? <PublicUpdatesPlaceholder dark={isDark}/>
-            : <PublicBlockRow
-                block={b as unknown as LibBlock}
-                businessId={business?.id ?? ''}
-                placeId={config.placeId ?? null}
-                dark={isDark}
-                accent={accent}
-                today={localDay(new Date(), timeZone || 'America/Chicago')}
-              />
-        )))}
+        {activeBlocks.map(b => {
+          const pending = showDrafts && !blockHasDestination(b);
+          const emptyDetail = b.id === 'offers' ? 'Add an offer to publish'
+            : b.id === 'gallery' ? 'Add photos to publish'
+            : b.id === 'reviews' ? 'Connect reviews to publish'
+            : 'Add a link to publish';
+          return editable(b.id, (
+            pending ? setupRow(b, emptyDetail)
+              // Instagram updates reads the database on the server, so the preview
+              // shows a stand-in rather than an empty gap the owner can't explain.
+              : b.id === 'updates' ? <PublicUpdatesPlaceholder dark={isDark}/>
+              : <PublicBlockRow
+                  block={b as unknown as LibBlock}
+                  businessId={business?.id ?? ''}
+                  placeId={config.placeId ?? null}
+                  dark={isDark}
+                  accent={accent}
+                  today={localDay(new Date(), timeZone || 'America/Chicago')}
+                  emptyFallback={showDrafts ? setupRow(b, emptyDetail) : undefined}
+                />
+          ));
+        })}
 
         {activeBlocks.length === 0 && !hoursOn && (
           <p style={{ textAlign:'center', fontSize:11, padding:'26px 0', color: isDark?'rgba(255,255,255,0.5)':'#9A9A97' }}>
@@ -802,7 +819,7 @@ function FittedPageCanvas({business,config,timeZone,override,inset=24,onSelectBl
         }} style={{position:'absolute',top:0,left:0,width:size.width,pointerEvents:onSelectBlock?'auto':'none',
           transform:`scale(${size.scale})`,transformOrigin:'top left',
           boxShadow:'0 8px 28px rgba(10,10,10,0.12)',outline:'1px solid rgba(10,10,10,0.07)'}}>
-          <LivePhonePreview business={business} config={config} timeZone={timeZone} override={override}/>
+          <LivePhonePreview business={business} config={config} timeZone={timeZone} override={override} showDrafts/>
         </div>
       </div>
     </div>
@@ -5634,7 +5651,7 @@ export default function BuilderClient({ business,initialConfig,isFirstRun=false,
                   <p className="text-[13px] font-medium text-[#0A0A0A] leading-tight truncate">{def.title}</p>
                 </button>
                 <button
-                  onClick={()=>{ if(isOn){ removeBlock(def.id); } else { enableBlock(def.id); } }}
+                  onClick={()=>{ if(isOn){ removeBlock(def.id); } else { enableBlock(def.id); setMSheet(null); } }}
                   aria-label={isOn?`Turn off ${def.title}`:`Turn on ${def.title}`}
                   aria-pressed={!!isOn}
                   className={`w-9 h-9 -mr-1 flex items-center justify-center flex-shrink-0 active:scale-90 transition-transform`}>

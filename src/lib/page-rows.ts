@@ -116,11 +116,15 @@ export function rowRank(id: string): number {
  * and it belongs to the owner.
  */
 export function publishedBlocks<T extends RowSource>(blocks: T[]): T[] {
+  return enabledPageBlocks(blocks).filter(blockHasDestination);
+}
+
+/** All enabled rows in the editor, including ones still needing setup. */
+export function enabledPageBlocks<T extends RowSource>(blocks: T[]): T[] {
   return blocks.filter((b) =>
     b.on !== false &&
     b.id !== 'hours' &&
     !HEADER_ACTION_IDS.has(b.id) &&
-    !RETIRED_ROW_IDS.has(b.id) &&
-    blockHasDestination(b)
+    !RETIRED_ROW_IDS.has(b.id)
   );
 }
